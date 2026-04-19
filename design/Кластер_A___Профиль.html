@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Контроль ремонта — Кластер A: Вход и идентификация</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/fill/style.css">
+<style>
+:root {
+  --brand:#4F6EF7;--brand-dark:#3A56D4;--brand-light:#EEF2FF;--brand-mid:#6B83F5;
+  --brand-glow:rgba(79,110,247,0.18);
+  --green:#059669;--green-light:#D1FAE5;--green-mid:#10B981;
+  --yellow:#92400E;--yellow-bg:#FEF3C7;--yellow-dot:#F59E0B;
+  --red:#991B1B;--red-bg:#FEE2E2;--red-dot:#DC2626;
+  --blue-status:#1E40AF;--blue-status-bg:#EEF2FF;--blue-status-dot:#4F6EF7;
+  --purple:#6D28D9;--purple-bg:#EDE9FE;
+  --n0:#FFFFFF;--n50:#F8FAFF;--n100:#F1F4FD;--n200:#E4E9F7;--n300:#C9D2EE;
+  --n400:#8E9BBF;--n500:#5F6E99;--n600:#3D4B70;--n700:#2A3357;--n800:#1A2240;--n900:#0D1229;
+  --r8:8px;--r12:12px;--r16:16px;--r20:20px;--r24:24px;--r28:28px;
+  --sh1:0 1px 3px rgba(13,18,41,0.06),0 4px 16px rgba(79,110,247,0.07);
+  --sh2:0 2px 8px rgba(13,18,41,0.08),0 8px 24px rgba(79,110,247,0.10);
+  --sh3:0 4px 16px rgba(13,18,41,0.10),0 16px 40px rgba(79,110,247,0.14);
+  --sh-blue:0 4px 20px rgba(79,110,247,0.35);
+  --sh-green:0 4px 16px rgba(5,150,105,0.30);
+  --sh-red:0 4px 16px rgba(220,38,38,0.25);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Manrope',sans-serif;background:linear-gradient(145deg,#0D1229 0%,#1A2240 50%,#0F1A3A 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 40px;gap:28px}
+.phone{width:390px;height:844px;background:var(--n50);border-radius:52px;overflow:hidden;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,0.12),0 0 0 11px #10163A,0 0 0 13px rgba(79,110,247,0.25),0 50px 100px rgba(0,0,0,0.75),0 25px 50px rgba(79,110,247,0.15);flex-shrink:0}
+.screen{display:none;flex-direction:column;height:100%;position:absolute;inset:0;background:var(--n50);overflow:hidden}
+.screen.active{display:flex}
+.sb{display:flex;justify-content:space-between;align-items:center;padding:16px 28px 10px;font-size:15px;font-weight:700;letter-spacing:-0.2px;flex-shrink:0}
+.sb.light{background:var(--n0);color:var(--n900)}
+.sb.transp{background:transparent;color:#fff;position:absolute;top:0;left:0;right:0;z-index:10}
+.sb-icons{display:flex;align-items:center;gap:6px}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ═══ WELCOME ═══ */
+#s-welcome{background:linear-gradient(155deg,#0F172A 0%,#1E3A5F 55%,#1D4ED8 100%)}
+.wlc-inner{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 32px;position:relative}
+.wlc-bg-blob{position:absolute;border-radius:50%;pointer-events:none}
+.wlc-logo{width:100px;height:100px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:32px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px);margin-bottom:28px}
+.wlc-title{font-size:30px;font-weight:800;color:#fff;letter-spacing:-0.8px;text-align:center;margin-bottom:12px;line-height:1.15}
+.wlc-sub{font-size:15px;font-weight:500;color:rgba(255,255,255,0.55);text-align:center;line-height:1.65;margin-bottom:44px}
+.wlc-bottom{padding:0 32px 52px;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+
+/* ═══ BUTTONS ═══ */
+.btn{width:100%;height:54px;border:none;cursor:pointer;font-family:'Manrope',sans-serif;font-size:15px;font-weight:700;border-radius:var(--r16);display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,opacity .1s;letter-spacing:-0.1px}
+.btn:active{transform:scale(0.97);opacity:0.9}
+.btn-white{background:var(--n0);color:var(--brand);box-shadow:var(--sh2)}
+.btn-blue{background:linear-gradient(135deg,#5B7EF8,#3A56D4);color:#fff;box-shadow:0 6px 20px rgba(79,110,247,0.40),0 2px 6px rgba(79,110,247,0.20)}
+.btn-ghost-white{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2)}
+.btn-ghost{background:transparent;color:var(--brand);border:1.5px solid var(--n200)}
+.btn-success{background:#057A55;color:#fff;box-shadow:var(--sh-green)}
+.btn-danger{background:var(--red-bg);color:var(--red-dot);border:none}
+.btn-sm{height:40px;font-size:13px;border-radius:var(--r12)}
+
+/* ═══ HEADERS ═══ */
+.back-hdr{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0}
+.back-btn{width:36px;height:36px;background:var(--n0);border:1px solid var(--n200);border-radius:var(--r12);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:var(--sh1);transition:all .12s}
+.back-btn:active{background:var(--n100)}
+.back-title{font-size:17px;font-weight:800;color:var(--n900);letter-spacing:-0.4px;flex:1}
+
+/* ═══ FORMS ═══ */
+.form-wrap{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.form-wrap::-webkit-scrollbar{display:none}
+.form-section{padding:20px 20px 40px;display:flex;flex-direction:column;gap:16px}
+.field-block{display:flex;flex-direction:column;gap:6px}
+.fl{font-size:12px;font-weight:800;color:var(--n500);letter-spacing:0.3px;text-transform:uppercase}
+.fi{width:100%;height:52px;border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 16px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:600;color:var(--n900);background:var(--n50);outline:none;transition:all .15s}
+.fi:focus{border-color:var(--brand);background:var(--brand-light);box-shadow:0 0 0 3px var(--brand-glow)}
+.fi.v{background:var(--n0);border-color:var(--n200)}
+.fi.error{border-color:var(--red-dot);background:var(--red-bg)}
+.fi-row{display:flex;gap:8px}
+.fi-row .fi{flex:1}
+.pw-wrap{position:relative}
+.pw-wrap .fi{padding-right:48px}
+.pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--n400)}
+.forgot-link{font-size:13px;font-weight:700;color:var(--brand);cursor:pointer;align-self:flex-end;margin-top:-4px}
+.form-link{font-size:14px;font-weight:500;color:var(--n500);text-align:center}
+.form-link b{color:var(--brand);cursor:pointer}
+.hint-box{display:flex;gap:8px;padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);font-size:12px;font-weight:600;color:var(--blue-status);line-height:1.55}
+.error-msg{font-size:12px;font-weight:700;color:var(--red-dot);margin-top:-2px;display:flex;align-items:center;gap:4px}
+
+/* ═══ ROLE CARDS ═══ */
+.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.role-card{padding:14px 8px;border-radius:var(--r16);border:2px solid var(--n200);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .15s;background:var(--n0)}
+.role-card.active{border-color:var(--brand);background:var(--brand-light);box-shadow:0 0 0 3px var(--brand-glow)}
+.role-card-icon{width:44px;height:44px;border-radius:var(--r12);background:var(--n100);display:flex;align-items:center;justify-content:center;transition:background .15s}
+.role-card.active .role-card-icon{background:linear-gradient(135deg,var(--brand),var(--brand-dark));box-shadow:var(--sh-blue)}
+.role-card.active .role-card-icon svg{stroke:white !important}
+.role-card-name{font-size:12px;font-weight:800;color:var(--n700);letter-spacing:-0.1px;text-align:center;line-height:1.3}
+.role-card-desc{font-size:9px;font-weight:600;color:var(--n400);text-align:center;line-height:1.3;margin-top:2px}
+
+/* ═══ PIN INPUT ═══ */
+.pin-row{display:flex;gap:12px;justify-content:center;margin:8px 0}
+.pin-box{width:56px;height:64px;border:2px solid var(--n200);border-radius:var(--r16);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:var(--n900);background:var(--n0)}
+.pin-box.filled{border-color:var(--brand);background:var(--brand-light)}
+.pin-box.cursor{border-color:var(--brand);animation:blink 1s infinite;color:var(--brand)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ═══ BOTTOM NAV ═══ */
+.bnav{display:flex;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--n200);padding:6px 0 28px;position:relative;flex-shrink:0}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0;cursor:pointer;position:relative}
+.bnav-label{font-size:10px;font-weight:700;color:var(--n400)}
+.bnav-item.active .bnav-label{color:var(--brand)}
+.bnav-indicator{width:5px;height:5px;border-radius:50%;margin-top:2px}
+.bnav-item.active .bnav-indicator{background:linear-gradient(135deg,var(--brand-mid),var(--brand))}
+
+/* ═══ PROFILE ═══ */
+.prof-hero{background:linear-gradient(155deg,#0F172A 0%,#1A2D5A 60%,#2A3F7E 100%);padding:64px 24px 28px;display:flex;flex-direction:column;align-items:center;position:relative;flex-shrink:0}
+.prof-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;border:3px solid rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(79,110,247,0.4);margin-bottom:12px}
+.prof-name{font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.4px;margin-bottom:4px}
+.prof-phone{font-size:14px;font-weight:600;color:rgba(255,255,255,0.5)}
+.prof-role-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);margin-top:12px;cursor:pointer;transition:all .15s}
+.prof-role-chip:active{background:rgba(255,255,255,0.18)}
+.prof-role-chip span{font-size:12px;font-weight:800;color:rgba(255,255,255,0.85)}
+.prof-back{position:absolute;top:58px;left:20px}
+
+/* ═══ PROFILE MENU ═══ */
+.prof-group{margin:12px 16px;background:var(--n0);border-radius:var(--r20);box-shadow:var(--sh1);overflow:hidden;border:1px solid var(--n200)}
+.prof-row{display:flex;align-items:center;gap:14px;padding:15px 16px;cursor:pointer;transition:background .12s}
+.prof-row:active{background:var(--n50)}
+.prof-row+.prof-row{border-top:1px solid var(--n100)}
+.prof-row-icon{width:36px;height:36px;border-radius:var(--r12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prof-row-label{font-size:14px;font-weight:700;color:var(--n800);flex:1}
+.prof-row-value{font-size:13px;font-weight:600;color:var(--n400)}
+.prof-row-arrow{color:var(--n300)}
+
+/* ═══ ROLE SWITCHER ═══ */
+.role-switch-card{margin:0 16px 10px;padding:16px;background:var(--n0);border-radius:var(--r20);box-shadow:var(--sh1);border:2px solid transparent;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all .15s}
+.role-switch-card:active{transform:scale(0.985)}
+.role-switch-card.current{border-color:var(--brand);background:var(--brand-light)}
+.role-switch-avatar{width:44px;height:44px;border-radius:var(--r12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.role-switch-name{font-size:15px;font-weight:800;color:var(--n900)}
+.role-switch-desc{font-size:12px;font-weight:600;color:var(--n500);margin-top:2px}
+
+/* ═══ TOGGLE ═══ */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}
+.toggle-row+.toggle-row{border-top:1px solid var(--n100)}
+.toggle-label{font-size:14px;font-weight:700;color:var(--n800);flex:1}
+.toggle-sub{font-size:11px;font-weight:500;color:var(--n400);margin-top:2px}
+.toggle{width:48px;height:28px;border-radius:14px;background:var(--n200);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--brand)}
+.toggle-knob{width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.15);position:absolute;top:3px;left:3px;transition:transform .2s}
+.toggle.on .toggle-knob{transform:translateX(20px)}
+
+/* ═══ SEARCH BAR ═══ */
+.search-bar{margin:12px 16px;display:flex;align-items:center;gap:10px;padding:0 14px;height:48px;background:var(--n0);border:1.5px solid var(--n200);border-radius:var(--r16);transition:all .15s}
+.search-bar:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-glow)}
+.search-bar input{flex:1;border:none;outline:none;font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;color:var(--n900);background:transparent}
+.search-bar input::placeholder{color:var(--n300)}
+
+/* ═══ EMPTY STATE ═══ */
+.empty-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;gap:10px}
+.empty-icon-wrap{width:72px;height:72px;background:var(--n100);border-radius:var(--r24);display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.empty-title{font-size:18px;font-weight:800;color:var(--n700);letter-spacing:-0.3px}
+.empty-sub{font-size:14px;font-weight:500;color:var(--n400);line-height:1.6;max-width:280px}
+
+/* ═══ TEAM CARD ═══ */
+.team-card{display:flex;align-items:center;gap:12px;padding:13px 16px;margin:0 16px 8px;background:var(--n0);border-radius:var(--r16);box-shadow:var(--sh1);border:1px solid var(--n200);cursor:pointer;transition:all .12s}
+.team-card:active{transform:scale(0.985)}
+.team-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.team-name{font-size:14px;font-weight:800;color:var(--n900)}
+.team-role{font-size:12px;font-weight:600;color:var(--n500);margin-top:2px}
+
+/* ═══ ERROR SCREEN ═══ */
+.error-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;gap:14px}
+.error-icon-wrap{width:80px;height:80px;background:var(--red-bg);border-radius:var(--r24);display:flex;align-items:center;justify-content:center}
+
+/* ═══ TOAST ═══ */
+.toast{position:absolute;bottom:100px;left:16px;right:16px;padding:14px 18px;border-radius:var(--r16);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;z-index:100;box-shadow:var(--sh3);animation:toastIn .3s ease-out;text-align:left;line-height:1.4}
+.toast-success{background:#065F46;color:#fff}
+.toast-error{background:#991B1B;color:#fff}
+@keyframes toastIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ═══ SKELETON ═══ */
+.skel{background:linear-gradient(90deg,var(--n100) 25%,var(--n200) 50%,var(--n100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--r8)}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ═══ STEP DOTS ═══ */
+.step-dots{display:flex;gap:6px;padding:14px 28px 0}
+.step-dot{height:4px;border-radius:2px;background:var(--n200);transition:all .3s}
+.step-dot.done{background:var(--brand)}
+.step-dot.active{background:var(--brand)}
+
+/* ═══════════════════════════════════════════
+   DEMO NAVIGATION — вне phone UI
+   ═══════════════════════════════════════════ */
+.demo-nav{
+  width:100%;max-width:680px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:20px;
+  padding:20px 24px 16px;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.demo-nav-header{margin-bottom:16px}
+.demo-nav-title{font-size:15px;font-weight:800;color:rgba(255,255,255,0.85);letter-spacing:-0.3px}
+.demo-nav-subtitle{font-size:12px;font-weight:600;color:rgba(255,255,255,0.35);margin-top:3px}
+.demo-nav-section{margin-bottom:12px}
+.demo-section-label{font-size:10px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px}
+.demo-chips{display:flex;flex-wrap:wrap;gap:6px}
+.demo-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px 7px 10px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:100px;
+  font-family:'Manrope',sans-serif;font-size:12px;font-weight:700;
+  color:rgba(255,255,255,0.7);
+  cursor:pointer;transition:all .15s;
+}
+.demo-chip:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.18);color:rgba(255,255,255,0.9)}
+.demo-chip.active{background:rgba(79,110,247,0.2);border-color:rgba(79,110,247,0.4);color:#fff}
+.demo-chip--error.active{background:rgba(220,38,38,0.15);border-color:rgba(220,38,38,0.35)}
+.demo-chip--warn.active{background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.35)}
+.demo-chip--neutral.active{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25)}
+.demo-chip--accent.active{background:rgba(79,110,247,0.25);border-color:rgba(79,110,247,0.5)}
+.demo-chip--index.active{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.3)}
+.demo-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ═══════════════════════════════════════════════
+     0-1 WELCOME
+     ═══════════════════════════════════════════════ -->
+<div class="screen active" id="s-welcome">
+  <div class="sb transp"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12" fill="white"><rect x="0" y="4" width="3" height="8" rx="1" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1"/><rect x="13.5" y="1" width="2.5" height="10" rx="1" fill="none" stroke="white" stroke-width="1.2"/><rect x="14" y="3" width="1.5" height="6" rx=".5"/></svg></div></div>
+  <div class="wlc-inner">
+    <div class="wlc-bg-blob" style="width:320px;height:320px;background:rgba(59,130,246,0.12);top:-100px;right:-80px;filter:blur(60px)"></div>
+    <div class="wlc-bg-blob" style="width:200px;height:200px;background:rgba(29,78,216,0.15);bottom:200px;left:-60px;filter:blur(40px)"></div>
+    <div class="wlc-logo">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M24 6L40 14V28C40 35.5 33 41.5 24 44C15 41.5 8 35.5 8 28V14L24 6Z" fill="rgba(255,255,255,0.9)"/><path d="M18 25L22 29L30 21" stroke="#4F6EF7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="wlc-title">Контроль ремонта</div>
+    <div class="wlc-sub">Управляйте строительством<br>удалённо — в реальном времени</div>
+  </div>
+  <div class="wlc-bottom">
+    <button class="btn btn-white" onclick="go('s-reg')">Зарегистрироваться</button>
+    <button class="btn btn-ghost-white" onclick="go('s-login')">Войти в аккаунт</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     0-2 REGISTER
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-reg">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr">
+    <div class="back-btn" onclick="go('s-welcome')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="back-title">Регистрация</div>
+  </div>
+  <div class="form-wrap">
+    <div class="form-section">
+      <div class="field-block"><div class="fl">Имя и фамилия</div><div class="fi-row"><input class="fi v" value="Константин" readonly><input class="fi v" value="Иванов" readonly></div></div>
+      <div class="field-block"><div class="fl">Номер телефона</div><div style="display:flex;gap:6px"><div style="display:flex;align-items:center;gap:5px;padding:0 12px;height:52px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);cursor:pointer;flex-shrink:0"><span style="font-size:18px">🇷🇺</span><span style="font-size:13px;font-weight:700;color:var(--n700)">+7</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div><input class="fi v" value="(999) 123-45-67" readonly style="flex:1"></div></div>
+      <div class="field-block">
+        <div class="fl">Пароль</div>
+        <div class="pw-wrap"><input class="fi v" type="password" value="password1" readonly><div class="pw-eye"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+      </div>
+      <div class="field-block">
+        <div class="fl">Ваша роль</div>
+        <div class="roles-grid">
+          <div class="role-card active" onclick="selectRole(this)"><div class="role-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4F6EF7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="role-card-name">Заказчик</div></div>
+          <div class="role-card" onclick="selectRole(this)"><div class="role-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div><div class="role-card-name">Подрядчик</div><div class="role-card-desc">Бригадир или мастер</div></div>
+          <div class="role-card" onclick="selectRole(this)"><div class="role-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="role-card-name">Представитель</div><div class="role-card-desc">Доверенное лицо</div></div>
+        </div>
+        <div class="hint-box" style="margin-top:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Одна регистрация — все роли. Добавить другие роли можно в профиле.</span></div>
+      </div>
+      <button class="btn btn-blue" onclick="go('s-empty-customer')">Создать аккаунт</button>
+      <div class="form-link">Уже есть аккаунт? <b onclick="go('s-login')">Войти</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     0-3 LOGIN
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-login">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-welcome')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Вход</div></div>
+  <div class="form-wrap">
+    <div class="form-section">
+      <div style="margin-bottom:4px"><div style="font-size:22px;font-weight:800;color:var(--n900);letter-spacing:-0.5px;margin-bottom:6px">С возвращением</div><div style="font-size:14px;font-weight:500;color:var(--n500)">Введите номер телефона и пароль</div></div>
+      <div class="field-block"><div class="fl">Номер телефона</div><div style="display:flex;gap:6px"><div style="display:flex;align-items:center;gap:5px;padding:0 12px;height:52px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);cursor:pointer;flex-shrink:0"><span style="font-size:18px">🇷🇺</span><span style="font-size:13px;font-weight:700;color:var(--n700)">+7</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div><input class="fi v" value="(999) 123-45-67" readonly style="flex:1"></div></div>
+      <div class="field-block"><div class="fl">Пароль</div><div class="pw-wrap"><input class="fi v" type="password" value="password1" readonly><div class="pw-eye"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div></div><div class="forgot-link" onclick="go('s-recovery-phone')">Забыли пароль?</div></div>
+      <button class="btn btn-blue" onclick="go('s-login-loading')">Войти</button>
+      <div class="form-link">Нет аккаунта? <b onclick="go('s-reg')">Зарегистрироваться</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     0-3b LOGIN ERROR (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-login-error">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-welcome')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Вход</div></div>
+  <div class="form-wrap">
+    <div class="form-section">
+      <div style="margin-bottom:4px"><div style="font-size:22px;font-weight:800;color:var(--n900);letter-spacing:-0.5px;margin-bottom:6px">С возвращением</div><div style="font-size:14px;font-weight:500;color:var(--n500)">Введите номер телефона и пароль</div></div>
+      <div class="field-block"><div class="fl">Номер телефона</div><input class="fi v" value="+7 (999) 123-45-67" readonly></div>
+      <div class="field-block">
+        <div class="fl">Пароль</div>
+        <div class="pw-wrap"><input class="fi error" type="password" value="wrongpass" readonly style="border-color:var(--red-dot);background:var(--red-bg)"><div class="pw-eye"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div></div>
+        <div class="error-msg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Неверный пароль. Осталось 2 попытки.</div>
+        <div class="forgot-link" onclick="go('s-recovery-phone')">Забыли пароль?</div>
+      </div>
+      <button class="btn btn-blue" onclick="go('s-login')">Повторить</button>
+      <div class="form-link">Нет аккаунта? <b onclick="go('s-reg')">Зарегистрироваться</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     0-3c LOGIN LOADING (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-login-loading">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:16px 20px;background:var(--n0);border-bottom:1px solid var(--n200);display:flex;align-items:center;gap:12px;flex-shrink:0"><div class="skel" style="width:36px;height:36px;border-radius:var(--r12)"></div><div class="skel" style="width:140px;height:20px"></div></div>
+  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;padding:20px 16px;background:var(--n0);border-radius:var(--r20);box-shadow:var(--sh1)">
+      <div class="skel" style="width:60px;height:60px;border-radius:50%"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel" style="width:140px;height:18px"></div><div class="skel" style="width:100px;height:14px"></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="skel" style="height:78px;border-radius:var(--r16)"></div>
+      <div class="skel" style="height:78px;border-radius:var(--r16)"></div>
+      <div class="skel" style="height:78px;border-radius:var(--r16)"></div>
+      <div class="skel" style="height:78px;border-radius:var(--r16)"></div>
+    </div>
+  </div>
+  <div style="text-align:center;padding:20px;color:var(--n400);font-size:13px;font-weight:600">Загрузка данных...</div>
+  <!-- auto-redirect -->
+  <script>setTimeout(()=>{if(document.getElementById('s-login-loading').classList.contains('active'))go('s-empty-customer')},2000)</script>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     0-4 RECOVERY
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-recovery">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-recovery-phone')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Восстановление пароля</div></div>
+  <div class="step-dots" style="padding:14px 28px 0"><div class="step-dot done" style="width:24px"></div><div class="step-dot active" style="width:28px"></div><div class="step-dot" style="width:24px"></div></div>
+  <div class="form-wrap">
+    <div class="form-section" style="align-items:center;text-align:center">
+      <div style="width:68px;height:68px;background:var(--brand-light);border-radius:22px;display:flex;align-items:center;justify-content:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--n900);letter-spacing:-0.5px;margin-bottom:8px">Введите код из SMS</div><div style="font-size:14px;font-weight:500;color:var(--n500)">Отправили на +7 (999) 123-**-67</div></div>
+      <div class="pin-row"><div class="pin-box filled">5</div><div class="pin-box filled">8</div><div class="pin-box cursor">–</div><div class="pin-box">–</div></div>
+      <div style="font-size:13px;font-weight:500;color:var(--n400)">Не пришёл код? <b style="color:var(--brand);cursor:pointer">Отправить снова</b></div>
+      <button class="btn btn-blue" onclick="go('s-recovery-newpass')">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PROFILE (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-profile">
+  <div class="prof-hero">
+    <div class="prof-avatar">КИ</div>
+    <div class="prof-name">Константин Иванов</div>
+    <div class="prof-phone">+7 (999) 123-45-67</div>
+    <div class="prof-role-chip" onclick="go('s-roles')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Заказчик</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+  </div>
+  <div class="scroll" style="padding-bottom:20px">
+    <div class="prof-group">
+      <div class="prof-row" onclick="go('s-roles')"><div class="prof-row-icon" style="background:var(--purple-bg)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M20 11l-2.5 2.5L15 11"/></svg></div><div class="prof-row-label">Мои роли</div><div class="prof-row-value">3 роли</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-edit-profile')"><div class="prof-row-icon" style="background:var(--brand-light)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div><div class="prof-row-label">Данные профиля</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <!-- Инструменты: видны только при роли Подрядчик (бригадир). По ТЗ §E3: заказчик не видит -->
+      <div class="prof-row" onclick="go('s-profile-tools')"><div class="prof-row-icon" style="background:#FEF3C7"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></svg></div><div class="prof-row-label">Мои инструменты</div><div class="prof-row-value">6 шт.</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="prof-group">
+      <div class="prof-row" onclick="go('s-notif-settings')"><div class="prof-row-icon" style="background:var(--yellow-bg)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="prof-row-label">Уведомления</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-language')"><div class="prof-row-icon" style="background:var(--n100)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div><div class="prof-row-label">Язык</div><div class="prof-row-value">Русский</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="prof-group">
+      <div class="prof-row" onclick="go('s-help')"><div class="prof-row-icon" style="background:#DEF7EC"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div><div class="prof-row-label">Помощь и FAQ</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-feedback')"><div class="prof-row-icon" style="background:var(--brand-light)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="prof-row-label">Обратная связь</div><div class="prof-row-value">Telegram</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div class="prof-group">
+      <div class="prof-row" onclick="go('s-delete-confirm')"><div class="prof-row-icon" style="background:var(--red-bg)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></div><div class="prof-row-label" style="color:var(--red-dot)">Удалить аккаунт</div></div>
+    </div>
+    <div style="text-align:center;padding:20px;font-size:12px;font-weight:600;color:var(--n300)">Контроль ремонта v1.0</div>
+  </div>
+  <div class="bnav">
+    <div class="bnav-item" onclick="go('s-empty-customer')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div class="bnav-label">Проекты</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item" onclick="go('s-contractors-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div class="bnav-label">Команда</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item" onclick="go('s-chats-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="bnav-label">Чаты</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg><div class="bnav-label">Профиль</div><div class="bnav-indicator"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MY ROLES (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-roles">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Мои роли</div></div>
+  <div class="scroll" style="padding-top:16px;padding-bottom:20px">
+    <div style="padding:0 16px 12px"><div style="font-size:13px;font-weight:600;color:var(--n500);line-height:1.6">Переключайте роли для доступа к разным проектам. Данные обновятся мгновенно.</div></div>
+
+    <div class="role-switch-card current" onclick="go('s-profile')">
+      <div class="role-switch-avatar" style="background:linear-gradient(135deg,var(--brand),var(--brand-dark))"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div style="flex:1"><div class="role-switch-name">Заказчик</div><div class="role-switch-desc">4 активных проекта</div></div>
+      <div style="background:var(--brand);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:100px">Активна</div>
+    </div>
+
+    <div class="role-switch-card" onclick="go('s-role-switched')">
+      <div class="role-switch-avatar" style="background:linear-gradient(135deg,#34D399,#059669)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+      <div style="flex:1"><div class="role-switch-name">Подрядчик</div><div class="role-switch-desc">2 назначенных проекта</div></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+
+    <div class="role-switch-card" onclick="go('s-role-switched')">
+      <div class="role-switch-avatar" style="background:linear-gradient(135deg,#A78BFA,#7C3AED)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div style="flex:1"><div class="role-switch-name">Представитель</div><div class="role-switch-desc">1 проект</div></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+
+    <div style="padding:16px">
+      <button class="btn btn-ghost" style="height:48px;border-style:dashed" onclick="go('s-add-role')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Добавить роль</button>
+    </div>
+  </div>
+</div>
+
+<!-- Old notif-settings removed — replaced by detailed version below -->
+
+<!-- ═══════════════════════════════════════════════
+     ADD MEMBER - SEARCH (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-add-member">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-contractors-empty')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Добавить участника</div></div>
+  <div style="padding:10px 16px;background:var(--brand-light);display:flex;align-items:center;gap:8px;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div style="font-size:12px;font-weight:700;color:var(--brand)">Проект: Квартира на Ленина, 12</div></div>
+  <div class="search-bar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Номер телефона" value="+7 (916) 555-44-33" readonly></div>
+  <div class="scroll" style="padding:4px 0 20px">
+    <div style="padding:12px 16px">
+      <button class="btn btn-blue btn-sm" style="max-width:200px" onclick="go('s-member-found')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Найти</button>
+    </div>
+    <div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase;margin-top:16px">Недавно добавленные</div></div>
+    <div class="team-card"><div class="team-avatar" style="background:linear-gradient(135deg,var(--brand),var(--brand-dark))">ПС</div><div style="flex:1"><div class="team-name">Петров Сергей</div><div class="team-role">Бригадир · Электрика</div></div></div>
+    <div class="team-card"><div class="team-avatar" style="background:linear-gradient(135deg,#34D399,#059669)">МА</div><div style="flex:1"><div class="team-name">Малышев Антон</div><div class="team-role">Бригадир · Сантехника</div></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MEMBER FOUND (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-member-found">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-add-member')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Назначение</div></div>
+  <div class="form-wrap">
+    <div class="form-section">
+      <div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--n0);border-radius:var(--r20);border:1px solid var(--n200);box-shadow:var(--sh1)">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#FCD34D,#D97706);width:52px;height:52px;font-size:18px">КЛ</div>
+        <div><div class="team-name" style="font-size:16px">Козлов Леонид</div><div class="team-role" style="margin-top:4px">+7 (916) 555-44-33</div><div style="display:flex;align-items:center;gap:4px;margin-top:6px"><div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div><div style="font-size:11px;font-weight:700;color:#059669">Зарегистрирован</div></div></div>
+      </div>
+      <div class="field-block"><div class="fl">Назначить как</div>
+        <div class="roles-grid" style="grid-template-columns:1fr 1fr">
+          <div class="role-card active" onclick="selectRole(this)"><div class="role-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4F6EF7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div><div class="role-card-name">На проект</div><div style="font-size:10px;font-weight:600;color:var(--n400);margin-top:2px">Бригадир</div></div>
+          <div class="role-card" onclick="selectRole(this)"><div class="role-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></div><div class="role-card-name">На этап</div><div style="font-size:10px;font-weight:600;color:var(--n400);margin-top:2px">Мастер</div></div>
+        </div>
+      </div>
+      <div class="hint-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>«На проект» — видит все этапы, назначает мастеров. «На этап» — работает только в выбранном этапе.</span></div>
+      <button class="btn btn-success" onclick="go('s-add-member')">Назначить бригадиром</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MEMBER NOT FOUND (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-member-not-found">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-add-member')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Подрядчик не найден</div></div>
+  <div class="scroll" style="padding:20px 16px">
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 0 20px">
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--yellow-bg);display:flex;align-items:center;justify-content:center;margin-bottom:14px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6"/></svg></div>
+      <div style="font-size:18px;font-weight:800;color:var(--n900);letter-spacing:-0.3px;margin-bottom:6px">Пользователь не найден</div>
+      <div style="font-size:13px;font-weight:500;color:var(--n500);line-height:1.6;max-width:300px">Номер <b style="color:var(--n700)">+7 (916) 555-44-33</b> не зарегистрирован в приложении. Отправьте SMS-приглашение.</div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">Предпросмотр SMS</div>
+    <div style="background:var(--n0);border:1.5px solid var(--n200);border-radius:16px;padding:14px 16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:50%;background:var(--brand-light);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div style="font-size:12px;font-weight:700;color:var(--n700)">SMS на +7 (916) 555-44-33</div></div>
+      <div style="font-size:13px;font-weight:500;color:var(--n600);line-height:1.6;background:var(--n50);border-radius:12px;padding:12px">Константин И. приглашает вас в приложение «Контроль ремонта» для совместной работы на проекте. Скачайте: https://kontrolremont.app/invite/abc123</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-blue" onclick="showToast('s-member-not-found','Приглашение отправлено');setTimeout(()=>go('s-add-member'),1500)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Отправить SMS-приглашение</button>
+      <button class="btn btn-ghost" style="font-size:13px" onclick="go('s-add-member')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Скопировать ссылку</button>
+      <div style="text-align:center;padding:4px"><div style="font-size:12px;font-weight:600;color:var(--n400);cursor:pointer" onclick="go('s-add-member')">Попробовать другой номер</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     REPRESENTATIVE RIGHTS SETTINGS (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-rep-rights">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-add-representative')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Права представителя</div></div>
+  <div class="scroll" style="padding-bottom:20px">
+    <div style="padding:16px;display:flex;align-items:center;gap:14px">
+      <div class="team-avatar" style="background:linear-gradient(135deg,#A78BFA,#7C3AED);width:48px;height:48px;font-size:16px">КА</div>
+      <div><div class="team-name" style="font-size:16px">Карпова Анна</div><div class="team-role">Представитель заказчика</div></div>
+    </div>
+    <div style="padding:4px 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Просмотр</div></div>
+    <div class="prof-group">
+      <div class="toggle-row"><div><div class="toggle-label">Этапы и шаги</div><div class="toggle-sub">Всегда включено</div></div><div class="toggle on" style="pointer-events:none;opacity:.6"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Бюджет проекта</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Бюджет этапов</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Лента событий (финансы)</div></div><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>
+    <div style="padding:12px 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Действия</div></div>
+    <div class="prof-group">
+      <div class="toggle-row"><div><div class="toggle-label">Добавление этапов</div></div><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Назначение подрядчиков</div></div><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Принятие / отклонение работ</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Добавление подшагов</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>
+    <div style="padding:16px"><button class="btn btn-blue" onclick="showToast('s-rep-rights','✓ Права сохранены');setTimeout(()=>go('s-add-representative'),1200)">Сохранить права</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     EMPTY: REPRESENTATIVE (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-empty-rep">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:16px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:22px;font-weight:800;color:var(--n900);letter-spacing:-0.6px">Мои объекты</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r12)" onclick="go('s-help')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r12)" onclick="go('s-notif-settings')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      </div>
+    </div>
+    <div style="display:flex;margin-top:8px"><div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand)">Активные</div><div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent">Архив</div></div>
+  </div>
+  <div class="empty-center">
+    <div class="empty-icon-wrap"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+    <div class="empty-title">Вас ещё не добавили</div>
+    <div class="empty-sub">Когда заказчик добавит вас в проект — он появится здесь автоматически</div>
+  </div>
+  <div class="bnav"><div class="bnav-item active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div class="bnav-label" style="color:var(--brand)">Проекты</div><div class="bnav-indicator"></div></div><div class="bnav-item" onclick="go('s-contractors-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div class="bnav-label">Команда</div><div class="bnav-indicator"></div></div><div class="bnav-item" onclick="go('s-chats-empty')"><svg width="22" height="22" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="bnav-label">Чаты</div><div class="bnav-indicator"></div></div><div class="bnav-item" onclick="go('s-profile')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg><div class="bnav-label">Профиль</div><div class="bnav-indicator"></div></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     EMPTY: CONTRACTOR (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-empty-contractor">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:16px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:22px;font-weight:800;color:var(--n900);letter-spacing:-0.6px">Мои объекты</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r12)" onclick="go('s-help')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r12)" onclick="go('s-notif-settings')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      </div>
+    </div>
+    <div style="display:flex;margin-top:8px"><div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand)">Активные</div><div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent">Архив</div></div>
+  </div>
+  <div class="empty-center">
+    <div class="empty-icon-wrap"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
+    <div class="empty-title">Нет назначений</div>
+    <div class="empty-sub">Когда заказчик или бригадир добавит вас на проект — он появится здесь</div>
+  </div>
+  <div class="bnav"><div class="bnav-item active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div class="bnav-label" style="color:var(--brand)">Проекты</div><div class="bnav-indicator"></div></div><div class="bnav-item" onclick="go('s-contractors-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div class="bnav-label">Команда</div><div class="bnav-indicator"></div></div><div class="bnav-item" onclick="go('s-chats-empty')"><svg width="22" height="22" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="bnav-label">Чаты</div><div class="bnav-indicator"></div></div><div class="bnav-item" onclick="go('s-profile')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg><div class="bnav-label">Профиль</div><div class="bnav-indicator"></div></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     NETWORK ERROR (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-network-error">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="error-screen">
+    <div class="error-icon-wrap">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 1l22 22"/>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <circle cx="12" cy="20" r="1" fill="var(--red-dot)"/>
+      </svg>
+    </div>
+    <div class="empty-title">Нет подключения</div>
+    <div class="empty-sub">Проверьте интернет-соединение и попробуйте снова</div>
+    <button class="btn btn-blue btn-sm" style="max-width:200px;margin-top:8px" onclick="go('s-welcome')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Повторить
+    </button>
+    <div style="font-size:12px;font-weight:600;color:var(--n300);margin-top:12px">Автоматическая попытка через 10 сек...</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     DELETE ACCOUNT CONFIRMATION (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-delete-confirm" style="background:transparent">
+  <div style="flex:1;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px)" onclick="go('s-profile')"></div>
+  <div style="background:var(--n0);border-radius:28px 28px 0 0;padding:24px 20px 44px">
+    <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="display:flex;justify-content:center;margin-bottom:16px"><div style="width:64px;height:64px;background:var(--red-bg);border-radius:var(--r20);display:flex;align-items:center;justify-content:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></div></div>
+    <div style="font-size:18px;font-weight:800;color:var(--n900);text-align:center;letter-spacing:-0.4px;margin-bottom:8px">Удалить аккаунт?</div>
+    <div style="font-size:14px;font-weight:500;color:var(--n500);text-align:center;line-height:1.6;margin-bottom:16px">Все ваши проекты, данные и история будут удалены безвозвратно. Это действие нельзя отменить.</div>
+    <div style="margin-bottom:16px;text-align:center"><div style="font-size:11px;font-weight:800;color:var(--n400);margin-bottom:6px">Введите УДАЛИТЬ для подтверждения</div><div style="width:100%;height:48px;border:1.5px solid var(--red-dot);border-radius:var(--r12);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--red-dot);letter-spacing:2px">УДАЛИТЬ</div></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="background:var(--red-dot);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,0.3)" onclick="go('s-welcome')">Подтвердить удаление</button>
+      <button class="btn btn-ghost" onclick="go('s-profile')">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     EDIT PROFILE (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-edit-profile">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Данные профиля</div></div>
+  <div class="form-wrap">
+    <div class="form-section">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding-bottom:8px">
+        <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;color:#fff;position:relative;box-shadow:0 4px 16px rgba(79,110,247,0.3)">КИ
+          <div style="position:absolute;bottom:2px;right:2px;width:30px;height:30px;background:var(--n0);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh2);border:2px solid var(--n0);cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--brand);cursor:pointer" onclick="go('s-photo-picker')">Изменить фото</div>
+      </div>
+      <div class="field-block"><div class="fl">Имя</div><input class="fi v" value="Константин" readonly></div>
+      <div class="field-block"><div class="fl">Фамилия</div><input class="fi v" value="Иванов" readonly></div>
+      <div class="field-block"><div class="fl">Дата рождения</div><input class="fi v" value="15.06.1985" readonly></div>
+      <div class="field-block"><div class="fl">Email <span style="font-size:9px;font-weight:500;color:var(--n400);text-transform:none;letter-spacing:0">(необязательно)</span></div><input class="fi v" value="konstantin@mail.ru" readonly></div>
+      <div class="field-block"><div class="fl">Номер телефона</div><input class="fi v" value="+7 (999) 123-45-67" readonly style="color:var(--n400)"><div style="font-size:11px;font-weight:600;color:var(--n400);display:flex;align-items:center;gap:4px;margin-top:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Телефон нельзя изменить — это ваш логин</div></div>
+      <button class="btn btn-blue" onclick="showToast('s-edit-profile','✓ Профиль сохранён');setTimeout(()=>go('s-profile'),1200)">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     HELP & FAQ (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-help">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Помощь</div></div>
+  <div class="scroll" style="padding-bottom:20px">
+    <div style="padding:20px 16px 12px"><div style="font-size:13px;font-weight:600;color:var(--n500);line-height:1.6">Выберите способ связи или найдите ответ в часто задаваемых вопросах.</div></div>
+    <div class="prof-group">
+      <div class="prof-row"><div class="prof-row-icon" style="background:var(--brand-light)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg></div><div class="prof-row-label">Написать в Telegram</div><div class="prof-row-value" style="color:var(--brand)">@kontrolremont →</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row"><div class="prof-row-icon" style="background:#DEF7EC"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><div class="prof-row-label">Позвонить</div><div class="prof-row-value" style="color:#059669">+7 (999) 000-00-00 →</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+    <div style="padding:16px 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Часто задаваемые вопросы</div></div>
+    <div class="prof-group">
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как работает светофор?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как создать проект?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как добавить подрядчика?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как работают роли?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как работают этапы и шаги?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Что такое согласования?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как заказать материалы?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как работают выплаты?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Что значит «неизменяемые данные»?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+      <div class="prof-row" onclick="go('s-faq-detail')"><div class="prof-row-label">Как настроить уведомления?</div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     FEEDBACK (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-feedback">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Обратная связь</div></div>
+  <div class="form-wrap">
+    <div class="form-section">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 0">
+        <div style="width:72px;height:72px;background:var(--brand-light);border-radius:var(--r24);display:flex;align-items:center;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div style="font-size:18px;font-weight:800;color:var(--n900);letter-spacing:-0.4px">Напишите нам</div>
+        <div style="font-size:14px;font-weight:500;color:var(--n400);text-align:center;line-height:1.6;max-width:280px">Предложения, баги, вопросы — всё принимаем. Отвечаем в Telegram в течение 24 часов.</div>
+      </div>
+      <button class="btn btn-blue" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Открыть Telegram</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ADD ROLE (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-add-role" style="background:transparent">
+  <div style="flex:1;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px)" onclick="go('s-roles')"></div>
+  <div style="background:var(--n0);border-radius:28px 28px 0 0;padding:14px 20px 44px">
+    <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-size:18px;font-weight:800;color:var(--n900);letter-spacing:-0.4px;margin-bottom:4px">Добавить роль</div>
+    <div style="font-size:13px;font-weight:500;color:var(--n400);margin-bottom:18px">Выберите роль, которую хотите добавить</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="role-switch-card" style="margin:0" onclick="go('s-roles')">
+        <div class="role-switch-avatar" style="background:linear-gradient(135deg,var(--brand),var(--brand-dark));width:40px;height:40px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div style="flex:1"><div class="role-switch-name" style="font-size:14px">Заказчик</div><div class="role-switch-desc">Создаёт проекты, управляет бюджетом</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="role-switch-card" style="margin:0" onclick="go('s-roles')">
+        <div class="role-switch-avatar" style="background:linear-gradient(135deg,#34D399,#059669);width:40px;height:40px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+        <div style="flex:1"><div class="role-switch-name" style="font-size:14px">Подрядчик</div><div class="role-switch-desc">Бригадир или мастер — зависит от назначения</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="role-switch-card" style="margin:0" onclick="go('s-roles')">
+        <div class="role-switch-avatar" style="background:linear-gradient(135deg,#A78BFA,#7C3AED);width:40px;height:40px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div style="flex:1"><div class="role-switch-name" style="font-size:14px">Представитель</div><div class="role-switch-desc">Доверенное лицо заказчика или бригадира</div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     EMPTY: CUSTOMER NO PROJECTS (E1 — новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-empty-customer">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:16px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:22px;font-weight:800;color:var(--n900);letter-spacing:-0.6px">Мои объекты</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r12);transition:background .12s" onclick="go('s-help')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r12);position:relative;transition:background .12s" onclick="go('s-notif-settings')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      </div>
+    </div>
+    <div style="display:flex;margin-top:8px">
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand)">Активные</div>
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent">Архив</div>
+    </div>
+  </div>
+  <div class="empty-center">
+    <div class="empty-icon-wrap"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+    <div class="empty-title">Нет проектов</div>
+    <div class="empty-sub">Создайте первый проект и начните контролировать ремонт</div>
+    <button class="btn btn-blue btn-sm" style="max-width:220px;margin-top:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Создать проект</button>
+  </div>
+  <div class="bnav">
+    <div class="bnav-item active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div class="bnav-label">Проекты</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item" onclick="go('s-contractors-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div class="bnav-label">Команда</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item" onclick="go('s-chats-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="bnav-label">Чаты</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item" onclick="go('s-profile')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg><div class="bnav-label">Профиль</div><div class="bnav-indicator"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     CONTRACTORS EMPTY (E4 — глобальная книга)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-contractors-empty">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity="0.6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:14px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1;font-size:22px;font-weight:900;color:var(--n900);letter-spacing:-0.5px">Команда</div>
+    </div>
+  </div>
+  <div class="empty-center">
+    <div style="width:56px;height:56px;border-radius:18px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;margin-bottom:10px"><span style="font-size:24px;font-weight:900;color:#7C3AED">F</span></div>
+    <div style="font-size:15px;font-weight:800;color:var(--n700)">→ Кластер F</div>
+    <div style="font-size:12px;font-weight:600;color:var(--n400);margin-top:4px">Команда (3 роли)</div>
+    <div style="font-size:11px;font-weight:600;color:var(--n300);margin-top:2px">cluster_f_audited.html · f-team-owner</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     CHATS EMPTY (E16 — пустые чаты)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-chats-empty">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity="0.6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:14px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1;font-size:22px;font-weight:900;color:var(--n900);letter-spacing:-0.5px">Чаты</div>
+    </div>
+  </div>
+  <div class="empty-center">
+    <div style="width:56px;height:56px;border-radius:18px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;margin-bottom:10px"><span style="font-size:24px;font-weight:900;color:#7C3AED">F</span></div>
+    <div style="font-size:15px;font-weight:800;color:var(--n700)">→ Кластер F</div>
+    <div style="font-size:12px;font-weight:600;color:var(--n400);margin-top:4px">Чаты проекта</div>
+    <div style="font-size:11px;font-weight:600;color:var(--n300);margin-top:2px">cluster_f_audited.html · f-chats</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     RECOVERY STEP 1: ENTER PHONE (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-recovery-phone">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-login')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Восстановление пароля</div></div>
+  <div class="step-dots" style="padding:14px 28px 0"><div class="step-dot active" style="width:28px"></div><div class="step-dot" style="width:24px"></div><div class="step-dot" style="width:24px"></div></div>
+  <div class="form-wrap">
+    <div class="form-section" style="align-items:center;text-align:center">
+      <div style="width:68px;height:68px;background:var(--brand-light);border-radius:22px;display:flex;align-items:center;justify-content:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--n900);letter-spacing:-0.5px;margin-bottom:8px">Введите номер телефона</div><div style="font-size:14px;font-weight:500;color:var(--n500)">Мы отправим SMS-код для восстановления доступа</div></div>
+      <div class="field-block" style="width:100%;text-align:left"><div class="fl">Номер телефона</div><input class="fi v" value="+7 (999) 123-45-67" readonly></div>
+      <button class="btn btn-blue" onclick="go('s-recovery')">Отправить код</button>
+      <div class="form-link" style="margin-top:4px">Вспомнили пароль? <b onclick="go('s-login')">Войти</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     RECOVERY STEP 3: NEW PASSWORD (новый)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-recovery-newpass">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-recovery')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Восстановление пароля</div></div>
+  <div class="step-dots" style="padding:14px 28px 0"><div class="step-dot done" style="width:24px"></div><div class="step-dot done" style="width:24px"></div><div class="step-dot active" style="width:28px"></div></div>
+  <div class="form-wrap">
+    <div class="form-section" style="align-items:center;text-align:center">
+      <div style="width:68px;height:68px;background:#DEF7EC;border-radius:22px;display:flex;align-items:center;justify-content:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--n900);letter-spacing:-0.5px;margin-bottom:8px">Новый пароль</div><div style="font-size:14px;font-weight:500;color:var(--n500)">Придумайте новый пароль для вашего аккаунта</div></div>
+      <div class="field-block" style="width:100%;text-align:left"><div class="fl">Новый пароль</div><div class="pw-wrap"><input class="fi" type="password" placeholder="Минимум 6 символов"><div class="pw-eye"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div></div></div>
+      <div class="field-block" style="width:100%;text-align:left"><div class="fl">Повторите пароль</div><div class="pw-wrap"><input class="fi" type="password" placeholder="Повторите пароль"><div class="pw-eye"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div></div></div>
+      <button class="btn btn-success" onclick="showToast('s-recovery-newpass','✅ Пароль сохранён! Войдите с новым паролем');setTimeout(()=>go('s-login'),1500)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Сохранить пароль</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ASSIGN TO STAGE (выбор этапа при назначении)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-assign-stage">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-member-found')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Выбор этапа</div></div>
+  <div style="padding:10px 16px;background:var(--brand-light);display:flex;align-items:center;gap:8px;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><div style="font-size:12px;font-weight:700;color:var(--brand)">Козлов Леонид будет назначен мастером на выбранный этап</div></div>
+  <div class="scroll" style="padding:12px 0 20px">
+    <div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Этапы проекта «Квартира на Ленина, 12»</div></div>
+    <div class="team-card" onclick="showToast('s-assign-stage','✓ Назначен на этап «Электрика»');setTimeout(()=>go('s-add-member'),1200)">
+      <div style="width:42px;height:42px;border-radius:var(--r12);background:linear-gradient(135deg,#FEF3C7,#FDE68A);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <div style="flex:1"><div class="team-name">Электрика</div><div class="team-role">Ожидает · 0%</div></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    <div class="team-card" onclick="showToast('s-assign-stage','✓ Назначен на этап «Сантехника»');setTimeout(()=>go('s-add-member'),1200)">
+      <div style="width:42px;height:42px;border-radius:var(--r12);background:linear-gradient(135deg,#DBEAFE,#BFDBFE);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4M12 16h.01"/></svg></div>
+      <div style="flex:1"><div class="team-name">Сантехника</div><div class="team-role">В работе · 35%</div></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    <div class="team-card" onclick="showToast('s-assign-stage','✓ Назначен на этап «Штукатурка»');setTimeout(()=>go('s-add-member'),1200)">
+      <div style="width:42px;height:42px;border-radius:var(--r12);background:linear-gradient(135deg,#D1FAE5,#A7F3D0);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8"/></svg></div>
+      <div style="flex:1"><div class="team-name">Штукатурка и стяжка</div><div class="team-role">Ожидает · 0%</div></div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ADD REPRESENTATIVE (flow отдельный от подрядчика)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-add-representative">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-contractors-empty')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Добавить представителя</div></div>
+  <div style="padding:10px 16px;background:var(--purple-bg);display:flex;align-items:center;gap:8px;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div style="font-size:12px;font-weight:700;color:var(--purple)">Представитель получит настраиваемые права</div></div>
+  <div class="search-bar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Номер телефона представителя"></div>
+  <div class="scroll" style="padding:12px 16px 20px">
+    <div class="hint-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>После добавления вы сможете настроить права представителя: просмотр бюджета, принятие работ и другие.</span></div>
+    <div style="margin-top:16px"><button class="btn btn-blue btn-sm" style="max-width:200px" onclick="go('s-rep-rights')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Найти</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     FAQ DETAIL (раскрытие ответа)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-faq-detail">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-help')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Помощь</div></div>
+  <div class="scroll" style="padding:16px">
+    <div style="font-size:20px;font-weight:800;color:var(--n900);letter-spacing:-0.5px;margin-bottom:16px">Как работает светофор?</div>
+    <div style="font-size:14px;font-weight:500;color:var(--n600);line-height:1.7;margin-bottom:20px">Светофорная система автоматически показывает состояние каждого проекта и этапа. Цвет определяется сравнением фактического прогресса с ожидаемым по времени.</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+      <div style="display:flex;gap:12px;padding:12px;background:#ECFDF5;border-radius:12px;border:1px solid #A7F3D0"><div style="width:36px;height:36px;border-radius:10px;background:#10B981;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div><div style="font-size:13px;font-weight:800;color:#065F46">Зелёный — по графику</div><div style="font-size:12px;font-weight:500;color:#065F46;margin-top:2px;line-height:1.5">Прогресс опережает или совпадает с планом. Всё идёт хорошо, вмешательство не требуется.</div></div></div>
+      <div style="display:flex;gap:12px;padding:12px;background:#FFFBEB;border-radius:12px;border:1px solid #FDE68A"><div style="width:36px;height:36px;border-radius:10px;background:#F59E0B;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div><div><div style="font-size:13px;font-weight:800;color:#92400E">Жёлтый — отставание</div><div style="font-size:12px;font-weight:500;color:#92400E;margin-top:2px;line-height:1.5">Прогресс отстаёт от плана, но дедлайн ещё не пройден. Пора обратить внимание и ускориться.</div></div></div>
+      <div style="display:flex;gap:12px;padding:12px;background:#FEF2F2;border-radius:12px;border:1px solid #FECACA"><div style="width:36px;height:36px;border-radius:10px;background:#DC2626;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></div><div><div style="font-size:13px;font-weight:800;color:#991B1B">Красный — просрочка</div><div style="font-size:12px;font-weight:500;color:#991B1B;margin-top:2px;line-height:1.5">Дедлайн пройден или отставание критическое. Требуется срочное вмешательство, связь с подрядчиком.</div></div></div>
+      <div style="display:flex;gap:12px;padding:12px;background:#EFF6FF;border-radius:12px;border:1px solid #BFDBFE"><div style="width:36px;height:36px;border-radius:10px;background:#4F6EF7;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div style="font-size:13px;font-weight:800;color:#1E40AF">Синий — ждёт действия</div><div style="font-size:12px;font-weight:500;color:#1E40AF;margin-top:2px;line-height:1.5">Есть открытое согласование, вопрос или запрос на материалы. Синий приоритетнее жёлтого.</div></div></div>
+    </div>
+    <div style="font-size:13px;font-weight:800;color:var(--n700);margin-bottom:8px">Формула расчёта</div>
+    <div style="font-size:13px;font-weight:500;color:var(--n600);line-height:1.6;padding:12px;background:var(--n50);border-radius:12px;border:1px solid var(--n200)">Прогресс = завершённые шаги / все шаги x 100%<br>Ожидаемый прогресс = (прошло дней / всего дней) x 100%<br><br>Если фактический &ge; ожидаемый &rarr; зелёный<br>Если фактический &lt; ожидаемый &rarr; жёлтый<br>Если дедлайн пройден &rarr; красный<br>Если есть открытое согласование &rarr; синий</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     LANGUAGE SELECT
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-language" style="background:transparent">
+  <div style="flex:1;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px)" onclick="go('s-profile')"></div>
+  <div style="background:var(--n0);border-radius:28px 28px 0 0;padding:14px 20px 44px">
+    <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-size:18px;font-weight:800;color:var(--n900);letter-spacing:-0.4px;margin-bottom:4px">Язык приложения</div>
+    <div style="font-size:13px;font-weight:500;color:var(--n400);margin-bottom:16px">Интерфейс переключится мгновенно</div>
+    <div class="prof-group" style="margin:0">
+      <div class="prof-row" style="cursor:pointer" onclick="go('s-profile')">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--n100);display:flex;align-items:center;justify-content:center;font-size:18px">🇷🇺</div>
+        <div style="flex:1"><div class="prof-row-label">Русский</div><div style="font-size:11px;font-weight:500;color:var(--n400)">Основной язык</div></div>
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      </div>
+      <div class="prof-row" style="cursor:pointer" onclick="go('s-language-en')">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--n100);display:flex;align-items:center;justify-content:center;font-size:18px">🇬🇧</div>
+        <div style="flex:1"><div class="prof-row-label">English</div><div style="font-size:11px;font-weight:500;color:var(--n400)">Interface language</div></div>
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--n300)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ЯЗЫК ПЕРЕКЛЮЧЁН НА EN ═══ -->
+<div class="screen" id="s-language-en" style="background:transparent">
+  <div style="flex:1;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px)" onclick="go('s-profile')"></div>
+  <div style="background:var(--n0);border-radius:28px 28px 0 0;padding:14px 20px 44px">
+    <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-size:18px;font-weight:800;color:var(--n900);letter-spacing:-0.4px;margin-bottom:4px">App language</div>
+    <div style="font-size:13px;font-weight:500;color:var(--n400);margin-bottom:16px">Interface will switch instantly</div>
+    <div class="prof-group" style="margin:0">
+      <div class="prof-row" style="cursor:pointer" onclick="go('s-language')">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--n100);display:flex;align-items:center;justify-content:center;font-size:18px">🇷🇺</div>
+        <div style="flex:1"><div class="prof-row-label">Русский</div><div style="font-size:11px;font-weight:500;color:var(--n400)">Russian</div></div>
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--n300)"></div>
+      </div>
+      <div class="prof-row" style="cursor:pointer" onclick="go('s-profile')">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--n100);display:flex;align-items:center;justify-content:center;font-size:18px">🇬🇧</div>
+        <div style="flex:1"><div class="prof-row-label">English</div><div style="font-size:11px;font-weight:500;color:var(--n400)">Interface language</div></div>
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ИНСТРУМЕНТЫ В ПРОФИЛЕ БРИГАДИРА (пробел ТЗ §7)
+     ═══════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════
+     МОИ ИНСТРУМЕНТЫ — ЛИЧНЫЙ КАТАЛОГ БРИГАДИРА
+     Кросс-проектный инвентарь. Группировка по складу.
+     В отличие от E3 (проектная выдача) — здесь нет
+     фильтра по человеку, т.к. бригадир видит ВСЕ
+     своё имущество и управляет каталогом.
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-profile-tools">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity="0.6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr">
+    <div class="back-btn" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="back-title">Мои инструменты</div>
+    <div style="padding:3px 8px;border-radius:100px;background:#D1FAE5;font-size:9px;font-weight:700;color:#065F46">Бригадир</div>
+    <div style="width:36px;height:36px;border-radius:12px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="go('s-tool-add')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
+  </div>
+  <!-- STATS BAR -->
+  <div style="display:flex;gap:6px;padding:12px 16px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="flex:1;padding:10px;background:var(--n50);border-radius:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:var(--n900)">6</div><div style="font-size:10px;font-weight:700;color:var(--n400);margin-top:2px">ВСЕГО</div></div>
+    <div style="flex:1;padding:10px;background:#FEF3C7;border-radius:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:#92400E">3</div><div style="font-size:10px;font-weight:700;color:#B45309;margin-top:2px">НА ПРОЕКТАХ</div></div>
+    <div style="flex:1;padding:10px;background:#D1FAE5;border-radius:12px;text-align:center"><div style="font-size:18px;font-weight:900;color:#065F46">3</div><div style="font-size:10px;font-weight:700;color:#059669;margin-top:2px">НА СКЛАДАХ</div></div>
+  </div>
+  <!-- SEARCH (по названию, С/Н, складу) -->
+  <div style="padding:8px 16px 0;flex-shrink:0">
+    <div class="search-bar" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Название, серийный №, склад..."></div>
+  </div>
+  <!-- FILTER by storage location (ключевое отличие от E3 — здесь по СКЛАДУ, а не по человеку) -->
+  <div style="display:flex;gap:6px;padding:8px 16px 4px;overflow-x:auto;flex-shrink:0">
+    <div style="padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:1.5px solid transparent;box-shadow:0 4px 12px rgba(79,110,247,0.25)">Все</div>
+    <div style="padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;border:1.5px solid var(--n200);color:var(--n600);background:var(--n0)">Склад гараж</div>
+    <div style="padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;border:1.5px solid var(--n200);color:var(--n600);background:var(--n0)">Склад на объекте</div>
+    <div style="padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;border:1.5px solid var(--n200);color:var(--n600);background:var(--n0)">На проектах</div>
+  </div>
+  <!-- Hint -->
+  <div style="padding:6px 16px 2px;display:flex;align-items:center;gap:6px;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div style="font-size:10px;font-weight:600;color:var(--n400)">Каталог переносится между проектами. Выдача — в разделе проекта → Инструмент.</div></div>
+
+  <div class="scroll" style="padding:8px 0 20px">
+    <!-- ── SECTION: Склад гараж ── -->
+    <div style="padding:8px 16px 6px"><div style="font-size:10px;font-weight:800;color:var(--n400);letter-spacing:.6px;text-transform:uppercase">Склад гараж · 2 позиции</div></div>
+    <div style="margin:0 16px 6px;padding:14px 16px;background:var(--n0);border-radius:16px;border:1px solid var(--n200);box-shadow:0 1px 3px rgba(13,18,41,0.06);display:flex;align-items:center;gap:12px;cursor:pointer" onclick="go('s-tool-detail')">
+      <div style="width:40px;height:40px;border-radius:12px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--n900)">Лазерный нивелир Bosch</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">С/Н: BL-4420 · На месте</div></div>
+      <div style="padding:3px 8px;border-radius:100px;background:#D1FAE5;font-size:10px;font-weight:700;color:#065F46">Свободен</div>
+    </div>
+    <div style="margin:0 16px 6px;padding:14px 16px;background:var(--n0);border-radius:16px;border:1px solid var(--n200);box-shadow:0 1px 3px rgba(13,18,41,0.06);display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--n900)">Шуруповёрт Makita DDF484</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">С/Н: MK-4841 · На месте</div></div>
+      <div style="padding:3px 8px;border-radius:100px;background:#D1FAE5;font-size:10px;font-weight:700;color:#065F46">Свободен</div>
+    </div>
+
+    <!-- ── SECTION: Склад на объекте ── -->
+    <div style="padding:12px 16px 6px"><div style="font-size:10px;font-weight:800;color:var(--n400);letter-spacing:.6px;text-transform:uppercase">Склад на объекте · 1 позиция</div></div>
+    <div style="margin:0 16px 6px;padding:14px 16px;background:var(--n0);border-radius:16px;border:1px solid var(--n200);box-shadow:0 1px 3px rgba(13,18,41,0.06);display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--n900)">Плиткорез Rubi TS-60</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">С/Н: RT-6001 · На месте</div></div>
+      <div style="padding:3px 8px;border-radius:100px;background:#D1FAE5;font-size:10px;font-weight:700;color:#065F46">Свободен</div>
+    </div>
+
+    <!-- ── SECTION: Выдано на проекты ── -->
+    <div style="padding:12px 16px 6px"><div style="font-size:10px;font-weight:800;color:var(--n400);letter-spacing:.6px;text-transform:uppercase">Выдано на проекты · 3 позиции</div></div>
+    <div style="margin:0 16px 6px;padding:14px 16px;background:var(--n0);border-radius:16px;border:1px solid var(--n200);box-shadow:0 1px 3px rgba(13,18,41,0.06);display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:#FEF3C7;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--n900)">Перфоратор Bosch GBH 2-26</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">С/Н: PB-2261 · <span style="color:var(--brand)">Ленина, 12</span> → Петров С.</div></div>
+      <div style="padding:3px 8px;border-radius:100px;background:#FEF3C7;font-size:10px;font-weight:700;color:#92400E">Выдан</div>
+    </div>
+    <div style="margin:0 16px 6px;padding:14px 16px;background:var(--n0);border-radius:16px;border:1px solid var(--n200);box-shadow:0 1px 3px rgba(13,18,41,0.06);display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:#FEF3C7;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--n900)">Уровень 1200 мм</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">С/Н: UV-1200 · <span style="color:var(--brand)">Дача</span> → Сидоров В.</div></div>
+      <div style="padding:3px 8px;border-radius:100px;background:#FEF3C7;font-size:10px;font-weight:700;color:#92400E">Выдан</div>
+    </div>
+    <div style="margin:0 16px 6px;padding:14px 16px;background:var(--n0);border-radius:16px;border:1px solid var(--n200);box-shadow:0 1px 3px rgba(13,18,41,0.06);display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:#FEF3C7;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--n900)">Штроборез Makita</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">С/Н: MK-3301 · <span style="color:var(--brand)">Ленина, 12</span> → Петров С.</div></div>
+      <div style="padding:3px 8px;border-radius:100px;background:#FEF3C7;font-size:10px;font-weight:700;color:#92400E">Выдан</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ДОБАВИТЬ ИНСТРУМЕНТ В КАТАЛОГ
+     Профиль → пополнение личного списка
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-tool-add">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile-tools')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Добавить инструмент</div></div>
+  <div class="form-wrap"><div class="form-section">
+    <!-- Название -->
+    <div class="field-block"><div class="fl">Название *</div><input class="fi" placeholder="Например: Перфоратор Bosch GBH 2-26"></div>
+    <!-- Серийный номер -->
+    <div class="field-block"><div class="fl">Серийный номер</div><input class="fi" placeholder="Например: PB-2261"></div>
+    <!-- Место хранения (ключевое поле из ТЗ) -->
+    <div class="field-block">
+      <div class="fl">На каком складе хранится *</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;border:2px solid var(--brand);border-radius:var(--r12);background:var(--brand-light);cursor:pointer">
+          <div style="width:20px;height:20px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/></svg></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--n900)">Склад гараж</div><div style="font-size:11px;font-weight:500;color:var(--n500);margin-top:2px">Основное хранение</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;border:2px solid var(--n200);border-radius:var(--r12);background:var(--n0);cursor:pointer">
+          <div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--n300)"></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--n900)">Склад на объекте</div><div style="font-size:11px;font-weight:500;color:var(--n500);margin-top:2px">Ленина, 12</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;border:2px solid var(--n200);border-radius:var(--r12);background:var(--n0);cursor:pointer">
+          <div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--n300)"></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--n900)">Другое</div><div style="font-size:11px;font-weight:500;color:var(--n500);margin-top:2px">Указать вручную</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Количество -->
+    <div class="field-block"><div class="fl">Количество</div><input class="fi" placeholder="1" value="1" style="width:100px"></div>
+    <!-- Описание -->
+    <div class="field-block"><div class="fl">Описание (необязательно)</div><input class="fi" placeholder="Характеристики, состояние..."></div>
+    <button class="btn btn-blue" onclick="showToast('s-tool-add','✅ Инструмент добавлен в каталог');setTimeout(()=>go('s-profile-tools'),1200)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Добавить в каталог</button>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     КАРТОЧКА ИНСТРУМЕНТА — КАТАЛОЖНЫЙ ВИД
+     Профиль: фокус на владении, местонахождении,
+     истории по ВСЕМ проектам (в отличие от E3,
+     где фокус на текущем проекте и мастерах)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-tool-detail">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile-tools')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Инструмент</div><div style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div></div>
+  <div class="scroll" style="padding:16px">
+    <!-- Hero -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div style="width:56px;height:56px;border-radius:16px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--n900);letter-spacing:-0.4px">Лазерный нивелир Bosch</div>
+        <div style="font-size:13px;font-weight:600;color:#059669;margin-top:4px;display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#10B981"></div>Свободен · Склад гараж</div>
+      </div>
+    </div>
+    <!-- Details -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Серийный номер</span><span style="font-size:12px;font-weight:700;color:var(--n800)">BL-4420</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Количество</span><span style="font-size:12px;font-weight:700;color:var(--n800)">1 шт.</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Место хранения</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Склад гараж</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Текущий статус</span><span style="font-size:12px;font-weight:700;color:#059669">Свободен</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Добавлен</span><span style="font-size:12px;font-weight:700;color:var(--n800)">10.01.2025</span></div>
+    </div>
+    <!-- Cross-project history — ключевое отличие от E3 -->
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px">История по всем проектам</div>
+    <div style="display:flex;flex-direction:column;gap:0;margin-bottom:16px">
+      <div style="display:flex;gap:12px;padding:10px 0">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0"><div style="width:10px;height:10px;border-radius:50%;background:var(--green-mid);border:2px solid var(--green-light)"></div><div style="width:2px;flex:1;background:var(--n200)"></div></div>
+        <div style="padding-bottom:6px"><div style="font-size:13px;font-weight:700;color:var(--n800)">Возвращён на склад</div><div style="font-size:11px;font-weight:600;color:var(--n400);margin-top:2px">05.02.2025 · Козлов Л. · <span style="color:var(--brand)">Ленина, 12</span></div></div>
+      </div>
+      <div style="display:flex;gap:12px;padding:10px 0">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0"><div style="width:10px;height:10px;border-radius:50%;background:#F59E0B;border:2px solid #FEF3C7"></div><div style="width:2px;flex:1;background:var(--n200)"></div></div>
+        <div style="padding-bottom:6px"><div style="font-size:13px;font-weight:700;color:var(--n800)">Выдан Козлову Л.</div><div style="font-size:11px;font-weight:600;color:var(--n400);margin-top:2px">15.01.2025 · <span style="color:var(--brand)">Ленина, 12</span> · Электрика</div></div>
+      </div>
+      <div style="display:flex;gap:12px;padding:10px 0">
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0"><div style="width:10px;height:10px;border-radius:50%;background:var(--brand);border:2px solid var(--brand-light)"></div></div>
+        <div><div style="font-size:13px;font-weight:700;color:var(--n800)">Добавлен в каталог</div><div style="font-size:11px;font-weight:600;color:var(--n400);margin-top:2px">10.01.2025</div></div>
+      </div>
+    </div>
+    <!-- Info block -->
+    <div style="padding:12px 14px;background:var(--brand-light);border-radius:var(--r12);margin-bottom:16px;display:flex;align-items:flex-start;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="margin-top:1px;flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div style="font-size:11px;font-weight:600;color:var(--brand-dark);line-height:1.5">Чтобы выдать инструмент мастеру, перейдите в проект → Инструмент → «+»</div>
+    </div>
+    <!-- Actions -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-ghost btn-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Редактировать</button>
+      <button class="btn btn-danger btn-sm" onclick="showToast('s-tool-detail','🗑 Инструмент удалён');setTimeout(()=>go('s-profile-tools'),1200)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Удалить из каталога</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     НАСТРОЙКИ PUSH-УВЕДОМЛЕНИЙ (пробел ТЗ §13.3)
+     ═══════════════════════════════════════════════ -->
+<div class="screen" id="s-notif-settings">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity="0.4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity="0.6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-profile')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Уведомления</div></div>
+  <div class="scroll" style="padding-bottom:20px">
+    <div style="padding:16px 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Критичные (нельзя отключить)</div></div>
+    <div class="prof-group">
+      <div class="toggle-row"><div><div class="toggle-label">Просрочка этапа</div><div class="toggle-sub">Дедлайн нарушен</div></div><div class="toggle on" style="pointer-events:none;opacity:.6"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Спор по выплате</div><div class="toggle-sub">Открыт спор</div></div><div class="toggle on" style="pointer-events:none;opacity:.6"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Дедлайн нарушен</div><div class="toggle-sub">Проект в красной зоне</div></div><div class="toggle on" style="pointer-events:none;opacity:.6"><div class="toggle-knob"></div></div></div>
+    </div>
+    <div style="padding:16px 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Важные</div></div>
+    <div class="prof-group">
+      <div class="toggle-row"><div><div class="toggle-label">Согласования</div><div class="toggle-sub">Новые запросы на одобрение</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Выплаты</div><div class="toggle-sub">Создание и подтверждение</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Новые участники</div><div class="toggle-sub">Добавление в проект</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>
+    <div style="padding:16px 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase">Информационные</div></div>
+    <div class="prof-group">
+      <div class="toggle-row"><div><div class="toggle-label">Выполнение шагов</div><div class="toggle-sub">Каждый завершённый шаг</div></div><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Загрузка документов</div><div class="toggle-sub">Новые файлы в проекте</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Заметки</div><div class="toggle-sub">Новые заметки «Мне»</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="toggle-row"><div><div class="toggle-label">Сообщения в чате</div><div class="toggle-sub">Новые сообщения</div></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ ПУСТОЕ: ПРЕДСТАВИТЕЛЬ БЕЗ ПРОЕКТОВ ═══ -->
+<div class="screen" id="s-empty-representative">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="hdr-main"><div class="hdr-main-title">Мои объекты</div><div style="display:flex;gap:8px"><div class="hdr-icon" onclick="go('s-help')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div></div></div>
+  <div style="display:flex;align-items:center;gap:6px;padding:0 16px 12px"><div style="padding:4px 12px;background:var(--purple-bg);border-radius:100px;font-size:11px;font-weight:800;color:var(--purple)">Представитель</div></div>
+  <div class="empty-center">
+    <div class="empty-icon-wrap" style="background:var(--purple-bg)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+    <div class="empty-title">Нет назначенных проектов</div>
+    <div class="empty-sub">Вы зарегистрированы как представитель. Попросите заказчика или бригадира добавить вас в проект через раздел «Команда».</div>
+    <div style="margin-top:12px;padding:12px 16px;background:var(--n50);border-radius:12px;border:1px solid var(--n200);max-width:280px">
+      <div style="font-size:11px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Как это работает</div>
+      <div style="font-size:12px;font-weight:500;color:var(--n600);line-height:1.6">Заказчик или бригадир добавляет вас по номеру телефона и настраивает права: просмотр бюджета, приёмка работ, закупка материалов.</div>
+    </div>
+  </div>
+  <div class="bnav">
+    <div class="bnav-item active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div class="bnav-label">Проекты</div><div class="bnav-indicator"></div></div>
+    <div class="bnav-item" onclick="go('s-contractors-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div class="bnav-label">Команда</div></div>
+    <div class="bnav-item" onclick="go('s-chats-empty')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div class="bnav-label">Чаты</div></div>
+    <div class="bnav-item" onclick="go('s-profile')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg><div class="bnav-label">Профиль</div></div>
+  </div>
+</div>
+
+<!-- ═══ НАЗНАЧЕНИЕ НА ПРОЕКТ (бригадир) ═══ -->
+<div class="screen" id="s-add-contractor">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('s-member-found')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n700)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Тип назначения</div></div>
+  <div style="padding:10px 16px;background:var(--brand-light);display:flex;align-items:center;gap:8px;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div style="font-size:12px;font-weight:700;color:var(--brand)">Козлов Леонид · +7 (916) 555-44-33</div></div>
+  <div class="scroll" style="padding:16px">
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">Выберите тип назначения</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="padding:16px;border:1.5px solid var(--brand);background:var(--brand-light);border-radius:16px;cursor:pointer" onclick="go('s-add-member')">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+          <div><div style="font-size:15px;font-weight:800;color:var(--n900)">На проект целиком</div><div style="font-size:12px;font-weight:600;color:var(--brand);margin-top:2px">Роль: Бригадир</div></div>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--n600);line-height:1.5">Получит доступ ко всем этапам проекта. Сможет добавлять мастеров, управлять шагами и получать выплаты.</div>
+      </div>
+      <div style="padding:16px;border:1.5px solid var(--n200);border-radius:16px;cursor:pointer" onclick="go('s-assign-stage')">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="width:42px;height:42px;border-radius:12px;background:var(--n100);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <div><div style="font-size:15px;font-weight:800;color:var(--n900)">На конкретный этап</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">Роль: Мастер</div></div>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--n600);line-height:1.5">Получит доступ только к выбранному этапу. Не видит другие этапы и общий бюджет.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PHOTO PICKER (bottom sheet) ═══ -->
+<div class="screen" id="s-photo-picker" style="background:transparent">
+  <div style="flex:1;background:rgba(0,0,0,0.45)" onclick="go('s-edit-profile')"></div>
+  <div style="background:var(--n0);border-radius:28px 28px 0 0;padding:14px 20px 44px">
+    <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-size:18px;font-weight:800;color:var(--n900);margin-bottom:4px">Фото профиля</div>
+    <div style="font-size:13px;font-weight:500;color:var(--n500);margin-bottom:16px">Выберите источник фотографии</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--n200);cursor:pointer" onclick="go('s-edit-profile')">
+        <div style="width:44px;height:44px;border-radius:14px;background:var(--brand-light);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <div><div style="font-size:15px;font-weight:700;color:var(--n900)">Сделать фото</div><div style="font-size:12px;font-weight:500;color:var(--n400);margin-top:2px">Открыть камеру</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--n200);cursor:pointer" onclick="go('s-edit-profile')">
+        <div style="width:44px;height:44px;border-radius:14px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+        <div><div style="font-size:15px;font-weight:700;color:var(--n900)">Из галереи</div><div style="font-size:12px;font-weight:500;color:var(--n400);margin-top:2px">Выбрать существующее фото</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1px solid var(--n200);cursor:pointer" onclick="go('s-edit-profile')">
+        <div style="width:44px;height:44px;border-radius:14px;background:var(--red-bg);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></div>
+        <div><div style="font-size:15px;font-weight:700;color:var(--red-dot)">Удалить фото</div><div style="font-size:12px;font-weight:500;color:var(--n400);margin-top:2px">Вернуть инициалы</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROLE SWITCHED (подтверждение) ═══ -->
+<div class="screen" id="s-role-switched">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="empty-center">
+    <div style="width:72px;height:72px;border-radius:22px;background:linear-gradient(135deg,#34D399,#059669);display:flex;align-items:center;justify-content:center;margin-bottom:16px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+    <div style="font-size:18px;font-weight:800;color:var(--n900);margin-bottom:4px">Роль переключена</div>
+    <div style="font-size:14px;font-weight:600;color:var(--n500);margin-bottom:4px">Вы теперь: <span style="color:var(--green);font-weight:800">Подрядчик</span></div>
+    <div style="font-size:13px;font-weight:500;color:var(--n400);line-height:1.6;max-width:260px">Проекты и данные обновлены. Вы видите проекты, назначенные вам как подрядчику.</div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;width:100%;max-width:260px">
+      <button class="btn btn-blue btn-sm" onclick="go('s-empty-contractor')">К проектам</button>
+      <button class="btn btn-ghost btn-sm" onclick="go('s-roles')">Назад к ролям</button>
+    </div>
+  </div>
+</div>
+</div><!-- /phone -->
+
+<!-- ═══════════════════════════════════════════════
+     DEMO NAVIGATION (не часть UI приложения)
+     ═══════════════════════════════════════════════ -->
+<div class="demo-nav">
+  <div class="demo-nav-header">
+    <div class="demo-nav-title">Навигация по экранам</div>
+    <div class="demo-nav-subtitle">Кластер A · Вход и идентификация · 30 экранов</div>
+  </div>
+
+  <div class="demo-nav-section">
+    <div class="demo-section-label">A1. Авторизация / роли</div>
+    <div class="demo-chips">
+      <button class="demo-chip" onclick="go('s-welcome')" data-screen="s-welcome">
+        <span class="demo-dot" style="background:linear-gradient(135deg,#1E3A5F,#1D4ED8)"></span>Welcome
+      </button>
+      <button class="demo-chip" onclick="go('s-reg')" data-screen="s-reg">
+        <span class="demo-dot" style="background:var(--brand)"></span>Регистрация
+      </button>
+      <button class="demo-chip" onclick="go('s-login')" data-screen="s-login">
+        <span class="demo-dot" style="background:var(--brand)"></span>Вход
+      </button>
+      <button class="demo-chip demo-chip--error" onclick="go('s-login-error')" data-screen="s-login-error">
+        <span class="demo-dot" style="background:var(--red-dot)"></span>Ошибка входа
+      </button>
+      <button class="demo-chip demo-chip--neutral" onclick="go('s-login-loading')" data-screen="s-login-loading">
+        <span class="demo-dot" style="background:var(--n400)"></span>Loading
+      </button>
+      <button class="demo-chip" onclick="go('s-recovery-phone')" data-screen="s-recovery-phone">
+        <span class="demo-dot" style="background:var(--yellow-dot)"></span>Восстановл. Шаг 1
+      </button>
+      <button class="demo-chip" onclick="go('s-recovery')" data-screen="s-recovery">
+        <span class="demo-dot" style="background:var(--yellow-dot)"></span>Восстановл. Шаг 2
+      </button>
+      <button class="demo-chip" onclick="go('s-recovery-newpass')" data-screen="s-recovery-newpass">
+        <span class="demo-dot" style="background:#059669"></span>Новый пароль (Шаг 3)
+      </button>
+    </div>
+  </div>
+
+  <div class="demo-nav-section">
+    <div class="demo-section-label">Профиль и роли</div>
+    <div class="demo-chips">
+      <button class="demo-chip demo-chip--accent" onclick="go('s-profile')" data-screen="s-profile">
+        <span class="demo-dot" style="background:var(--brand)"></span>Профиль
+      </button>
+      <button class="demo-chip" onclick="go('s-edit-profile')" data-screen="s-edit-profile">
+        <span class="demo-dot" style="background:var(--brand)"></span>Данные профиля
+      </button>
+      <button class="demo-chip" onclick="go('s-roles')" data-screen="s-roles">
+        <span class="demo-dot" style="background:#7C3AED"></span>Мои роли
+      </button>
+      <button class="demo-chip" onclick="go('s-add-role')" data-screen="s-add-role">
+        <span class="demo-dot" style="background:#7C3AED"></span>Добавить роль
+      </button>
+      <button class="demo-chip" onclick="go('s-notif-settings')" data-screen="s-notif-settings">
+        <span class="demo-dot" style="background:var(--yellow-dot)"></span>Уведомления
+      </button>
+      <button class="demo-chip" onclick="go('s-profile-tools')" data-screen="s-profile-tools">
+        <span class="demo-dot" style="background:#059669"></span>Мои инструменты
+      </button>
+      <button class="demo-chip" onclick="go('s-tool-add')" data-screen="s-tool-add">
+        <span class="demo-dot" style="background:#059669"></span>Добавить инструмент
+      </button>
+      <button class="demo-chip" onclick="go('s-tool-detail')" data-screen="s-tool-detail">
+        <span class="demo-dot" style="background:#059669"></span>Карточка инструмента
+      </button>
+      <button class="demo-chip" onclick="go('s-help')" data-screen="s-help">
+        <span class="demo-dot" style="background:#059669"></span>Помощь и FAQ
+      </button>
+      <button class="demo-chip" onclick="go('s-faq-detail')" data-screen="s-faq-detail">
+        <span class="demo-dot" style="background:#059669"></span>Статья FAQ
+      </button>
+      <button class="demo-chip" onclick="go('s-feedback')" data-screen="s-feedback">
+        <span class="demo-dot" style="background:var(--brand)"></span>Обратная связь
+      </button>
+      <button class="demo-chip" onclick="go('s-language')" data-screen="s-language">
+        <span class="demo-dot" style="background:var(--n400)"></span>Язык (RU)
+      </button>
+      <button class="demo-chip" onclick="go('s-language-en')" data-screen="s-language-en">
+        <span class="demo-dot" style="background:var(--brand)"></span>Язык (EN)
+      </button>
+      <button class="demo-chip demo-chip--error" onclick="go('s-delete-confirm')" data-screen="s-delete-confirm"><span class="demo-dot" style="background:var(--red-dot)"></span>Удаление</button>
+      <button class="demo-chip" onclick="go('s-photo-picker')" data-screen="s-photo-picker"><span class="demo-dot" style="background:var(--brand)"></span>Фото профиля</button>
+      <button class="demo-chip" onclick="go('s-role-switched')" data-screen="s-role-switched"><span class="demo-dot" style="background:#059669"></span>Роль переключена</button>
+    </div>
+  </div>
+
+  <div class="demo-nav-section">
+    <div class="demo-section-label">A2. Добавление участников</div>
+    <div class="demo-chips">
+      <button class="demo-chip" onclick="go('s-add-member')" data-screen="s-add-member">
+        <span class="demo-dot" style="background:#059669"></span>Поиск подрядчика
+      </button>
+      <button class="demo-chip" onclick="go('s-member-found')" data-screen="s-member-found">
+        <span class="demo-dot" style="background:#059669"></span>Найден + назначение
+      </button>
+      <button class="demo-chip" onclick="go('s-assign-stage')" data-screen="s-assign-stage">
+        <span class="demo-dot" style="background:#059669"></span>Выбор этапа
+      </button>
+      <button class="demo-chip demo-chip--warn" onclick="go('s-member-not-found')" data-screen="s-member-not-found">
+        <span class="demo-dot" style="background:var(--yellow-dot)"></span>Не найден
+      </button>
+      <button class="demo-chip" onclick="go('s-add-representative')" data-screen="s-add-representative">
+        <span class="demo-dot" style="background:#7C3AED"></span>Добавить представителя
+      </button>
+      <button class="demo-chip" onclick="go('s-rep-rights')" data-screen="s-rep-rights">
+        <span class="demo-dot" style="background:#7C3AED"></span>Права представителя
+      </button>
+    </div>
+  </div>
+
+  <div class="demo-nav-section">
+    <div class="demo-section-label">Пустые состояния и ошибки</div>
+    <div class="demo-chips">
+      <button class="demo-chip demo-chip--neutral" onclick="go('s-empty-customer')" data-screen="s-empty-customer">
+        <span class="demo-dot" style="background:var(--brand)"></span>Заказчик (нет проектов)
+      </button>
+      <button class="demo-chip demo-chip--neutral" onclick="go('s-empty-rep')" data-screen="s-empty-rep">
+        <span class="demo-dot" style="background:var(--n400)"></span>Представитель (пусто)
+      </button>
+      <button class="demo-chip demo-chip--neutral" onclick="go('s-empty-contractor')" data-screen="s-empty-contractor">
+        <span class="demo-dot" style="background:var(--n400)"></span>Подрядчик (пусто)
+      </button>
+      <button class="demo-chip demo-chip--neutral" onclick="go('s-contractors-empty')" data-screen="s-contractors-empty">
+        <span class="demo-dot" style="background:var(--n400)"></span>Команда (пусто)
+      </button>
+      <button class="demo-chip demo-chip--neutral" onclick="go('s-chats-empty')" data-screen="s-chats-empty">
+        <span class="demo-dot" style="background:var(--n400)"></span>Чаты (пусто)
+      </button>
+      <button class="demo-chip demo-chip--error" onclick="go('s-network-error')" data-screen="s-network-error">
+        <span class="demo-dot" style="background:var(--red-dot)"></span>Ошибка сети
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const t=document.getElementById(id);
+  if(t)t.classList.add('active');
+  document.querySelectorAll('.demo-chip').forEach(c=>c.classList.remove('active'));
+  const chip=document.querySelector('.demo-chip[data-screen="'+id+'"]');
+  if(chip)chip.classList.add('active');
+}
+function selectRole(el){
+  el.closest('.roles-grid').querySelectorAll('.role-card').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+}
+function showToast(screenId, msg){
+  const screen=document.getElementById(screenId);
+  if(!screen)return;
+  let existing=screen.querySelector('.toast');
+  if(existing)existing.remove();
+  const t=document.createElement('div');
+  t.className='toast toast-success';
+  t.textContent=msg;
+  screen.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+function switchRole(roleName, targetScreen){
+  showToast('s-roles','✓ Роль переключена: '+roleName);
+  setTimeout(()=>go(targetScreen),1200);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const chip=document.querySelector('.demo-chip[data-screen="s-welcome"]');
+  if(chip)chip.classList.add('active');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+cd "$(git rev-parse --show-toplevel)/backend" || exit 1
+npx lint-staged

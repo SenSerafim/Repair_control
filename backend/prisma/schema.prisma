@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemRole {
+  customer
+  representative
+  contractor
+  master
+  admin
+}
+
+enum DevicePlatform {
+  ios
+  android
+}
+
+enum ProjectStatus {
+  active
+  archived
+}
+
+enum StageStatus {
+  pending
+  active
+  paused
+  review
+  done
+  rejected
+}
+
+enum PauseReason {
+  materials
+  approval
+  force_majeure
+  other
+}
+
+enum TemplateKind {
+  platform
+  user
+}
+
+enum MembershipRole {
+  customer
+  representative
+  foreman
+  master
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  cancelled
+  expired
+}
+
+enum FeedEventKind {
+  project_created
+  project_archived
+  project_restored
+  project_copied
+  membership_added
+  membership_removed
+  stage_created
+  stage_started
+  stage_paused
+  stage_resumed
+  stage_sent_to_review
+  stage_deadline_recalculated
+  stage_deadline_exceeds_project
+  stages_reordered
+}
+
+// ---------- Users / Auth ----------
+
+model User {
+  id            String   @id @default(cuid())
+  phone         String   @unique
+  email         String?  @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  language      String   @default("ru")
+  activeRole    SystemRole @default(customer)
+  lastSeenAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  roles         UserRole[]
+  sessions      Session[]
+  devices       DeviceToken[]
+  recoveryAttempts RecoveryAttempt[]
+  loginAttempts LoginAttempt[]
+
+  ownedProjects Project[]        @relation("ProjectOwner")
+  memberships   Membership[]
+  invitationsSent ProjectInvitation[] @relation("InvitationInvitedBy")
+}
+
+model UserRole {
+  userId    String
+  role      SystemRole
+  isActive  Boolean    @default(true)
+  addedAt   DateTime   @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  userId          String
+  refreshTokenHash String
+  deviceId        String
+  userAgent       String?
+  ipFingerprint   String
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DeviceToken {
+  id         String         @id @default(cuid())
+  userId     String
+  platform   DevicePlatform
+  token      String         @unique
+  lastSeenAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  userId     String?
+  phone      String
+  ip         String
+  success    Boolean
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone, createdAt])
+  @@index([ip, createdAt])
+}
+
+model RecoveryAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  code       String
+  attempts   Int      @default(0)
+  isUsed     Boolean  @default(false)
+  blockedUntil DateTime?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ---------- Projects ----------
+
+model Project {
+  id               String        @id @default(cuid())
+  ownerId          String
+  title            String
+  address          String?
+  plannedStart     DateTime?
+  plannedEnd       DateTime?
+  status           ProjectStatus @default(active)
+  workBudget       BigInt        @default(0) // minor units (копейки)
+  materialsBudget  BigInt        @default(0)
+  progressCache    Int           @default(0)
+  semaphoreCache   String        @default("green")
+  archivedAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  owner            User          @relation("ProjectOwner", fields: [ownerId], references: [id])
+  memberships      Membership[]
+  invitations      ProjectInvitation[]
+  stages           Stage[]
+  feedEvents       FeedEvent[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Membership {
+  id            String         @id @default(cuid())
+  projectId     String
+  userId        String
+  role          MembershipRole
+  invitedById   String?
+  stageIds      String[]       @default([])
+  permissions   Json           @default("{}")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId, role])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ProjectInvitation {
+  id           String           @id @default(cuid())
+  projectId    String
+  phone        String
+  role         MembershipRole
+  invitedById  String
+  status       InvitationStatus @default(pending)
+  token        String           @unique
+  createdAt    DateTime         @default(now())
+  expiresAt    DateTime
+
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy    User             @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
+
+  @@index([projectId])
+  @@index([phone])
+}
+
+// ---------- Stages ----------
+
+model Stage {
+  id              String      @id @default(cuid())
+  projectId       String
+  title           String
+  orderIndex      Int
+  status          StageStatus @default(pending)
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
+  originalEnd     DateTime?
+  pauseDurationMs BigInt      @default(0)
+  workBudget      BigInt      @default(0)
+  materialsBudget BigInt      @default(0)
+  foremanIds      String[]    @default([])
+  progressCache   Int         @default(0)
+  startedAt       DateTime?
+  sentToReviewAt  DateTime?
+  doneAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pauses          Pause[]
+
+  @@index([projectId, orderIndex])
+  @@index([status])
+}
+
+model Pause {
+  id         String      @id @default(cuid())
+  stageId    String
+  reason     PauseReason
+  comment    String?
+  startedAt  DateTime    @default(now())
+  endedAt    DateTime?
+  startedBy  String
+
+  stage      Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+}
+
+// ---------- Templates ----------
+
+model Template {
+  id          String       @id @default(cuid())
+  kind        TemplateKind
+  authorId    String?
+  title       String
+  description String?
+  payload     Json         @default("{}")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  steps       TemplateStep[]
+
+  @@index([kind])
+}
+
+model TemplateStep {
+  id         String   @id @default(cuid())
+  templateId String
+  title      String
+  orderIndex Int
+  price      BigInt?
+
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, orderIndex])
+}
+
+// ---------- Feed (outbox) ----------
+
+model FeedEvent {
+  id         String        @id @default(cuid())
+  projectId  String?
+  kind       FeedEventKind
+  actorId    String?
+  payload    Json          @default("{}")
+  createdAt  DateTime      @default(now())
+
+  project    Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([kind, createdAt])
+}

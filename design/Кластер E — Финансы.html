@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Контроль ремонта — Кластер E: Финансы и снабжение</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#4F6EF7;--brand-dark:#3A56D4;--brand-light:#EEF2FF;--brand-mid:#6B83F5;--green:#059669;--green-light:#D1FAE5;--green-mid:#10B981;--yellow:#92400E;--yellow-bg:#FEF3C7;--yellow-dot:#F59E0B;--red:#991B1B;--red-bg:#FEE2E2;--red-dot:#DC2626;--purple:#6D28D9;--purple-bg:#EDE9FE;--n0:#FFFFFF;--n50:#F8FAFF;--n100:#F1F4FD;--n200:#E4E9F7;--n300:#C9D2EE;--n400:#8E9BBF;--n500:#5F6E99;--n600:#3D4B70;--n700:#2A3357;--n800:#1A2240;--n900:#0D1229;--r8:8px;--r12:12px;--r16:16px;--r20:20px;--r24:24px;--sh1:0 1px 3px rgba(13,18,41,0.06),0 4px 16px rgba(79,110,247,0.07);--sh2:0 2px 8px rgba(13,18,41,0.08),0 8px 24px rgba(79,110,247,0.10)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+body{font-family:'Manrope',sans-serif;background:linear-gradient(145deg,#0D1229,#1A2240,#0F1A3A);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 40px;gap:28px}
+.phone{width:390px;height:844px;background:var(--n50);border-radius:52px;overflow:hidden;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,0.12),0 0 0 11px #10163A,0 0 0 13px rgba(79,110,247,0.25),0 50px 100px rgba(0,0,0,0.75);flex-shrink:0}
+.screen{display:none;flex-direction:column;height:100%;position:absolute;inset:0;background:var(--n50);overflow:hidden;max-width:390px}
+.screen.active{display:flex}
+.sb{display:flex;justify-content:space-between;align-items:center;padding:14px 28px 8px;font-size:15px;font-weight:700;flex-shrink:0}
+.sb.light{background:var(--n0);color:var(--n900)}
+.sb-icons{display:flex;align-items:center;gap:6px}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0}
+.scroll::-webkit-scrollbar{display:none}
+.btn{width:100%;height:54px;border:none;cursor:pointer;font-family:'Manrope',sans-serif;font-size:15px;font-weight:700;border-radius:var(--r16);display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s}
+.btn:active{transform:scale(0.97)}
+.btn-blue{background:linear-gradient(135deg,#5B7EF8,#3A56D4);color:#fff;box-shadow:0 6px 20px rgba(79,110,247,0.35)}
+.btn-ghost{background:transparent;color:var(--brand);border:1.5px solid var(--n200)}
+.btn-success{background:#057A55;color:#fff}
+.btn-danger{background:var(--red-bg);color:var(--red-dot);border:1.5px solid #FECACA}
+.btn-sm{height:40px;font-size:13px;border-radius:var(--r12)}
+.back-hdr{display:flex;align-items:center;gap:8px;padding:16px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0}
+.back-btn{width:36px;height:36px;background:var(--n0);border:1px solid var(--n200);border-radius:var(--r12);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:var(--sh1)}
+.chev{fill:none;stroke:var(--n700);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.back-title{flex:1;font-size:17px;font-weight:800;color:var(--n900);letter-spacing:-0.4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;padding:0 20px;background:var(--n0)}
+.tab{flex:1;padding:12px 0 14px;font-size:14px;font-weight:700;color:var(--n400);cursor:pointer;text-align:center;border-bottom:2.5px solid transparent;transition:all .15s}
+.tab.on{color:var(--brand);border-bottom-color:var(--brand)}
+.tab-badge{display:inline-flex;min-width:18px;height:18px;padding:0 5px;background:var(--brand-light);color:var(--brand);border-radius:50%;font-size:10px;font-weight:800;margin-left:5px;align-items:center;justify-content:center}
+.empty-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;gap:10px}
+.empty-icon-wrap{width:72px;height:72px;background:var(--n100);border-radius:var(--r24);display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.empty-title{font-size:18px;font-weight:800;color:var(--n700)}
+.empty-sub{font-size:14px;font-weight:500;color:var(--n400);line-height:1.6;max-width:280px}
+.action-bar{background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);border-top:1px solid var(--n200);padding:12px 16px 36px;display:flex;gap:10px;flex-shrink:0}
+.sheet-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:100;display:flex;align-items:flex-end}
+.sheet{background:var(--n0);border-radius:28px 28px 0 0;width:100%;padding:14px 20px 44px}
+.sheet-handle{width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px}
+.skel{background:linear-gradient(90deg,var(--n100) 25%,var(--n200) 50%,var(--n100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--r8)}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ═══ BUDGET ═══ */
+.budget-hero{padding:20px;background:var(--n0);border-bottom:1px solid var(--n200)}
+.bh-total{font-size:28px;font-weight:900;color:var(--n900);letter-spacing:-1px}
+.bh-sub{font-size:12px;font-weight:600;color:var(--n400);margin-top:2px}
+.bh-row{display:flex;gap:10px;margin-top:14px}
+.bh-card{flex:1;padding:12px;border-radius:var(--r12);border:1px solid var(--n200)}
+.bh-card-label{font-size:10px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.bh-card-val{font-size:16px;font-weight:900;color:var(--n900);letter-spacing:-.5px}
+.bh-card-bar{height:4px;background:var(--n100);border-radius:2px;margin-top:6px;overflow:hidden}
+.bh-card-fill{height:100%;border-radius:2px}
+
+/* ═══ PAYMENT ROWS ═══ */
+.pay-row{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 16px 8px;background:var(--n0);border-radius:var(--r16);border:1px solid var(--n200);cursor:pointer;box-shadow:var(--sh1)}
+.pay-row:active{transform:scale(0.985)}
+.pay-icon{width:40px;height:40px;border-radius:var(--r12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pay-body{flex:1;min-width:0}
+.pay-name{font-size:14px;font-weight:700;color:var(--n800)}
+.pay-meta{font-size:11px;font-weight:600;color:var(--n400);margin-top:2px}
+.pay-amount{font-size:14px;font-weight:900;color:var(--n900);letter-spacing:-.3px;text-align:right}
+.pay-status{font-size:10px;font-weight:700;text-align:right;margin-top:2px}
+
+/* ═══ MATERIALS ═══ */
+.mat-card{margin:0 16px 10px;background:var(--n0);border-radius:var(--r16);border:1px solid var(--n200);overflow:hidden;cursor:pointer;box-shadow:var(--sh1)}
+.mat-card:active{transform:scale(0.985)}
+.mat-top{padding:14px;display:flex;gap:12px}
+.mat-icon{width:44px;height:44px;border-radius:var(--r12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mat-body{flex:1;min-width:0}
+.mat-title{font-size:14px;font-weight:800;color:var(--n900);margin-bottom:3px}
+.mat-sub{font-size:11px;font-weight:600;color:var(--n400)}
+.mat-bottom{padding:8px 14px 10px;border-top:1px solid var(--n100);display:flex;align-items:center;justify-content:space-between}
+.mat-badge{padding:3px 8px;border-radius:100px;font-size:10px;font-weight:700}
+.mat-amount{font-size:13px;font-weight:800;color:var(--n800)}
+
+/* ═══ MATERIAL LIFECYCLE ═══ */
+.lc-step{display:flex;gap:12px;padding:12px 0}
+.lc-step+.lc-step{border-top:1px solid var(--n100)}
+.lc-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px;border:2px solid var(--n200)}
+.lc-dot.done{background:var(--green-mid);border-color:var(--green)}
+.lc-dot.active{background:var(--brand);border-color:var(--brand-dark)}
+.lc-body{flex:1}
+.lc-title{font-size:13px;font-weight:700;color:var(--n800)}
+.lc-title.pending{color:var(--n400)}
+.lc-date{font-size:11px;font-weight:600;color:var(--n400);margin-top:2px}
+.lc-date.immutable{color:var(--green);font-weight:700}
+
+/* ═══ INSTRUMENT ═══ */
+.instr-row{display:flex;align-items:center;gap:12px;padding:14px 16px;margin:0 16px 8px;background:var(--n0);border-radius:var(--r16);border:1px solid var(--n200);box-shadow:var(--sh1)}
+.instr-icon{width:40px;height:40px;border-radius:var(--r12);background:var(--n100);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.instr-body{flex:1;min-width:0}
+.instr-name{font-size:14px;font-weight:700;color:var(--n800)}
+.instr-meta{font-size:11px;font-weight:600;color:var(--n400);margin-top:2px}
+.instr-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px}
+
+/* ═══ DEMO ═══ */
+.demo-nav{width:100%;max-width:680px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:20px 24px 16px}
+.demo-nav-title{font-size:15px;font-weight:800;color:rgba(255,255,255,0.85)}.demo-nav-subtitle{font-size:12px;font-weight:600;color:rgba(255,255,255,0.35);margin-top:3px;margin-bottom:16px}
+.demo-section-label{font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px}
+.demo-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.demo-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 14px 7px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:100px;font-family:'Manrope',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,0.7);cursor:pointer;transition:all .15s}
+.demo-chip:hover{background:rgba(255,255,255,0.1)}
+.demo-chip.active{background:rgba(79,110,247,0.2);border-color:rgba(79,110,247,0.4);color:#fff}
+.demo-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* SEARCH & FILTERS */
+.search-bar{display:flex;align-items:center;gap:10px;padding:0 14px;height:44px;background:var(--n0);border:1.5px solid var(--n200);border-radius:var(--r12)}
+.search-bar:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,110,247,0.1)}
+.search-bar input{flex:1;border:none;outline:none;font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;color:var(--n900);background:transparent}
+.filter-bar{display:flex;gap:6px;overflow-x:auto;flex-shrink:0}
+.filter-bar::-webkit-scrollbar{display:none}
+.fc{padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;border:1.5px solid var(--n200);color:var(--n600);background:var(--n0);transition:all .15s}
+.fc.on{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(79,110,247,0.25)}
+/* MATERIAL TABLE */
+.mt-row{display:grid;grid-template-columns:1fr 50px 72px;gap:4px;padding:12px 14px;align-items:center}
+.mt-hdr{display:grid;grid-template-columns:1fr 50px 72px;gap:4px;padding:10px 14px;background:var(--n50);border-bottom:1px solid var(--n200)}
+.mt-hdr>div{font-size:10px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:.5px}
+.mt-name{font-size:13px;font-weight:700;color:var(--n800);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-sub{font-size:10px;font-weight:500;color:var(--n400);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-qty{text-align:center;font-size:12px;font-weight:700;color:var(--n700)}
+.mt-sum{text-align:right;font-size:12px;font-weight:800;color:var(--n900);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="phone">
+
+<!-- ═══ E1-1: БЮДЖЕТ ОБЗОР ═══ -->
+<div class="screen active" id="e-budget">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:14px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div style="flex:1;font-size:17px;font-weight:800;color:var(--n900);letter-spacing:-0.4px">Бюджет проекта</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red-dot);border-radius:50%;border:2px solid var(--n0)"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="budget-hero">
+    <div class="bh-sub">Общий бюджет · план</div>
+    <div class="bh-total">830 000 ₽</div>
+    <div style="display:flex;gap:16px;margin-top:6px;margin-bottom:4px">
+      <div style="font-size:12px;font-weight:700;color:var(--n500)">Потрачено: <span style="color:var(--n900);font-weight:900">375 000 ₽</span></div>
+      <div style="font-size:12px;font-weight:700;color:#059669">Остаток: <span style="font-weight:900">455 000 ₽</span></div>
+    </div>
+    <div style="height:6px;background:var(--n100);border-radius:3px;overflow:hidden;margin-bottom:14px"><div style="height:100%;width:45%;background:linear-gradient(90deg,var(--brand),var(--green-mid));border-radius:3px"></div></div>
+    <div class="bh-row">
+      <div class="bh-card">
+        <div class="bh-card-label">Работы</div>
+        <div class="bh-card-val">193 000 <span style="font-size:11px;font-weight:600;color:var(--n400)">/ 350 000</span></div>
+        <div class="bh-card-bar"><div class="bh-card-fill" style="width:55%;background:var(--brand)"></div></div>
+        <div style="font-size:10px;font-weight:700;color:var(--green);margin-top:4px">Остаток: 157 000 ₽</div>
+      </div>
+      <div class="bh-card">
+        <div class="bh-card-label">Материалы</div>
+        <div class="bh-card-val">182 000 <span style="font-size:11px;font-weight:600;color:var(--n400)">/ 480 000</span></div>
+        <div class="bh-card-bar"><div class="bh-card-fill" style="width:38%;background:var(--green-mid)"></div></div>
+        <div style="font-size:10px;font-weight:700;color:var(--green);margin-top:4px">Остаток: 298 000 ₽</div>
+      </div>
+    </div>
+  </div>
+  <div class="tabs" style="border-bottom:1px solid var(--n200)">
+    <div class="tab on">Выплаты<span class="tab-badge">5</span></div>
+    <div class="tab" onclick="go('e-budget-stages')">По этапам</div>
+    <div class="tab" onclick="go('e-budget-materials')">Материалы</div>
+  </div>
+  <div class="scroll" style="padding-top:10px;padding-bottom:100px">
+    <div style="margin:0 16px 12px;padding:12px 14px;background:var(--brand-light);border-radius:var(--r12);display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:10px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.5px">Итого выплат</div><div style="font-size:18px;font-weight:900;color:var(--brand-dark);letter-spacing:-.5px;margin-top:2px">168 500 ₽</div></div>
+      <div style="text-align:right"><div style="font-size:11px;font-weight:700;color:var(--green)">Подтверждено: 115 000 ₽</div><div style="font-size:11px;font-weight:700;color:var(--yellow);margin-top:2px">Ожидает: 45 000 ₽</div><div style="font-size:11px;font-weight:700;color:var(--brand);margin-top:2px">Самозакуп: 8 500 ₽</div></div>
+    </div>
+    <div class="pay-row" onclick="go('e-pay-confirmed')">
+      <div class="pay-icon" style="background:var(--green-light)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l4 4 6-7"/></svg></div>
+      <div class="pay-body"><div class="pay-name">Аванс: Электрика</div><div class="pay-meta">Петров С. · 15.01.2025</div></div>
+      <div><div class="pay-amount">50 000 ₽</div><div class="pay-status" style="color:var(--green)">Подтверждена</div></div>
+    </div>
+    <div class="pay-row" onclick="go('e-pay-confirmed')">
+      <div class="pay-icon" style="background:var(--green-light)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l4 4 6-7"/></svg></div>
+      <div class="pay-body"><div class="pay-name">Демонтаж: финал</div><div class="pay-meta">Иванов А. · 28.01.2025</div></div>
+      <div><div class="pay-amount">35 000 ₽</div><div class="pay-status" style="color:var(--green)">Подтверждена</div></div>
+    </div>
+    <div class="pay-row" onclick="go('e-pay-pending')">
+      <div class="pay-icon" style="background:var(--yellow-bg)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#D97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><path d="M9 6v3l2 1.5"/></svg></div>
+      <div class="pay-body"><div class="pay-name">Электрика: этап 2</div><div class="pay-meta">Петров С. · 10.02.2025</div></div>
+      <div><div class="pay-amount">45 000 ₽</div><div class="pay-status" style="color:var(--yellow)">Ожидает</div></div>
+    </div>
+    <div class="pay-row">
+      <div class="pay-icon" style="background:var(--green-light)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l4 4 6-7"/></svg></div>
+      <div class="pay-body"><div class="pay-name">Штукатурка: аванс</div><div class="pay-meta">Сидоров В. · 05.02.2025</div></div>
+      <div><div class="pay-amount">30 000 ₽</div><div class="pay-status" style="color:var(--green)">Подтверждена</div></div>
+    </div>
+    <div class="pay-row">
+      <div class="pay-icon" style="background:var(--brand-light)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v12M4 9h10"/></svg></div>
+      <div class="pay-body"><div class="pay-name" style="color:var(--brand)">Самозакуп: кабель</div><div class="pay-meta">Петров С. · 12.02.2025</div></div>
+      <div><div class="pay-amount">8 500 ₽</div><div class="pay-status" style="color:var(--brand)">Самозакуп</div></div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-pay-new')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></svg>Новая выплата</button></div>
+  <div style="display:flex;background:rgba(255,255,255,0.96);backdrop-filter:blur(24px);border-top:1px solid var(--n200);padding:6px 0 28px;flex-shrink:0">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><div style="font-size:10px;font-weight:700;color:var(--brand)">Проекты</div><div style="width:5px;height:5px;border-radius:50%;background:var(--brand);margin-top:2px"></div></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div style="font-size:10px;font-weight:700;color:var(--n400)">Команда</div></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div style="font-size:10px;font-weight:700;color:var(--n400)">Чаты</div></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 0;cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg><div style="font-size:10px;font-weight:700;color:var(--n400)">Профиль</div></div>
+  </div>
+</div>
+
+<!-- ═══ E1-2: НОВАЯ ВЫПЛАТА ═══ -->
+<div class="screen" id="e-pay-new">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Новая выплата</div></div>
+  <div class="scroll" style="padding:20px 20px 120px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div><div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Кому</div><div style="padding:14px;background:var(--n0);border:1.5px solid var(--n200);border-radius:var(--r12);display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">ПС</div><div><div style="font-size:14px;font-weight:700;color:var(--n900)">Петров Сергей</div><div style="font-size:11px;font-weight:600;color:var(--n400)">Бригадир</div></div></div></div>
+      <div><div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Этап</div><div style="height:48px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">Электрика</div></div>
+      <div><div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Сумма, ₽</div><div style="height:56px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;font-size:22px;font-weight:900;color:var(--n900);letter-spacing:-1px">45 000</div></div>
+      <div><div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Назначение</div><div style="height:48px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">Этап 2 — прокладка кабеля</div></div>
+    </div>
+    <div style="margin-top:16px;padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);display:flex;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--brand)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="7" cy="7" r="6"/><path d="M7 4v3M7 9h.01"/></svg>
+      <span style="font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5">Подрядчик должен подтвердить получение. Только подтверждённые выплаты учитываются в бюджете.</span>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-budget')">Отправить выплату</button></div>
+</div>
+
+<!-- ═══ E1-3: ВЫПЛАТА — ОЖИДАЕТ ═══ -->
+<div class="screen" id="e-pay-pending">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Выплата</div><div style="padding:4px 10px;border-radius:100px;background:var(--yellow-bg);font-size:11px;font-weight:800;color:var(--yellow)">Ожидает</div></div>
+  <div class="scroll" style="padding:20px 16px">
+    <div style="text-align:center;padding:20px 0 24px"><div style="font-size:32px;font-weight:900;color:var(--n900);letter-spacing:-1.5px">45 000 ₽</div><div style="font-size:13px;font-weight:600;color:var(--yellow);margin-top:4px">Ожидает подтверждения подрядчика</div></div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Получатель</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Петров С.</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Этап</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Электрика</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Назначение</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Этап 2 — прокладка</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Дата отправки</span><span style="font-size:12px;font-weight:700;color:var(--n800)">10.02.2025</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Статус</span><span style="font-size:12px;font-weight:700;color:var(--yellow)">Ожидает подтверждения</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E1-4: ВЫПЛАТА — ПОДТВЕРЖДЕНА ═══ -->
+<div class="screen" id="e-pay-confirmed">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Выплата</div><div style="padding:4px 10px;border-radius:100px;background:var(--green-light);font-size:11px;font-weight:800;color:var(--green)">Подтверждена</div></div>
+  <div class="scroll" style="padding:20px 16px">
+    <div style="text-align:center;padding:20px 0 24px"><div style="font-size:32px;font-weight:900;color:var(--green);letter-spacing:-1.5px">50 000 ₽</div><div style="font-size:13px;font-weight:600;color:var(--green);margin-top:4px">Обе стороны подтвердили</div></div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Получатель</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Петров С.</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Этап</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Электрика</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Дата отправки</span><span style="font-size:12px;font-weight:700;color:var(--n800)">15.01.2025</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Подтверждена</span><span style="font-size:12px;font-weight:700;color:var(--green)">15.01.2025 (неизменяемая)</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E1-5: БЮДЖЕТ ПО ЭТАПАМ ═══ -->
+<div class="screen" id="e-budget-stages">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:14px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div style="flex:1;font-size:17px;font-weight:800;color:var(--n900);letter-spacing:-0.4px">Бюджет проекта</div>
+      <div style="font-size:18px;font-weight:900;color:var(--n900);letter-spacing:-0.5px">830 000 ₽</div>
+    </div>
+    <div style="display:flex">
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent;cursor:pointer" onclick="go('e-budget')">Выплаты<span class="tab-badge">5</span></div>
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand)">По этапам</div>
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent;cursor:pointer" onclick="go('e-budget-materials')">Материалы</div>
+    </div>
+  </div>
+  <div class="scroll" style="padding:12px 16px 20px">
+    <!-- Budget summary (same as Выплаты) -->
+    <div style="padding:16px;background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:600;color:var(--n400)">Общий бюджет · работы</div>
+        <div style="font-size:20px;font-weight:900;color:var(--n900);letter-spacing:-0.5px">350 000 ₽</div>
+      </div>
+      <div style="height:5px;background:var(--n100);border-radius:3px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:55%;background:var(--brand);border-radius:3px"></div></div>
+      <div style="display:flex;justify-content:space-between">
+        <div style="font-size:12px;font-weight:700;color:var(--n500)">Потрачено: <span style="color:var(--n900);font-weight:900">193 000 ₽</span></div>
+        <div style="font-size:12px;font-weight:700;color:var(--green)">Остаток: <span style="font-weight:900">157 000 ₽</span></div>
+      </div>
+    </div>
+    <!-- Stages list -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);overflow:hidden">
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--n100)">
+        <div><div style="font-size:14px;font-weight:800;color:var(--n900)">Демонтаж</div><div style="font-size:11px;font-weight:600;color:var(--green);margin-top:2px">✓ Завершён</div></div>
+        <div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--n900)">35 000 ₽</div><div style="font-size:11px;font-weight:600;color:var(--n400)">из 35 000</div></div>
+      </div>
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--n100)">
+        <div><div style="font-size:14px;font-weight:800;color:var(--n900)">Электрика</div><div style="font-size:11px;font-weight:600;color:var(--brand);margin-top:2px">● В работе</div></div>
+        <div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--n900)">95 000 ₽</div><div style="font-size:11px;font-weight:600;color:var(--n400)">из 120 000</div></div>
+      </div>
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--n100)">
+        <div><div style="font-size:14px;font-weight:800;color:var(--n900)">Штукатурка</div><div style="font-size:11px;font-weight:600;color:var(--yellow);margin-top:2px">⏸ На паузе</div></div>
+        <div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--n900)">30 000 ₽</div><div style="font-size:11px;font-weight:600;color:var(--n400)">из 85 000</div></div>
+      </div>
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:14px;font-weight:800;color:var(--n900)">Плитка</div><div style="font-size:11px;font-weight:600;color:var(--purple);margin-top:2px">◉ На проверке</div></div>
+        <div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--n900)">33 000 ₽</div><div style="font-size:11px;font-weight:600;color:var(--n400)">из 70 000</div></div>
+      </div>
+    </div>
+    <div style="margin:12px 0;padding:14px;background:var(--brand-light);border-radius:var(--r16)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:800;color:var(--brand-dark)">Итого по этапам</div>
+        <div style="font-size:16px;font-weight:900;color:var(--brand-dark)">193 000 ₽</div>
+      </div>
+      <div style="height:4px;background:rgba(79,110,247,0.15);border-radius:2px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:55%;background:var(--brand);border-radius:2px"></div></div>
+      <div style="display:flex;justify-content:space-between"><div style="font-size:11px;font-weight:700;color:var(--n500)">Потрачено: 193 000 ₽</div><div style="font-size:11px;font-weight:700;color:var(--green)">Остаток: 157 000 ₽</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E1-6: БЮДЖЕТ МАТЕРИАЛОВ ═══ -->
+<div class="screen" id="e-budget-materials">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:14px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div style="flex:1;font-size:17px;font-weight:800;color:var(--n900);letter-spacing:-0.4px">Бюджет проекта</div>
+      <div style="font-size:14px;font-weight:800;color:var(--n500)">182 000 <span style="font-weight:600;color:var(--n400)">/ 480 000 ₽</span></div>
+    </div>
+    <div style="display:flex">
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent;cursor:pointer" onclick="go('e-budget')">Выплаты<span class="tab-badge">5</span></div>
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent;cursor:pointer" onclick="go('e-budget-stages')">По этапам</div>
+      <div style="flex:1;padding:10px 0 12px;font-size:14px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand)">Материалы</div>
+    </div>
+  </div>
+  <!-- Search -->
+  <div style="padding:10px 16px 0;flex-shrink:0">
+    <div class="search-bar" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Поиск по материалам"></div>
+  </div>
+  <!-- Filters -->
+  <div class="filter-bar" style="padding:10px 16px 6px">
+    <div class="fc on" onclick="toggleFC(this)">Все</div>
+    <div class="fc" onclick="toggleFC(this)">Электрика</div>
+    <div class="fc" onclick="toggleFC(this)">Плитка</div>
+    <div class="fc" onclick="toggleFC(this)">Штукатурка</div>
+    <div class="fc" onclick="toggleFC(this)">Самозакуп</div>
+  </div>
+  <div style="display:flex;gap:6px;padding:0 16px 8px;flex-shrink:0">
+    <div style="padding:6px 12px;border-radius:100px;border:1.5px solid var(--n200);font-size:11px;font-weight:700;color:var(--n600);background:var(--n0);cursor:pointer;display:flex;align-items:center;gap:4px" onclick="go('e-date-picker')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M16 2v4M8 2v4"/></svg><span id="date-label">Янв — Фев 2025</span></div>
+  </div>
+  <div class="scroll" style="padding:0 16px 20px">
+    <!-- Table -->
+    <div id="mat-table" style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);overflow:hidden">
+      <div class="mt-hdr"><div>Материал</div><div style="text-align:center">Кол-во</div><div style="text-align:right">Сумма</div></div>
+      <div class="mat-row mt-row" data-cat="электрика" style="border-bottom:1px solid var(--n100)">
+        <div><div class="mt-name">Кабель NYM 3×2.5</div><div class="mt-sub">Электрика · Петров С.</div></div>
+        <div class="mt-qty">500 м</div>
+        <div class="mt-sum mat-sum">42 000 ₽</div>
+      </div>
+      <div class="mat-row mt-row" data-cat="электрика" style="border-bottom:1px solid var(--n100)">
+        <div><div class="mt-name">Розетки Legrand</div><div class="mt-sub">Электрика · Петров С.</div></div>
+        <div class="mt-qty">30 шт</div>
+        <div class="mt-sum mat-sum">28 500 ₽</div>
+      </div>
+      <div class="mat-row mt-row" data-cat="плитка" style="border-bottom:1px solid var(--n100)">
+        <div><div class="mt-name">Плитка Kerama Marazzi</div><div class="mt-sub">Плитка · Козлов Л.</div></div>
+        <div class="mt-qty">45 м²</div>
+        <div class="mt-sum mat-sum">67 000 ₽</div>
+      </div>
+      <div class="mat-row mt-row" data-cat="штукатурка" style="border-bottom:1px solid var(--n100)">
+        <div><div class="mt-name">Штукатурка Knauf</div><div class="mt-sub">Штукатурка · Сидоров В.</div></div>
+        <div class="mt-qty">20 меш</div>
+        <div class="mt-sum mat-sum">18 500 ₽</div>
+      </div>
+      <div class="mat-row mt-row" data-cat="самозакуп">
+        <div><div class="mt-name" style="color:var(--brand)">Кабель-канал 40×25</div><div class="mt-sub">Электрика · самозакуп</div></div>
+        <div class="mt-qty">20 м</div>
+        <div class="mt-sum mat-sum">8 500 ₽</div>
+      </div>
+      <div class="mt-row" id="mat-total" style="background:var(--n50);border-top:1px solid var(--n200)">
+        <div style="font-size:13px;font-weight:800;color:var(--n800)" id="mat-total-label">Итого · 5 позиций</div>
+        <div></div>
+        <div style="text-align:right;font-size:13px;font-weight:900;color:var(--n900)" id="mat-total-sum">164 500 ₽</div>
+      </div>
+    </div>
+    <!-- Export button -->
+    <div style="margin-top:16px">
+      <button class="btn btn-sm" style="width:100%;height:48px;background:var(--n0);border:1.5px solid var(--n200);color:var(--n700);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Скачать отчёт по материалам
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E1-E: ПУСТО БЮДЖЕТ ═══ -->
+<div class="screen" id="e-budget-empty">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Бюджет проекта</div></div>
+  <div class="empty-center"><div class="empty-icon-wrap"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="10" width="24" height="16" rx="3"/><path d="M6 16h24"/><circle cx="12" cy="22" r="2"/></svg></div><div class="empty-title">Бюджет не заполнен</div><div class="empty-sub">Установите бюджет проекта: стоимость работ и материалов</div><button class="btn btn-blue btn-sm" style="max-width:200px;margin-top:8px">Настроить бюджет</button></div>
+</div>
+
+<!-- ═══ E2-1: МАТЕРИАЛЫ СПИСОК ═══ -->
+<div class="screen" id="e-materials">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div style="padding:14px 20px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div style="flex:1;font-size:17px;font-weight:800;color:var(--n900);letter-spacing:-0.4px">Материалы</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+        <div style="width:36px;height:36px;border-radius:var(--r12);background:var(--brand-light);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="go('e-mat-create')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v10M4 9h10"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll" style="padding-top:12px;padding-bottom:20px">
+    <div style="margin:0 16px 12px;padding:12px 14px;background:var(--green-light);border-radius:var(--r12);display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Итого материалов</div><div style="font-size:11px;font-weight:700;color:var(--n500);margin-top:2px">4 заявки · 2 доставлено</div></div>
+      <div style="font-size:18px;font-weight:900;color:#065F46;letter-spacing:-.5px">156 000 ₽</div>
+    </div>
+    <div class="mat-card" onclick="go('e-mat-detail')">
+      <div class="mat-top"><div class="mat-icon" style="background:var(--green-light)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l8-4 8 4-8 4z"/><path d="M2 7v6l8 4 8-4V7"/><path d="M10 11v6"/></svg></div><div class="mat-body"><div class="mat-title">Кабель NYM 3×2.5</div><div class="mat-sub">Электрика · Петров С. · 500 м</div></div></div>
+      <div class="mat-bottom"><div class="mat-badge" style="background:var(--green-light);color:var(--green)">Доставлено</div><div class="mat-amount">42 000 ₽</div></div>
+    </div>
+    <div class="mat-card" onclick="go('e-mat-partial')">
+      <div class="mat-top"><div class="mat-icon" style="background:var(--yellow-bg)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#D97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l8-4 8 4-8 4z"/><path d="M2 7v6l8 4 8-4V7"/><path d="M10 11v6"/></svg></div><div class="mat-body"><div class="mat-title">Розетки Legrand × 30</div><div class="mat-sub">Электрика · Петров С.</div></div></div>
+      <div class="mat-bottom"><div class="mat-badge" style="background:var(--yellow-bg);color:var(--yellow)">Частично куплено</div><div class="mat-amount">28 500 ₽</div></div>
+    </div>
+    <div class="mat-card" onclick="go('e-mat-checklist-new')">
+      <div class="mat-top"><div class="mat-icon" style="background:var(--brand-light)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l8-4 8 4-8 4z"/><path d="M2 7v6l8 4 8-4V7"/><path d="M10 11v6"/></svg></div><div class="mat-body"><div class="mat-title">Плитка Kerama Marazzi</div><div class="mat-sub">Плитка · Козлов Л. · 45 м²</div></div></div>
+      <div class="mat-bottom"><div class="mat-badge" style="background:var(--brand-light);color:var(--brand)">Отправлена</div><div class="mat-amount">67 000 ₽</div></div>
+    </div>
+    <div class="mat-card" onclick="go('e-mat-dispute')">
+      <div class="mat-top"><div class="mat-icon" style="background:var(--red-bg)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--red-dot)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l8-4 8 4-8 4z"/><path d="M2 7v6l8 4 8-4V7"/><path d="M10 11v6"/></svg></div><div class="mat-body"><div class="mat-title">Штукатурка Knauf</div><div class="mat-sub">Штукатурка · Сидоров В.</div></div></div>
+      <div class="mat-bottom"><div class="mat-badge" style="background:var(--red-bg);color:var(--red)">Спор</div><div class="mat-amount">18 500 ₽</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E2-2: ДЕТАЛИ МАТЕРИАЛА (lifecycle) ═══ -->
+<div class="screen" id="e-mat-detail">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Кабель NYM 3×2.5</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><div class="mat-badge" style="background:var(--green-light);color:var(--green);font-size:12px;padding:5px 12px">Доставлено</div><div style="font-size:13px;font-weight:600;color:var(--n400)">500 м · 42 000 ₽</div></div>
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Жизненный цикл</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:4px 16px">
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Создана</div><div class="lc-date immutable">01.02.2025 (неизменяемая)</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Отправлена получателю</div><div class="lc-date">02.02.2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Куплено</div><div class="lc-date immutable">03.02.2025 (неизменяемая)</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Доставлено</div><div class="lc-date immutable">05.02.2025 (неизменяемая)</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Подтверждено</div><div class="lc-date">05.02.2025</div></div></div>
+    </div>
+    <div style="margin-top:16px;background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Этап</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Электрика</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Ответственный</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Петров С.</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Поставщик</span><span style="font-size:12px;font-weight:700;color:var(--n800)">ЭлектроМастер</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E2-3: МАТЕРИАЛ — ЧАСТИЧНО ═══ -->
+<div class="screen" id="e-mat-partial">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Розетки Legrand</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><div class="mat-badge" style="background:var(--yellow-bg);color:var(--yellow);font-size:12px;padding:5px 12px">Частично куплено</div><div style="font-size:13px;font-weight:600;color:var(--n400)">30 шт. · 28 500 ₽</div></div>
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Жизненный цикл</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:4px 16px">
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Создана</div><div class="lc-date immutable">08.02.2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Отправлена</div><div class="lc-date">08.02.2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot active"></div><div class="lc-body"><div class="lc-title">Куплено: 20 из 30 шт.</div><div class="lc-date immutable">10.02.2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot"></div><div class="lc-body"><div class="lc-title pending">Доставлено</div><div class="lc-date">—</div></div></div>
+      <div class="lc-step"><div class="lc-dot"></div><div class="lc-body"><div class="lc-title pending">Подтверждено</div><div class="lc-date">—</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E2-4: СОЗДАТЬ ЗАЯВКУ (мульти-позиция) ═══ -->
+<div class="screen" id="e-mat-create">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Новая заявка</div><div style="padding:3px 8px;border-radius:6px;background:var(--purple-bg);font-size:10px;font-weight:800;color:var(--purple);flex-shrink:0;white-space:nowrap">Подрядчик</div></div>
+  <div class="scroll" style="padding:20px 20px 140px">
+    <!-- Этап -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Этап</div>
+      <div style="height:48px;background:var(--n50);border:1.5px solid var(--brand);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:14px;font-weight:600;color:var(--n900)">Электрика</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+    <!-- Получатель -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Получатель</div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;padding:10px;border-radius:var(--r12);border:2px solid var(--brand);background:var(--brand-light);text-align:center;cursor:pointer">
+          <div style="font-size:12px;font-weight:800;color:var(--brand)">Заказчику</div>
+        </div>
+        <div style="flex:1;padding:10px;border-radius:var(--r12);border:2px solid var(--n200);text-align:center;cursor:pointer">
+          <div style="font-size:12px;font-weight:800;color:var(--n600)">Бригадиру</div>
+        </div>
+      </div>
+    </div>
+    <!-- Позиции -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Позиции</div>
+    <!-- Позиция 1 -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--n400)">Позиция 1</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" style="cursor:pointer"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900);margin-bottom:8px">Кабель NYM 3×2.5</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">500</div></div>
+        <div style="width:60px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--n500)">м</div></div>
+        <div style="flex:1"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">84 ₽/м</div></div>
+      </div>
+      <div style="text-align:right;margin-top:6px;font-size:12px;font-weight:700;color:var(--n600)">= 42 000 ₽</div>
+    </div>
+    <!-- Позиция 2 -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--n400)">Позиция 2</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" style="cursor:pointer"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900);margin-bottom:8px">Розетки Legrand Valena</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">30</div></div>
+        <div style="width:60px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--n500)">шт</div></div>
+        <div style="flex:1"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">950 ₽</div></div>
+      </div>
+      <div style="text-align:right;margin-top:6px;font-size:12px;font-weight:700;color:var(--n600)">= 28 500 ₽</div>
+    </div>
+    <!-- Позиция 3 (пустая) -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--n400)">Позиция 3</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" style="cursor:pointer"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:500;color:var(--n300);margin-bottom:8px">Выключатели двухклавишные</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">12</div></div>
+        <div style="width:60px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--n500)">шт</div></div>
+        <div style="flex:1"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">800 ₽</div></div>
+      </div>
+      <div style="text-align:right;margin-top:6px;font-size:12px;font-weight:700;color:var(--n600)">= 9 600 ₽</div>
+    </div>
+    <!-- + Добавить позицию -->
+    <div style="width:100%;height:48px;border:2px dashed var(--n200);border-radius:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13px;font-weight:700;color:var(--brand);margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Добавить позицию</div>
+    <!-- Итого -->
+    <div style="background:var(--brand-light);border-radius:var(--r12);padding:14px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:10px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.5px">Итого · 3 позиции</div></div>
+      <div style="font-size:20px;font-weight:900;color:var(--brand-dark);letter-spacing:-.5px">80 100 ₽</div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-materials')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Создать заявку</button></div>
+</div>
+
+<!-- ═══ E2-4b: ЗАЯВКА — ВИД ПОЛУЧАТЕЛЯ (чеклист) ═══ -->
+<div class="screen" id="e-mat-checklist">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Заявка: Электрика</div><div style="padding:4px 10px;border-radius:100px;background:var(--yellow-bg);font-size:11px;font-weight:800;color:var(--yellow);flex-shrink:0;white-space:nowrap">В закупке</div><div style="padding:3px 8px;border-radius:6px;background:var(--green-light);font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;white-space:nowrap">Покупатель</div></div>
+  <!-- Info bar -->
+  <div style="padding:10px 16px;background:var(--n50);border-bottom:1px solid var(--n200);flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:12px;font-weight:600;color:var(--n500)">От: Константин И. · 08 фев</div>
+    <div style="font-size:12px;font-weight:700;color:var(--n700)">3 позиции · 80 100 ₽</div>
+  </div>
+  <div class="scroll" style="padding:12px 16px 140px">
+    <!-- Позиция 1 — куплено -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:24px;height:24px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;box-shadow:0 2px 6px rgba(16,185,129,0.25)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5l2 2L9 4.5"/></svg></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700;color:var(--n800)">Кабель NYM 3×2.5</div><div style="display:flex;gap:4px"><div style="cursor:pointer;padding:4px" onclick="go('e-mat-edit-pos')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div style="cursor:pointer;padding:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14H6L5 6"/></svg></div></div></div>
+        <div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">500 м · 84 ₽/м · 42 000 ₽</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+          <div style="padding:3px 8px;border-radius:6px;background:var(--green-light);font-size:10px;font-weight:800;color:var(--green)">Куплено</div>
+          <div style="font-size:10px;font-weight:600;color:var(--n400)">10 фев · 14:32</div>
+        </div>
+      </div>
+    </div>
+    <!-- Позиция 2 — частично -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:24px;height:24px;border-radius:50%;background:#10B981;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;box-shadow:0 2px 6px rgba(16,185,129,0.25)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5l2 2L9 4.5"/></svg></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700;color:var(--n800)">Розетки Legrand Valena</div><div style="display:flex;gap:4px"><div style="cursor:pointer;padding:4px" onclick="go('e-mat-edit-pos')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div style="cursor:pointer;padding:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14H6L5 6"/></svg></div></div></div>
+        <div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">20 из 30 шт · 950 ₽ · 19 000 ₽</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+          <div style="padding:3px 8px;border-radius:6px;background:var(--yellow-bg);font-size:10px;font-weight:800;color:var(--yellow)">Частично</div>
+          <div style="font-size:10px;font-weight:600;color:var(--n400)">10 фев · 15:10</div>
+        </div>
+      </div>
+    </div>
+    <!-- Позиция 3 — ожидает -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:24px;height:24px;border-radius:50%;border:2px solid var(--n300);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700;color:var(--n800)">Выключатели двухклавишные</div><div style="display:flex;gap:4px"><div style="cursor:pointer;padding:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div style="cursor:pointer;padding:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14H6L5 6"/></svg></div></div></div>
+        <div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">12 шт · 800 ₽ · 9 600 ₽</div>
+        <div style="margin-top:6px"><div style="padding:3px 8px;border-radius:6px;background:var(--n100);font-size:10px;font-weight:800;color:var(--n500);display:inline-block">Ожидает</div></div>
+      </div>
+    </div>
+    <!-- Прогресс -->
+    <div style="background:var(--brand-light);border-radius:var(--r12);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-top:8px">
+      <div style="flex:1">
+        <div style="font-size:10px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Прогресс закупки</div>
+        <div style="height:5px;background:rgba(79,110,247,0.15);border-radius:3px;overflow:hidden"><div style="width:66%;height:100%;background:var(--brand);border-radius:3px"></div></div>
+      </div>
+      <div style="font-size:14px;font-weight:900;color:var(--brand-dark)">2/3</div>
+    </div>
+  </div>
+  <div class="action-bar" style="gap:8px">
+    <button class="btn btn-ghost btn-sm" style="flex:1" onclick="go('e-mat-partial-confirm')">Частично куплено</button>
+    <button class="btn btn-success btn-sm" style="flex:1" onclick="go('e-mat-bought')">Всё куплено</button>
+  </div>
+</div>
+
+<!-- ═══ E2-4c: РЕДАКТИРОВАТЬ ПОЗИЦИЮ ═══ -->
+<div class="screen" id="e-mat-edit-pos">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-mat-checklist')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Ред. позицию</div><div style="padding:3px 8px;border-radius:6px;background:var(--green-light);font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;white-space:nowrap">Покупатель</div></div>
+  <div class="scroll" style="padding:20px 20px 120px">
+    <div style="font-size:16px;font-weight:800;color:var(--n900);margin-bottom:16px">Кабель NYM 3×2.5</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Фактически куплено</div>
+        <div style="height:48px;background:var(--n50);border:1.5px solid var(--brand);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">500 м</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Фактическая цена, ₽</div>
+        <div style="height:48px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">42 500</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Комментарий</div>
+        <div style="min-height:80px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:12px 14px;font-size:14px;font-weight:500;color:var(--n300);line-height:1.5">Купил в ЭлектроМастер, цена чуть выше...</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Фото чека</div>
+        <div style="height:70px;border:1.5px dashed var(--n300);border-radius:var(--r12);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span style="font-size:13px;font-weight:700;color:var(--n500)">Прикрепить фото</span></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="vertical-align:-1px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Дата покупки зафиксирована автоматически: 10 фев, 14:32 (неизменяемая)</div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-mat-checklist')">Сохранить</button></div>
+</div>
+
+<!-- ═══ E2-4d: ЧАСТИЧНО КУПЛЕНО — подтверждение ═══ -->
+<div class="screen" id="e-mat-partial-confirm">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-mat-checklist')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Заявка: Электрика</div><div style="padding:4px 10px;border-radius:100px;background:var(--yellow-bg);font-size:11px;font-weight:800;color:var(--yellow);flex-shrink:0;white-space:nowrap">Частично</div><div style="padding:3px 8px;border-radius:6px;background:var(--green-light);font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;white-space:nowrap">Покупатель</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <!-- Toast-like banner -->
+    <div style="padding:14px;background:var(--yellow-bg);border:1px solid #FCD34D;border-radius:var(--r16);margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <div><div style="font-size:13px;font-weight:800;color:var(--yellow);margin-bottom:4px">Заявка отправлена как «Частично куплено»</div><div style="font-size:12px;font-weight:600;color:#B45309;line-height:1.5">Заказчик увидит какие позиции куплены, а какие нет. Он может создать доп. заявку на остаток.</div></div>
+    </div>
+    <!-- Summary -->
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Итого</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Куплено</span><span style="font-size:12px;font-weight:700;color:var(--green)">2 из 3 позиций</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Сумма куплено</span><span style="font-size:12px;font-weight:700;color:var(--n800)">61 000 ₽</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Остаток</span><span style="font-size:12px;font-weight:700;color:var(--yellow)">19 100 ₽ (1 позиция + недобор)</span></div>
+    </div>
+    <div style="margin-top:16px;font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Следующие шаги</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--n50);border-radius:var(--r12)"><div style="width:28px;height:28px;border-radius:8px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div style="font-size:12px;font-weight:600;color:var(--n700);line-height:1.5">Доставьте купленное на объект</div></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--n50);border-radius:var(--r12)"><div style="width:28px;height:28px;border-radius:8px;background:var(--yellow-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div style="font-size:12px;font-weight:600;color:var(--n700);line-height:1.5">Заказчик получит уведомление об остатке</div></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--n50);border-radius:var(--r12)"><div style="width:28px;height:28px;border-radius:8px;background:var(--green-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div style="font-size:12px;font-weight:600;color:var(--n700);line-height:1.5">Подрядчик подтвердит получение на объекте</div></div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-materials')">К списку заявок</button></div>
+</div>
+
+<!-- ═══ E2-4e: ВСЁ КУПЛЕНО → Ожидает доставки ═══ -->
+<div class="screen" id="e-mat-bought">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-mat-checklist')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Заявка: Электрика</div><div style="padding:4px 10px;border-radius:100px;background:var(--green-light);font-size:11px;font-weight:800;color:var(--green);flex-shrink:0;white-space:nowrap">Куплено</div><div style="padding:3px 8px;border-radius:6px;background:var(--green-light);font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;white-space:nowrap">Покупатель</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <!-- Success banner -->
+    <div style="padding:14px;background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--r16);margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <div><div style="font-size:13px;font-weight:800;color:#065F46;margin-bottom:4px">Все позиции куплены!</div><div style="font-size:12px;font-weight:600;color:#047857;line-height:1.5">Дата покупки зафиксирована. Теперь доставьте материалы на объект. Подрядчик подтвердит получение.</div></div>
+    </div>
+    <!-- Summary -->
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Итого</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Позиций</span><span style="font-size:12px;font-weight:700;color:var(--green)">3 из 3 ✓</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Итого куплено</span><span style="font-size:12px;font-weight:700;color:var(--n800)">80 100 ₽</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Дата покупки</span><span style="font-size:12px;font-weight:700;color:var(--n800)">10 фев 2025</span></div>
+    </div>
+    <!-- Lifecycle -->
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Статус</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:4px 16px">
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Заявка создана</div><div class="lc-date immutable">08 фев 2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Всё куплено</div><div class="lc-date immutable">10 фев 2025 (неизменяемая)</div></div></div>
+      <div class="lc-step"><div class="lc-dot active"></div><div class="lc-body"><div class="lc-title">Ожидает доставки</div><div class="lc-date">—</div></div></div>
+      <div class="lc-step"><div class="lc-dot"></div><div class="lc-body"><div class="lc-title pending">Получено подрядчиком</div><div class="lc-date">—</div></div></div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-materials')">К списку заявок</button></div>
+</div>
+
+<!-- ═══ E2-5: САМОЗАКУП (мульти-позиция) ═══ -->
+<div class="screen" id="e-selfpurchase">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Самозакуп</div><div style="padding:3px 8px;border-radius:6px;background:var(--purple-bg);font-size:10px;font-weight:800;color:var(--purple);flex-shrink:0;white-space:nowrap">Бригадир</div></div>
+  <div class="scroll" style="padding:20px 20px 140px">
+    <!-- Info -->
+    <div style="padding:12px;background:var(--brand-light);border-radius:var(--r12);margin-bottom:16px;display:flex;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span style="font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5">Укажите все купленные позиции. Сумма попадёт в бюджет после подтверждения заказчиком.</span></div>
+    <!-- Этап -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Этап</div>
+      <div style="height:48px;background:var(--n50);border:1.5px solid var(--brand);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:14px;font-weight:600;color:var(--n900)">Электрика</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+    <!-- Позиции -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Позиции</div>
+    <!-- Позиция 1 -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--n400)">Позиция 1</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" style="cursor:pointer"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900);margin-bottom:8px">Кабель-канал 40×25</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">20</div></div>
+        <div style="width:60px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--n500)">м</div></div>
+        <div style="flex:1"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">4 250 ₽</div></div>
+      </div>
+    </div>
+    <!-- Позиция 2 -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--n400)">Позиция 2</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" style="cursor:pointer"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900);margin-bottom:8px">Изолента ПВХ синяя</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">5</div></div>
+        <div style="width:60px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--n500)">шт</div></div>
+        <div style="flex:1"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">250 ₽</div></div>
+      </div>
+    </div>
+    <!-- + Добавить -->
+    <div style="width:100%;height:48px;border:2px dashed var(--n200);border-radius:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13px;font-weight:700;color:var(--brand);margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Добавить позицию</div>
+    <!-- Фото чеков -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Фото чеков</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="width:72px;height:72px;background:var(--n100);border-radius:var(--r12);border:1px solid var(--n200);display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+      <div style="width:72px;height:72px;border:2px dashed var(--n300);border-radius:var(--r12);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+    </div>
+    <!-- Итого -->
+    <div style="background:var(--brand-light);border-radius:var(--r12);padding:14px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:10px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.5px">Итого · 2 позиции</div><div style="font-size:10px;font-weight:600;color:var(--brand);opacity:0.7;margin-top:2px">Дата: сегодня (зафиксирована)</div></div>
+      <div style="font-size:20px;font-weight:900;color:var(--brand-dark);letter-spacing:-.5px">8 500 ₽</div>
+    </div>
+    <!-- Цепочка одобрения -->
+    <div style="margin-top:16px;padding:10px 12px;background:var(--yellow-bg);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--yellow);line-height:1.5;display:flex;gap:6px;align-items:flex-start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Вы бригадир → заявка уйдёт заказчику на подтверждение</div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-selfpurchase-pending')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Отправить на подтверждение</button></div>
+</div>
+
+<!-- ═══ E2-5 (мастер): САМОЗАКУП ОТ МАСТЕРА ═══ -->
+<div class="screen" id="e-selfpurchase-master">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Самозакуп</div><div style="padding:3px 8px;border-radius:6px;background:#EDE9FE;font-size:10px;font-weight:800;color:var(--purple);flex-shrink:0;white-space:nowrap">Мастер</div></div>
+  <div class="scroll" style="padding:20px 20px 140px">
+    <div style="padding:12px;background:var(--brand-light);border-radius:var(--r12);margin-bottom:16px;display:flex;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span style="font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5">Заявка уйдёт бригадиру, затем заказчику. Только после двух подтверждений сумма попадёт в бюджет.</span></div>
+    <!-- Этап -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Этап</div>
+      <div style="height:48px;background:var(--n50);border:1.5px solid var(--brand);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:14px;font-weight:600;color:var(--n900)">Штукатурка</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+    <!-- Позиция -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Позиции</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--n400)">Позиция 1</div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2" style="cursor:pointer"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900);margin-bottom:8px">Цемент М400</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">5</div></div>
+        <div style="width:70px"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--n500)">мешков</div></div>
+        <div style="flex:1"><div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 10px;display:flex;align-items:center;font-size:14px;font-weight:600;color:var(--n900)">2 100 ₽</div></div>
+      </div>
+    </div>
+    <div style="width:100%;height:48px;border:2px dashed var(--n200);border-radius:14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13px;font-weight:700;color:var(--brand);margin-bottom:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Добавить позицию</div>
+    <!-- Фото -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Фото чека</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="width:72px;height:72px;border:2px dashed var(--n300);border-radius:var(--r12);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+    </div>
+    <!-- Итого -->
+    <div style="background:var(--brand-light);border-radius:var(--r12);padding:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div><div style="font-size:10px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.5px">Итого · 1 позиция</div><div style="font-size:10px;font-weight:600;color:var(--brand);opacity:0.7;margin-top:2px">Дата: сегодня (зафиксирована)</div></div>
+      <div style="font-size:20px;font-weight:900;color:var(--brand-dark);letter-spacing:-.5px">2 100 ₽</div>
+    </div>
+    <!-- Цепочка -->
+    <div style="padding:10px 12px;background:var(--yellow-bg);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--yellow);line-height:1.5;display:flex;gap:6px;align-items:flex-start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Вы мастер → сначала бригадиру → потом заказчику</div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-selfpurchase-foreman')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>Отправить бригадиру</button></div>
+</div>
+
+<!-- ═══ E2-5 (бригадир видит от мастера): ПОДТВЕРЖДЕНИЕ БРИГАДИРОМ ═══ -->
+<div class="screen" id="e-selfpurchase-foreman">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Самозакуп</div><div style="padding:4px 10px;border-radius:100px;background:var(--yellow-bg);font-size:11px;font-weight:800;color:var(--yellow);flex-shrink:0;white-space:nowrap">От мастера</div><div style="padding:3px 8px;border-radius:6px;background:var(--purple-bg);font-size:10px;font-weight:800;color:var(--purple);flex-shrink:0;white-space:nowrap">Бригадир</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <div style="text-align:center;padding:12px 0 16px"><div style="font-size:28px;font-weight:900;color:var(--n900);letter-spacing:-1.5px">2 100 ₽</div><div style="font-size:13px;font-weight:600;color:var(--yellow);margin-top:4px">Мастер просит подтвердить</div></div>
+    <!-- Chain -->
+    <div style="padding:10px 14px;background:var(--n50);border:1px solid var(--n200);border-radius:var(--r12);margin-bottom:16px">
+      <div style="font-size:10px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Цепочка одобрения</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <div style="padding:4px 10px;border-radius:8px;background:#EDE9FE;font-size:11px;font-weight:700;color:var(--purple)">Козлов Л. (мастер)</div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        <div style="padding:4px 10px;border-radius:8px;background:var(--purple-bg);font-size:11px;font-weight:700;color:var(--purple);border:1.5px solid var(--purple)">Вы (бригадир)</div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--n300)" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        <div style="padding:4px 10px;border-radius:8px;background:var(--n100);font-size:11px;font-weight:700;color:var(--n500)">Заказчик</div>
+      </div>
+      <div style="font-size:10px;font-weight:500;color:var(--n400);margin-top:6px">После вашего подтверждения → автоматически уйдёт заказчику</div>
+    </div>
+    <!-- Позиции -->
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Позиция · 1</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700;color:var(--n800)">Цемент М400</div><div style="font-size:11px;font-weight:500;color:var(--n400)">5 мешков</div></div><div style="font-size:13px;font-weight:800;color:var(--n800)">2 100 ₽</div></div>
+    </div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Этап</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Штукатурка</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Купил</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Козлов Л. (мастер)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Дата покупки</span><span style="font-size:12px;font-weight:700;color:var(--n800)">15 фев 2025 (неизменяемая)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Чек</span><span style="font-size:12px;font-weight:700;color:var(--brand)">1 фото</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="width:72px;height:72px;background:var(--n100);border-radius:var(--r12);border:1px solid var(--n200)"></div>
+    </div>
+  </div>
+  <div class="action-bar" style="gap:8px">
+    <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--red-dot);border-color:var(--red-dot)" onclick="go('e-materials')">Отклонить</button>
+    <button class="btn btn-success btn-sm" style="flex:2" onclick="go('e-selfpurchase-pending')">Подтвердить → заказчику</button>
+  </div>
+</div>
+<div class="screen" id="e-mat-dispute">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Штукатурка Knauf</div><div style="padding:4px 10px;border-radius:100px;background:var(--red-bg);font-size:11px;font-weight:800;color:var(--red)">Спор</div></div>
+  <div class="scroll" style="padding:16px 16px 120px">
+    <div style="padding:14px;background:var(--red-bg);border:1px solid #FECACA;border-radius:var(--r16);margin-bottom:16px">
+      <div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="6"/><path d="M7 4v3M7 9h.01"/></svg>Открыт спор</div>
+      <div style="font-size:12px;font-weight:600;color:var(--n700);line-height:1.5">Подрядчик сообщает: «Не получил 5 мешков из 20. Привезли только 15 шт.»</div>
+      <div style="font-size:11px;font-weight:600;color:var(--n500);margin-top:6px">Открыл: Сидоров В. · 12.02.2025</div>
+      <div style="display:flex;gap:6px;margin-top:8px"><div style="width:48px;height:48px;border-radius:8px;background:var(--n200)"></div><div style="width:48px;height:48px;border-radius:8px;background:var(--n200)"></div></div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Детали заявки</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Заказано</span><span style="font-size:12px;font-weight:700;color:var(--n800)">20 мешков (30 кг)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Получено</span><span style="font-size:12px;font-weight:700;color:var(--red-dot)">15 мешков</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Сумма</span><span style="font-size:12px;font-weight:700;color:var(--n800)">18 500 ₽</span></div>
+    </div>
+    <div style="padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5">Решите спор через чат или по телефону. После решения — нажмите «Закрыть спор».</div>
+  </div>
+  <div class="action-bar"><button class="btn btn-success btn-sm" style="flex:1" onclick="go('e-mat-dispute-resolve')">Закрыть спор</button></div>
+</div>
+
+<!-- ═══ E2-4f: ЧЕКЛИСТ — НОВАЯ ЗАЯВКА (все ожидают) ═══ -->
+<div class="screen" id="e-mat-checklist-new">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Заявка: Плитка</div><div style="padding:4px 10px;border-radius:100px;background:var(--brand-light);font-size:11px;font-weight:800;color:var(--brand);flex-shrink:0;white-space:nowrap">Новая</div><div style="padding:3px 8px;border-radius:6px;background:var(--green-light);font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;white-space:nowrap">Покупатель</div></div>
+  <div style="padding:10px 16px;background:var(--n50);border-bottom:1px solid var(--n200);flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:12px;font-weight:600;color:var(--n500)">От: Константин И. · 15 фев</div>
+    <div style="font-size:12px;font-weight:700;color:var(--n700)">2 позиции · 67 000 ₽</div>
+  </div>
+  <div class="scroll" style="padding:12px 16px 140px">
+    <div style="padding:14px;background:var(--brand-light);border:1px solid rgba(79,110,247,0.2);border-radius:var(--r16);margin-bottom:12px;display:flex;gap:10px;align-items:flex-start">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div style="font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5">Новая заявка. Отмечайте позиции по мере покупки.</div>
+    </div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:24px;height:24px;border-radius:50%;border:2px solid var(--n300);flex-shrink:0;margin-top:2px;cursor:pointer"></div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:var(--n800)">Плитка Kerama Marazzi</div>
+        <div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">45 м² · 1 200 ₽/м² · 54 000 ₽</div>
+        <div style="margin-top:6px"><div style="padding:3px 8px;border-radius:6px;background:var(--n100);font-size:10px;font-weight:800;color:var(--n500);display:inline-block">Ожидает</div></div>
+      </div>
+    </div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:24px;height:24px;border-radius:50%;border:2px solid var(--n300);flex-shrink:0;margin-top:2px;cursor:pointer"></div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:var(--n800)">Клей для плитки Ceresit CM-11</div>
+        <div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">10 мешков · 1 300 ₽ · 13 000 ₽</div>
+        <div style="margin-top:6px"><div style="padding:3px 8px;border-radius:6px;background:var(--n100);font-size:10px;font-weight:800;color:var(--n500);display:inline-block">Ожидает</div></div>
+      </div>
+    </div>
+    <div style="background:var(--brand-light);border-radius:var(--r12);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-top:8px">
+      <div style="flex:1">
+        <div style="font-size:10px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Прогресс закупки</div>
+        <div style="height:5px;background:rgba(79,110,247,0.15);border-radius:3px;overflow:hidden"><div style="width:0%;height:100%;background:var(--brand);border-radius:3px"></div></div>
+      </div>
+      <div style="font-size:14px;font-weight:900;color:var(--brand-dark)">0/2</div>
+    </div>
+  </div>
+  <div class="action-bar" style="gap:8px">
+    <button class="btn btn-ghost btn-sm" style="flex:1" onclick="go('e-materials')">Частично куплено</button>
+    <button class="btn btn-success btn-sm" style="flex:1" onclick="go('e-mat-bought')">Всё куплено</button>
+  </div>
+</div>
+
+<!-- ═══ E2-6b: ЗАКРЫТИЕ СПОРА ═══ -->
+<div class="screen" id="e-mat-dispute-resolve">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-mat-dispute')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Закрыть спор</div><div style="padding:3px 8px;border-radius:6px;background:var(--brand-light);font-size:10px;font-weight:800;color:var(--brand);flex-shrink:0;white-space:nowrap">Заказчик</div></div>
+  <div class="scroll" style="padding:20px 20px 120px">
+    <div style="font-size:14px;font-weight:800;color:var(--n900);margin-bottom:4px">Штукатурка Knauf</div>
+    <div style="font-size:12px;font-weight:600;color:var(--n500);margin-bottom:20px">Спор открыт Сидоровым В. · 12.02.2025</div>
+    <!-- Решение -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Как решён спор?</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--brand);background:var(--brand-light);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="M16 5l2 2-8 8H8v-2l8-8z"/></svg>
+        <div><div style="font-size:13px;font-weight:700;color:var(--brand)">Довезли остаток</div><div style="font-size:11px;font-weight:500;color:var(--brand);opacity:0.7">Недостающие 5 мешков доставлены</div></div>
+      </div>
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--n200);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 18v4M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M2 12h6M18 12h4M4.93 19.07l4.24-4.24M14.83 9.17l4.24-4.24"/></svg>
+        <div><div style="font-size:13px;font-weight:700;color:var(--n700)">Возврат денег</div><div style="font-size:11px;font-weight:500;color:var(--n400)">Скорректировать сумму на 5 мешков</div></div>
+      </div>
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--n200);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        <div><div style="font-size:13px;font-weight:700;color:var(--n700)">Списать</div><div style="font-size:11px;font-weight:500;color:var(--n400)">Принять как есть, закрыть без компенсации</div></div>
+      </div>
+    </div>
+    <!-- Комментарий -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Комментарий</div>
+    <div style="min-height:80px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:12px 14px;font-size:14px;font-weight:500;color:var(--n300);line-height:1.5;margin-bottom:12px">Поставщик привёз недостающее 14 фев...</div>
+    <div style="padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="vertical-align:-1px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Решение зафиксируется в ленте событий и будет неизменяемым</div>
+  </div>
+  <div class="action-bar"><button class="btn btn-success btn-sm" style="flex:1" onclick="go('e-materials')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5l4 4L14 3"/></svg>Подтвердить и закрыть спор</button></div>
+</div>
+
+<!-- ═══ E2-E: ПУСТО МАТЕРИАЛЫ ═══ -->
+<div class="screen" id="e-materials-empty">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Материалы</div></div>
+  <div class="empty-center"><div class="empty-icon-wrap"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l12-6 12 6-12 6z"/><path d="M6 14v8l12 6 12-6v-8"/><path d="M18 20v8"/></svg></div><div class="empty-title">Нет заявок</div><div class="empty-sub">Создайте заявку на закупку материалов для этапа</div><button class="btn btn-blue btn-sm" style="max-width:200px;margin-top:8px" onclick="go('e-mat-create')">Создать заявку</button></div>
+</div>
+
+<!-- ═══ E3-1: ИНСТРУМЕНТЫ ═══ -->
+<div class="screen" id="e-instruments">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Инструмент</div><div style="width:36px;height:36px;border-radius:var(--r12);background:var(--brand-light);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="go('e-tool-issue')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+  <!-- Search -->
+  <div style="padding:8px 16px 0;flex-shrink:0">
+    <div class="search-bar" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Название, серийный №, склад..."></div>
+  </div>
+  <!-- Filter by person -->
+  <div class="filter-bar" id="instr-person-filter" style="padding:8px 16px 10px">
+    <div class="fc on" onclick="filterInstr(this,'all')">Все</div>
+    <div class="fc" onclick="filterInstr(this,'петров')">Петров С.</div>
+    <div class="fc" onclick="filterInstr(this,'сидоров')">Сидоров В.</div>
+    <div class="fc" onclick="filterInstr(this,'склад')">На складе</div>
+  </div>
+  <!-- Status tabs -->
+  <div style="display:flex;padding:0 16px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div class="instr-tab" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand);cursor:pointer" onclick="filterInstrTab(this,'all')">Все (5)</div>
+    <div class="instr-tab" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent;cursor:pointer" onclick="filterInstrTab(this,'выдан')">Выданные (3)</div>
+    <div class="instr-tab" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent;cursor:pointer" onclick="filterInstrTab(this,'склад')">На складе (2)</div>
+  </div>
+  <div class="scroll" style="padding-top:8px;padding-bottom:20px">
+    <!-- Sorted alphabetically -->
+    <div class="instr-row" data-person="склад" data-instrstat="склад">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l3-3 3 3 3-3 3 3"/><path d="M4 14l3-3 3 3 3-3 3 3"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Лазерный нивелир Bosch</div><div class="instr-meta">С/Н: BL-4420 · Склад гараж</div></div>
+      <div class="instr-status" style="background:var(--green-light);color:var(--green)">На складе</div>
+    </div>
+    <div class="instr-row" data-person="петров" data-instrstat="выдан">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3l3 3-9 9H5v-3z"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Перфоратор Bosch GBH</div><div class="instr-meta">С/Н: PB-2261 · Петров С. · Ленина, 12</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow)">Выдан</div>
+    </div>
+    <div class="instr-row" data-person="склад" data-instrstat="склад">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Плиткорез Rubi TS-60</div><div class="instr-meta">С/Н: RT-6001 · Склад на объекте</div></div>
+      <div class="instr-status" style="background:var(--green-light);color:var(--green)">На складе</div>
+    </div>
+    <div class="instr-row" data-person="сидоров" data-instrstat="выдан">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l3-3 3 3 3-3 3 3"/><path d="M4 14l3-3 3 3 3-3 3 3"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Уровень 1200 мм</div><div class="instr-meta">С/Н: UV-1200 · Сидоров В. · Дача</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow)">Выдан</div>
+    </div>
+    <div class="instr-row" data-person="петров" data-instrstat="выдан">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="14" height="8" rx="2"/><path d="M6 8V6a4 4 0 0 1 8 0v2"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Штроборез Makita</div><div class="instr-meta">С/Н: MK-3301 · Петров С. · Ленина, 12</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow)">Выдан</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E3-E: ПУСТО ИНСТРУМЕНТЫ ═══ -->
+<div class="screen" id="e-instruments-empty">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-instruments')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Инструмент</div></div>
+  <div class="empty-center"><div class="empty-icon-wrap"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8l4 4-12 12H10v-4z"/><path d="M18 12l4 4"/></svg></div><div class="empty-title">Нет инструментов</div><div class="empty-sub">Добавьте инструменты в свой список для учёта выдачи мастерам</div><button class="btn btn-blue btn-sm" style="max-width:220px;margin-top:8px">Добавить инструмент</button></div>
+</div>
+
+<!-- ═══ E1: РАСПРЕДЕЛЕНИЕ АВАНСА ═══ -->
+<div class="screen" id="e-advance">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Распределение аванса</div></div>
+  <div class="scroll" style="padding:0 0 20px">
+    <div style="margin:16px;padding:16px;background:linear-gradient(135deg,#ECFDF5,#F0FDF9);border-radius:var(--r16);border:1px solid #A7F3D0">
+      <div style="font-size:11px;font-weight:800;color:#065F46;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Получено от заказчика</div>
+      <div style="font-size:24px;font-weight:900;color:#059669;letter-spacing:-1px">150 000 ₽</div>
+      <div style="font-size:12px;font-weight:600;color:#065F46;margin-top:4px">Распределено: 65 000 ₽ · Остаток: 85 000 ₽</div>
+      <div style="margin-top:8px;padding:8px 12px;background:var(--yellow-bg);border-radius:8px;font-size:11px;font-weight:700;color:var(--yellow);line-height:1.5">⚠ При создании выплаты, превышающей остаток, вы увидите предупреждение. Операция не блокируется.</div>
+    </div>
+    <div style="padding:0 16px 8px"><div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase">Распределено мастерам</div></div>
+    <div style="margin:0 16px 8px;padding:14px 16px;background:var(--n0);border-radius:var(--r16);border:1px solid var(--n200);box-shadow:var(--sh1)">
+      <div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:14px;font-weight:800;color:var(--n900)">Петров Сергей</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">Электрика</div></div><div style="font-size:15px;font-weight:800;color:var(--n900)">40 000 ₽</div></div>
+    </div>
+    <div style="margin:0 16px 8px;padding:14px 16px;background:var(--n0);border-radius:var(--r16);border:1px solid var(--n200);box-shadow:var(--sh1)">
+      <div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:14px;font-weight:800;color:var(--n900)">Сидоров Виктор</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:2px">Штукатурка</div></div><div style="font-size:15px;font-weight:800;color:var(--n900)">25 000 ₽</div></div>
+    </div>
+    <div style="padding:4px 16px"><div style="display:flex;gap:8px;padding:10px 12px;background:var(--yellow-bg);border-radius:var(--r12);font-size:12px;font-weight:600;color:var(--yellow);line-height:1.55"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Заказчик не видит распределение — это внутренняя кухня бригадира</span></div></div>
+    <div style="padding:16px"><button class="btn btn-blue btn-sm" onclick="go('e-budget')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Выплатить мастеру</button></div>
+  </div>
+</div>
+
+<!-- ═══ E1: СПОР ПО ВЫПЛАТЕ ═══ -->
+<div class="screen" id="e-pay-dispute" style="background:transparent">
+  <div class="sheet-overlay" onclick="go('e-pay-pending')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div style="display:flex;justify-content:center;margin-bottom:14px"><div style="width:56px;height:56px;background:var(--red-bg);border-radius:var(--r20);display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div></div>
+      <div style="font-size:18px;font-weight:800;color:var(--n900);text-align:center;margin-bottom:4px">Оспорить выплату</div>
+      <div style="font-size:13px;font-weight:500;color:var(--n400);text-align:center;line-height:1.6;margin-bottom:16px">Другая сторона получит push-уведомление</div>
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Причина *</div>
+      <div style="width:100%;min-height:80px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:12px;font-size:14px;font-weight:600;color:var(--n900)">Перевод не поступил на счёт</div>
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin:8px 0 6px">Фото</div><div style="display:flex;gap:8px;margin-bottom:14px"><div style="width:48px;height:48px;border-radius:10px;background:var(--n100);border:1px solid var(--n200);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div style="width:48px;height:48px;border-radius:10px;border:1.5px dashed var(--n300);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+        <button class="btn btn-sm" style="background:var(--red-dot);color:#fff" onclick="go('e-pay-disputed')">Открыть спор</button>
+        <button class="btn btn-ghost btn-sm" onclick="go('e-pay-pending')">Отмена</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E1: ВЫПЛАТА ОСПОРЕНА ═══ -->
+<div class="screen" id="e-pay-disputed">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Выплата</div><div style="padding:4px 10px;border-radius:100px;background:var(--red-bg);font-size:11px;font-weight:800;color:var(--red)">Спор</div></div>
+  <div class="scroll" style="padding:20px 16px">
+    <div style="text-align:center;padding:20px 0 24px"><div style="font-size:32px;font-weight:900;color:var(--red-dot);letter-spacing:-1.5px">45 000 ₽</div><div style="font-size:13px;font-weight:600;color:var(--red);margin-top:4px">Выплата оспорена</div></div>
+    <div style="padding:14px;background:var(--red-bg);border:1px solid #FECACA;border-radius:var(--r16);margin-bottom:16px">
+      <div style="font-size:12px;font-weight:800;color:var(--red-dot);margin-bottom:4px">Причина</div>
+      <div style="font-size:13px;font-weight:600;color:var(--red);line-height:1.5">Перевод не поступил на счёт</div>
+      <div style="font-size:11px;font-weight:600;color:var(--red);opacity:0.7;margin-top:6px">Открыл: Петров С. · 14.02.2025</div>
+    </div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Получатель</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Петров С.</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Дата создания</span><span style="font-size:12px;font-weight:700;color:var(--n800)">10.02.2025</span></div>
+    </div>
+    <div style="padding:16px 0"><button class="btn btn-success btn-sm" onclick="go('e-budget')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Закрыть спор</button></div>
+  </div>
+</div>
+
+<!-- ═══ E3: ВЫДАЧА ИНСТРУМЕНТА ═══ -->
+<div class="screen" id="e-tool-issue">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-instruments')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Выдача инструмента</div></div>
+  <div class="scroll" style="padding:16px 16px 140px">
+    <!-- Кому -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Кому выдать</div>
+      <div style="height:48px;background:var(--n50);border:1.5px solid var(--brand);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg><span style="font-size:14px;font-weight:600;color:var(--n900)">Козлов Леонид</span></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+    <!-- Проект (необязательно) -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Проект <span style="font-weight:600;color:var(--n300)">(необязательно)</span></div>
+      <div style="height:48px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 14px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span style="font-size:14px;font-weight:600;color:var(--n900)">Квартира на Ленина, 12</span></div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+    <!-- Поиск инструмента -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Выберите инструмент</div>
+    <div class="search-bar" style="margin:0 0 10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Поиск: перфоратор, шуруповёрт..."></div>
+    <!-- Full list alphabetical: available = checkbox, issued = greyed -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);overflow:hidden">
+      <!-- Available ✓ -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--n100);cursor:pointer">
+        <div style="width:20px;height:20px;border-radius:6px;background:var(--brand);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--n800)">Лазерный нивелир Bosch</div><div style="font-size:10px;font-weight:500;color:var(--n400)">С/Н: BL-4420 · Склад гараж</div></div>
+        <div style="padding:2px 6px;border-radius:4px;background:var(--green-light);font-size:9px;font-weight:800;color:var(--green)">Свободен</div>
+      </div>
+      <!-- Issued — greyed out -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--n100);opacity:0.45">
+        <div style="width:20px;height:20px;border-radius:6px;background:var(--n200)"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--n600)">Перфоратор Bosch GBH</div><div style="font-size:10px;font-weight:500;color:var(--n400)">Выдан → Петров С.</div></div>
+      </div>
+      <!-- Available -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--n100);cursor:pointer">
+        <div style="width:20px;height:20px;border-radius:6px;border:2px solid var(--n300)"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--n800)">Плиткорез Rubi TS-60</div><div style="font-size:10px;font-weight:500;color:var(--n400)">С/Н: RT-6001 · Склад на объекте</div></div>
+        <div style="padding:2px 6px;border-radius:4px;background:var(--green-light);font-size:9px;font-weight:800;color:var(--green)">Свободен</div>
+      </div>
+      <!-- Issued — greyed out -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--n100);opacity:0.45">
+        <div style="width:20px;height:20px;border-radius:6px;background:var(--n200)"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--n600)">Уровень 1200 мм</div><div style="font-size:10px;font-weight:500;color:var(--n400)">Выдан → Сидоров В.</div></div>
+      </div>
+      <!-- Issued — greyed out -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;opacity:0.45">
+        <div style="width:20px;height:20px;border-radius:6px;background:var(--n200)"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--n600)">Штроборез Makita</div><div style="font-size:10px;font-weight:500;color:var(--n400)">Выдан → Петров С.</div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;font-weight:600;color:var(--n400)">Всего 5 · свободно 2 · выбрано 1</div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="vertical-align:-1px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Мастер получит push и должен подтвердить получение</div>
+  </div>
+  <div class="action-bar"><button class="btn btn-blue btn-sm" style="flex:1" onclick="go('e-instruments-after')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Выдать 1 инструмент</button></div>
+</div>
+
+<!-- ═══ E3: СПИСОК ПОСЛЕ ВЫДАЧИ (Козлов добавился в фильтры) ═══ -->
+<div class="screen" id="e-instruments-after">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-budget')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Инструмент</div><div style="width:36px;height:36px;border-radius:var(--r12);background:var(--brand-light);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="go('e-tool-issue')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+  <!-- Toast: выдача успешна -->
+  <div style="margin:8px 16px;padding:10px 14px;background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--r12);display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/></svg>
+    <span style="font-size:12px;font-weight:700;color:#065F46">Лазерный нивелир Bosch выдан Козлову Л. · Ожидает подтверждения</span>
+  </div>
+  <!-- Search -->
+  <div style="padding:4px 16px 0;flex-shrink:0">
+    <div class="search-bar" style="margin:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input placeholder="Название, серийный №, склад..."></div>
+  </div>
+  <!-- Filter by person — Козлов Л. ADDED -->
+  <div class="filter-bar" style="padding:8px 16px 10px">
+    <div class="fc on" onclick="toggleFC(this)">Все</div>
+    <div class="fc" onclick="toggleFC(this)">Петров С.</div>
+    <div class="fc" onclick="toggleFC(this)">Сидоров В.</div>
+    <div class="fc" style="background:#ECFDF5;border-color:#A7F3D0;color:#065F46;position:relative" onclick="toggleFC(this)">Козлов Л.<div style="position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:var(--green);border-radius:50%;border:2px solid var(--n0)"></div></div>
+    <div class="fc" onclick="toggleFC(this)">На складе</div>
+  </div>
+  <!-- Tabs -->
+  <div style="display:flex;padding:0 16px;background:var(--n0);border-bottom:1px solid var(--n200);flex-shrink:0">
+    <div style="flex:1;padding:10px 0;font-size:13px;font-weight:700;color:var(--brand);text-align:center;border-bottom:2.5px solid var(--brand)">Все (5)</div>
+    <div style="flex:1;padding:10px 0;font-size:13px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent">Выданные (4)</div>
+    <div style="flex:1;padding:10px 0;font-size:13px;font-weight:700;color:var(--n400);text-align:center;border-bottom:2.5px solid transparent">На складе (1)</div>
+  </div>
+  <div class="scroll" style="padding-top:8px;padding-bottom:20px">
+    <!-- Нивелир теперь выдан Козлову — жёлтый бейдж + ожидает -->
+    <div class="instr-row" style="background:var(--green-light)">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l3-3 3 3 3-3 3 3"/><path d="M4 14l3-3 3 3 3-3 3 3"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Лазерный нивелир Bosch</div><div class="instr-meta">С/Н: BL-4420 · Козлов Л. · Ленина, 12</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow);font-size:9px">Ожидает</div>
+    </div>
+    <div class="instr-row">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3l3 3-9 9H5v-3z"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Перфоратор Bosch GBH</div><div class="instr-meta">С/Н: PB-2261 · Петров С. · Ленина, 12</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow)">Выдан</div>
+    </div>
+    <div class="instr-row">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Плиткорез Rubi TS-60</div><div class="instr-meta">С/Н: RT-6001 · Склад на объекте</div></div>
+      <div class="instr-status" style="background:var(--green-light);color:var(--green)">На складе</div>
+    </div>
+    <div class="instr-row">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l3-3 3 3 3-3 3 3"/><path d="M4 14l3-3 3 3 3-3 3 3"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Уровень 1200 мм</div><div class="instr-meta">С/Н: UV-1200 · Сидоров В. · Дача</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow)">Выдан</div>
+    </div>
+    <div class="instr-row">
+      <div class="instr-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--n600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="14" height="8" rx="2"/><path d="M6 8V6a4 4 0 0 1 8 0v2"/></svg></div>
+      <div class="instr-body"><div class="instr-name">Штроборез Makita</div><div class="instr-meta">С/Н: MK-3301 · Петров С. · Ленина, 12</div></div>
+      <div class="instr-status" style="background:var(--yellow-bg);color:var(--yellow)">Выдан</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E3: ПОДТВЕРЖДЕНИЕ ПОЛУЧЕНИЯ ═══ -->
+<div class="screen" id="e-tool-confirm" style="background:transparent">
+  <div class="sheet-overlay" onclick="go('e-instruments')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div style="font-size:18px;font-weight:800;color:var(--n900);margin-bottom:4px">Подтвердить получение</div>
+      <div style="font-size:13px;font-weight:500;color:var(--n400);margin-bottom:16px">Бригадир Иванов А. выдал вам инструмент</div>
+      <div style="padding:14px;background:var(--n50);border:1px solid var(--n200);border-radius:var(--r12);margin-bottom:16px"><div style="font-size:14px;font-weight:800;color:var(--n900)">Перфоратор Bosch GBH 2-26</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:4px">Выдан сегодня</div><div style="font-size:11px;font-weight:600;color:var(--brand);margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4l3-2 3 2v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>Квартира на Ленина, 12</div></div>
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin:8px 0 6px">Фото</div><div style="display:flex;gap:8px;margin-bottom:14px"><div style="width:48px;height:48px;border-radius:10px;background:var(--n100);border:1px solid var(--n200);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div style="width:48px;height:48px;border-radius:10px;border:1.5px dashed var(--n300);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
+      <button class="btn btn-success btn-sm" onclick="go('e-instruments')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Подтверждаю получение</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E3: ВОЗВРАТ ═══ -->
+<div class="screen" id="e-tool-return" style="background:transparent">
+  <div class="sheet-overlay" onclick="go('e-instruments')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div style="font-size:18px;font-weight:800;color:var(--n900);margin-bottom:4px">Подтвердить возврат</div>
+      <div style="font-size:13px;font-weight:500;color:var(--n400);margin-bottom:16px">Мастер Петров С. возвращает инструмент</div>
+      <div style="padding:14px;background:var(--n50);border:1px solid var(--n200);border-radius:var(--r12);margin-bottom:16px"><div style="font-size:14px;font-weight:800;color:var(--n900)">Штроборез Makita</div><div style="font-size:12px;font-weight:600;color:var(--n500);margin-top:4px">Выдан 20.01.2025 · 25 дней назад</div><div style="font-size:11px;font-weight:600;color:var(--brand);margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4l3-2 3 2v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>Квартира на Ленина, 12</div></div>
+      <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin:8px 0 6px">Фото</div><div style="display:flex;gap:8px;margin-bottom:14px"><div style="width:48px;height:48px;border-radius:10px;background:var(--n100);border:1px solid var(--n200);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div style="width:48px;height:48px;border-radius:10px;border:1.5px dashed var(--n300);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
+      <button class="btn btn-success btn-sm" onclick="go('e-instruments')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Подтвердить возврат</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ E2: САМОЗАКУП НА РАССМОТРЕНИИ ═══ -->
+<div class="screen" id="e-selfpurchase-pending">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Самозакуп</div><div style="padding:4px 10px;border-radius:100px;background:var(--yellow-bg);font-size:11px;font-weight:800;color:var(--yellow);flex-shrink:0;white-space:nowrap">На рассмотрении</div><div style="padding:3px 8px;border-radius:6px;background:var(--brand-light);font-size:10px;font-weight:800;color:var(--brand);flex-shrink:0;white-space:nowrap">Заказчик</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <!-- Summary -->
+    <div style="text-align:center;padding:12px 0 16px"><div style="font-size:28px;font-weight:900;color:var(--n900);letter-spacing:-1.5px">8 500 ₽</div><div style="font-size:13px;font-weight:600;color:var(--yellow);margin-top:4px">Ожидает вашего подтверждения</div></div>
+    <!-- Approval chain -->
+    <div style="padding:10px 14px;background:var(--n50);border:1px solid var(--n200);border-radius:var(--r12);margin-bottom:16px">
+      <div style="font-size:10px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Цепочка одобрения</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="padding:4px 10px;border-radius:8px;background:var(--purple-bg);font-size:11px;font-weight:700;color:var(--purple)">Петров С.</div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        <div style="padding:4px 10px;border-radius:8px;background:var(--brand-light);font-size:11px;font-weight:700;color:var(--brand)">Вы (заказчик)</div>
+      </div>
+      <div style="font-size:10px;font-weight:500;color:var(--n400);margin-top:6px">Бригадир купил → отправил вам на подтверждение</div>
+    </div>
+    <!-- Позиции -->
+    <div style="font-size:11px;font-weight:800;color:var(--n400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">Позиции · 2</div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700;color:var(--n800)">Кабель-канал 40×25</div><div style="font-size:11px;font-weight:500;color:var(--n400)">20 м</div></div><div style="font-size:13px;font-weight:800;color:var(--n800)">4 250 ₽</div></div>
+      <div style="height:1px;background:var(--n100)"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700;color:var(--n800)">Изолента ПВХ синяя</div><div style="font-size:11px;font-weight:500;color:var(--n400)">5 шт</div></div><div style="font-size:13px;font-weight:800;color:var(--n800)">250 ₽</div></div>
+    </div>
+    <!-- Meta -->
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Этап</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Электрика</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Купил</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Петров С. (бригадир)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Дата покупки</span><span style="font-size:12px;font-weight:700;color:var(--n800)">12 фев 2025 (неизменяемая)</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Чеки</span><span style="font-size:12px;font-weight:700;color:var(--brand)">2 фото приложено</span></div>
+    </div>
+    <!-- Photo thumbnails -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="width:72px;height:72px;background:var(--n100);border-radius:var(--r12);border:1px solid var(--n200)"></div>
+      <div style="width:72px;height:72px;background:var(--n100);border-radius:var(--r12);border:1px solid var(--n200)"></div>
+    </div>
+    <div style="padding:10px 12px;background:var(--brand-light);border-radius:var(--r12);font-size:12px;font-weight:700;color:var(--brand-dark);line-height:1.5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="vertical-align:-1px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>После подтверждения сумма 8 500 ₽ уйдёт в бюджет (материалы)</div>
+  </div>
+  <div class="action-bar" style="gap:8px">
+    <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--red-dot);border-color:var(--red-dot)" onclick="go('e-selfpurchase-reject')">Отклонить</button>
+    <button class="btn btn-success btn-sm" style="flex:2" onclick="go('e-selfpurchase-confirmed')">Подтвердить</button>
+  </div>
+</div>
+
+<!-- ═══ E2-5b: САМОЗАКУП — ОТКЛОНЕНИЕ ═══ -->
+<div class="screen" id="e-selfpurchase-reject">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-selfpurchase-pending')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Отклонить самозакуп</div><div style="padding:3px 8px;border-radius:6px;background:var(--brand-light);font-size:10px;font-weight:800;color:var(--brand);flex-shrink:0;white-space:nowrap">Заказчик</div></div>
+  <div class="scroll" style="padding:20px 20px 120px">
+    <div style="padding:12px;background:var(--red-bg);border:1px solid #FECACA;border-radius:var(--r12);margin-bottom:20px;display:flex;gap:8px;align-items:flex-start">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <span style="font-size:12px;font-weight:700;color:var(--red);line-height:1.5">Подрядчик получит уведомление с причиной отклонения. Сумма не попадёт в бюджет.</span>
+    </div>
+    <div style="font-size:14px;font-weight:800;color:var(--n900);margin-bottom:4px">Самозакуп: Электрика</div>
+    <div style="font-size:12px;font-weight:600;color:var(--n500);margin-bottom:20px">Петров С. · 2 позиции · 8 500 ₽</div>
+    <!-- Причина -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Причина отклонения</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--red-dot);background:var(--red-bg);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 18v4M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M2 12h6M18 12h4M4.93 19.07l4.24-4.24M14.83 9.17l4.24-4.24"/></svg>
+        <div style="font-size:13px;font-weight:700;color:var(--red)">Не согласована закупка</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--n200);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>
+        <div style="font-size:13px;font-weight:700;color:var(--n700)">Завышена цена</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--n200);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <div style="font-size:13px;font-weight:700;color:var(--n700)">Нет чека / плохое фото</div>
+      </div>
+      <div style="padding:12px 14px;border-radius:var(--r12);border:2px solid var(--n200);display:flex;align-items:center;gap:10px;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        <div style="font-size:13px;font-weight:700;color:var(--n700)">Другая причина</div>
+      </div>
+    </div>
+    <!-- Комментарий -->
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Комментарий (необязательно)</div>
+    <div style="min-height:80px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:12px 14px;font-size:14px;font-weight:500;color:var(--n300);line-height:1.5">Опишите подробнее...</div>
+    <div style="font-size:11px;font-weight:800;color:var(--n500);letter-spacing:.5px;text-transform:uppercase;margin:12px 0 6px">Фото</div><div style="display:flex;gap:8px;margin-bottom:12px"><div style="width:56px;height:56px;border-radius:var(--r12);background:var(--n100);border:1px solid var(--n200);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div style="width:56px;height:56px;border-radius:var(--r12);border:1.5px dashed var(--n300);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
+  </div>
+  <div class="action-bar"><button class="btn btn-sm" style="flex:1;height:44px;background:var(--red-dot);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,0.3)" onclick="go('e-selfpurchase-rejected')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>Отклонить самозакуп</button></div>
+</div>
+
+<!-- ═══ E2-5b2: САМОЗАКУП — ОТКЛОНЁН (результат) ═══ -->
+<div class="screen" id="e-selfpurchase-rejected">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Самозакуп</div><div style="padding:4px 10px;border-radius:100px;background:var(--red-bg);font-size:11px;font-weight:800;color:var(--red)">Отклонён</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <div style="padding:14px;background:var(--red-bg);border:1px solid #FECACA;border-radius:var(--r16);margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red-dot)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      <div><div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:4px">Самозакуп отклонён</div><div style="font-size:12px;font-weight:600;color:#B91C1C;line-height:1.5">Причина: не согласована закупка. Подрядчик получил уведомление.</div></div>
+    </div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Сумма</span><span style="font-size:12px;font-weight:700;color:var(--n800);text-decoration:line-through">8 500 ₽</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">В бюджет</span><span style="font-size:12px;font-weight:700;color:var(--red-dot)">Не добавлено</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--n500)">Отклонил</span><span style="font-size:12px;font-weight:700;color:var(--n800)">Константин И. · 13 фев</span></div>
+    </div>
+    <div style="padding:10px 12px;background:var(--n50);border-radius:var(--r12);font-size:12px;font-weight:600;color:var(--n500);line-height:1.5">Подрядчик может подать самозакуп повторно с исправлениями или обсудить в чате проекта.</div>
+  </div>
+  <div style="padding:12px 16px 36px;background:var(--n0);border-top:1px solid var(--n200);flex-shrink:0"><button class="btn btn-ghost btn-sm" style="width:100%" onclick="go('e-materials')">К списку материалов</button></div>
+</div>
+
+<!-- ═══ E2-5c: САМОЗАКУП — ПОДТВЕРЖДЁН ═══ -->
+<div class="screen" id="e-selfpurchase-confirmed">
+  <div class="sb light"><span>9:41</span><div class="sb-icons"><svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="4" width="3" height="8" rx="1" fill="#374151" opacity=".4"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#374151" opacity=".6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#374151"/></svg></div></div>
+  <div class="back-hdr"><div class="back-btn" onclick="go('e-materials')"><svg width="18" height="18" viewBox="0 0 24 24" class="chev"><path d="M15 18l-6-6 6-6"/></svg></div><div class="back-title">Самозакуп</div><div style="padding:4px 10px;border-radius:100px;background:var(--green-light);font-size:11px;font-weight:800;color:var(--green)">Подтверждён</div></div>
+  <div class="scroll" style="padding:16px 16px 20px">
+    <div style="padding:14px;background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--r16);margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <div><div style="font-size:13px;font-weight:800;color:#065F46;margin-bottom:4px">Самозакуп подтверждён!</div><div style="font-size:12px;font-weight:600;color:#047857;line-height:1.5">8 500 ₽ добавлены в бюджет проекта (материалы · Электрика)</div></div>
+    </div>
+    <div style="background:var(--n0);border:1px solid var(--n200);border-radius:var(--r16);padding:4px 16px">
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Куплено бригадиром</div><div class="lc-date immutable">12 фев 2025 (неизменяемая)</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Отправлено заказчику</div><div class="lc-date">12 фев 2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Подтверждено заказчиком</div><div class="lc-date">13 фев 2025</div></div></div>
+      <div class="lc-step"><div class="lc-dot done"></div><div class="lc-body"><div class="lc-title">Добавлено в бюджет</div><div class="lc-date immutable">13 фев 2025 (неизменяемая)</div></div></div>
+    </div>
+  </div>
+  <div style="padding:12px 16px 36px;background:var(--n0);border-top:1px solid var(--n200);flex-shrink:0"><button class="btn btn-ghost btn-sm" style="width:100%" onclick="go('e-materials')">К списку материалов</button></div>
+</div>
+
+
+<!-- E3: СДАТЬ ИНСТРУМЕНТ (мастер) -->
+<div class="screen" id="e-tool-surrender" style="background:transparent">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:flex-end" onclick="go('e-instruments')">
+    <div style="background:var(--n0);border-radius:28px 28px 0 0;width:100%;padding:14px 20px 44px" onclick="event.stopPropagation()">
+      <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-size:18px;font-weight:800;color:var(--n900);margin-bottom:4px">Сдать инструмент</div>
+      <div style="font-size:13px;font-weight:500;color:var(--n500);margin-bottom:16px">Выберите позиции для возврата бригадиру</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:1.5px solid var(--brand);background:var(--brand-light)">
+          <div style="width:20px;height:20px;border-radius:6px;background:var(--brand);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--n800)">Перфоратор Bosch GBH 2-26</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:1.5px solid var(--brand);background:var(--brand-light)">
+          <div style="width:20px;height:20px;border-radius:6px;background:var(--brand);display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--n800)">Уровень лазерный Bosch</div></div>
+        </div>
+      </div>
+      <button class="btn btn-blue btn-sm" onclick="go('e-instruments')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Отправить на подтверждение</button>
+      <div style="text-align:center;margin-top:8px;font-size:11px;font-weight:600;color:var(--n400)">Бригадир получит уведомление и подтвердит возврат</div>
+    </div>
+  </div>
+</div>
+<!-- ═══ DATE PICKER SHEET ═══ -->
+<div class="screen" id="e-date-picker" style="background:transparent">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:flex-end" onclick="go('e-budget-materials')">
+    <div style="background:var(--n0);border-radius:28px 28px 0 0;width:100%;padding:14px 20px 44px" onclick="event.stopPropagation()">
+      <div style="width:40px;height:4px;background:var(--n200);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-size:18px;font-weight:800;color:var(--n900);margin-bottom:4px">Период</div>
+      <div style="font-size:13px;font-weight:500;color:var(--n500);margin-bottom:16px">Выберите диапазон дат для фильтрации</div>
+      <!-- Quick presets -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <div style="padding:8px 14px;border-radius:100px;border:1.5px solid var(--brand);background:var(--brand-light);font-size:12px;font-weight:700;color:var(--brand);cursor:pointer">Янв — Фев</div>
+        <div style="padding:8px 14px;border-radius:100px;border:1.5px solid var(--n200);font-size:12px;font-weight:700;color:var(--n600);cursor:pointer">Март</div>
+        <div style="padding:8px 14px;border-radius:100px;border:1.5px solid var(--n200);font-size:12px;font-weight:700;color:var(--n600);cursor:pointer">Весь проект</div>
+        <div style="padding:8px 14px;border-radius:100px;border:1.5px solid var(--n200);font-size:12px;font-weight:700;color:var(--n600);cursor:pointer">Последние 30 дн</div>
+      </div>
+      <!-- Date inputs -->
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Начало</div>
+          <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;gap:8px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M16 2v4M8 2v4"/></svg>
+            <span style="font-size:14px;font-weight:600;color:var(--n900)">01.01.2025</span>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:800;color:var(--n400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Конец</div>
+          <div style="height:44px;background:var(--n50);border:1.5px solid var(--n200);border-radius:var(--r12);padding:0 12px;display:flex;align-items:center;gap:8px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--n400)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M16 2v4M8 2v4"/></svg>
+            <span style="font-size:14px;font-weight:600;color:var(--n900)">28.02.2025</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="go('e-budget-materials')">Сбросить</button>
+        <button class="btn btn-blue btn-sm" style="flex:2" onclick="go('e-budget-materials')">Применить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /phone -->
+
+<div class="demo-nav">
+  <div class="demo-nav-title">Навигация по экранам</div>
+  <div class="demo-nav-subtitle">Кластер E · Финансы и снабжение · 24 экрана</div>
+  <div class="demo-section-label">E1. Финансы и бюджет</div>
+  <div class="demo-chips">
+    <button class="demo-chip active" onclick="go('e-budget')" data-screen="e-budget"><span class="demo-dot" style="background:var(--brand)"></span>Бюджет + выплаты</button>
+    <button class="demo-chip" onclick="go('e-pay-new')" data-screen="e-pay-new"><span class="demo-dot" style="background:var(--brand)"></span>Новая выплата</button>
+    <button class="demo-chip" onclick="go('e-pay-pending')" data-screen="e-pay-pending"><span class="demo-dot" style="background:var(--yellow-dot)"></span>Ожидает</button>
+    <button class="demo-chip" onclick="go('e-pay-confirmed')" data-screen="e-pay-confirmed"><span class="demo-dot" style="background:var(--green-mid)"></span>Подтверждена</button>
+    <button class="demo-chip" onclick="go('e-pay-dispute')" data-screen="e-pay-dispute"><span class="demo-dot" style="background:var(--red-dot)"></span>Спор</button>
+    <button class="demo-chip" onclick="go('e-pay-disputed')" data-screen="e-pay-disputed"><span class="demo-dot" style="background:var(--red-dot)"></span>Оспорена</button>
+    <button class="demo-chip" onclick="go('e-advance')" data-screen="e-advance"><span class="demo-dot" style="background:#059669"></span>Распред. аванса</button>
+    <button class="demo-chip" onclick="go('e-budget-stages')" data-screen="e-budget-stages"><span class="demo-dot" style="background:var(--brand)"></span>По этапам</button>
+    <button class="demo-chip" onclick="go('e-budget-materials')" data-screen="e-budget-materials"><span class="demo-dot" style="background:var(--green-mid)"></span>Материалы</button>
+    <button class="demo-chip" onclick="go('e-date-picker')" data-screen="e-date-picker"><span class="demo-dot" style="background:var(--brand)"></span>Выбор дат</button>
+    <button class="demo-chip" onclick="go('e-budget-empty')" data-screen="e-budget-empty"><span class="demo-dot" style="background:var(--n400)"></span>Пусто</button>
+  </div>
+  <div class="demo-section-label">E2. Материалы</div>
+  <div class="demo-chips">
+    <button class="demo-chip" onclick="go('e-materials')" data-screen="e-materials"><span class="demo-dot" style="background:var(--brand)"></span>Список заявок</button>
+    <button class="demo-chip" onclick="go('e-mat-detail')" data-screen="e-mat-detail"><span class="demo-dot" style="background:var(--green-mid)"></span>Доставлено</button>
+    <button class="demo-chip" onclick="go('e-mat-partial')" data-screen="e-mat-partial"><span class="demo-dot" style="background:var(--yellow-dot)"></span>Частично</button>
+    <button class="demo-chip" onclick="go('e-mat-create')" data-screen="e-mat-create"><span class="demo-dot" style="background:var(--brand)"></span>Создать заявку</button>
+    <button class="demo-chip" onclick="go('e-mat-checklist')" data-screen="e-mat-checklist"><span class="demo-dot" style="background:var(--yellow-dot)"></span>Чеклист закупки</button>
+    <button class="demo-chip" onclick="go('e-mat-edit-pos')" data-screen="e-mat-edit-pos"><span class="demo-dot" style="background:var(--brand)"></span>Ред. позицию</button>
+    <button class="demo-chip" onclick="go('e-mat-partial-confirm')" data-screen="e-mat-partial-confirm"><span class="demo-dot" style="background:var(--yellow-dot)"></span>Частично</button>
+    <button class="demo-chip" onclick="go('e-mat-bought')" data-screen="e-mat-bought"><span class="demo-dot" style="background:var(--green-mid)"></span>Всё куплено</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase')" data-screen="e-selfpurchase"><span class="demo-dot" style="background:var(--brand)"></span>Самозакуп (бригадир)</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase-master')" data-screen="e-selfpurchase-master"><span class="demo-dot" style="background:#7C3AED"></span>Самозакуп (мастер)</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase-foreman')" data-screen="e-selfpurchase-foreman"><span class="demo-dot" style="background:var(--yellow-dot)"></span>Одобрение бригадиром</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase-pending')" data-screen="e-selfpurchase-pending"><span class="demo-dot" style="background:var(--yellow-dot)"></span>На рассмотрении</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase-confirmed')" data-screen="e-selfpurchase-confirmed"><span class="demo-dot" style="background:var(--green-mid)"></span>Подтверждён</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase-reject')" data-screen="e-selfpurchase-reject"><span class="demo-dot" style="background:var(--red-dot)"></span>Отклонение</button>
+    <button class="demo-chip" onclick="go('e-selfpurchase-rejected')" data-screen="e-selfpurchase-rejected"><span class="demo-dot" style="background:var(--red-dot)"></span>Отклонён</button>
+    <button class="demo-chip" onclick="go('e-mat-dispute')" data-screen="e-mat-dispute"><span class="demo-dot" style="background:var(--red-dot)"></span>Спор</button>
+    <button class="demo-chip" onclick="go('e-mat-dispute-resolve')" data-screen="e-mat-dispute-resolve"><span class="demo-dot" style="background:var(--green-mid)"></span>Закрыть спор</button>
+    <button class="demo-chip" onclick="go('e-mat-checklist-new')" data-screen="e-mat-checklist-new"><span class="demo-dot" style="background:var(--brand)"></span>Новая заявка (вид)</button>
+    <button class="demo-chip" onclick="go('e-materials-empty')" data-screen="e-materials-empty"><span class="demo-dot" style="background:var(--n400)"></span>Пусто</button>
+  </div>
+  <div class="demo-section-label">E3. Инструмент</div>
+  <div class="demo-chips">
+    <button class="demo-chip" onclick="go('e-instruments')" data-screen="e-instruments"><span class="demo-dot" style="background:var(--brand)"></span>Список (фильтры)</button>
+    <button class="demo-chip" onclick="go('e-tool-issue')" data-screen="e-tool-issue"><span class="demo-dot" style="background:var(--brand)"></span>Выдача</button>
+    <button class="demo-chip" onclick="go('e-instruments-after')" data-screen="e-instruments-after"><span class="demo-dot" style="background:var(--green-mid)"></span>После выдачи</button>
+    <button class="demo-chip" onclick="go('e-tool-confirm')" data-screen="e-tool-confirm"><span class="demo-dot" style="background:#059669"></span>Получение</button>
+    <button class="demo-chip" onclick="go('e-tool-surrender')" data-screen="e-tool-surrender"><span class="demo-dot" style="background:var(--brand)"></span>Сдать (мастер)</button>
+      <button class="demo-chip" onclick="go('e-tool-return')" data-screen="e-tool-return"><span class="demo-dot" style="background:#059669"></span>Возврат</button>
+    <button class="demo-chip" onclick="go('e-instruments-empty')" data-screen="e-instruments-empty"><span class="demo-dot" style="background:var(--n400)"></span>Пусто</button>
+  </div>
+</div>
+
+<script>
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const t=document.getElementById(id);if(t)t.classList.add('active');document.querySelectorAll('.demo-chip').forEach(c=>c.classList.remove('active'));const c=document.querySelector('.demo-chip[data-screen="'+id+'"]');if(c)c.classList.add('active')}
+function filterInstr(chip, person){
+  chip.closest('.filter-bar').querySelectorAll('.fc').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  document.querySelectorAll('#e-instruments .instr-row').forEach(function(row){
+    if(person==='all' || row.dataset.person===person){
+      row.style.display='';
+    } else {
+      row.style.display='none';
+    }
+  });
+}
+function filterInstrTab(tab, status){
+  tab.parentElement.querySelectorAll('.instr-tab').forEach(function(t){
+    t.style.color='var(--n400)';t.style.borderBottomColor='transparent';
+  });
+  tab.style.color='var(--brand)';tab.style.borderBottomColor='var(--brand)';
+  document.querySelectorAll('#e-instruments .instr-row').forEach(function(row){
+    if(status==='all' || row.dataset.instrstat===status){
+      row.style.display='';
+    } else {
+      row.style.display='none';
+    }
+  });
+}
+function toggleFC(el){
+  var bar=el.closest('.filter-bar');
+  bar.querySelectorAll('.fc').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  var cat=el.textContent.trim().toLowerCase();
+  var rows=document.querySelectorAll('#mat-table .mat-row');
+  var total=0, count=0;
+  rows.forEach(function(row){
+    if(cat==='все' || row.dataset.cat===cat){
+      row.style.display='';
+      var s=row.querySelector('.mat-sum');
+      if(s){total+=parseInt(s.textContent.replace(/[^\d]/g,''));count++;}
+    } else {
+      row.style.display='none';
+    }
+  });
+  var lbl=document.getElementById('mat-total-label');
+  var sm=document.getElementById('mat-total-sum');
+  if(lbl)lbl.textContent='Итого · '+count+' позиц'+(count===1?'ия':count<5?'ии':'ий');
+  if(sm)sm.textContent=total.toLocaleString('ru-RU')+' ₽';
+}
+</script>
+</body>
+</html>

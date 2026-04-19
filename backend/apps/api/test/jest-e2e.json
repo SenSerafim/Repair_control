@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "../../..",
+  "testRegex": ".*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@app/common(|/.*)$": "<rootDir>/libs/common/src$1",
+    "^@app/rbac(|/.*)$": "<rootDir>/libs/rbac/src$1",
+    "^@app/files(|/.*)$": "<rootDir>/libs/files/src$1"
+  },
+  "testEnvironment": "node",
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "globalSetup": "<rootDir>/apps/api/test/global-setup.ts",
+  "setupFilesAfterEach": [],
+  "testPathIgnorePatterns": ["/node_modules/", "/dist/"]
+}
