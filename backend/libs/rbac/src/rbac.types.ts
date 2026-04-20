@@ -14,6 +14,7 @@ export const DOMAIN_ACTIONS = [
   'stage.pause',
   'step.manage',
   'step.add_substep',
+  'step.photo.upload',
   'approval.request',
   'approval.decide',
   'finance.budget.edit',
@@ -21,6 +22,8 @@ export const DOMAIN_ACTIONS = [
   'materials.manage',
   'tools.manage',
   'chat.read',
+  'note.manage',
+  'question.manage',
 ] as const;
 
 export type DomainAction = (typeof DOMAIN_ACTIONS)[number];
@@ -32,6 +35,8 @@ export interface AccessContext {
   membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
   representativeRights?: RepresentativeRights;
   stageForemanIds?: string[];
+  stepAuthorId?: string;
+  stepAssigneeIds?: string[];
 }
 
 export interface RepresentativeRights {

@@ -133,6 +133,71 @@ describe('project-level semaphore', () => {
   });
 });
 
+describe('computeStageProgress — формула со шагами (gaps §2.3)', () => {
+  const mkClient = (done: number, active: number) =>
+    ({
+      step: {
+        count: jest.fn(({ where }: any) => {
+          if (where.status === 'done') return Promise.resolve(done);
+          if (where.status?.notIn) return Promise.resolve(active);
+          return Promise.resolve(0);
+        }),
+      },
+    }) as any;
+
+  it('status=done всегда даёт 100%', async () => {
+    const c = calc();
+    const client = mkClient(0, 0);
+    expect(await c.computeStageProgress('s1', 'done', client)).toBe(100);
+  });
+
+  it('нет шагов → фоллбэк по статусу стадии (pending=0)', async () => {
+    const c = calc();
+    const client = mkClient(0, 0);
+    expect(await c.computeStageProgress('s1', 'pending', client)).toBe(0);
+  });
+
+  it('нет шагов, status=active → 50%', async () => {
+    const c = calc();
+    const client = mkClient(0, 0);
+    expect(await c.computeStageProgress('s1', 'active', client)).toBe(50);
+  });
+
+  it('нет шагов, status=review → 90%', async () => {
+    const c = calc();
+    const client = mkClient(0, 0);
+    expect(await c.computeStageProgress('s1', 'review', client)).toBe(90);
+  });
+
+  it('1 из 4 активных done → 25%', async () => {
+    const c = calc();
+    const client = mkClient(1, 4);
+    expect(await c.computeStageProgress('s1', 'active', client)).toBe(25);
+  });
+
+  it('3 из 4 активных done → 75%', async () => {
+    const c = calc();
+    const client = mkClient(3, 4);
+    expect(await c.computeStageProgress('s1', 'active', client)).toBe(75);
+  });
+
+  it('pending_approval и rejected НЕ учитываются в знаменателе', async () => {
+    // Мок вернёт active (notIn), не включая rejected/pending_approval — проверяем
+    // что именно это условие уходит в prisma
+    const c = calc();
+    const countFn = jest.fn().mockImplementation(({ where }: any) => {
+      if (where.status === 'done') return Promise.resolve(2);
+      if (where.status?.notIn) {
+        expect(where.status.notIn).toEqual(['rejected', 'pending_approval']);
+        return Promise.resolve(2);
+      }
+      return Promise.resolve(0);
+    });
+    const client = { step: { count: countFn } } as any;
+    expect(await c.computeStageProgress('s1', 'active', client)).toBe(100);
+  });
+});
+
 describe('project progress', () => {
   it('0% при пустом списке', () => {
     expect(calc().computeProjectProgress([])).toBe(0);

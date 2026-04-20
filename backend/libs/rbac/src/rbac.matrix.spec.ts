@@ -191,6 +191,59 @@ describe('RBAC matrix — ТЗ §1.5', () => {
       expect(canAccess('step.add_substep', { userId: 'x', systemRole: 'customer' })).toBe(false);
     });
   });
+
+  describe('step.manage — мастер только на назначенных этапах (ТЗ §6.4)', () => {
+    it('foreman — всегда ок', () => {
+      expect(canAccess('step.manage', foreman())).toBe(true);
+    });
+    it('master назначен на stage (stageForemanIds содержит его userId) — ok', () => {
+      const ctx = { ...master(), stageForemanIds: ['u-mas'] };
+      expect(canAccess('step.manage', ctx)).toBe(true);
+    });
+    it('master назначен непосредственно на шаг (stepAssigneeIds) — ok', () => {
+      const ctx = { ...master(), stepAssigneeIds: ['u-mas'], stageForemanIds: [] };
+      expect(canAccess('step.manage', ctx)).toBe(true);
+    });
+    it('master не назначен ни на этап, ни на шаг — 403', () => {
+      const ctx = { ...master(), stageForemanIds: ['other'], stepAssigneeIds: ['other'] };
+      expect(canAccess('step.manage', ctx)).toBe(false);
+    });
+    it('representative без canEditStages — 403', () => {
+      expect(canAccess('step.manage', representative({ canEditStages: false }))).toBe(false);
+    });
+    it('representative с canEditStages — ok', () => {
+      expect(canAccess('step.manage', representative({ canEditStages: true }))).toBe(true);
+    });
+  });
+
+  describe('step.photo.upload', () => {
+    it('owner, foreman, master — могут прикрепить фото', () => {
+      expect(canAccess('step.photo.upload', customer(true))).toBe(true);
+      expect(canAccess('step.photo.upload', foreman())).toBe(true);
+      expect(canAccess('step.photo.upload', master())).toBe(true);
+    });
+    it('representative — только с canEditStages', () => {
+      expect(canAccess('step.photo.upload', representative({ canEditStages: true }))).toBe(true);
+      expect(canAccess('step.photo.upload', representative({ canEditStages: false }))).toBe(false);
+    });
+    it('не-участник — 403', () => {
+      expect(canAccess('step.photo.upload', { userId: 'x', systemRole: 'customer' })).toBe(false);
+    });
+  });
+
+  describe('note.manage / question.manage', () => {
+    it('любой участник может (точечные права в сервисе)', () => {
+      expect(canAccess('note.manage', foreman())).toBe(true);
+      expect(canAccess('note.manage', master())).toBe(true);
+      expect(canAccess('note.manage', customer(true))).toBe(true);
+      expect(canAccess('note.manage', representative())).toBe(true);
+      expect(canAccess('question.manage', foreman())).toBe(true);
+    });
+    it('не-участник — 403', () => {
+      expect(canAccess('note.manage', { userId: 'x', systemRole: 'customer' })).toBe(false);
+      expect(canAccess('question.manage', { userId: 'x', systemRole: 'customer' })).toBe(false);
+    });
+  });
 });
 
 describe('mergeRepresentativeRights', () => {

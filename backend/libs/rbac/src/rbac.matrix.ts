@@ -39,13 +39,31 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
 
     case 'step.manage':
       if (ctx.membershipRole === 'foreman') return true;
-      if (ctx.membershipRole === 'master') return (ctx.stageForemanIds ?? []).length === 0 || true;
+      if (ctx.membershipRole === 'master') {
+        // Мастер может управлять шагом, только если он назначен на этап или на сам шаг (ТЗ §6.4)
+        const isStageAssignee = (ctx.stageForemanIds ?? []).includes(ctx.userId);
+        const isStepAssignee = (ctx.stepAssigneeIds ?? []).includes(ctx.userId);
+        return isStageAssignee || isStepAssignee;
+      }
       if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       return false;
 
     case 'step.add_substep':
       // подшаги могут добавлять все участники проекта (ТЗ §6.4)
+      return !!ctx.membershipRole;
+
+    case 'step.photo.upload':
+      // Фото шага может прикрепить любой активный участник (customer/rep.canEditStages/foreman/master)
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return !!ctx.membershipRole;
+      return false;
+
+    case 'note.manage':
+    case 'question.manage':
+      // Любой участник проекта. Точечные ограничения (author-only / addressee-only) — внутри сервиса.
       return !!ctx.membershipRole;
 
     case 'approval.request':

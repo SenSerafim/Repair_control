@@ -13,6 +13,9 @@ import { StagesModule } from './modules/stages/stages.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { FilesApiModule } from './modules/files/files-api.module';
+import { StepsModule } from './modules/steps/steps.module';
+import { NotesModule } from './modules/notes/notes.module';
+import { QuestionsModule } from './modules/questions/questions.module';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { FilesApiModule } from './modules/files/files-api.module';
     TemplatesModule,
     FeedModule,
     FilesApiModule,
+    StepsModule,
+    NotesModule,
+    QuestionsModule,
   ],
 })
 export class AppModule {}

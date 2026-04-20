@@ -45,6 +45,11 @@ export class AccessGuard implements CanActivate {
       if (stageId) {
         await this.hydrateStageContext(accessCtx, stageId);
       }
+    } else if (requirement.resource === 'step' && requirement.resourceIdFrom) {
+      const stepId = this.extractId(req, requirement.resourceIdFrom);
+      if (stepId) {
+        await this.hydrateStepContext(accessCtx, stepId);
+      }
     }
 
     if (!canAccess(requirement.action, accessCtx)) {
@@ -89,6 +94,38 @@ export class AccessGuard implements CanActivate {
     acc.projectOwnerId = stage.project.ownerId;
     acc.stageForemanIds = stage.foremanIds;
     const m = stage.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+    }
+  }
+
+  private async hydrateStepContext(acc: AccessContext, stepId: string): Promise<void> {
+    const step = await this.prisma.step.findUnique({
+      where: { id: stepId },
+      select: {
+        authorId: true,
+        assigneeIds: true,
+        stage: {
+          select: {
+            foremanIds: true,
+            project: {
+              select: {
+                id: true,
+                ownerId: true,
+                memberships: { where: { userId: acc.userId } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!step) return;
+    acc.projectOwnerId = step.stage.project.ownerId;
+    acc.stageForemanIds = step.stage.foremanIds;
+    acc.stepAuthorId = step.authorId;
+    acc.stepAssigneeIds = step.assigneeIds;
+    const m = step.stage.project.memberships[0];
     if (m) {
       acc.membershipRole = m.role;
       acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);

@@ -81,19 +81,38 @@ export class ProgressCalculator {
     const client = tx ?? this.prisma;
     const stage = await client.stage.findUnique({ where: { id: stageId } });
     if (!stage) return;
-    const progress =
-      stage.status === 'done'
-        ? 100
-        : stage.status === 'review'
-          ? 90
-          : stage.status === 'active'
-            ? 50
-            : 0;
+    const progress = await this.computeStageProgress(stage.id, stage.status, client);
     await client.stage.update({
       where: { id: stageId },
       data: { progressCache: progress },
     });
     await this.recalcProject(stage.projectId, tx);
+  }
+
+  /**
+   * Прогресс стадии (ТЗ §2.4, gaps §2.3):
+   * - done → 100
+   * - иначе: если есть активные шаги (статус ≠ rejected, ≠ pending_approval) → done_count / active_count
+   * - если шагов нет → фоллбэк по status стадии (pending=0, active=50, review=90)
+   */
+  async computeStageProgress(
+    stageId: string,
+    status: StageStatus,
+    client: Prisma.TransactionClient | PrismaService,
+  ): Promise<number> {
+    if (status === 'done') return 100;
+    const stepsClient = client as any;
+    const [done, active] = await Promise.all([
+      stepsClient.step.count({ where: { stageId, status: 'done' } }),
+      stepsClient.step.count({
+        where: { stageId, status: { notIn: ['rejected', 'pending_approval'] } },
+      }),
+    ]);
+    if (active > 0) {
+      return Math.round((done / active) * 100);
+    }
+    // фоллбэк по статусу стадии, если шагов нет
+    return status === 'review' ? 90 : status === 'active' ? 50 : 0;
   }
 
   async recalcProject(projectId: string, tx?: Prisma.TransactionClient): Promise<void> {

@@ -41,6 +41,31 @@ enum PauseReason {
   other
 }
 
+enum StepType {
+  regular
+  extra
+}
+
+enum StepStatus {
+  pending
+  in_progress
+  done
+  pending_approval
+  rejected
+}
+
+enum QuestionStatus {
+  open
+  answered
+  closed
+}
+
+enum NoteScope {
+  personal
+  for_me
+  stage
+}
+
 enum TemplateKind {
   platform
   user
@@ -75,58 +100,79 @@ enum FeedEventKind {
   stage_deadline_recalculated
   stage_deadline_exceeds_project
   stages_reordered
+  step_created
+  step_updated
+  step_completed
+  step_uncompleted
+  step_deleted
+  steps_reordered
+  substep_added
+  substep_updated
+  substep_completed
+  substep_uncompleted
+  substep_deleted
+  photo_attached
+  photo_deleted
+  extra_work_requested
+  note_created
+  note_updated
+  note_deleted
+  question_asked
+  question_answered
+  question_closed
+  progress_recalculated_on_step_change
 }
 
 // ---------- Users / Auth ----------
 
 model User {
-  id            String   @id @default(cuid())
-  phone         String   @unique
-  email         String?  @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  avatarUrl     String?
-  language      String   @default("ru")
-  activeRole    SystemRole @default(customer)
-  lastSeenAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String     @id @default(cuid())
+  phone        String     @unique
+  email        String?    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  language     String     @default("ru")
+  activeRole   SystemRole @default(customer)
+  lastSeenAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  roles         UserRole[]
-  sessions      Session[]
-  devices       DeviceToken[]
+  roles            UserRole[]
+  sessions         Session[]
+  devices          DeviceToken[]
   recoveryAttempts RecoveryAttempt[]
-  loginAttempts LoginAttempt[]
+  loginAttempts    LoginAttempt[]
 
-  ownedProjects Project[]        @relation("ProjectOwner")
-  memberships   Membership[]
+  ownedProjects   Project[]           @relation("ProjectOwner")
+  memberships     Membership[]
   invitationsSent ProjectInvitation[] @relation("InvitationInvitedBy")
 }
 
 model UserRole {
-  userId    String
-  role      SystemRole
-  isActive  Boolean    @default(true)
-  addedAt   DateTime   @default(now())
+  userId   String
+  role     SystemRole
+  isActive Boolean    @default(true)
+  addedAt  DateTime   @default(now())
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, role])
 }
 
 model Session {
-  id              String   @id @default(cuid())
-  userId          String
+  id               String    @id @default(cuid())
+  userId           String
   refreshTokenHash String
-  deviceId        String
-  userAgent       String?
-  ipFingerprint   String
-  createdAt       DateTime @default(now())
-  expiresAt       DateTime
-  revokedAt       DateTime?
+  deviceId         String
+  userAgent        String?
+  ipFingerprint    String
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -140,36 +186,36 @@ model DeviceToken {
   lastSeenAt DateTime       @default(now())
   createdAt  DateTime       @default(now())
 
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model LoginAttempt {
-  id         String   @id @default(cuid())
-  userId     String?
-  phone      String
-  ip         String
-  success    Boolean
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  phone     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
 
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([phone, createdAt])
   @@index([ip, createdAt])
 }
 
 model RecoveryAttempt {
-  id         String   @id @default(cuid())
-  userId     String
-  code       String
-  attempts   Int      @default(0)
-  isUsed     Boolean  @default(false)
+  id           String    @id @default(cuid())
+  userId       String
+  code         String
+  attempts     Int       @default(0)
+  isUsed       Boolean   @default(false)
   blockedUntil DateTime?
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }
@@ -177,44 +223,44 @@ model RecoveryAttempt {
 // ---------- Projects ----------
 
 model Project {
-  id               String        @id @default(cuid())
-  ownerId          String
-  title            String
-  address          String?
-  plannedStart     DateTime?
-  plannedEnd       DateTime?
-  status           ProjectStatus @default(active)
-  workBudget       BigInt        @default(0) // minor units (копейки)
-  materialsBudget  BigInt        @default(0)
-  progressCache    Int           @default(0)
-  semaphoreCache   String        @default("green")
-  archivedAt       DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  ownerId         String
+  title           String
+  address         String?
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
+  status          ProjectStatus @default(active)
+  workBudget      BigInt        @default(0) // minor units (копейки)
+  materialsBudget BigInt        @default(0)
+  progressCache   Int           @default(0)
+  semaphoreCache  String        @default("green")
+  archivedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  owner            User          @relation("ProjectOwner", fields: [ownerId], references: [id])
-  memberships      Membership[]
-  invitations      ProjectInvitation[]
-  stages           Stage[]
-  feedEvents       FeedEvent[]
+  owner       User                @relation("ProjectOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  invitations ProjectInvitation[]
+  stages      Stage[]
+  feedEvents  FeedEvent[]
 
   @@index([ownerId])
   @@index([status])
 }
 
 model Membership {
-  id            String         @id @default(cuid())
-  projectId     String
-  userId        String
-  role          MembershipRole
-  invitedById   String?
-  stageIds      String[]       @default([])
-  permissions   Json           @default("{}")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  projectId   String
+  userId      String
+  role        MembershipRole
+  invitedById String?
+  stageIds    String[]       @default([])
+  permissions Json           @default("{}")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId, role])
   @@index([projectId])
@@ -222,18 +268,18 @@ model Membership {
 }
 
 model ProjectInvitation {
-  id           String           @id @default(cuid())
-  projectId    String
-  phone        String
-  role         MembershipRole
-  invitedById  String
-  status       InvitationStatus @default(pending)
-  token        String           @unique
-  createdAt    DateTime         @default(now())
-  expiresAt    DateTime
+  id          String           @id @default(cuid())
+  projectId   String
+  phone       String
+  role        MembershipRole
+  invitedById String
+  status      InvitationStatus @default(pending)
+  token       String           @unique
+  createdAt   DateTime         @default(now())
+  expiresAt   DateTime
 
-  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  invitedBy    User             @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
 
   @@index([projectId])
   @@index([phone])
@@ -261,23 +307,24 @@ model Stage {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pauses          Pause[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pauses  Pause[]
+  steps   Step[]
 
   @@index([projectId, orderIndex])
   @@index([status])
 }
 
 model Pause {
-  id         String      @id @default(cuid())
-  stageId    String
-  reason     PauseReason
-  comment    String?
-  startedAt  DateTime    @default(now())
-  endedAt    DateTime?
-  startedBy  String
+  id        String      @id @default(cuid())
+  stageId   String
+  reason    PauseReason
+  comment   String?
+  startedAt DateTime    @default(now())
+  endedAt   DateTime?
+  startedBy String
 
-  stage      Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  stage Stage @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
   @@index([stageId])
 }
@@ -294,34 +341,133 @@ model Template {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  steps       TemplateStep[]
+  steps TemplateStep[]
 
   @@index([kind])
 }
 
 model TemplateStep {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   templateId String
   title      String
   orderIndex Int
   price      BigInt?
 
-  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId, orderIndex])
+}
+
+// ---------- Steps / Substeps / Photos ----------
+
+model Step {
+  id          String     @id @default(cuid())
+  stageId     String
+  title       String
+  orderIndex  Int
+  type        StepType   @default(regular)
+  status      StepStatus @default(pending)
+  price       BigInt?
+  description String?
+  authorId    String
+  assigneeIds String[]   @default([])
+  doneAt      DateTime?
+  doneById    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  stage     Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  substeps  Substep[]
+  photos    StepPhoto[]
+  questions Question[]
+
+  @@index([stageId, orderIndex])
+  @@index([status])
+  @@index([type])
+}
+
+model Substep {
+  id        String    @id @default(cuid())
+  stepId    String
+  text      String
+  authorId  String
+  isDone    Boolean   @default(false)
+  doneAt    DateTime?
+  doneById  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+  @@index([authorId])
+}
+
+model StepPhoto {
+  id          String   @id @default(cuid())
+  stepId      String
+  fileKey     String
+  thumbKey    String?
+  mimeType    String
+  sizeBytes   Int
+  uploadedBy  String
+  exifCleared Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+}
+
+// ---------- Notes / Questions ----------
+
+model Note {
+  id          String    @id @default(cuid())
+  scope       NoteScope
+  authorId    String
+  addresseeId String?
+  projectId   String?
+  stageId     String?
+  text        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([authorId, scope, createdAt])
+  @@index([addresseeId, scope])
+  @@index([stageId])
+  @@index([projectId])
+}
+
+model Question {
+  id          String         @id @default(cuid())
+  stepId      String
+  authorId    String
+  addresseeId String
+  text        String
+  status      QuestionStatus @default(open)
+  answer      String?
+  answeredAt  DateTime?
+  answeredBy  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId, status])
+  @@index([addresseeId, status])
 }
 
 // ---------- Feed (outbox) ----------
 
 model FeedEvent {
-  id         String        @id @default(cuid())
-  projectId  String?
-  kind       FeedEventKind
-  actorId    String?
-  payload    Json          @default("{}")
-  createdAt  DateTime      @default(now())
+  id        String        @id @default(cuid())
+  projectId String?
+  kind      FeedEventKind
+  actorId   String?
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now())
 
-  project    Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
   @@index([kind, createdAt])
