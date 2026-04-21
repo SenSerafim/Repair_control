@@ -68,10 +68,45 @@ Prisma возвращает `BigInt` для всех колонок `BigInt` (`w
 
 Мобильной команде: OpenAPI (`/api/docs`) — источник истины. Генерация клиентов идёт от него.
 
+## Approvals FSM (ТЗ §8 спринт 3 день 6)
+
+5 scope × 4 status (`pending → approved | rejected | cancelled`; из `rejected` можно resubmit → `pending` с `attemptNumber++`).
+
+| scope | когда создаётся | addressee | `applyDecisionEffect` при approved | при rejected |
+|---|---|---|---|---|
+| `plan` | foreman → customer на всё дерево этапов | owner проекта | `project.planApproved=true` + все `stage.planApproved=true` + emit `plan_approved` | — (ждём resubmit) |
+| `stage_accept` | `StagesService.sendToReview` автоматом | owner проекта | `stage.status=done` + emit `stage_accepted` | `stage.status=rejected` + emit `stage_rejected_by_customer` |
+| `extra_work` | `StepsService.create(type=extra)` автоматом | owner проекта | `stage.workBudget += step.price` (увеличение в той же транзакции) + `step.status=pending` + emit `budget_updated` | `step.status=rejected`, бюджет не меняется |
+| `deadline_change` | foreman → customer | owner проекта | `stage.plannedEnd = newEnd`, `stage.originalEnd = newEnd` + emit `deadline_changed` + `stage_deadline_recalculated` | — |
+| `step` | foreman/master → foreman | foreman (или customer если нет foreman) | `step.status=done`, `doneAt` + `recalcStage` | — |
+
+Инварианты:
+- Reject требует `comment` (иначе 400 `approvals.reject_comment_required`).
+- gaps §3.3 — customer-owner не может approve scope=step мимо foreman (если addressee = foreman и actor ≠ addressee → 403 `approvals.customer_bypass_foreman`).
+- gaps §3.2 — `StagesService.start` бросает 409 `approvals.plan_not_approved`, если `project.requiresPlanApproval` и план ещё не одобрен.
+- Все эффекты `apply*` выполняются в одной транзакции с `feed.emit({ tx })`.
+
+## Cross-module forwardRef (паттерн)
+
+Из-за двусторонней зависимости `Steps ↔ Approvals` (Steps создают Approval при extra_work; Approvals при approve меняют `step.status`) и `Stages ↔ Approvals` (Stages создают Approval при `sendToReview`; Approvals при approve меняют `stage.status`/`workBudget`) используется `forwardRef`:
+
+- `StepsModule.imports = [forwardRef(() => ApprovalsModule)]` и в `StepsService`: `@Inject(forwardRef(() => ApprovalsService))`.
+- `StagesModule.imports = [forwardRef(() => ApprovalsModule)]` и аналогично в `StagesService`.
+- `ApprovalsModule.imports = [forwardRef(() => StagesModule)]` — нужен `ProgressCalculator` для пересчёта прогресса в `applyDecisionEffect`.
+
+Все вызовы кросс-сервисных методов принимают optional `tx: Prisma.TransactionClient`, чтобы не терять транзакцию-родитель.
+
+## Методичка — FTS и ETag (ТЗ §8 спринт 3 день 6, §5.2)
+
+- `MethodologyArticle.searchVector` — GENERATED ALWAYS tsvector (russian dict) + GIN индекс + `pg_trgm` индекс на `title`. Миграция raw SQL (`prisma/migrations/*_add_methodology_fts`).
+- Поиск — `ts_rank + ts_headline(snippet)` через `$queryRaw`. Trigram `%` как fallback для опечаток.
+- `etag = sha256(title + body + refKeys.join(','))`. `version++` только при изменении `title|body` (не `orderIndex`). Контроллер `GET /methodology/articles/:id` возвращает `ETag` header и 304 на `If-None-Match`.
+- Edit только admin (`methodology.edit`). Read — все аутентифицированные (`methodology.read`).
+
 ## Что ещё оседает в schema.prisma «на вырост» (ТЗ §5.7)
 
-- `Subscription` / `FeatureFlag` — не добавлены в S1-S2 (появятся в следующих спринтах).
-- `Document`, `Payment`, `MaterialRequest`, `ToolItem`, `Approval`, `Chat`, `Note` — в схеме пока отсутствуют, добавим в S3-S5 под их модули.
+- `Subscription` / `FeatureFlag` — не добавлены (появятся в следующих спринтах).
+- `Document`, `Chat` — в схеме пока отсутствуют, добавим в S5 под их модули.
 - Партиционирование `FeedEvent` по году (ТЗ §5.4) — задел на момент, когда лента начнёт активно расти; сейчас обычная таблица.
 
 ## Миграции

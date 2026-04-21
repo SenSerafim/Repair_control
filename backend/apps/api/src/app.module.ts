@@ -18,6 +18,9 @@ import { NotesModule } from './modules/notes/notes.module';
 import { QuestionsModule } from './modules/questions/questions.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { MethodologyModule } from './modules/methodology/methodology.module';
+import { IdempotencyModule } from './modules/idempotency/idempotency.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { MaterialsModule } from './modules/materials/materials.module';
 
 @Module({
   imports: [
@@ -46,6 +49,9 @@ import { MethodologyModule } from './modules/methodology/methodology.module';
     QuestionsModule,
     ApprovalsModule,
     MethodologyModule,
+    IdempotencyModule,
+    PaymentsModule,
+    MaterialsModule,
   ],
 })
 export class AppModule {}

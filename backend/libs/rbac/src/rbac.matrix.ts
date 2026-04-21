@@ -74,6 +74,36 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       // Только админ правит методичку. Admin обрабатывается в блоке выше → сюда не доходит.
       return false;
 
+    case 'finance.payment.confirm':
+      // Подтверждение — любой участник проекта; точечная проверка toUserId === actor — в сервисе.
+      return !!ctx.membershipRole;
+
+    case 'finance.payment.dispute':
+      // Спор может открыть любой участник; точечная проверка fromUserId|toUserId — в сервисе.
+      return !!ctx.membershipRole;
+
+    case 'finance.payment.resolve':
+      // Резолвит спор — customer-owner или representative.canApprove.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canApprove;
+      return false;
+
+    case 'finance.budget.view':
+      // Бюджет видят customer-owner, representative.canSeeBudget, foreman и master — объём по RBAC matrix.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canSeeBudget;
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      return false;
+
+    case 'material.finalize':
+      // Финализируют бригадир/заказчик. Master не может.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative')
+        return !!ctx.representativeRights?.canManageMaterials;
+      if (ctx.membershipRole === 'foreman') return true;
+      return false;
+
     case 'approval.request':
       if (ctx.membershipRole === 'foreman') return true;
       if (ctx.membershipRole === 'master') return true;

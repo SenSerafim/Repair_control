@@ -41,6 +41,12 @@ export async function bootTestApp(
 export async function truncateAll(prisma: PrismaService): Promise<void> {
   // Шаблоны и методичку не трогаем — seed'ятся globalSetup и не меняются между тестами.
   const tables = [
+    'IdempotencyRecord',
+    'PaymentDispute',
+    'Payment',
+    'MaterialDispute',
+    'MaterialItem',
+    'MaterialRequest',
     'ApprovalAttachment',
     'ApprovalAttempt',
     'Approval',

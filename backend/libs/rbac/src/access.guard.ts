@@ -50,6 +50,11 @@ export class AccessGuard implements CanActivate {
       if (stepId) {
         await this.hydrateStepContext(accessCtx, stepId);
       }
+    } else if (requirement.resource === 'material_request' && requirement.resourceIdFrom) {
+      const materialRequestId = this.extractId(req, requirement.resourceIdFrom);
+      if (materialRequestId) {
+        await this.hydrateMaterialRequestContext(accessCtx, materialRequestId);
+      }
     }
 
     if (!canAccess(requirement.action, accessCtx)) {
@@ -94,6 +99,28 @@ export class AccessGuard implements CanActivate {
     acc.projectOwnerId = stage.project.ownerId;
     acc.stageForemanIds = stage.foremanIds;
     const m = stage.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+    }
+  }
+
+  private async hydrateMaterialRequestContext(
+    acc: AccessContext,
+    materialRequestId: string,
+  ): Promise<void> {
+    const mr = await this.prisma.materialRequest.findUnique({
+      where: { id: materialRequestId },
+      select: {
+        projectId: true,
+        project: {
+          select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+        },
+      },
+    });
+    if (!mr) return;
+    acc.projectOwnerId = mr.project.ownerId;
+    const m = mr.project.memberships[0];
     if (m) {
       acc.membershipRole = m.role;
       acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);

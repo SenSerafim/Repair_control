@@ -26,6 +26,11 @@ export const DOMAIN_ACTIONS = [
   'question.manage',
   'methodology.read',
   'methodology.edit',
+  'finance.payment.confirm',
+  'finance.payment.dispute',
+  'finance.payment.resolve',
+  'finance.budget.view',
+  'material.finalize',
 ] as const;
 
 export type DomainAction = (typeof DOMAIN_ACTIONS)[number];

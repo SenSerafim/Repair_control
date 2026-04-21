@@ -6,3 +6,4 @@ export * from './errors/domain-errors';
 export * from './time/clock';
 export * from './time/clock.module';
 export * from './pagination/cursor';
+export * from './money/money';
