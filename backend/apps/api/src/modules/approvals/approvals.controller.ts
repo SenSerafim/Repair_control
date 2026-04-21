@@ -39,7 +39,7 @@ export class ApprovalsController {
 
   @Get('projects/:projectId/approvals')
   @RequireAccess({
-    action: 'chat.read',
+    action: 'approval.list',
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })

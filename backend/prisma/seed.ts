@@ -1,5 +1,6 @@
 import { PrismaClient, TemplateKind } from '@prisma/client';
 import { PLATFORM_TEMPLATES } from '../apps/api/src/modules/templates/platform-templates';
+import { seedMethodology } from './methodology-seed';
 
 const prisma = new PrismaClient();
 
@@ -38,6 +39,10 @@ async function main(): Promise<void> {
   const count = await prisma.template.count({ where: { kind: 'platform' } });
   // eslint-disable-next-line no-console
   console.log(`Seeded platform templates: ${count}`);
+
+  const methodologyArticles = await seedMethodology(prisma);
+  // eslint-disable-next-line no-console
+  console.log(`Seeded methodology articles: ${methodologyArticles}`);
 }
 
 main()

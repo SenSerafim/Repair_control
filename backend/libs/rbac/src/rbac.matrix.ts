@@ -109,6 +109,10 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       if (ctx.membershipRole === 'master') return true;
       return false;
 
+    case 'approval.list':
+      // Список согласований проекта видят все участники.
+      return !!ctx.membershipRole;
+
     case 'approval.decide':
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canApprove;

@@ -126,9 +126,10 @@ export class MembersService {
       throw new InvalidInputError(ErrorCodes.FORBIDDEN, 'owner membership cannot be removed');
     }
 
-    // H.2: если удаляется foreman — ищем активные стадии, где он в foremanIds,
-    // помечаем его pending approvals requiresReassign и эмитим foreman_removed.
-    // Мастера остаются (не удаляются автоматически).
+    // H.2: удаление foreman — чистим его из foremanIds активных стадий,
+    // помечаем его pending approvals requiresReassign, эмитим foreman_removed.
+    // Удаление master — очищаем его из step.assigneeIds, чтобы не оставлять orphan ссылки.
+    // Мастера, принадлежащие foreman'у, при удалении foreman'а НЕ удаляются автоматически.
     await this.prisma.$transaction(async (tx) => {
       if (membership.role === 'foreman') {
         const activeStages = await tx.stage.findMany({
@@ -159,6 +160,22 @@ export class MembersService {
             projectId,
             actorId: actorUserId,
             payload: { stageId: stage.id, userId: membership.userId },
+          });
+        }
+      } else if (membership.role === 'master') {
+        // Очищаем userId удаляемого мастера из step.assigneeIds всех шагов проекта,
+        // чтобы не остались orphan-ссылки. Массивы пересохраняем точечно.
+        const stepsWithAssignment = await tx.step.findMany({
+          where: {
+            stage: { projectId },
+            assigneeIds: { has: membership.userId },
+          },
+          select: { id: true, assigneeIds: true },
+        });
+        for (const s of stepsWithAssignment) {
+          await tx.step.update({
+            where: { id: s.id },
+            data: { assigneeIds: s.assigneeIds.filter((id) => id !== membership.userId) },
           });
         }
       }

@@ -35,6 +35,7 @@ export const DOMAIN_ACTIONS = [
   'selfpurchase.confirm',
   'tools.issue',
   'tools.return',
+  'approval.list',
 ] as const;
 
 export type DomainAction = (typeof DOMAIN_ACTIONS)[number];

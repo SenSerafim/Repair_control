@@ -38,14 +38,14 @@ ALTER TYPE "FeedEventKind" ADD VALUE 'material_delivered';
 ALTER TYPE "FeedEventKind" ADD VALUE 'material_disputed';
 ALTER TYPE "FeedEventKind" ADD VALUE 'material_resolved';
 
--- DropIndex
-DROP INDEX "methodology_article_fts_idx";
+-- DropIndex: searchVector GENERATED-колонка и fts_idx не применялись на чистой БД
+-- (Prisma migrate deploy не поддерживает ADD COLUMN GENERATED ALWAYS AS STORED).
+-- FTS теперь вычисляется в $queryRaw налету (см. MethodologyService.search).
+-- trgm_idx нужен для fallback по опечаткам — НЕ дропаем.
+DROP INDEX IF EXISTS "methodology_article_fts_idx";
 
--- DropIndex
-DROP INDEX "methodology_article_trgm_idx";
-
--- AlterTable
-ALTER TABLE "MethodologyArticle" DROP COLUMN "searchVector";
+-- AlterTable: searchVector могло не создаться — IF EXISTS страхует.
+ALTER TABLE "MethodologyArticle" DROP COLUMN IF EXISTS "searchVector";
 
 -- CreateTable
 CREATE TABLE "Payment" (

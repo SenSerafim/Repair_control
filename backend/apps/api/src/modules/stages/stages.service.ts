@@ -106,9 +106,20 @@ export class StagesService {
   }
 
   async update(stageId: string, input: UpdateStageInput) {
-    this.validateDateRange(input.plannedStart, input.plannedEnd);
     const existing = await this.prisma.stage.findUnique({ where: { id: stageId } });
     if (!existing) throw new NotFoundError(ErrorCodes.STAGE_NOT_FOUND, 'stage not found');
+    // Валидируем интервал дат комбинацией новых и существующих значений (ТЗ §4.2).
+    const effectiveStart = input.plannedStart
+      ? input.plannedStart
+      : existing.plannedStart
+        ? existing.plannedStart.toISOString()
+        : undefined;
+    const effectiveEnd = input.plannedEnd
+      ? input.plannedEnd
+      : existing.plannedEnd
+        ? existing.plannedEnd.toISOString()
+        : undefined;
+    this.validateDateRange(effectiveStart, effectiveEnd);
 
     const data: Prisma.StageUpdateInput = {
       title: input.title,

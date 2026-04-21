@@ -219,6 +219,8 @@ export class MethodologyService {
       );
     }
     const q = query.trim();
+    // FTS вычисляется налету: to_tsvector('russian', title || ' ' || body).
+    // Trigram-fallback (%) ловит опечатки в title (pg_trgm установлен в миграции).
     const rows = await this.prisma.$queryRaw<
       Array<{ id: string; sectionId: string; title: string; snippet: string; rank: number }>
     >(Prisma.sql`
@@ -232,9 +234,13 @@ export class MethodologyService {
           plainto_tsquery('russian', ${q}),
           'StartSel=«,StopSel=»,MaxWords=20,MinWords=5,ShortWord=2'
         ) AS snippet,
-        ts_rank(a."searchVector", plainto_tsquery('russian', ${q})) AS rank
+        ts_rank(
+          to_tsvector('russian', coalesce(a."title", '') || ' ' || coalesce(a."body", '')),
+          plainto_tsquery('russian', ${q})
+        ) AS rank
       FROM "MethodologyArticle" a
-      WHERE a."searchVector" @@ plainto_tsquery('russian', ${q})
+      WHERE to_tsvector('russian', coalesce(a."title", '') || ' ' || coalesce(a."body", ''))
+              @@ plainto_tsquery('russian', ${q})
          OR a."title" % ${q}
       ORDER BY rank DESC, a."updatedAt" DESC
       LIMIT ${limit}
