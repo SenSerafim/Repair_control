@@ -114,7 +114,7 @@ const mkApprovals = () =>
 
 describe('StagesService.create', () => {
   it('создаёт этап и записывает в ленту', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active', plannedEnd: new Date('2026-12-31') });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -200,7 +200,7 @@ describe('StagesService.create', () => {
 
 describe('StagesService lifecycle + deadline recalculation', () => {
   it('start переводит pending → active и фиксирует startedAt', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -239,7 +239,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
   });
 
   it('resume пересчитывает дедлайн: originalEnd + накопленные паузы (ТЗ §4.2)', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -276,7 +276,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
   });
 
   it('send-to-review переводит active → review и фиксирует sentToReviewAt', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -314,7 +314,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
 
 describe('StagesService.reorder', () => {
   it('переписывает orderIndex по массиву', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -381,7 +381,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
   });
 
   it('разрешает старт если requiresPlanApproval=false', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', {
       id: 'p1',
       status: 'active',
@@ -403,7 +403,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
   });
 
   it('разрешает старт после approval плана (project.planApproved=true)', async () => {
-    const { prisma, projects, stages } = mkPrisma();
+    const { prisma, projects } = mkPrisma();
     projects.set('p1', {
       id: 'p1',
       status: 'active',
@@ -422,6 +422,109 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
     expect(stages.get(s.id).status).toBe('active');
+  });
+});
+
+describe('StagesService.update — H.1: правка бюджета после старта (gaps §2.5)', () => {
+  it('после старта смена workBudget → emit stage_budget_edit_after_start с diff', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active' });
+    const clock = new FixedClock(NOW);
+    const feed = mkFeed();
+    const svc = new StagesService(
+      prisma,
+      feed,
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
+    const s = await svc.create({
+      projectId: 'p1',
+      title: 'X',
+      workBudget: 100000,
+      actorUserId: 'u',
+    });
+    await svc.start(s.id, 'u');
+    (feed.emit as jest.Mock).mockClear();
+    await svc.update(s.id, { workBudget: 200000, actorUserId: 'customer1' });
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    expect(kinds).toContain('stage_budget_edit_after_start');
+    const event = (feed.emit as jest.Mock).mock.calls.find(
+      (c) => c[0].kind === 'stage_budget_edit_after_start',
+    );
+    expect(event[0].payload.oldWork).toBe(100000);
+    expect(event[0].payload.newWork).toBe(200000);
+  });
+
+  it('для pending стадии — смена бюджета НЕ эмитит stage_budget_edit_after_start', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active' });
+    const clock = new FixedClock(NOW);
+    const feed = mkFeed();
+    const svc = new StagesService(
+      prisma,
+      feed,
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
+    const s = await svc.create({
+      projectId: 'p1',
+      title: 'X',
+      workBudget: 100000,
+      actorUserId: 'u',
+    });
+    (feed.emit as jest.Mock).mockClear();
+    await svc.update(s.id, { workBudget: 200000, actorUserId: 'customer1' });
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    expect(kinds).not.toContain('stage_budget_edit_after_start');
+  });
+});
+
+describe('StagesService.update — H.2: замена foreman на активной стадии', () => {
+  it('removed foreman → pending approvals requiresReassign=true + emit foreman_replaced', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active' });
+    const clock = new FixedClock(NOW);
+    const feed = mkFeed();
+    const svc = new StagesService(
+      prisma,
+      feed,
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
+    const s = await svc.create({
+      projectId: 'p1',
+      title: 'X',
+      foremanIds: ['oldForeman'],
+      actorUserId: 'u',
+    });
+    await svc.start(s.id, 'u');
+    // Мокаем approval.updateMany чтобы проверить
+    (prisma as any).approval = {
+      updateMany: jest.fn().mockResolvedValue({ count: 2 }),
+    };
+    (feed.emit as jest.Mock).mockClear();
+    await svc.update(s.id, {
+      foremanIds: ['newForeman'],
+      actorUserId: 'customer1',
+    });
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    expect(kinds).toContain('foreman_replaced');
+    expect((prisma as any).approval.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          stageId: s.id,
+          addresseeId: 'oldForeman',
+          status: 'pending',
+        }),
+        data: { requiresReassign: true },
+      }),
+    );
   });
 });
 

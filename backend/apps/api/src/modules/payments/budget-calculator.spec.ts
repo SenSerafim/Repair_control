@@ -7,6 +7,7 @@ const mkPrisma = () => {
     stages: [] as any[],
     payments: [] as any[],
     materialRequests: [] as any[],
+    selfPurchases: [] as any[],
   };
   const prisma: any = {
     project: {
@@ -47,6 +48,16 @@ const mkPrisma = () => {
         }
         return filtered;
       }),
+    },
+    selfPurchase: {
+      findMany: jest.fn(({ where }: any) =>
+        state.selfPurchases.filter((sp) => {
+          if (where.projectId && sp.projectId !== where.projectId) return false;
+          if (where.stageId && sp.stageId !== where.stageId) return false;
+          if (where.status && sp.status !== where.status) return false;
+          return true;
+        }),
+      ),
     },
   };
   return { prisma: prisma as unknown as PrismaService, state };
@@ -184,6 +195,32 @@ describe('BudgetCalculator', () => {
     });
     expect(b.stages).toHaveLength(1);
     expect(b.stages[0].stageId).toBe('s1');
+  });
+
+  it('approved SelfPurchase суммируется в materials.spent', async () => {
+    const { prisma, state } = mkPrisma();
+    state.project = { id: 'p1', ownerId: 'cust1' };
+    state.stages = [
+      {
+        id: 's1',
+        projectId: 'p1',
+        title: 'A',
+        orderIndex: 0,
+        workBudget: BigInt(0),
+        materialsBudget: BigInt(100_000_00),
+        foremanIds: [],
+      },
+    ];
+    state.payments = [];
+    state.materialRequests = [];
+    state.selfPurchases = [
+      { id: 'sp1', projectId: 'p1', stageId: 's1', status: 'approved', amount: BigInt(8_000_00) },
+      { id: 'sp2', projectId: 'p1', stageId: 's1', status: 'rejected', amount: BigInt(10_000_00) },
+    ];
+    const calc = new BudgetCalculator(prisma);
+    const b = await calc.getProjectBudget('p1', { userId: 'cust1', isOwner: true });
+    expect(b.materials.spent).toBe(8_000_00);
+    expect(b.stages[0].materials.spent).toBe(8_000_00);
   });
 
   it('resolvedAmount используется вместо amount для resolved', async () => {

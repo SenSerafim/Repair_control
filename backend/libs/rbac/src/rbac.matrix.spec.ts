@@ -231,6 +231,40 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
   });
 
+  describe('tools.* — customer явно заблокирован (ТЗ §1.4)', () => {
+    it('customer-owner НЕ видит инструмент', () => {
+      expect(canAccess('tools.manage', customer(true))).toBe(false);
+      expect(canAccess('tools.return', customer(true))).toBe(false);
+      expect(canAccess('tools.issue', customer(true))).toBe(false);
+    });
+    it('foreman выдаёт и возвращает', () => {
+      expect(canAccess('tools.issue', foreman())).toBe(true);
+      expect(canAccess('tools.return', foreman())).toBe(true);
+    });
+    it('master не может выдавать (только foreman)', () => {
+      expect(canAccess('tools.issue', master())).toBe(false);
+    });
+    it('master может инициировать возврат', () => {
+      expect(canAccess('tools.return', master())).toBe(true);
+    });
+  });
+
+  describe('selfpurchase.create / selfpurchase.confirm', () => {
+    it('foreman и master могут создать самозакуп (gaps §4.3)', () => {
+      expect(canAccess('selfpurchase.create', foreman())).toBe(true);
+      expect(canAccess('selfpurchase.create', master())).toBe(true);
+    });
+    it('customer-owner и foreman могут подтвердить; rep — только с canApprove', () => {
+      expect(canAccess('selfpurchase.confirm', customer(true))).toBe(true);
+      expect(canAccess('selfpurchase.confirm', foreman())).toBe(true);
+      expect(canAccess('selfpurchase.confirm', representative({ canApprove: true }))).toBe(true);
+      expect(canAccess('selfpurchase.confirm', representative({ canApprove: false }))).toBe(false);
+    });
+    it('master не подтверждает (только создаёт)', () => {
+      expect(canAccess('selfpurchase.confirm', master())).toBe(false);
+    });
+  });
+
   describe('note.manage / question.manage', () => {
     it('любой участник может (точечные права в сервисе)', () => {
       expect(canAccess('note.manage', foreman())).toBe(true);

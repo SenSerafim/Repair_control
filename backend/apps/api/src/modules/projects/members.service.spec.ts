@@ -11,6 +11,8 @@ import {
 const mkPrisma = () => {
   const memberships: any[] = [];
   const projects = new Map<string, any>();
+  const stages: any[] = [];
+  const approvals: any[] = [];
   const users: any[] = [];
   let id = 0;
   const prisma: any = {
@@ -20,6 +22,35 @@ const mkPrisma = () => {
         const p = projects.get(where.id);
         if (p) Object.assign(p, data);
         return p;
+      }),
+    },
+    stage: {
+      findMany: jest.fn(({ where }: any) =>
+        stages.filter((s) => {
+          if (where.projectId && s.projectId !== where.projectId) return false;
+          if (where.status?.in && !where.status.in.includes(s.status)) return false;
+          if (where.foremanIds?.has && !(s.foremanIds ?? []).includes(where.foremanIds.has)) {
+            return false;
+          }
+          return true;
+        }),
+      ),
+      update: jest.fn(({ where, data }: any) => {
+        const s = stages.find((x) => x.id === where.id);
+        if (s) Object.assign(s, data);
+        return s;
+      }),
+    },
+    approval: {
+      updateMany: jest.fn(({ where, data }: any) => {
+        const affected = approvals.filter((a) => {
+          if (where.stageId && a.stageId !== where.stageId) return false;
+          if (where.addresseeId && a.addresseeId !== where.addresseeId) return false;
+          if (where.status && a.status !== where.status) return false;
+          return true;
+        });
+        for (const a of affected) Object.assign(a, data);
+        return { count: affected.length };
       }),
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
@@ -68,7 +99,14 @@ const mkPrisma = () => {
       }),
     },
   };
-  return { prisma: prisma as unknown as PrismaService, memberships, projects, users };
+  return {
+    prisma: prisma as unknown as PrismaService,
+    memberships,
+    projects,
+    stages,
+    approvals,
+    users,
+  };
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
@@ -191,5 +229,33 @@ describe('MembersService.removeMembership', () => {
     memberships.push({ id: 'm1', projectId: 'p1', userId: 'u-owner', role: 'customer' });
     const svc = new MembersService(prisma, mkFeed());
     await expect(svc.removeMembership('p1', 'm1', 'u-owner')).rejects.toThrow(InvalidInputError);
+  });
+
+  it('H.2: удаление foreman активной стадии помечает его pending approvals requiresReassign + emit foreman_removed', async () => {
+    const { prisma, projects, memberships, stages, approvals } = mkPrisma();
+    projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
+    memberships.push({ id: 'mf', projectId: 'p1', userId: 'f1', role: 'foreman' });
+    stages.push({
+      id: 's1',
+      projectId: 'p1',
+      status: 'active',
+      foremanIds: ['f1'],
+    });
+    approvals.push({
+      id: 'ap1',
+      stageId: 's1',
+      addresseeId: 'f1',
+      status: 'pending',
+      requiresReassign: false,
+    });
+    const feed = mkFeed();
+    const svc = new MembersService(prisma, feed);
+    await svc.removeMembership('p1', 'mf', 'u-owner');
+    expect(approvals[0].requiresReassign).toBe(true);
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    expect(kinds).toContain('foreman_removed');
+    expect(kinds).toContain('membership_removed');
+    // Мастера не должны быть автоматически удалены (не добавлялись в этом тесте — просто проверяем что foreman исчез)
+    expect(memberships.find((m) => m.id === 'mf')).toBeUndefined();
   });
 });

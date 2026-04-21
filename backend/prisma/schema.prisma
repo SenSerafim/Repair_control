@@ -96,6 +96,24 @@ enum MaterialRecipient {
   customer
 }
 
+enum SelfPurchaseStatus {
+  pending
+  approved
+  rejected
+}
+
+enum SelfPurchaseBy {
+  foreman
+  master
+}
+
+enum ToolIssuanceStatus {
+  issued
+  confirmed
+  return_requested
+  returned
+}
+
 enum ApprovalScope {
   plan
   step
@@ -195,6 +213,16 @@ enum FeedEventKind {
   material_delivered
   material_disputed
   material_resolved
+  selfpurchase_created
+  selfpurchase_approved
+  selfpurchase_rejected
+  tool_issued
+  tool_issuance_confirmed
+  tool_return_requested
+  tool_returned
+  foreman_removed
+  foreman_replaced
+  stage_budget_edit_after_start
 }
 
 // ---------- Users / Auth ----------
@@ -322,6 +350,7 @@ model Project {
   approvals        Approval[]
   payments         Payment[]
   materialRequests MaterialRequest[]
+  selfPurchases    SelfPurchase[]
 
   @@index([ownerId])
   @@index([status])
@@ -393,6 +422,7 @@ model Stage {
   approvals        Approval[]
   payments         Payment[]
   materialRequests MaterialRequest[]
+  selfPurchases    SelfPurchase[]
 
   @@index([projectId, orderIndex])
   @@index([status])
@@ -544,21 +574,22 @@ model Question {
 // ---------- Approvals ----------
 
 model Approval {
-  id              String         @id @default(cuid())
-  scope           ApprovalScope
-  projectId       String
-  stageId         String?
-  stepId          String?
-  payload         Json           @default("{}")
-  requestedById   String
-  addresseeId     String
-  status          ApprovalStatus @default(pending)
-  attemptNumber   Int            @default(1)
-  decidedAt       DateTime?
-  decidedById     String?
-  decisionComment String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  scope            ApprovalScope
+  projectId        String
+  stageId          String?
+  stepId           String?
+  payload          Json           @default("{}")
+  requestedById    String
+  addresseeId      String
+  status           ApprovalStatus @default(pending)
+  attemptNumber    Int            @default(1)
+  requiresReassign Boolean        @default(false)
+  decidedAt        DateTime?
+  decidedById      String?
+  decisionComment  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
   stage       Stage?               @relation(fields: [stageId], references: [id], onDelete: Cascade)
@@ -757,6 +788,75 @@ model MaterialDispute {
   request MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId, status])
+}
+
+// ---------- SelfPurchase ----------
+
+model SelfPurchase {
+  id              String             @id @default(cuid())
+  projectId       String
+  stageId         String?
+  byUserId        String
+  byRole          SelfPurchaseBy
+  addresseeId     String
+  amount          BigInt
+  comment         String?
+  photoKeys       String[]           @default([])
+  status          SelfPurchaseStatus @default(pending)
+  decidedAt       DateTime?
+  decidedById     String?
+  decisionComment String?
+  idempotencyKey  String?            @unique
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage   Stage?  @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([addresseeId, status])
+}
+
+// ---------- Tools ----------
+
+model ToolItem {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  totalQty  Int
+  issuedQty Int      @default(0)
+  unit      String?  @default("шт")
+  photoKey  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issuances ToolIssuance[]
+
+  @@index([ownerId])
+}
+
+model ToolIssuance {
+  id                String             @id @default(cuid())
+  toolItemId        String
+  projectId         String?
+  stageId           String?
+  toUserId          String
+  issuedById        String
+  qty               Int
+  returnedQty       Int?
+  status            ToolIssuanceStatus @default(issued)
+  issuedAt          DateTime           @default(now())
+  confirmedAt       DateTime?
+  returnedAt        DateTime?
+  returnConfirmedAt DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  toolItem ToolItem @relation(fields: [toolItemId], references: [id], onDelete: Cascade)
+
+  @@index([toolItemId, status])
+  @@index([toUserId, status])
+  @@index([projectId])
 }
 
 // ---------- Idempotency ----------

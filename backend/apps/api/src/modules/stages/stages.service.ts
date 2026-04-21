@@ -122,7 +122,78 @@ export class StagesService {
     if (input.plannedEnd && !existing.originalEnd) {
       data.originalEnd = new Date(input.plannedEnd);
     }
-    const updated = await this.prisma.stage.update({ where: { id: stageId }, data });
+
+    // H.1: правка бюджета после старта (gaps §2.5) → emit stage_budget_edit_after_start
+    const budgetChanged =
+      (input.workBudget !== undefined && BigInt(input.workBudget) !== existing.workBudget) ||
+      (input.materialsBudget !== undefined &&
+        BigInt(input.materialsBudget) !== existing.materialsBudget);
+    const postStart = existing.status !== 'pending';
+
+    // H.2: diff foremanIds в активных этапах → пометить pending approvals requiresReassign
+    const oldForemanIds = existing.foremanIds;
+    const newForemanIds = input.foremanIds;
+    const foremenChanged =
+      newForemanIds !== undefined &&
+      (newForemanIds.length !== oldForemanIds.length ||
+        newForemanIds.some((id) => !oldForemanIds.includes(id)) ||
+        oldForemanIds.some((id) => !newForemanIds.includes(id)));
+    const removedForemen =
+      foremenChanged && newForemanIds
+        ? oldForemanIds.filter((id) => !newForemanIds.includes(id))
+        : [];
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.stage.update({ where: { id: stageId }, data });
+      if (budgetChanged && postStart) {
+        await this.feed.emit({
+          tx,
+          kind: 'stage_budget_edit_after_start',
+          projectId: existing.projectId,
+          actorId: input.actorUserId,
+          payload: {
+            stageId,
+            oldWork: Number(existing.workBudget),
+            newWork:
+              input.workBudget !== undefined
+                ? Number(input.workBudget)
+                : Number(existing.workBudget),
+            oldMaterials: Number(existing.materialsBudget),
+            newMaterials:
+              input.materialsBudget !== undefined
+                ? Number(input.materialsBudget)
+                : Number(existing.materialsBudget),
+            notifyUserIds: existing.foremanIds,
+          },
+        });
+      }
+      if (foremenChanged && removedForemen.length > 0 && postStart) {
+        // Помечаем открытые approvals на удалённых foremen как requiresReassign
+        for (const removedId of removedForemen) {
+          await tx.approval.updateMany({
+            where: {
+              stageId,
+              addresseeId: removedId,
+              status: 'pending',
+            },
+            data: { requiresReassign: true },
+          });
+        }
+        await this.feed.emit({
+          tx,
+          kind: 'foreman_replaced',
+          projectId: existing.projectId,
+          actorId: input.actorUserId,
+          payload: {
+            stageId,
+            removedForemen,
+            addedForemen: newForemanIds!.filter((id) => !oldForemanIds.includes(id)),
+          },
+        });
+      }
+      return u;
+    });
+
     await this.calc.recalcStage(stageId);
     return this.serialize(updated);
   }

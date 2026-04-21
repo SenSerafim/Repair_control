@@ -136,11 +136,37 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       return false;
 
     case 'tools.manage':
-      // заказчик инструменты не видит (ТЗ §1.4)
+      // заказчик инструменты не видит (ТЗ §1.4) — явный return false
+      if (ctx.membershipRole === 'customer') return false;
       if (ctx.membershipRole === 'foreman') return true;
       if (ctx.membershipRole === 'master') return true;
       if (ctx.membershipRole === 'representative')
         return !!ctx.representativeRights?.canManageTools;
+      return false;
+
+    case 'tools.issue':
+      // Инструмент выдаёт только бригадир-владелец (ownerId совпадает в сервисе).
+      return ctx.membershipRole === 'foreman';
+
+    case 'tools.return':
+      // Возврат: мастер инициирует, бригадир подтверждает. Customer не видит (ТЗ §1.4).
+      if (ctx.membershipRole === 'customer') return false;
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      return false;
+
+    case 'selfpurchase.create':
+      // Самозакуп создают бригадир/мастер (gaps §4.3).
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      return false;
+
+    case 'selfpurchase.confirm':
+      // Адресат (customer-owner для byRole=foreman, foreman для byRole=master) —
+      // точечная проверка addresseeId === actorUserId в сервисе.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canApprove;
+      if (ctx.membershipRole === 'foreman') return true;
       return false;
 
     case 'chat.read':

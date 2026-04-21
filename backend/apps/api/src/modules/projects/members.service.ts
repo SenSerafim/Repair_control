@@ -125,12 +125,52 @@ export class MembersService {
     if (membership.role === 'customer') {
       throw new InvalidInputError(ErrorCodes.FORBIDDEN, 'owner membership cannot be removed');
     }
-    await this.prisma.membership.delete({ where: { id: membershipId } });
-    await this.feed.emit({
-      kind: 'membership_removed',
-      projectId,
-      actorId: actorUserId,
-      payload: { userId: membership.userId, role: membership.role },
+
+    // H.2: если удаляется foreman — ищем активные стадии, где он в foremanIds,
+    // помечаем его pending approvals requiresReassign и эмитим foreman_removed.
+    // Мастера остаются (не удаляются автоматически).
+    await this.prisma.$transaction(async (tx) => {
+      if (membership.role === 'foreman') {
+        const activeStages = await tx.stage.findMany({
+          where: {
+            projectId,
+            status: { in: ['active', 'paused', 'review'] },
+            foremanIds: { has: membership.userId },
+          },
+        });
+        for (const stage of activeStages) {
+          await tx.approval.updateMany({
+            where: {
+              stageId: stage.id,
+              addresseeId: membership.userId,
+              status: 'pending',
+            },
+            data: { requiresReassign: true },
+          });
+          await tx.stage.update({
+            where: { id: stage.id },
+            data: {
+              foremanIds: stage.foremanIds.filter((id) => id !== membership.userId),
+            },
+          });
+          await this.feed.emit({
+            tx,
+            kind: 'foreman_removed',
+            projectId,
+            actorId: actorUserId,
+            payload: { stageId: stage.id, userId: membership.userId },
+          });
+        }
+      }
+
+      await tx.membership.delete({ where: { id: membershipId } });
+      await this.feed.emit({
+        tx,
+        kind: 'membership_removed',
+        projectId,
+        actorId: actorUserId,
+        payload: { userId: membership.userId, role: membership.role },
+      });
     });
   }
 

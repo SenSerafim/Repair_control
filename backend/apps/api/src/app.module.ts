@@ -21,6 +21,8 @@ import { MethodologyModule } from './modules/methodology/methodology.module';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { MaterialsModule } from './modules/materials/materials.module';
+import { SelfPurchasesModule } from './modules/selfpurchases/selfpurchases.module';
+import { ToolsModule } from './modules/tools/tools.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { MaterialsModule } from './modules/materials/materials.module';
     IdempotencyModule,
     PaymentsModule,
     MaterialsModule,
+    SelfPurchasesModule,
+    ToolsModule,
   ],
 })
 export class AppModule {}

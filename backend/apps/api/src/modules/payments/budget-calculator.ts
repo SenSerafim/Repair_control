@@ -73,12 +73,15 @@ export class BudgetCalculator {
       },
       include: { items: { where: { isBought: true } } },
     });
+    const selfPurchases = await this.prisma.selfPurchase.findMany({
+      where: { projectId, status: 'approved' },
+    });
 
     const workSpent = payments.reduce(
       (acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)),
       Money.zero(),
     );
-    const materialsSpent = materialRequests.reduce(
+    const materialsFromRequests = materialRequests.reduce(
       (acc, r) =>
         acc.plus(
           r.items.reduce(
@@ -88,6 +91,11 @@ export class BudgetCalculator {
         ),
       Money.zero(),
     );
+    const materialsFromSelfPurchases = selfPurchases.reduce(
+      (acc, sp) => acc.plus(Money.ofKopeks(sp.amount)),
+      Money.zero(),
+    );
+    const materialsSpent = materialsFromRequests.plus(materialsFromSelfPurchases);
 
     const workPlanned = project.stages.reduce(
       (acc, s) => acc.plus(Money.ofKopeks(s.workBudget)),
@@ -104,7 +112,7 @@ export class BudgetCalculator {
         const stageWorkSpent = payments
           .filter((p) => p.stageId === s.id)
           .reduce((acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)), Money.zero());
-        const stageMaterialsSpent = materialRequests
+        const stageMaterialsFromReq = materialRequests
           .filter((r) => r.stageId === s.id)
           .reduce(
             (acc, r) =>
@@ -116,6 +124,10 @@ export class BudgetCalculator {
               ),
             Money.zero(),
           );
+        const stageMaterialsFromSp = selfPurchases
+          .filter((sp) => sp.stageId === s.id)
+          .reduce((acc, sp) => acc.plus(Money.ofKopeks(sp.amount)), Money.zero());
+        const stageMaterialsSpent = stageMaterialsFromReq.plus(stageMaterialsFromSp);
         return {
           stageId: s.id,
           title: s.title,
@@ -155,11 +167,14 @@ export class BudgetCalculator {
       },
       include: { items: { where: { isBought: true } } },
     });
+    const stageSelfPurchases = await this.prisma.selfPurchase.findMany({
+      where: { stageId, status: 'approved' },
+    });
     const workSpent = payments.reduce(
       (acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)),
       Money.zero(),
     );
-    const materialsSpent = materialRequests.reduce(
+    const materialsFromReq = materialRequests.reduce(
       (acc, r) =>
         acc.plus(
           r.items.reduce(
@@ -169,6 +184,11 @@ export class BudgetCalculator {
         ),
       Money.zero(),
     );
+    const materialsFromSp = stageSelfPurchases.reduce(
+      (acc, sp) => acc.plus(Money.ofKopeks(sp.amount)),
+      Money.zero(),
+    );
+    const materialsSpent = materialsFromReq.plus(materialsFromSp);
     return {
       stageId: stage.id,
       title: stage.title,

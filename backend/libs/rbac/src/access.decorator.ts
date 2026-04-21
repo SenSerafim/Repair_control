@@ -10,7 +10,14 @@ export interface AccessRequirement {
    * AccessGuard по этому id вытянет контекст через loader.
    */
   resourceIdFrom?: { source: 'params' | 'body' | 'query'; key: string };
-  resource?: 'project' | 'stage' | 'step' | 'material_request' | 'none';
+  resource?:
+    | 'project'
+    | 'stage'
+    | 'step'
+    | 'material_request'
+    | 'selfpurchase'
+    | 'tool_issuance'
+    | 'none';
 }
 
 export const RequireAccess = (requirement: AccessRequirement) =>

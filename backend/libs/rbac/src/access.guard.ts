@@ -55,6 +55,16 @@ export class AccessGuard implements CanActivate {
       if (materialRequestId) {
         await this.hydrateMaterialRequestContext(accessCtx, materialRequestId);
       }
+    } else if (requirement.resource === 'selfpurchase' && requirement.resourceIdFrom) {
+      const selfPurchaseId = this.extractId(req, requirement.resourceIdFrom);
+      if (selfPurchaseId) {
+        await this.hydrateSelfPurchaseContext(accessCtx, selfPurchaseId);
+      }
+    } else if (requirement.resource === 'tool_issuance' && requirement.resourceIdFrom) {
+      const issuanceId = this.extractId(req, requirement.resourceIdFrom);
+      if (issuanceId) {
+        await this.hydrateToolIssuanceContext(accessCtx, issuanceId);
+      }
     }
 
     if (!canAccess(requirement.action, accessCtx)) {
@@ -124,6 +134,48 @@ export class AccessGuard implements CanActivate {
     if (m) {
       acc.membershipRole = m.role;
       acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+    }
+  }
+
+  private async hydrateSelfPurchaseContext(acc: AccessContext, id: string): Promise<void> {
+    const sp = await this.prisma.selfPurchase.findUnique({
+      where: { id },
+      select: {
+        projectId: true,
+        project: {
+          select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+        },
+      },
+    });
+    if (!sp) return;
+    acc.projectOwnerId = sp.project.ownerId;
+    const m = sp.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+    }
+  }
+
+  private async hydrateToolIssuanceContext(acc: AccessContext, id: string): Promise<void> {
+    const iss = await this.prisma.toolIssuance.findUnique({
+      where: { id },
+      select: { projectId: true, toolItem: { select: { ownerId: true } }, toUserId: true },
+    });
+    if (!iss) return;
+    // Для tool_issuance используем projectId (если задан), иначе только ownerId хранится как proxy
+    if (iss.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: iss.projectId },
+        select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+      });
+      if (project) {
+        acc.projectOwnerId = project.ownerId;
+        const m = project.memberships[0];
+        if (m) {
+          acc.membershipRole = m.role;
+          acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+        }
+      }
     }
   }
 

@@ -31,6 +31,10 @@ export const DOMAIN_ACTIONS = [
   'finance.payment.resolve',
   'finance.budget.view',
   'material.finalize',
+  'selfpurchase.create',
+  'selfpurchase.confirm',
+  'tools.issue',
+  'tools.return',
 ] as const;
 
 export type DomainAction = (typeof DOMAIN_ACTIONS)[number];
