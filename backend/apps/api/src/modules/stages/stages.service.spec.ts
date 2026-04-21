@@ -114,7 +114,7 @@ const mkApprovals = () =>
 
 describe('StagesService.create', () => {
   it('создаёт этап и записывает в ленту', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active', plannedEnd: new Date('2026-12-31') });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -200,7 +200,7 @@ describe('StagesService.create', () => {
 
 describe('StagesService lifecycle + deadline recalculation', () => {
   it('start переводит pending → active и фиксирует startedAt', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -239,7 +239,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
   });
 
   it('resume пересчитывает дедлайн: originalEnd + накопленные паузы (ТЗ §4.2)', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -276,7 +276,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
   });
 
   it('send-to-review переводит active → review и фиксирует sentToReviewAt', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -314,7 +314,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
 
 describe('StagesService.reorder', () => {
   it('переписывает orderIndex по массиву', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
     const svc = new StagesService(
@@ -381,7 +381,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
   });
 
   it('разрешает старт если requiresPlanApproval=false', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', {
       id: 'p1',
       status: 'active',
@@ -403,7 +403,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
   });
 
   it('разрешает старт после approval плана (project.planApproved=true)', async () => {
-    const { prisma, projects } = mkPrisma();
+    const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', {
       id: 'p1',
       status: 'active',
