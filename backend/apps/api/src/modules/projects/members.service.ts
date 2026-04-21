@@ -58,22 +58,32 @@ export class MembersService {
     const permissions =
       input.role === 'representative' ? sanitizeRepresentativeRights(input.permissions as any) : {};
 
-    const created = await this.prisma.membership.create({
-      data: {
+    const created = await this.prisma.$transaction(async (tx) => {
+      const m = await tx.membership.create({
+        data: {
+          projectId: input.projectId,
+          userId: input.userId,
+          role: input.role,
+          invitedById: input.actorUserId,
+          permissions: permissions as Prisma.InputJsonValue,
+          stageIds: input.stageIds ?? [],
+        },
+      });
+      // Появление foreman включает требование согласования плана работ (ТЗ §4.4, gaps §3.2)
+      if (input.role === 'foreman') {
+        await tx.project.update({
+          where: { id: input.projectId },
+          data: { requiresPlanApproval: true },
+        });
+      }
+      await this.feed.emit({
+        tx,
+        kind: 'membership_added',
         projectId: input.projectId,
-        userId: input.userId,
-        role: input.role,
-        invitedById: input.actorUserId,
-        permissions: permissions as Prisma.InputJsonValue,
-        stageIds: input.stageIds ?? [],
-      },
-    });
-
-    await this.feed.emit({
-      kind: 'membership_added',
-      projectId: input.projectId,
-      actorId: input.actorUserId,
-      payload: { userId: input.userId, role: input.role },
+        actorId: input.actorUserId,
+        payload: { userId: input.userId, role: input.role },
+      });
+      return m;
     });
     return created;
   }

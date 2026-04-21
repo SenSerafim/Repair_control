@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Prisma, Stage } from '@prisma/client';
 import {
   Clock,
@@ -11,6 +11,7 @@ import {
 import { FeedService } from '../feed/feed.service';
 import { StageLifecycle, StageTransition } from './stage-lifecycle';
 import { ProgressCalculator } from './progress-calculator';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 export interface CreateStageInput {
   projectId: string;
@@ -42,6 +43,8 @@ export class StagesService {
     private readonly lifecycle: StageLifecycle,
     private readonly calc: ProgressCalculator,
     private readonly clock: Clock,
+    @Inject(forwardRef(() => ApprovalsService))
+    private readonly approvals: ApprovalsService,
   ) {}
 
   async create(input: CreateStageInput) {
@@ -152,20 +155,34 @@ export class StagesService {
   }
 
   async start(stageId: string, actorUserId: string) {
-    return this.transition(stageId, actorUserId, 'start', async (stage, tx) => {
+    // Гвард: план работ должен быть согласован, если проект этого требует (gaps §3.2)
+    const stage = await this.prisma.stage.findUnique({
+      where: { id: stageId },
+      select: {
+        planApproved: true,
+        project: { select: { requiresPlanApproval: true, planApproved: true } },
+      },
+    });
+    if (stage?.project.requiresPlanApproval && !stage.project.planApproved && !stage.planApproved) {
+      throw new ConflictError(
+        'approvals.plan_not_approved',
+        'plan must be approved before starting this stage',
+      );
+    }
+    return this.transition(stageId, actorUserId, 'start', async (st, tx) => {
       await tx.stage.update({
-        where: { id: stage.id },
+        where: { id: st.id },
         data: {
           status: 'active',
-          startedAt: stage.startedAt ?? this.clock.now(),
+          startedAt: st.startedAt ?? this.clock.now(),
         },
       });
       await this.feed.emit({
         tx,
         kind: 'stage_started',
-        projectId: stage.projectId,
+        projectId: st.projectId,
         actorId: actorUserId,
-        payload: { stageId: stage.id },
+        payload: { stageId: st.id },
       });
     });
   }
@@ -261,6 +278,22 @@ export class StagesService {
         actorId: actorUserId,
         payload: { stageId: stage.id },
       });
+      // Создаём Approval scope=stage_accept, адресат — владелец проекта (ТЗ §4.4)
+      const project = await tx.project.findUnique({
+        where: { id: stage.projectId },
+        select: { ownerId: true },
+      });
+      if (project) {
+        await this.approvals.request({
+          scope: 'stage_accept',
+          projectId: stage.projectId,
+          stageId: stage.id,
+          addresseeId: project.ownerId,
+          payload: { stageId: stage.id },
+          requestedById: actorUserId,
+          tx,
+        });
+      }
     });
   }
 

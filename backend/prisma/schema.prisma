@@ -66,6 +66,21 @@ enum NoteScope {
   stage
 }
 
+enum ApprovalScope {
+  plan
+  step
+  extra_work
+  deadline_change
+  stage_accept
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
 enum TemplateKind {
   platform
   user
@@ -121,6 +136,22 @@ enum FeedEventKind {
   question_answered
   question_closed
   progress_recalculated_on_step_change
+  approval_requested
+  approval_approved
+  approval_rejected
+  approval_cancelled
+  approval_resubmitted
+  plan_approved
+  deadline_changed
+  stage_accepted
+  stage_rejected_by_customer
+  budget_updated
+  methodology_section_created
+  methodology_section_updated
+  methodology_section_deleted
+  methodology_article_created
+  methodology_article_updated
+  methodology_article_deleted
 }
 
 // ---------- Users / Auth ----------
@@ -223,26 +254,29 @@ model RecoveryAttempt {
 // ---------- Projects ----------
 
 model Project {
-  id              String        @id @default(cuid())
-  ownerId         String
-  title           String
-  address         String?
-  plannedStart    DateTime?
-  plannedEnd      DateTime?
-  status          ProjectStatus @default(active)
-  workBudget      BigInt        @default(0) // minor units (копейки)
-  materialsBudget BigInt        @default(0)
-  progressCache   Int           @default(0)
-  semaphoreCache  String        @default("green")
-  archivedAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  ownerId              String
+  title                String
+  address              String?
+  plannedStart         DateTime?
+  plannedEnd           DateTime?
+  status               ProjectStatus @default(active)
+  workBudget           BigInt        @default(0) // minor units (копейки)
+  materialsBudget      BigInt        @default(0)
+  progressCache        Int           @default(0)
+  semaphoreCache       String        @default("green")
+  planApproved         Boolean       @default(false)
+  requiresPlanApproval Boolean       @default(false)
+  archivedAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   owner       User                @relation("ProjectOwner", fields: [ownerId], references: [id])
   memberships Membership[]
   invitations ProjectInvitation[]
   stages      Stage[]
   feedEvents  FeedEvent[]
+  approvals   Approval[]
 
   @@index([ownerId])
   @@index([status])
@@ -301,15 +335,17 @@ model Stage {
   materialsBudget BigInt      @default(0)
   foremanIds      String[]    @default([])
   progressCache   Int         @default(0)
+  planApproved    Boolean     @default(false)
   startedAt       DateTime?
   sentToReviewAt  DateTime?
   doneAt          DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pauses  Pause[]
-  steps   Step[]
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pauses    Pause[]
+  steps     Step[]
+  approvals Approval[]
 
   @@index([projectId, orderIndex])
   @@index([status])
@@ -380,6 +416,7 @@ model Step {
   substeps  Substep[]
   photos    StepPhoto[]
   questions Question[]
+  approvals Approval[]
 
   @@index([stageId, orderIndex])
   @@index([status])
@@ -455,6 +492,110 @@ model Question {
 
   @@index([stepId, status])
   @@index([addresseeId, status])
+}
+
+// ---------- Approvals ----------
+
+model Approval {
+  id              String         @id @default(cuid())
+  scope           ApprovalScope
+  projectId       String
+  stageId         String?
+  stepId          String?
+  payload         Json           @default("{}")
+  requestedById   String
+  addresseeId     String
+  status          ApprovalStatus @default(pending)
+  attemptNumber   Int            @default(1)
+  decidedAt       DateTime?
+  decidedById     String?
+  decisionComment String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage       Stage?               @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  step        Step?                @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  attempts    ApprovalAttempt[]
+  attachments ApprovalAttachment[]
+
+  @@index([projectId, status])
+  @@index([addresseeId, status])
+  @@index([stageId])
+  @@index([stepId])
+  @@index([scope, status])
+}
+
+model ApprovalAttempt {
+  id            String   @id @default(cuid())
+  approvalId    String
+  attemptNumber Int
+  action        String
+  actorId       String
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  approval Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+
+  @@index([approvalId, createdAt])
+}
+
+model ApprovalAttachment {
+  id         String   @id @default(cuid())
+  approvalId String
+  fileKey    String
+  thumbKey   String?
+  mimeType   String
+  sizeBytes  Int
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  approval Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+
+  @@index([approvalId])
+}
+
+// ---------- Methodology ----------
+
+model MethodologySection {
+  id         String   @id @default(cuid())
+  title      String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  articles MethodologyArticle[]
+
+  @@index([orderIndex])
+}
+
+model MethodologyArticle {
+  id         String   @id @default(cuid())
+  sectionId  String
+  title      String
+  body       String
+  orderIndex Int
+  version    Int      @default(1)
+  etag       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  section         MethodologySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  referencePhotos ReferencePhoto[]
+
+  @@index([sectionId, orderIndex])
+}
+
+model ReferencePhoto {
+  id         String  @id @default(cuid())
+  articleId  String
+  fileKey    String
+  caption    String?
+  orderIndex Int
+
+  article MethodologyArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, orderIndex])
 }
 
 // ---------- Feed (outbox) ----------

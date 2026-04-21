@@ -66,6 +66,14 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       // Любой участник проекта. Точечные ограничения (author-only / addressee-only) — внутри сервиса.
       return !!ctx.membershipRole;
 
+    case 'methodology.read':
+      // Методичка видна всем аутентифицированным (ТЗ §8 спринт 3 день 6).
+      return true;
+
+    case 'methodology.edit':
+      // Только админ правит методичку. Admin обрабатывается в блоке выше → сюда не доходит.
+      return false;
+
     case 'approval.request':
       if (ctx.membershipRole === 'foreman') return true;
       if (ctx.membershipRole === 'master') return true;

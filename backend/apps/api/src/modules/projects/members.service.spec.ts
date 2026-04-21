@@ -16,7 +16,13 @@ const mkPrisma = () => {
   const prisma: any = {
     project: {
       findUnique: jest.fn(({ where }: any) => projects.get(where.id) ?? null),
+      update: jest.fn(({ where, data }: any) => {
+        const p = projects.get(where.id);
+        if (p) Object.assign(p, data);
+        return p;
+      }),
     },
+    $transaction: jest.fn(async (fn: any) => fn(prisma)),
     membership: {
       findUnique: jest.fn(({ where }: any) => {
         if (where.id) return memberships.find((m) => m.id === where.id) ?? null;

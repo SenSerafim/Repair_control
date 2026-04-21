@@ -20,7 +20,22 @@ const mkPrisma = () => {
   let pauseSeq = 0;
   const prisma: any = {
     stage: {
-      findUnique: jest.fn(({ where }: any) => stages.get(where.id) ?? null),
+      findUnique: jest.fn(({ where }: any) => {
+        const s = stages.get(where.id);
+        if (!s) return null;
+        const project = projects.get(s.projectId);
+        return {
+          ...s,
+          planApproved: s.planApproved ?? false,
+          project: project
+            ? {
+                requiresPlanApproval: project.requiresPlanApproval ?? false,
+                planApproved: project.planApproved ?? false,
+                ownerId: project.ownerId ?? 'owner',
+              }
+            : null,
+        };
+      }),
       findMany: jest.fn(({ where }: any) =>
         [...stages.values()].filter((s) => s.projectId === where.projectId),
       ),
@@ -92,12 +107,24 @@ const mkCalc = (): ProgressCalculator =>
     computeProjectSemaphore: jest.fn(),
   }) as any;
 
+const mkApprovals = () =>
+  ({
+    request: jest.fn().mockResolvedValue({ id: 'ap-mock' }),
+  }) as any;
+
 describe('StagesService.create', () => {
   it('создаёт этап и записывает в ленту', async () => {
     const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active', plannedEnd: new Date('2026-12-31') });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const s = await svc.create({
       projectId: 'p1',
       title: 'Демонтаж',
@@ -113,7 +140,14 @@ describe('StagesService.create', () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'archived' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     await expect(svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u1' })).rejects.toThrow(
       ConflictError,
     );
@@ -122,7 +156,14 @@ describe('StagesService.create', () => {
   it('не найден проект → 404', async () => {
     const { prisma } = mkPrisma();
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     await expect(
       svc.create({ projectId: 'p-missing', title: 'X', actorUserId: 'u1' }),
     ).rejects.toThrow(NotFoundError);
@@ -137,7 +178,14 @@ describe('StagesService.create', () => {
     });
     const feed = mkFeed();
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, feed, new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      feed,
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     await svc.create({
       projectId: 'p1',
       title: 'X',
@@ -155,7 +203,14 @@ describe('StagesService lifecycle + deadline recalculation', () => {
     const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
     const fresh = stages.get(s.id);
@@ -167,7 +222,14 @@ describe('StagesService lifecycle + deadline recalculation', () => {
     const { prisma, projects, stages, pauses } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
     await svc.pause(s.id, 'u', 'materials', 'ждём плитку');
@@ -180,7 +242,14 @@ describe('StagesService lifecycle + deadline recalculation', () => {
     const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const s = await svc.create({
       projectId: 'p1',
       title: 'X',
@@ -210,7 +279,14 @@ describe('StagesService lifecycle + deadline recalculation', () => {
     const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
     await svc.sendToReview(s.id, 'u');
@@ -223,7 +299,14 @@ describe('StagesService lifecycle + deadline recalculation', () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await expect(svc.pause(s.id, 'u', 'materials')).rejects.toThrow(InvalidInputError);
   });
@@ -234,7 +317,14 @@ describe('StagesService.reorder', () => {
     const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     const a = await svc.create({ projectId: 'p1', title: 'A', actorUserId: 'u' });
     const b = await svc.create({ projectId: 'p1', title: 'B', actorUserId: 'u' });
     await svc.reorder(
@@ -253,9 +343,113 @@ describe('StagesService.reorder', () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });
     const clock = new FixedClock(NOW);
-    const svc = new StagesService(prisma, mkFeed(), new StageLifecycle(), mkCalc(), clock);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
     await expect(svc.reorder('p1', [{ id: 's-unknown', orderIndex: 0 }], 'u')).rejects.toThrow(
       InvalidInputError,
+    );
+  });
+});
+
+describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
+  it('блокирует старт если requiresPlanApproval=true и planApproved=false', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', {
+      id: 'p1',
+      status: 'active',
+      requiresPlanApproval: true,
+      planApproved: false,
+      ownerId: 'owner',
+    });
+    const clock = new FixedClock(NOW);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
+    await expect(svc.start(s.id, 'u')).rejects.toThrow(ConflictError);
+  });
+
+  it('разрешает старт если requiresPlanApproval=false', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', {
+      id: 'p1',
+      status: 'active',
+      requiresPlanApproval: false,
+      planApproved: false,
+    });
+    const clock = new FixedClock(NOW);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
+    await svc.start(s.id, 'u');
+    expect(stages.get(s.id).status).toBe('active');
+  });
+
+  it('разрешает старт после approval плана (project.planApproved=true)', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', {
+      id: 'p1',
+      status: 'active',
+      requiresPlanApproval: true,
+      planApproved: true,
+    });
+    const clock = new FixedClock(NOW);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
+    await svc.start(s.id, 'u');
+    expect(stages.get(s.id).status).toBe('active');
+  });
+});
+
+describe('StagesService.sendToReview — создаёт Approval scope=stage_accept', () => {
+  it('вызывает approvals.request с addresseeId = ownerId проекта', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    await svc.start(s.id, 'f1');
+    await svc.sendToReview(s.id, 'f1');
+    expect(approvals.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'stage_accept',
+        projectId: 'p1',
+        stageId: s.id,
+        addresseeId: 'cust-owner',
+        requestedById: 'f1',
+      }),
     );
   });
 });

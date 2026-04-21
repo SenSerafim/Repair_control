@@ -24,6 +24,8 @@ export const DOMAIN_ACTIONS = [
   'chat.read',
   'note.manage',
   'question.manage',
+  'methodology.read',
+  'methodology.edit',
 ] as const;
 
 export type DomainAction = (typeof DOMAIN_ACTIONS)[number];

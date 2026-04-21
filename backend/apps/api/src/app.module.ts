@@ -16,6 +16,8 @@ import { FilesApiModule } from './modules/files/files-api.module';
 import { StepsModule } from './modules/steps/steps.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { QuestionsModule } from './modules/questions/questions.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { MethodologyModule } from './modules/methodology/methodology.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { QuestionsModule } from './modules/questions/questions.module';
     StepsModule,
     NotesModule,
     QuestionsModule,
+    ApprovalsModule,
+    MethodologyModule,
   ],
 })
 export class AppModule {}

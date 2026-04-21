@@ -48,7 +48,11 @@ const mkPrisma = () => {
 
   const prisma: any = {
     stage: {
-      findUnique: jest.fn(({ where }: any) => stages.get(where.id) ?? null),
+      findUnique: jest.fn(({ where }: any) => {
+        const s = stages.get(where.id);
+        if (!s) return null;
+        return { ...s, project: { ownerId: `${s.projectId}-owner` } };
+      }),
     },
     step: {
       findUnique: jest.fn(({ where, include }: any) => {
@@ -141,6 +145,11 @@ const mkCalc = (): ProgressCalculator =>
     computeStageProgress: jest.fn().mockResolvedValue(0),
   }) as any;
 
+const mkApprovals = () =>
+  ({
+    request: jest.fn().mockResolvedValue({ id: 'ap-mock' }),
+  }) as any;
+
 const setupStage = (
   prismaState: ReturnType<typeof mkPrisma>,
   id: string,
@@ -153,7 +162,7 @@ describe('StepsService.create — регулярный шаг', () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
     const feed = mkFeed();
-    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW), mkApprovals());
     const step = await svc.create({
       stageId: 'stage1',
       title: 'Снять плинтусы',
@@ -168,7 +177,13 @@ describe('StepsService.create — регулярный шаг', () => {
 
   it('бросает 404 если stage не найден', async () => {
     const state = mkPrisma();
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     await expect(svc.create({ stageId: 'missing', title: 'X', actorUserId: 'u1' })).rejects.toThrow(
       NotFoundError,
     );
@@ -177,7 +192,13 @@ describe('StepsService.create — регулярный шаг', () => {
   it('пустой title отклоняется', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     await expect(
       svc.create({ stageId: 'stage1', title: '   ', actorUserId: 'u1' }),
     ).rejects.toThrow(InvalidInputError);
@@ -189,7 +210,7 @@ describe('StepsService.create — extra (доп.работа, ТЗ §4.3 + gaps 
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
     const feed = mkFeed();
-    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW), mkApprovals());
     const step = await svc.create({
       stageId: 'stage1',
       title: 'Ревизия розеток',
@@ -210,7 +231,13 @@ describe('StepsService.create — extra (доп.работа, ТЗ §4.3 + gaps 
   it('extra без price отклоняется', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     await expect(
       svc.create({ stageId: 'stage1', title: 'X', type: 'extra', actorUserId: 'u1' }),
     ).rejects.toThrow(InvalidInputError);
@@ -219,7 +246,13 @@ describe('StepsService.create — extra (доп.работа, ТЗ §4.3 + gaps 
   it('extra с price=0 отклоняется', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     await expect(
       svc.create({ stageId: 'stage1', title: 'X', type: 'extra', price: 0, actorUserId: 'u1' }),
     ).rejects.toThrow(InvalidInputError);
@@ -231,7 +264,7 @@ describe('StepsService.create — пересчёт прогресса (gaps §2.
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1', 'active');
     const feed = mkFeed();
-    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW), mkApprovals());
     await svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u1' });
     const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
     expect(kinds).toContain('progress_recalculated_on_step_change');
@@ -241,7 +274,7 @@ describe('StepsService.create — пересчёт прогресса (gaps §2.
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1', 'pending');
     const feed = mkFeed();
-    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(state.prisma, feed, mkCalc(), new FixedClock(NOW), mkApprovals());
     await svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u1' });
     const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
     expect(kinds).not.toContain('progress_recalculated_on_step_change');
@@ -251,7 +284,7 @@ describe('StepsService.create — пересчёт прогресса (gaps §2.
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1', 'active');
     const calc = mkCalc();
-    const svc = new StepsService(state.prisma, mkFeed(), calc, new FixedClock(NOW));
+    const svc = new StepsService(state.prisma, mkFeed(), calc, new FixedClock(NOW), mkApprovals());
     await svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u1' });
     expect(calc.recalcStage).toHaveBeenCalledWith('stage1', expect.anything());
   });
@@ -263,7 +296,7 @@ describe('StepsService.complete', () => {
     setupStage(state, 'stage1', 'p1', 'active');
     const clock = new FixedClock(NOW);
     const calc = mkCalc();
-    const svc = new StepsService(state.prisma, mkFeed(), calc, clock);
+    const svc = new StepsService(state.prisma, mkFeed(), calc, clock, mkApprovals());
     const created = await svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u1' });
     const done = await svc.complete(created.id, 'u2');
     expect(done.status).toBe('done');
@@ -275,7 +308,13 @@ describe('StepsService.complete', () => {
   it('extra в pending_approval нельзя завершить до одобрения', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     const extra = await svc.create({
       stageId: 'stage1',
       title: 'X',
@@ -289,7 +328,13 @@ describe('StepsService.complete', () => {
   it('уже done → Conflict', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1', 'active');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     const s = await svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u' });
     await svc.complete(s.id, 'u');
     await expect(svc.complete(s.id, 'u')).rejects.toThrow(ConflictError);
@@ -302,7 +347,7 @@ describe('StepsService.delete', () => {
     setupStage(state, 'stage1', 'p1', 'active');
     const feed = mkFeed();
     const calc = mkCalc();
-    const svc = new StepsService(state.prisma, feed, calc, new FixedClock(NOW));
+    const svc = new StepsService(state.prisma, feed, calc, new FixedClock(NOW), mkApprovals());
     const s = await svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u' });
     await svc.delete(s.id, 'u');
     expect(state.steps.size).toBe(0);
@@ -317,7 +362,13 @@ describe('StepsService.reorder', () => {
   it('переставляет шаги только того же stage', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     const s1 = await svc.create({ stageId: 'stage1', title: 'A', actorUserId: 'u' });
     const s2 = await svc.create({ stageId: 'stage1', title: 'B', actorUserId: 'u' });
     await svc.reorder(
@@ -337,7 +388,13 @@ describe('StepsService.reorder', () => {
   it('шаг из чужого stage → InvalidInputError', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     await expect(svc.reorder('stage1', [{ id: 'unknown', orderIndex: 0 }], 'u')).rejects.toThrow(
       InvalidInputError,
     );
@@ -350,7 +407,13 @@ describe('StepsService: assigneeIds валидация', () => {
     setupStage(state, 'stage1', 'p1');
     state.memberships.push({ projectId: 'p1', userId: 'm1', role: 'master' });
     state.memberships.push({ projectId: 'p1', userId: 'f1', role: 'foreman' });
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     // master ok
     await expect(
       svc.create({
@@ -374,7 +437,13 @@ describe('StepsService: assigneeIds валидация', () => {
   it('пустой список assigneeIds — ok', async () => {
     const state = mkPrisma();
     setupStage(state, 'stage1', 'p1');
-    const svc = new StepsService(state.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
     await expect(
       svc.create({ stageId: 'stage1', title: 'X', actorUserId: 'u' }),
     ).resolves.toBeDefined();

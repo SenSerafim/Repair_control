@@ -39,8 +39,16 @@ export async function bootTestApp(
  * Очистка всех таблиц между тестами в правильном порядке (учитывая FK).
  */
 export async function truncateAll(prisma: PrismaService): Promise<void> {
-  // Шаблоны не трогаем — их seed'ит globalSetup, переиспользуем.
+  // Шаблоны и методичку не трогаем — seed'ятся globalSetup и не меняются между тестами.
   const tables = [
+    'ApprovalAttachment',
+    'ApprovalAttempt',
+    'Approval',
+    'StepPhoto',
+    'Substep',
+    'Question',
+    'Step',
+    'Note',
     'FeedEvent',
     'Pause',
     'Stage',

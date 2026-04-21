@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Prisma, Step } from '@prisma/client';
 import {
   Clock,
@@ -10,6 +10,7 @@ import {
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
 import { ProgressCalculator } from '../stages/progress-calculator';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 export interface CreateStepInput {
   stageId: string;
@@ -37,6 +38,8 @@ export class StepsService {
     private readonly feed: FeedService,
     private readonly calc: ProgressCalculator,
     private readonly clock: Clock,
+    @Inject(forwardRef(() => ApprovalsService))
+    private readonly approvals: ApprovalsService,
   ) {}
 
   async create(input: CreateStepInput) {
@@ -53,7 +56,7 @@ export class StepsService {
 
     const stage = await this.prisma.stage.findUnique({
       where: { id: input.stageId },
-      select: { id: true, projectId: true, status: true },
+      select: { id: true, projectId: true, status: true, project: { select: { ownerId: true } } },
     });
     if (!stage) throw new NotFoundError(ErrorCodes.STAGE_NOT_FOUND, 'stage not found');
 
@@ -84,6 +87,19 @@ export class StepsService {
         actorId: input.actorUserId,
         payload: { stageId: stage.id, stepId: s.id, title: s.title, type, price: input.price },
       });
+      // Доп.работа сразу создаёт Approval scope=extra_work на заказчика (ТЗ §4.3, gaps §4.1)
+      if (type === 'extra') {
+        await this.approvals.request({
+          scope: 'extra_work',
+          projectId: stage.projectId,
+          stageId: stage.id,
+          stepId: s.id,
+          addresseeId: stage.project.ownerId,
+          payload: { stepId: s.id, price: input.price },
+          requestedById: input.actorUserId,
+          tx,
+        });
+      }
       // Пересчёт прогресса при добавлении шага в активный этап (gaps §2.3)
       if (this.isActiveStage(stage.status)) {
         await this.feed.emit({
