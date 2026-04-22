@@ -75,58 +75,104 @@ enum FeedEventKind {
   stage_deadline_recalculated
   stage_deadline_exceeds_project
   stages_reordered
+  // S3/D5 — steps, substeps, photos, extras, notes, questions
+  step_created
+  step_reordered
+  step_done
+  step_reopened
+  step_deleted
+  substep_created
+  substep_updated
+  substep_deleted
+  substep_done
+  substep_reopened
+  step_photo_added
+  step_photo_deleted
+  extra_work_requested
+  extra_work_approved
+  extra_work_rejected
+  note_created
+  note_updated
+  note_deleted
+  question_created
+  question_answered
+  question_closed
+  stage_progress_recalculated
+}
+
+enum StepType {
+  regular
+  extra
+}
+
+enum ExtraApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum NoteScope {
+  personal
+  forMe
+  stage
+}
+
+enum QuestionStatus {
+  open
+  answered
+  closed
 }
 
 // ---------- Users / Auth ----------
 
 model User {
-  id            String   @id @default(cuid())
-  phone         String   @unique
-  email         String?  @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  avatarUrl     String?
-  language      String   @default("ru")
-  activeRole    SystemRole @default(customer)
-  lastSeenAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String     @id @default(cuid())
+  phone        String     @unique
+  email        String?    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  language     String     @default("ru")
+  activeRole   SystemRole @default(customer)
+  lastSeenAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
-  roles         UserRole[]
-  sessions      Session[]
-  devices       DeviceToken[]
+  roles            UserRole[]
+  sessions         Session[]
+  devices          DeviceToken[]
   recoveryAttempts RecoveryAttempt[]
-  loginAttempts LoginAttempt[]
+  loginAttempts    LoginAttempt[]
 
-  ownedProjects Project[]        @relation("ProjectOwner")
-  memberships   Membership[]
+  ownedProjects   Project[]           @relation("ProjectOwner")
+  memberships     Membership[]
   invitationsSent ProjectInvitation[] @relation("InvitationInvitedBy")
 }
 
 model UserRole {
-  userId    String
-  role      SystemRole
-  isActive  Boolean    @default(true)
-  addedAt   DateTime   @default(now())
+  userId   String
+  role     SystemRole
+  isActive Boolean    @default(true)
+  addedAt  DateTime   @default(now())
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, role])
 }
 
 model Session {
-  id              String   @id @default(cuid())
-  userId          String
+  id               String    @id @default(cuid())
+  userId           String
   refreshTokenHash String
-  deviceId        String
-  userAgent       String?
-  ipFingerprint   String
-  createdAt       DateTime @default(now())
-  expiresAt       DateTime
-  revokedAt       DateTime?
+  deviceId         String
+  userAgent        String?
+  ipFingerprint    String
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -140,36 +186,36 @@ model DeviceToken {
   lastSeenAt DateTime       @default(now())
   createdAt  DateTime       @default(now())
 
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model LoginAttempt {
-  id         String   @id @default(cuid())
-  userId     String?
-  phone      String
-  ip         String
-  success    Boolean
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  phone     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
 
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([phone, createdAt])
   @@index([ip, createdAt])
 }
 
 model RecoveryAttempt {
-  id         String   @id @default(cuid())
-  userId     String
-  code       String
-  attempts   Int      @default(0)
-  isUsed     Boolean  @default(false)
+  id           String    @id @default(cuid())
+  userId       String
+  code         String
+  attempts     Int       @default(0)
+  isUsed       Boolean   @default(false)
   blockedUntil DateTime?
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }
@@ -177,44 +223,45 @@ model RecoveryAttempt {
 // ---------- Projects ----------
 
 model Project {
-  id               String        @id @default(cuid())
-  ownerId          String
-  title            String
-  address          String?
-  plannedStart     DateTime?
-  plannedEnd       DateTime?
-  status           ProjectStatus @default(active)
-  workBudget       BigInt        @default(0) // minor units (копейки)
-  materialsBudget  BigInt        @default(0)
-  progressCache    Int           @default(0)
-  semaphoreCache   String        @default("green")
-  archivedAt       DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  ownerId         String
+  title           String
+  address         String?
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
+  status          ProjectStatus @default(active)
+  workBudget      BigInt        @default(0) // minor units (копейки)
+  materialsBudget BigInt        @default(0)
+  progressCache   Int           @default(0)
+  semaphoreCache  String        @default("green")
+  archivedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  owner            User          @relation("ProjectOwner", fields: [ownerId], references: [id])
-  memberships      Membership[]
-  invitations      ProjectInvitation[]
-  stages           Stage[]
-  feedEvents       FeedEvent[]
+  owner       User                @relation("ProjectOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  invitations ProjectInvitation[]
+  stages      Stage[]
+  feedEvents  FeedEvent[]
+  notes       Note[]
 
   @@index([ownerId])
   @@index([status])
 }
 
 model Membership {
-  id            String         @id @default(cuid())
-  projectId     String
-  userId        String
-  role          MembershipRole
-  invitedById   String?
-  stageIds      String[]       @default([])
-  permissions   Json           @default("{}")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  projectId   String
+  userId      String
+  role        MembershipRole
+  invitedById String?
+  stageIds    String[]       @default([])
+  permissions Json           @default("{}")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId, role])
   @@index([projectId])
@@ -222,18 +269,18 @@ model Membership {
 }
 
 model ProjectInvitation {
-  id           String           @id @default(cuid())
-  projectId    String
-  phone        String
-  role         MembershipRole
-  invitedById  String
-  status       InvitationStatus @default(pending)
-  token        String           @unique
-  createdAt    DateTime         @default(now())
-  expiresAt    DateTime
+  id          String           @id @default(cuid())
+  projectId   String
+  phone       String
+  role        MembershipRole
+  invitedById String
+  status      InvitationStatus @default(pending)
+  token       String           @unique
+  createdAt   DateTime         @default(now())
+  expiresAt   DateTime
 
-  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  invitedBy    User             @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
 
   @@index([projectId])
   @@index([phone])
@@ -261,23 +308,25 @@ model Stage {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  pauses          Pause[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pauses  Pause[]
+  steps   Step[]
+  notes   Note[]
 
   @@index([projectId, orderIndex])
   @@index([status])
 }
 
 model Pause {
-  id         String      @id @default(cuid())
-  stageId    String
-  reason     PauseReason
-  comment    String?
-  startedAt  DateTime    @default(now())
-  endedAt    DateTime?
-  startedBy  String
+  id        String      @id @default(cuid())
+  stageId   String
+  reason    PauseReason
+  comment   String?
+  startedAt DateTime    @default(now())
+  endedAt   DateTime?
+  startedBy String
 
-  stage      Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  stage Stage @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
   @@index([stageId])
 }
@@ -294,19 +343,19 @@ model Template {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  steps       TemplateStep[]
+  steps TemplateStep[]
 
   @@index([kind])
 }
 
 model TemplateStep {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   templateId String
   title      String
   orderIndex Int
   price      BigInt?
 
-  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId, orderIndex])
 }
@@ -314,15 +363,131 @@ model TemplateStep {
 // ---------- Feed (outbox) ----------
 
 model FeedEvent {
-  id         String        @id @default(cuid())
-  projectId  String?
-  kind       FeedEventKind
-  actorId    String?
-  payload    Json          @default("{}")
-  createdAt  DateTime      @default(now())
+  id        String        @id @default(cuid())
+  projectId String?
+  kind      FeedEventKind
+  actorId   String?
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now())
 
-  project    Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
   @@index([kind, createdAt])
+}
+
+// ---------- Steps (S3/D5) ----------
+
+model Step {
+  id         String   @id @default(cuid())
+  stageId    String
+  title      String
+  orderIndex Int
+  type       StepType @default(regular)
+
+  // Справочная цена шага. Для type=regular — оценка из шаблона или вручную; в MVP
+  // не участвует в расчёте бюджета (он на уровне Stage).
+  // Для type=extra — игнорируется, факт. стоимость = extraQty * extraUnitPrice.
+  price BigInt?
+
+  doneAt DateTime?
+  doneBy String?
+
+  // Поля для type=extra (иначе NULL)
+  extraQty             Int?
+  extraUnitPrice       BigInt?
+  extraApprovalStatus  ExtraApprovalStatus?
+  extraApprovedBy      String?
+  extraApprovedAt      DateTime?
+  extraRejectionReason String?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stage     Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  substeps  Substep[]
+  photos    StepPhoto[]
+  questions Question[]
+
+  @@index([stageId, orderIndex])
+  @@index([type, extraApprovalStatus])
+  @@index([doneAt])
+}
+
+model Substep {
+  id        String    @id @default(cuid())
+  stepId    String
+  text      String
+  authorId  String
+  isDone    Boolean   @default(false)
+  doneAt    DateTime?
+  doneBy    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId, createdAt])
+  @@index([authorId])
+}
+
+model StepPhoto {
+  id         String   @id @default(cuid())
+  stepId     String
+  fileKey    String
+  thumbKey   String?
+  mimeType   String
+  size       BigInt
+  width      Int?
+  height     Int?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId, createdAt])
+}
+
+// ---------- Notes & Questions (S3/D5) ----------
+
+model Note {
+  id          String    @id @default(cuid())
+  scope       NoteScope
+  authorId    String
+  addresseeId String?
+  projectId   String?
+  stageId     String?
+  text        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage   Stage?   @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
+  @@index([addresseeId, createdAt])
+  @@index([stageId, createdAt])
+  @@index([projectId, createdAt])
+}
+
+model Question {
+  id          String         @id @default(cuid())
+  stepId      String
+  authorId    String
+  addresseeId String
+  text        String
+  status      QuestionStatus @default(open)
+  answerText  String?
+  answeredBy  String?
+  answeredAt  DateTime?
+  closedAt    DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId, createdAt])
+  @@index([addresseeId, status])
+  @@index([authorId, status])
 }
