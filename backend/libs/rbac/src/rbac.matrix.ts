@@ -173,8 +173,130 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       if (ctx.membershipRole === 'foreman') return true;
       return false;
 
-    case 'chat.read':
+    case 'chat.read': {
+      // Чат видят участники проекта/этапа. Customer видит project-чат всегда,
+      // stage/personal — только если явно добавлен в participants (и чат не закрыт visibleToCustomer=false)
+      if (!ctx.membershipRole) return false;
+      // Если подгружен chat-контекст — проверяем участие
+      if (ctx.chatIsParticipant !== undefined) {
+        if (ctx.chatIsActiveParticipant) return true;
+        // customer может смотреть чат этапа если foreman открыл его
+        if (
+          ctx.systemRole === 'customer' &&
+          ctx.projectOwnerId === ctx.userId &&
+          (ctx.chatType === 'stage' || ctx.chatType === 'group') &&
+          ctx.chatVisibleToCustomer
+        ) {
+          return true;
+        }
+        return false;
+      }
+      return true;
+    }
+
+    case 'chat.write': {
+      // Писать может только active-participant. Если customer получил visibility — он всё равно read-only.
+      if (!ctx.membershipRole) return false;
+      if (ctx.chatIsActiveParticipant) return true;
+      return false;
+    }
+
+    case 'chat.create_personal': {
+      // Любой active member проекта может инициировать personal-чат (ТЗ §10 + цитата клиента про подрядчиков).
+      // Запрет самому-себе валидируется в сервисе.
       return !!ctx.membershipRole;
+    }
+
+    case 'chat.create_group': {
+      // Group-чат может создать owner / rep.canInviteMembers / foreman.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative')
+        return !!ctx.representativeRights?.canInviteMembers;
+      if (ctx.membershipRole === 'foreman') return true;
+      return false;
+    }
+
+    case 'chat.toggle_customer_visibility': {
+      // Только foreman-создатель чата может включить/выключить visibility для customer (цитата клиента).
+      if (ctx.membershipRole !== 'foreman') return false;
+      return ctx.chatCreatedById === ctx.userId;
+    }
+
+    case 'chat.moderate': {
+      // Модерация (удаление сообщения, удаление участника) — owner проекта или creator чата.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      return ctx.chatCreatedById === ctx.userId;
+    }
+
+    case 'document.read': {
+      // Любой участник проекта видит документы проекта/этапа (ТЗ §11, цитата клиента про общую папку).
+      return !!ctx.membershipRole;
+    }
+
+    case 'document.write': {
+      // Загружают и редактируют: owner / rep.canEditStages / foreman / master (на своих этапах).
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      return false;
+    }
+
+    case 'document.delete': {
+      // Удалить — автор документа, owner проекта, rep.canEditStages, либо admin.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
+      if (ctx.documentUploadedById && ctx.documentUploadedById === ctx.userId) return true;
+      return false;
+    }
+
+    case 'feed.export': {
+      // Экспорт ленты/архива — owner проекта или rep.canSeeBudget (содержит финансы, materials).
+      // Foreman-у даём feed_pdf, но НЕ project_zip (выбор kind проверяется в сервисе).
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canSeeBudget;
+      if (ctx.membershipRole === 'foreman') return true;
+      return false;
+    }
+
+    case 'notification.settings.self': {
+      // Свои настройки уведомлений может менять любой аутентифицированный.
+      return true;
+    }
+
+    case 'feedback.create': {
+      // Обратная связь — любой аутентифицированный.
+      return true;
+    }
+
+    case 'admin.templates.manage':
+    case 'admin.faq.manage':
+    case 'admin.feedback.read':
+    case 'admin.feedback.reply':
+    case 'admin.settings.manage':
+    case 'admin.notifications.inspect':
+    case 'admin.users.list':
+    case 'admin.users.detail':
+    case 'admin.users.ban':
+    case 'admin.users.reset_password':
+    case 'admin.users.force_logout':
+    case 'admin.users.manage_roles':
+    case 'admin.projects.list_all':
+    case 'admin.projects.force_archive':
+    case 'admin.legal.read_admin':
+    case 'admin.legal.manage':
+    case 'admin.broadcast.send':
+    case 'admin.broadcast.list':
+    case 'admin.audit.read':
+    case 'admin.stats.read': {
+      // Все admin.* — только системная роль admin (ветка выше admin→true, сюда не доходит).
+      return false;
+    }
+
+    case 'legal.accept': {
+      // Любой аутентифицированный пользователь может принять версии политики.
+      return true;
+    }
 
     default:
       return false;

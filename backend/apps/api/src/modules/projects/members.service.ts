@@ -10,6 +10,7 @@ import {
 } from '@app/common';
 import { sanitizeRepresentativeRights } from '@app/rbac';
 import { FeedService } from '../feed/feed.service';
+import { ChatsService } from '../chats/chats.service';
 
 export type MembershipRole = 'customer' | 'representative' | 'foreman' | 'master';
 
@@ -27,6 +28,7 @@ export class MembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
+    private readonly chats: ChatsService,
   ) {}
 
   async addMembership(input: AddMembershipInput) {
@@ -85,6 +87,17 @@ export class MembersService {
       });
       return m;
     });
+
+    // Автосоздание project-чата при появлении foreman (ТЗ §10).
+    // Вне транзакции, чтобы не блокировать на Redis/socket — но если упадёт, не ронять membership.
+    if (input.role === 'foreman') {
+      try {
+        await this.chats.ensureProjectChat(input.projectId, input.actorUserId);
+      } catch (e) {
+        // logger из FeedService ловит; membership уже создан — не откатываем
+      }
+    }
+
     return created;
   }
 

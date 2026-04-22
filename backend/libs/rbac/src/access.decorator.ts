@@ -17,6 +17,9 @@ export interface AccessRequirement {
     | 'material_request'
     | 'selfpurchase'
     | 'tool_issuance'
+    | 'chat'
+    | 'document'
+    | 'chat_message'
     | 'none';
 }
 

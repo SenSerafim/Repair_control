@@ -25,7 +25,9 @@ export async function bootTestApp(
   const app = moduleRef.createNestApplication({
     logger: process.env.E2E_SILENT ? false : ['error', 'warn'],
   });
-  app.setGlobalPrefix('api', { exclude: ['healthz'] });
+  app.setGlobalPrefix('api', {
+    exclude: ['healthz', 'legal/(.*)', 'legal', 'metrics'],
+  });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
@@ -41,12 +43,34 @@ export async function bootTestApp(
 export async function truncateAll(prisma: PrismaService): Promise<void> {
   // Шаблоны и методичку не трогаем — seed'ятся globalSetup и не меняются между тестами.
   const tables = [
+    // Admin Panel (Day 10b) — leaf
+    'AdminAuditLog',
+    'BroadcastCampaign',
+    'LegalAcceptance',
+    'LegalDocument',
+    // S5 — сначала leaf-таблицы (чтобы FK cascade не блокировал)
+    'ExportJob',
+    'NotificationLog',
+    'NotificationSetting',
+    'FeedbackMessage',
+    'FaqItem',
+    'FaqSection',
+    'AppSetting',
+    'Document',
+    'ChatMessage',
+    'ChatParticipant',
+    'Chat',
+    // S4
     'IdempotencyRecord',
     'PaymentDispute',
     'Payment',
     'MaterialDispute',
     'MaterialItem',
     'MaterialRequest',
+    'SelfPurchase',
+    'ToolIssuance',
+    'ToolItem',
+    // S3
     'ApprovalAttachment',
     'ApprovalAttempt',
     'Approval',
@@ -55,6 +79,7 @@ export async function truncateAll(prisma: PrismaService): Promise<void> {
     'Question',
     'Step',
     'Note',
+    // S1-S2
     'FeedEvent',
     'Pause',
     'Stage',

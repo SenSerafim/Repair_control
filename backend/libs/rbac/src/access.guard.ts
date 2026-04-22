@@ -65,6 +65,21 @@ export class AccessGuard implements CanActivate {
       if (issuanceId) {
         await this.hydrateToolIssuanceContext(accessCtx, issuanceId);
       }
+    } else if (requirement.resource === 'chat' && requirement.resourceIdFrom) {
+      const chatId = this.extractId(req, requirement.resourceIdFrom);
+      if (chatId) {
+        await this.hydrateChatContext(accessCtx, chatId);
+      }
+    } else if (requirement.resource === 'chat_message' && requirement.resourceIdFrom) {
+      const messageId = this.extractId(req, requirement.resourceIdFrom);
+      if (messageId) {
+        await this.hydrateChatMessageContext(accessCtx, messageId);
+      }
+    } else if (requirement.resource === 'document' && requirement.resourceIdFrom) {
+      const documentId = this.extractId(req, requirement.resourceIdFrom);
+      if (documentId) {
+        await this.hydrateDocumentContext(accessCtx, documentId);
+      }
     }
 
     if (!canAccess(requirement.action, accessCtx)) {
@@ -176,6 +191,72 @@ export class AccessGuard implements CanActivate {
           acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
         }
       }
+    }
+  }
+
+  private async hydrateChatContext(acc: AccessContext, chatId: string): Promise<void> {
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      select: {
+        type: true,
+        projectId: true,
+        createdById: true,
+        visibleToCustomer: true,
+        participants: {
+          where: { userId: acc.userId },
+          select: { id: true, leftAt: true },
+        },
+      },
+    });
+    if (!chat) return;
+    acc.chatCreatedById = chat.createdById;
+    acc.chatType = chat.type;
+    acc.chatVisibleToCustomer = chat.visibleToCustomer;
+    acc.chatIsParticipant = chat.participants.length > 0;
+    acc.chatIsActiveParticipant = chat.participants.some((p) => p.leftAt === null);
+    if (chat.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: chat.projectId },
+        select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+      });
+      if (project) {
+        acc.projectOwnerId = project.ownerId;
+        const m = project.memberships[0];
+        if (m) {
+          acc.membershipRole = m.role;
+          acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+        }
+      }
+    }
+  }
+
+  private async hydrateChatMessageContext(acc: AccessContext, messageId: string): Promise<void> {
+    const msg = await this.prisma.chatMessage.findUnique({
+      where: { id: messageId },
+      select: { chatId: true },
+    });
+    if (!msg) return;
+    await this.hydrateChatContext(acc, msg.chatId);
+  }
+
+  private async hydrateDocumentContext(acc: AccessContext, documentId: string): Promise<void> {
+    const doc = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      select: {
+        projectId: true,
+        uploadedById: true,
+        project: {
+          select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+        },
+      },
+    });
+    if (!doc) return;
+    acc.documentUploadedById = doc.uploadedById;
+    acc.projectOwnerId = doc.project.ownerId;
+    const m = doc.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
     }
   }
 

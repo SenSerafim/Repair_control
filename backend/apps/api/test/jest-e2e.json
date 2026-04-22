@@ -13,7 +13,7 @@
   "testEnvironment": "node",
   "testTimeout": 30000,
   "maxWorkers": 1,
+  "forceExit": true,
   "globalSetup": "<rootDir>/apps/api/test/global-setup.ts",
-  "setupFilesAfterEach": [],
   "testPathIgnorePatterns": ["/node_modules/", "/dist/"]
 }

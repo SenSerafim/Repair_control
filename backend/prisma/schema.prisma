@@ -223,6 +223,92 @@ enum FeedEventKind {
   foreman_removed
   foreman_replaced
   stage_budget_edit_after_start
+  // ---- S5 ----
+  chat_created
+  chat_message_sent
+  chat_participant_added
+  chat_participant_removed
+  chat_visibility_toggled
+  document_uploaded
+  document_updated
+  document_deleted
+  export_requested
+  export_completed
+  export_failed
+  feedback_received
+  admin_settings_updated
+  admin_faq_updated
+  admin_methodology_updated
+  admin_template_updated
+}
+
+// ---------- S5 Enums ----------
+
+enum ChatType {
+  project
+  stage
+  personal
+  group
+}
+
+enum DocumentCategory {
+  contract
+  act
+  estimate
+  warranty
+  photo
+  blueprint
+  other
+}
+
+enum NotificationKind {
+  // --- CRITICAL (не отключается пользователем) ---
+  approval_requested
+  approval_approved
+  approval_rejected
+  payment_created
+  payment_confirmed
+  payment_disputed
+  payment_resolved
+  stage_rejected_by_customer
+  stage_overdue
+  stage_deadline_exceeds_project
+  material_request_created
+  material_delivered
+  material_disputed
+  selfpurchase_created
+  tool_issued
+  export_completed
+  export_failed
+  // --- HIGH (отключается) ---
+  chat_message_new
+  step_completed
+  stage_completed
+  stage_paused
+  note_created_for_me
+  question_asked
+  // --- NORMAL / system ---
+  project_archived
+  membership_added
+}
+
+enum NotificationPriority {
+  critical
+  high
+  normal
+}
+
+enum ExportKind {
+  feed_pdf
+  project_zip
+}
+
+enum ExportStatus {
+  queued
+  running
+  done
+  failed
+  expired
 }
 
 // ---------- Users / Auth ----------
@@ -238,6 +324,8 @@ model User {
   language     String     @default("ru")
   activeRole   SystemRole @default(customer)
   lastSeenAt   DateTime?
+  bannedAt     DateTime?
+  banReason    String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -246,6 +334,7 @@ model User {
   devices          DeviceToken[]
   recoveryAttempts RecoveryAttempt[]
   loginAttempts    LoginAttempt[]
+  legalAcceptances LegalAcceptance[]
 
   ownedProjects   Project[]           @relation("ProjectOwner")
   memberships     Membership[]
@@ -351,6 +440,9 @@ model Project {
   payments         Payment[]
   materialRequests MaterialRequest[]
   selfPurchases    SelfPurchase[]
+  chats            Chat[]
+  documents        Document[]
+  exportJobs       ExportJob[]
 
   @@index([ownerId])
   @@index([status])
@@ -423,6 +515,7 @@ model Stage {
   payments         Payment[]
   materialRequests MaterialRequest[]
   selfPurchases    SelfPurchase[]
+  chats            Chat[]
 
   @@index([projectId, orderIndex])
   @@index([status])
@@ -889,4 +982,279 @@ model FeedEvent {
 
   @@index([projectId, createdAt])
   @@index([kind, createdAt])
+}
+
+// ---------- S5: Chats ----------
+
+model Chat {
+  id                String    @id @default(cuid())
+  type              ChatType
+  projectId         String?
+  stageId           String?
+  title             String?
+  visibleToCustomer Boolean   @default(false)
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
+
+  project      Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage        Stage?            @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@index([projectId, createdAt])
+  @@index([stageId])
+  @@index([type])
+}
+
+model ChatParticipant {
+  id                String    @id @default(cuid())
+  chatId            String
+  userId            String
+  joinedAt          DateTime  @default(now())
+  leftAt            DateTime?
+  lastReadMessageId String?
+  lastReadAt        DateTime?
+  mutedUntil        DateTime?
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId, leftAt])
+}
+
+model ChatMessage {
+  id              String    @id @default(cuid())
+  chatId          String
+  authorId        String
+  text            String?
+  attachmentKeys  String[]  @default([])
+  forwardedFromId String?
+  editedAt        DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  chat          Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  forwardedFrom ChatMessage?  @relation("ChatMessageForward", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwardedBy   ChatMessage[] @relation("ChatMessageForward")
+
+  @@index([chatId, createdAt])
+  @@index([authorId])
+}
+
+// ---------- S5: Documents ----------
+
+model Document {
+  id           String           @id @default(cuid())
+  projectId    String
+  stageId      String?
+  stepId       String?
+  category     DocumentCategory
+  title        String
+  fileKey      String
+  thumbKey     String?
+  thumbStatus  String           @default("pending")
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([stageId])
+  @@index([stepId])
+  @@index([category])
+}
+
+// ---------- S5: Notifications ----------
+
+model NotificationSetting {
+  id          String           @id @default(cuid())
+  userId      String
+  kind        NotificationKind
+  pushEnabled Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([userId, kind])
+  @@index([userId])
+}
+
+model NotificationLog {
+  id            String               @id @default(cuid())
+  userId        String
+  deviceTokenId String?
+  kind          NotificationKind
+  priority      NotificationPriority
+  title         String
+  body          String
+  deepLink      String?
+  projectId     String?
+  payload       Json                 @default("{}")
+  sentAt        DateTime             @default(now())
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+
+  @@index([userId, sentAt])
+  @@index([projectId, sentAt])
+  @@index([kind])
+}
+
+// ---------- S5: FAQ / Feedback / AppSettings ----------
+
+model FaqSection {
+  id         String   @id @default(cuid())
+  title      String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  items FaqItem[]
+
+  @@index([orderIndex])
+}
+
+model FaqItem {
+  id         String   @id @default(cuid())
+  sectionId  String
+  question   String
+  answer     String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  section FaqSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, orderIndex])
+}
+
+model FeedbackMessage {
+  id             String    @id @default(cuid())
+  userId         String
+  text           String
+  attachmentKeys String[]  @default([])
+  status         String    @default("new")
+  readById       String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+// ---------- S5: Export jobs (PDF/ZIP) ----------
+
+// ---------- S5 Admin Panel (2026-04-22) ----------
+
+enum LegalKind {
+  privacy
+  tos
+  data_processing_consent
+}
+
+model LegalDocument {
+  id            String    @id @default(cuid())
+  kind          LegalKind
+  version       Int
+  title         String
+  bodyMd        String
+  publishedAt   DateTime?
+  publishedById String?
+  isActive      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  acceptances LegalAcceptance[]
+
+  @@unique([kind, version])
+  @@index([kind, isActive])
+  @@index([kind, publishedAt])
+}
+
+model LegalAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  documentId String
+  acceptedAt DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId])
+}
+
+enum BroadcastStatus {
+  draft
+  queued
+  sent
+  failed
+}
+
+model BroadcastCampaign {
+  id             String          @id @default(cuid())
+  title          String
+  body           String
+  deepLink       String?
+  filter         Json            @default("{}")
+  createdById    String
+  createdAt      DateTime        @default(now())
+  sentAt         DateTime?
+  targetCount    Int             @default(0)
+  queuedCount    Int             @default(0)
+  deliveredCount Int             @default(0)
+  failedCount    Int             @default(0)
+  status         BroadcastStatus @default(draft)
+
+  @@index([createdById, createdAt])
+  @@index([status])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
+model ExportJob {
+  id              String       @id @default(cuid())
+  projectId       String
+  requestedById   String
+  kind            ExportKind
+  filtersPayload  Json         @default("{}")
+  status          ExportStatus @default(queued)
+  progressPct     Int          @default(0)
+  resultFileKey   String?
+  resultSizeBytes Int?
+  error           String?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([requestedById, createdAt])
+  @@index([expiresAt])
 }

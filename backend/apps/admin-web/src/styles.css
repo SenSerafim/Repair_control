@@ -1,0 +1,148 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family:
+    Manrope,
+    -apple-system,
+    Arial,
+    sans-serif;
+  margin: 0;
+  background: #f6f7fb;
+  color: #0d1229;
+  font-size: 14px;
+}
+.app {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e3e8f1;
+}
+h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  margin: 0;
+}
+button {
+  cursor: pointer;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid #4f6ef7;
+  background: #4f6ef7;
+  color: #fff;
+}
+button.secondary {
+  background: #fff;
+  color: #4f6ef7;
+}
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #556;
+}
+input,
+textarea,
+select {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid #d4daea;
+  border-radius: 12px;
+  width: 100%;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0;
+  border-bottom: 1px solid #e3e8f1;
+}
+.tab {
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #556;
+  border-bottom: 2px solid transparent;
+}
+.tab.active {
+  color: #4f6ef7;
+  border-bottom-color: #4f6ef7;
+}
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(13, 18, 41, 0.06);
+  margin-bottom: 12px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.row > * {
+  flex: 1;
+}
+.row > .grow {
+  flex: 2;
+}
+.muted {
+  color: #778;
+  font-size: 13px;
+}
+.error {
+  color: #b00020;
+  font-weight: 600;
+}
+.login {
+  max-width: 360px;
+  margin: 80px auto;
+  background: #fff;
+  padding: 28px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(13, 18, 41, 0.08);
+}
+.login h1 {
+  margin-bottom: 16px;
+}
+.login label {
+  display: block;
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+.login button {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  margin-top: 16px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #4f6ef7;
+  font-weight: 700;
+  font-size: 12px;
+}
+.badge.new {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.badge.read {
+  background: #d1fae5;
+  color: #059669;
+}
+.badge.archived {
+  background: #e5e7eb;
+  color: #556;
+}

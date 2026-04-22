@@ -112,6 +112,8 @@ const mkApprovals = () =>
     request: jest.fn().mockResolvedValue({ id: 'ap-mock' }),
   }) as any;
 
+const mkChats = () => ({ ensureStageChat: jest.fn().mockResolvedValue({}) }) as any;
+
 describe('StagesService.create', () => {
   it('создаёт этап и записывает в ленту', async () => {
     const { prisma, projects, stages } = mkPrisma();
@@ -124,6 +126,7 @@ describe('StagesService.create', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -147,6 +150,7 @@ describe('StagesService.create', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     await expect(svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u1' })).rejects.toThrow(
       ConflictError,
@@ -163,6 +167,7 @@ describe('StagesService.create', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     await expect(
       svc.create({ projectId: 'p-missing', title: 'X', actorUserId: 'u1' }),
@@ -185,6 +190,7 @@ describe('StagesService.create', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     await svc.create({
       projectId: 'p1',
@@ -210,6 +216,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -229,6 +236,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -249,6 +257,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -286,6 +295,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -306,6 +316,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await expect(svc.pause(s.id, 'u', 'materials')).rejects.toThrow(InvalidInputError);
@@ -324,6 +335,7 @@ describe('StagesService.reorder', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const a = await svc.create({ projectId: 'p1', title: 'A', actorUserId: 'u' });
     const b = await svc.create({ projectId: 'p1', title: 'B', actorUserId: 'u' });
@@ -350,6 +362,7 @@ describe('StagesService.reorder', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     await expect(svc.reorder('p1', [{ id: 's-unknown', orderIndex: 0 }], 'u')).rejects.toThrow(
       InvalidInputError,
@@ -375,6 +388,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await expect(svc.start(s.id, 'u')).rejects.toThrow(ConflictError);
@@ -396,6 +410,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -418,6 +433,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -438,6 +454,7 @@ describe('StagesService.update — H.1: правка бюджета после �
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -469,6 +486,7 @@ describe('StagesService.update — H.1: правка бюджета после �
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -496,6 +514,7 @@ describe('StagesService.update — H.2: замена foreman на активно
       mkCalc(),
       clock,
       mkApprovals(),
+      mkChats(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -541,6 +560,7 @@ describe('StagesService.sendToReview — создаёт Approval scope=stage_acc
       mkCalc(),
       clock,
       approvals,
+      mkChats(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
     await svc.start(s.id, 'f1');

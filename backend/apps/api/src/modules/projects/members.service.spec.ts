@@ -110,12 +110,13 @@ const mkPrisma = () => {
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
+const mkChats = () => ({ ensureProjectChat: jest.fn().mockResolvedValue({}) }) as any;
 
 describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('нельзя назначить владельца бригадиром на его же проект', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await expect(
       svc.addMembership({
         projectId: 'p1',
@@ -129,7 +130,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('добавление обычного бригадира работает', async () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await svc.addMembership({
       projectId: 'p1',
       actorUserId: 'u-owner',
@@ -142,7 +143,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('роль customer может быть только у владельца проекта', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await expect(
       svc.addMembership({
         projectId: 'p1',
@@ -156,7 +157,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('повторное добавление → конфликт', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await svc.addMembership({
       projectId: 'p1',
       actorUserId: 'u-owner',
@@ -175,7 +176,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
 
   it('несуществующий проект → 404', async () => {
     const { prisma } = mkPrisma();
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await expect(
       svc.addMembership({
         projectId: 'p-missing',
@@ -189,7 +190,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('санитизирует permissions для representative (только известные ключи, только boolean)', async () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await svc.addMembership({
       projectId: 'p1',
       actorUserId: 'u-owner',
@@ -212,12 +213,12 @@ describe('MembersService.searchUser', () => {
   it('находит по телефону', async () => {
     const { prisma, users } = mkPrisma();
     users.push({ id: 'u1', phone: '+79991112233', email: 'x@y.z' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await expect(svc.searchUser({ phone: '+79991112233' })).resolves.toMatchObject({ id: 'u1' });
   });
   it('null если не передали ни phone, ни email', async () => {
     const { prisma } = mkPrisma();
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await expect(svc.searchUser({})).resolves.toBeNull();
   });
 });
@@ -227,7 +228,7 @@ describe('MembersService.removeMembership', () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
     memberships.push({ id: 'm1', projectId: 'p1', userId: 'u-owner', role: 'customer' });
-    const svc = new MembersService(prisma, mkFeed());
+    const svc = new MembersService(prisma, mkFeed(), mkChats());
     await expect(svc.removeMembership('p1', 'm1', 'u-owner')).rejects.toThrow(InvalidInputError);
   });
 
@@ -249,7 +250,7 @@ describe('MembersService.removeMembership', () => {
       requiresReassign: false,
     });
     const feed = mkFeed();
-    const svc = new MembersService(prisma, feed);
+    const svc = new MembersService(prisma, feed, mkChats());
     await svc.removeMembership('p1', 'mf', 'u-owner');
     expect(approvals[0].requiresReassign).toBe(true);
     const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);

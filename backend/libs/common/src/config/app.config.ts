@@ -23,6 +23,14 @@ export interface AppConfig {
     bucket: string;
     presignTtlSeconds: number;
   };
+  redis: { url: string };
+  logging: { level: string; pretty: boolean };
+  sentry: { dsn: string };
+  metrics: { token: string };
+  fcm: { enabled: boolean; projectId: string; clientEmail: string; privateKey: string };
+  exports: { tempDir: string; pdfLogoUrl: string; zipMaxSizeMb: number };
+  support: { telegramUrl: string };
+  websocket: { corsOrigin: string; pingIntervalMs: number; pingTimeoutMs: number };
 }
 
 export const appConfigFactory = (env: Record<string, string | undefined>): AppConfig => ({
@@ -59,5 +67,34 @@ export const appConfigFactory = (env: Record<string, string | undefined>): AppCo
     secretKey: env.MINIO_SECRET_KEY ?? 'minioadmin',
     bucket: env.MINIO_BUCKET ?? 'repair-control',
     presignTtlSeconds: Number(env.MINIO_PRESIGN_TTL_SECONDS ?? 300),
+  },
+  redis: {
+    url:
+      env.REDIS_URL ?? `redis://${env.REDIS_HOST ?? 'localhost'}:${Number(env.REDIS_PORT ?? 6379)}`,
+  },
+  logging: {
+    level: env.LOG_LEVEL ?? 'info',
+    pretty: env.LOG_PRETTY === 'true',
+  },
+  sentry: { dsn: env.SENTRY_DSN ?? '' },
+  metrics: { token: env.METRICS_TOKEN ?? '' },
+  fcm: {
+    enabled: env.FCM_ENABLED === 'true',
+    projectId: env.FCM_PROJECT_ID ?? '',
+    clientEmail: env.FCM_CLIENT_EMAIL ?? '',
+    privateKey: (env.FCM_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
+  },
+  exports: {
+    tempDir: env.EXPORT_TEMP_DIR ?? '/tmp/repair-control-exports',
+    pdfLogoUrl: env.PDF_LOGO_URL ?? '',
+    zipMaxSizeMb: Number(env.ZIP_MAX_SIZE_MB ?? 500),
+  },
+  support: {
+    telegramUrl: env.SUPPORT_TELEGRAM_URL ?? 'https://t.me/repaircontrol_support',
+  },
+  websocket: {
+    corsOrigin: env.WS_CORS_ORIGIN ?? '*',
+    pingIntervalMs: Number(env.WS_PING_INTERVAL_MS ?? 25_000),
+    pingTimeoutMs: Number(env.WS_PING_TIMEOUT_MS ?? 20_000),
   },
 });

@@ -12,6 +12,7 @@ import { FeedService } from '../feed/feed.service';
 import { StageLifecycle, StageTransition } from './stage-lifecycle';
 import { ProgressCalculator } from './progress-calculator';
 import { ApprovalsService } from '../approvals/approvals.service';
+import { ChatsService } from '../chats/chats.service';
 
 export interface CreateStageInput {
   projectId: string;
@@ -45,6 +46,7 @@ export class StagesService {
     private readonly clock: Clock,
     @Inject(forwardRef(() => ApprovalsService))
     private readonly approvals: ApprovalsService,
+    private readonly chats: ChatsService,
   ) {}
 
   async create(input: CreateStageInput) {
@@ -85,6 +87,16 @@ export class StagesService {
     });
     await this.maybeWarnStageOverProject(stage, project.plannedEnd, input.actorUserId);
     await this.calc.recalcProject(input.projectId);
+
+    // Автосоздание stage-чата если назначен хотя бы один foreman (ТЗ §10, §8 день 9).
+    if ((input.foremanIds ?? []).length > 0) {
+      try {
+        await this.chats.ensureStageChat(stage.id, input.actorUserId);
+      } catch (e) {
+        // не ронять основной flow
+      }
+    }
+
     return this.serialize(stage);
   }
 
@@ -206,6 +218,16 @@ export class StagesService {
     });
 
     await this.calc.recalcStage(stageId);
+
+    // Автосоздание stage-чата, если в этапе теперь есть foreman (а раньше не было)
+    if (newForemanIds && newForemanIds.length > 0 && oldForemanIds.length === 0) {
+      try {
+        await this.chats.ensureStageChat(stageId, input.actorUserId);
+      } catch (e) {
+        // silent
+      }
+    }
+
     return this.serialize(updated);
   }
 

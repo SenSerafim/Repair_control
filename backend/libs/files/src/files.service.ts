@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Client as MinioClient } from 'minio';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
@@ -6,7 +6,9 @@ import { InvalidInputError } from '@app/common';
 import { MINIO_CLIENT, MINIO_CONFIG, MinioConfig } from './minio.client';
 
 export interface PresignedUploadRequest {
-  originalName: string;
+  /** Исходное имя файла (любое человеко-читаемое). Алиасы: filename. */
+  originalName?: string;
+  filename?: string;
   mimeType: string;
   sizeBytes: number;
   scope: string; // "avatars" | "stages/{stageId}/photos" | "docs/{projectId}" и т.д.
@@ -19,7 +21,7 @@ export interface PresignedUploadResponse {
 }
 
 @Injectable()
-export class FilesService {
+export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
   private readonly allowedMimes: Set<string>;
   private readonly maxSizeBytes: number;
@@ -32,6 +34,14 @@ export class FilesService {
   ) {
     this.allowedMimes = new Set(allowedMimes);
     this.maxSizeBytes = maxSizeMb * 1024 * 1024;
+  }
+
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureBucket();
+    } catch (e) {
+      this.logger.warn(`ensureBucket failed at startup: ${(e as Error).message}`);
+    }
   }
 
   async ensureBucket(): Promise<void> {
@@ -89,6 +99,38 @@ export class FilesService {
       .resize({ width, withoutEnlargement: true })
       .jpeg({ quality: 80 })
       .toBuffer();
+  }
+
+  /**
+   * Проверка существования файла. Используется в documents.confirm (после клиентского upload).
+   */
+  async statObject(key: string): Promise<{ size: number; etag: string; lastModified: Date }> {
+    const info = await this.minio.statObject(this.config.bucket, key);
+    return { size: info.size, etag: info.etag, lastModified: info.lastModified };
+  }
+
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const stream = await this.minio.getObject(this.config.bucket, key);
+    const chunks: Buffer[] = [];
+    return new Promise((resolve, reject) => {
+      stream.on('data', (c: Buffer) => chunks.push(c));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+  }
+
+  async putObject(key: string, buffer: Buffer, mimeType: string): Promise<void> {
+    await this.minio.putObject(this.config.bucket, key, buffer, buffer.length, {
+      'Content-Type': mimeType,
+    });
+  }
+
+  async removeObject(key: string): Promise<void> {
+    try {
+      await this.minio.removeObject(this.config.bucket, key);
+    } catch (e) {
+      this.logger.warn(`removeObject failed for ${key}: ${(e as Error).message}`);
+    }
   }
 }
 

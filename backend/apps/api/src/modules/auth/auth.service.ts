@@ -89,6 +89,11 @@ export class AuthService {
       throw new AuthError(ErrorCodes.INVALID_CREDENTIALS, 'invalid phone or password');
     }
 
+    // Admin-panel: заблокированных пользователей не пускаем (ТЗ §5.1 + админ-управление).
+    if (user.bannedAt) {
+      throw new AuthError(ErrorCodes.USER_BANNED, user.banReason ?? 'account banned');
+    }
+
     const systemRole = user.activeRole as SystemRole;
     const tokens = await this.issueSession(user.id, systemRole, {
       deviceId: input.deviceId,

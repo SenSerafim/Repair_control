@@ -106,8 +106,64 @@ Prisma возвращает `BigInt` для всех колонок `BigInt` (`w
 ## Что ещё оседает в schema.prisma «на вырост» (ТЗ §5.7)
 
 - `Subscription` / `FeatureFlag` — не добавлены (появятся в следующих спринтах).
-- `Document`, `Chat` — в схеме пока отсутствуют, добавим в S5 под их модули.
-- Партиционирование `FeedEvent` по году (ТЗ §5.4) — задел на момент, когда лента начнёт активно расти; сейчас обычная таблица.
+- ~~`Document`, `Chat` — в схеме пока отсутствуют, добавим в S5 под их модули.~~ **S5: добавлены.**
+- Партиционирование `FeedEvent` и `ChatMessage` по году (ТЗ §5.4) — задел. Переход — отдельная миграция через `pg_partman` поверх Prisma (вне migrate deploy). Комментарий в schema.prisma и трекер в backlog.
+
+## S5 — Real-time, Docs, Feed-export, Push, Admin
+
+### Модули (добавлены в app.module.ts)
+
+- `QueuesModule` (глобально) — BullMQ регистрация (`exports`, `push`, `documents.thumbnails`) + `RedisClientModule` (`REDIS_CLIENT`, `REDIS_PUBSUB_CLIENT`) для socket.io-adapter и health-checks.
+- `RealtimeModule` — WebSocket gateway `/chats` (socket.io), handshake JWT (`WsAuthService`), комнаты `chat:{id}` и `user:{id}`. Подписан через `@OnEvent` на внутренние события чата/экспорта/уведомлений и broadcast'ит в socket.io.
+- `ChatsModule` — CRUD чатов (project/stage/personal/group), `messages.service` (edit-window 15 мин, soft-delete, forward, cursor-пагинация), `read-receipts.service` (lastReadAt, unreadCount).
+- `DocumentsModule` — presigned-upload через `FilesService`, `confirm` с проверкой `minio.statObject`, auto-enqueue thumbnail для PDF. Worker использует `puppeteer-core + @sparticuz/chromium` для рендера 1-й страницы в JPG.
+- `ExportsModule` — `ExportJob` FSM (queued → running → done/failed/expired). `PdfRendererService` (puppeteer HTML→PDF с graceful-fallback на plaintext если chromium недоступен), `ZipPackerService` (archiver), `ExportProcessor` BullMQ-worker. Idempotency-Key обязателен.
+- `NotificationsModule` — абстракция `NotificationProvider` (FCM + Noop для тестов/FCM_ENABLED=false). `NotificationRouter` подписан на `feed.emitted`, мапит `FeedEventKind → NotificationKind` + получатели. Критичные kinds не отключаются. `PushProcessor` + `DeviceToken` cleanup при `token-not-registered`.
+- `FeedbackModule` — `POST /feedback` + admin list/patch.
+- `AdminModule` — FAQ CRUD, AppSettings (public subset через `GET /me/app-settings`). Telegram support URL — `support_telegram_url` (ТЗ §753).
+- `MetricsModule` — `/api/metrics` (Prometheus), защищён `X-Metrics-Token`.
+
+### Observability
+
+- `nestjs-pino` — structured logs, `x-request-id` middleware, redact `authorization`/`password`/`token`/`idempotencyKey`/`fcmPrivateKey`.
+- `@sentry/node` — init в `bootstrap/sentry.ts` до `NestFactory.create`, если `SENTRY_DSN` не пусто.
+- `prom-client` — HTTP counter/histogram, BullMQ queue depth gauge, push и export counters.
+- `/healthz` расширен: db + redis + minio (timeout 500ms на каждый).
+
+### WebSocket — Redis adapter
+
+`main.ts` использует `RedisIoAdapter` (extends `IoAdapter`) из `modules/realtime/ws-adapter.ts`. Два `ioredis` клиента (pub + sub-duplicate) + `createAdapter` из `@socket.io/redis-adapter` для горизонтального масштаба. Комнаты `chat:{id}` и `user:{id}` — точная фильтрация broadcast.
+
+**Integration via event-emitter:**
+- `ChatsService/MessagesService` эмитят `chat.message.sent`, `chat.participant.added`, и т.д.
+- `ChatsGateway` подписан `@OnEvent('chat.message.sent')` → `server.to('chat:{id}').emit('message:new', ...)`.
+- `FeedService.emit` после `INSERT feed_events` дополнительно эмитит `feed.emitted` → `NotificationRouter` фан-аут на push + `ChatsGateway` на `user:{id}` для `export:ready`, `notification:new`.
+
+### FeedEventKind расширение
+
++16 значений: `chat_created`, `chat_message_sent`, `chat_participant_added/removed`, `chat_visibility_toggled`, `document_uploaded/updated/deleted`, `export_requested/completed/failed`, `feedback_received`, `admin_*`. Всего 91.
+
+### RBAC — новые actions (+16)
+
+`chat.write`, `chat.create_personal`, `chat.create_group`, `chat.toggle_customer_visibility`, `chat.moderate`, `document.read`, `document.write`, `document.delete`, `feed.export`, `notification.settings.self`, `feedback.create`, `admin.templates.manage`, `admin.faq.manage`, `admin.feedback.read`, `admin.settings.manage`, `admin.notifications.inspect`.
+
+Новые resource hydrators в `AccessGuard`: `chat`, `document`, `chat_message`.
+
+Расширенный `AccessContext` — `chatCreatedById`, `chatIsParticipant`, `chatIsActiveParticipant`, `chatVisibleToCustomer`, `chatType`, `documentUploadedById`.
+
+### Idempotency
+
+`@Idempotent()` на `POST /projects/:id/exports` (как в S4 для `payments`/`materials`/`selfpurchases`). Replay через `IdempotencyRecord` (TTL 24 ч).
+
+### FCM абстракция (санкционный failover, ТЗ §11)
+
+```
+NotificationProvider (interface)
+  ├── FcmProvider        — firebase-admin, реальная отправка при FCM_ENABLED=true
+  └── NoopProvider       — для тестов и staging без ключей
+```
+
+Переключение — factory в `NotificationsModule` по ENV. Добавить Mind Push/Yandex Push — реализовать `NotificationProvider` и зарегистрировать в factory.
 
 ## Миграции
 

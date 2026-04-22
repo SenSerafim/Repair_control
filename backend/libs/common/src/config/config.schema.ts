@@ -10,6 +10,9 @@ export const configValidationSchema = Joi.object({
 
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().default(6379),
+  REDIS_URL: Joi.string()
+    .uri({ scheme: ['redis', 'rediss'] })
+    .default('redis://localhost:6379'),
 
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),
   JWT_REFRESH_SECRET: Joi.string().min(16).required(),
@@ -40,4 +43,31 @@ export const configValidationSchema = Joi.object({
 
   RECOVERY_MAX_ATTEMPTS: Joi.number().default(3),
   RECOVERY_BLOCK_SECONDS: Joi.number().default(300),
+
+  // S5 — Observability
+  SENTRY_DSN: Joi.string().uri().allow('').default(''),
+  LOG_LEVEL: Joi.string()
+    .valid('trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent')
+    .default('info'),
+  LOG_PRETTY: Joi.boolean().default(false),
+  METRICS_TOKEN: Joi.string().allow('').default(''),
+
+  // S5 — FCM push (abstracted via NotificationProvider; actual send only if FCM_ENABLED=true)
+  FCM_ENABLED: Joi.boolean().default(false),
+  FCM_PROJECT_ID: Joi.string().allow('').default(''),
+  FCM_CLIENT_EMAIL: Joi.string().allow('').default(''),
+  FCM_PRIVATE_KEY: Joi.string().allow('').default(''),
+
+  // S5 — Export jobs (PDF/ZIP)
+  EXPORT_TEMP_DIR: Joi.string().default('/tmp/repair-control-exports'),
+  PDF_LOGO_URL: Joi.string().allow('').default(''),
+  ZIP_MAX_SIZE_MB: Joi.number().default(500),
+
+  // S5 — Admin / support
+  SUPPORT_TELEGRAM_URL: Joi.string().default('https://t.me/repaircontrol_support'),
+
+  // S5 — WebSocket
+  WS_CORS_ORIGIN: Joi.string().default('*'),
+  WS_PING_INTERVAL_MS: Joi.number().default(25_000),
+  WS_PING_TIMEOUT_MS: Joi.number().default(20_000),
 });

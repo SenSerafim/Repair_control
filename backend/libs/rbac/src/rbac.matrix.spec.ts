@@ -278,6 +278,219 @@ describe('RBAC matrix — ТЗ §1.5', () => {
       expect(canAccess('question.manage', { userId: 'x', systemRole: 'customer' })).toBe(false);
     });
   });
+
+  // ---------- S5: Chat actions ----------
+
+  describe('chat.read', () => {
+    it('admin → true', () => {
+      expect(canAccess('chat.read', admin())).toBe(true);
+    });
+    it('no membership → false', () => {
+      expect(canAccess('chat.read', { userId: 'x', systemRole: 'customer' })).toBe(false);
+    });
+    it('active participant → true', () => {
+      const ctx: AccessContext = {
+        ...customer(true),
+        chatIsParticipant: true,
+        chatIsActiveParticipant: true,
+      };
+      expect(canAccess('chat.read', ctx)).toBe(true);
+    });
+    it('left participant без visibility → false', () => {
+      const ctx: AccessContext = {
+        ...customer(true),
+        chatIsParticipant: true,
+        chatIsActiveParticipant: false,
+        chatType: 'stage',
+        chatVisibleToCustomer: false,
+      };
+      expect(canAccess('chat.read', ctx)).toBe(false);
+    });
+    it('customer-owner видит stage-chat если visibleToCustomer=true', () => {
+      const ctx: AccessContext = {
+        ...customer(true),
+        chatIsParticipant: true,
+        chatIsActiveParticipant: false,
+        chatType: 'stage',
+        chatVisibleToCustomer: true,
+      };
+      expect(canAccess('chat.read', ctx)).toBe(true);
+    });
+  });
+
+  describe('chat.write', () => {
+    it('active participant → true', () => {
+      const ctx: AccessContext = { ...foreman(), chatIsActiveParticipant: true };
+      expect(canAccess('chat.write', ctx)).toBe(true);
+    });
+    it('customer с visibility (read-only) → false (write запрещён)', () => {
+      const ctx: AccessContext = {
+        ...customer(true),
+        chatIsParticipant: true,
+        chatIsActiveParticipant: false,
+        chatVisibleToCustomer: true,
+      };
+      expect(canAccess('chat.write', ctx)).toBe(false);
+    });
+    it('без membership → false', () => {
+      expect(canAccess('chat.write', { userId: 'x', systemRole: 'customer' })).toBe(false);
+    });
+  });
+
+  describe('chat.create_personal', () => {
+    it('любой member', () => {
+      expect(canAccess('chat.create_personal', customer(true))).toBe(true);
+      expect(canAccess('chat.create_personal', foreman())).toBe(true);
+      expect(canAccess('chat.create_personal', master())).toBe(true);
+    });
+    it('не-участник — 403', () => {
+      expect(canAccess('chat.create_personal', { userId: 'x', systemRole: 'customer' })).toBe(
+        false,
+      );
+    });
+  });
+
+  describe('chat.create_group', () => {
+    it('owner, rep.canInviteMembers, foreman — OK', () => {
+      expect(canAccess('chat.create_group', customer(true))).toBe(true);
+      expect(canAccess('chat.create_group', representative({ canInviteMembers: true }))).toBe(true);
+      expect(canAccess('chat.create_group', foreman())).toBe(true);
+    });
+    it('master — no', () => {
+      expect(canAccess('chat.create_group', master())).toBe(false);
+    });
+    it('rep без canInviteMembers — no', () => {
+      expect(canAccess('chat.create_group', representative())).toBe(false);
+    });
+  });
+
+  describe('chat.toggle_customer_visibility', () => {
+    it('foreman — creator чата — OK', () => {
+      const ctx: AccessContext = { ...foreman(), chatCreatedById: 'u-for' };
+      expect(canAccess('chat.toggle_customer_visibility', ctx)).toBe(true);
+    });
+    it('foreman не-creator — no', () => {
+      const ctx: AccessContext = { ...foreman(), chatCreatedById: 'u-other' };
+      expect(canAccess('chat.toggle_customer_visibility', ctx)).toBe(false);
+    });
+    it('customer — no', () => {
+      expect(canAccess('chat.toggle_customer_visibility', customer(true))).toBe(false);
+    });
+  });
+
+  describe('chat.moderate', () => {
+    it('customer-owner — OK', () => {
+      expect(canAccess('chat.moderate', customer(true))).toBe(true);
+    });
+    it('creator чата — OK', () => {
+      const ctx: AccessContext = { ...foreman(), chatCreatedById: 'u-for' };
+      expect(canAccess('chat.moderate', ctx)).toBe(true);
+    });
+    it('чужой — no', () => {
+      expect(canAccess('chat.moderate', master())).toBe(false);
+    });
+  });
+
+  // ---------- S5: Document actions ----------
+
+  describe('document.read', () => {
+    it('любой член проекта', () => {
+      expect(canAccess('document.read', customer(true))).toBe(true);
+      expect(canAccess('document.read', representative())).toBe(true);
+      expect(canAccess('document.read', foreman())).toBe(true);
+      expect(canAccess('document.read', master())).toBe(true);
+    });
+    it('не-член — no', () => {
+      expect(canAccess('document.read', { userId: 'x', systemRole: 'customer' })).toBe(false);
+    });
+  });
+
+  describe('document.write', () => {
+    it('owner, rep.canEditStages, foreman, master — OK', () => {
+      expect(canAccess('document.write', customer(true))).toBe(true);
+      expect(canAccess('document.write', representative({ canEditStages: true }))).toBe(true);
+      expect(canAccess('document.write', foreman())).toBe(true);
+      expect(canAccess('document.write', master())).toBe(true);
+    });
+    it('rep без прав — no', () => {
+      expect(canAccess('document.write', representative())).toBe(false);
+    });
+  });
+
+  describe('document.delete', () => {
+    it('owner — OK', () => {
+      expect(canAccess('document.delete', customer(true))).toBe(true);
+    });
+    it('uploader-сам — OK', () => {
+      const ctx: AccessContext = { ...foreman(), documentUploadedById: 'u-for' };
+      expect(canAccess('document.delete', ctx)).toBe(true);
+    });
+    it('чужой foreman — no', () => {
+      const ctx: AccessContext = { ...foreman(), documentUploadedById: 'u-other' };
+      expect(canAccess('document.delete', ctx)).toBe(false);
+    });
+    it('master чужой документ — no', () => {
+      expect(canAccess('document.delete', master())).toBe(false);
+    });
+  });
+
+  // ---------- S5: Feed export ----------
+
+  describe('feed.export', () => {
+    it('owner и foreman — OK', () => {
+      expect(canAccess('feed.export', customer(true))).toBe(true);
+      expect(canAccess('feed.export', foreman())).toBe(true);
+      expect(canAccess('feed.export', representative({ canSeeBudget: true }))).toBe(true);
+    });
+    it('master — no', () => {
+      expect(canAccess('feed.export', master())).toBe(false);
+    });
+    it('rep без canSeeBudget — no', () => {
+      expect(canAccess('feed.export', representative())).toBe(false);
+    });
+  });
+
+  // ---------- S5: Notification settings ----------
+
+  describe('notification.settings.self', () => {
+    it('любой аутентифицированный — OK', () => {
+      expect(canAccess('notification.settings.self', customer(true))).toBe(true);
+      expect(canAccess('notification.settings.self', foreman())).toBe(true);
+      expect(canAccess('notification.settings.self', master())).toBe(true);
+      expect(canAccess('notification.settings.self', { userId: 'x', systemRole: 'customer' })).toBe(
+        true,
+      );
+    });
+  });
+
+  // ---------- S5: Feedback ----------
+
+  describe('feedback.create', () => {
+    it('любой аутентифицированный — OK', () => {
+      expect(canAccess('feedback.create', customer(true))).toBe(true);
+      expect(canAccess('feedback.create', master())).toBe(true);
+      expect(canAccess('feedback.create', { userId: 'x', systemRole: 'customer' })).toBe(true);
+    });
+  });
+
+  // ---------- S5: Admin-only ----------
+
+  describe('admin.*', () => {
+    it('admin имеет все admin.* права', () => {
+      expect(canAccess('admin.templates.manage', admin())).toBe(true);
+      expect(canAccess('admin.faq.manage', admin())).toBe(true);
+      expect(canAccess('admin.feedback.read', admin())).toBe(true);
+      expect(canAccess('admin.settings.manage', admin())).toBe(true);
+      expect(canAccess('admin.notifications.inspect', admin())).toBe(true);
+    });
+    it('не-admin — все запрещено', () => {
+      expect(canAccess('admin.templates.manage', customer(true))).toBe(false);
+      expect(canAccess('admin.faq.manage', foreman())).toBe(false);
+      expect(canAccess('admin.feedback.read', representative({ canApprove: true }))).toBe(false);
+      expect(canAccess('admin.settings.manage', master())).toBe(false);
+      expect(canAccess('admin.notifications.inspect', foreman())).toBe(false);
+    });
+  });
 });
 
 describe('mergeRepresentativeRights', () => {
