@@ -4,5 +4,12 @@
 
 # Local env files — committed .env.example only
 .env
+.env.dev
+.env.prod
 .env.local
 .env.test
+
+# Node / build artefacts
+node_modules/
+dist/
+build/
