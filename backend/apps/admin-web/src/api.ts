@@ -63,7 +63,7 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ phone, password }) },
       { authRequired: false },
     ),
-  me: () => request<any>('/api/auth/me'),
+  me: () => request<any>('/api/me'),
 
   // ────────── Dashboard / audit ──────────
   stats: () => request<Record<string, any>>('/api/admin/stats'),
@@ -198,4 +198,37 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // ────────── Global overview (всё в системе) ──────────
+  listDocuments: (params?: { projectId?: string; q?: string; limit?: number; offset?: number }) =>
+    request<{ items: any[]; total: number }>(`/api/admin/documents${qs(params)}`),
+  listPayments: (params?: {
+    projectId?: string;
+    status?: string;
+    kind?: string;
+    limit?: number;
+    offset?: number;
+  }) => request<{ items: any[]; total: number }>(`/api/admin/payments${qs(params)}`),
+  listMaterials: (params?: {
+    projectId?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }) => request<{ items: any[]; total: number }>(`/api/admin/materials${qs(params)}`),
+  listApprovals: (params?: {
+    projectId?: string;
+    status?: string;
+    scope?: string;
+    limit?: number;
+    offset?: number;
+  }) => request<{ items: any[]; total: number }>(`/api/admin/approvals${qs(params)}`),
+  listChats: (params?: { projectId?: string; type?: string; limit?: number; offset?: number }) =>
+    request<{ items: any[]; total: number }>(`/api/admin/chats${qs(params)}`),
+  listStages: (params?: { projectId?: string; status?: string; limit?: number; offset?: number }) =>
+    request<{ items: any[]; total: number }>(`/api/admin/stages${qs(params)}`),
+
+  // ────────── User sessions / devices / projects ──────────
+  userSessions: (id: string) => request<any[]>(`/api/admin/users/${id}/sessions`),
+  userDevices: (id: string) => request<any[]>(`/api/admin/users/${id}/devices`),
+  userProjects: (id: string) => request<any[]>(`/api/admin/users/${id}/projects`),
 };

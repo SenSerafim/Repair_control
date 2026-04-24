@@ -36,6 +36,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { AdminAuditModule } from './modules/admin-audit/admin-audit.module';
 import { AdminUsersModule } from './modules/admin-users/admin-users.module';
 import { AdminProjectsModule } from './modules/admin-projects/admin-projects.module';
+import { AdminOverviewModule } from './modules/admin-overview/admin-overview.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 
@@ -85,6 +86,7 @@ import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
     AdminAuditModule,
     AdminUsersModule,
     AdminProjectsModule,
+    AdminOverviewModule,
     LegalModule,
     BroadcastsModule,
   ],
