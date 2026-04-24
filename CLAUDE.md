@@ -4,14 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Этот репозиторий на старте — код ещё не написан. Содержимое:
+Репозиторий в активной разработке. Структура:
 
-- `Сводное_ТЗ_и_Спринты.md` — **главный рабочий документ** (v1.0, финальный). 9 спринтов × 2 дня = 18 рабочих дней. Любые действия сверяются с ним.
-- `design/` — 6 HTML-кластеров макетов (A Профиль / B Проекты / C Этапы / D Согласования / E Финансы / F Коммуникации), ~180 экранов. Источник дизайн-токенов для `lib/core/theme/tokens.dart`.
+- `backend/` — NestJS + Prisma + PostgreSQL + Redis + MinIO + Socket.IO + BullMQ. **S1–S5 закрыты**, API заморожен в 1.0.0 (`backend/docs/openapi.v1.json`, 148 путей, 32 модуля, 46 Prisma-моделей, 351 unit + 30 e2e тестов). Admin Panel поднят (коммит `563b23a`).
+- `mobile/` — Flutter 3.35+ / Dart 3.11. **S6–S17 закрыты** (full 12-sprint roadmap). 176 тестов зелёные, `flutter analyze` чистый, `flutter build apk --flavor dev --debug` собирается, CI (`.github/workflows/mobile-ci.yml`) настроен, `mobile/README_RELEASE.md` готов к TestFlight/Play Internal.
+- `design/` — 6 HTML-кластеров макетов (A Профиль / B Проекты / C Этапы / D Согласования / E Финансы / F Коммуникации), ~180 экранов. Источник дизайн-токенов для `mobile/lib/core/theme/tokens.dart`.
+- `Сводное_ТЗ_и_Спринты.md` — **главный рабочий документ**. Изначальный план (9 спринтов) расширен на Flutter-часть до 12 спринтов (S6–S17). План итерации: `.claude/plans/users-serafim-project-repair-control-md-hidden-hellman.md`.
 - Исходные `.docx`: ТЗ v1.0 (источник истины), v3.0 (UI-состояния, push-приоритеты), Gaps_Analysis (25 закрытых пробелов).
 - `видео1255320897.txt`, `константин1.txt` — расшифровки созвонов; при конфликтах с ранними ТЗ **приоритет у цитат заказчика**.
 
 Рабочая ветка — `dev_v1`. `main` принимает только зелёные спринты.
+
+### Flutter roadmap (S6–S17, ~24 рабочих дня)
+
+| Sprint | Дни | Scope |
+|---|---|---|
+| S6 | 11–12 | Foundation, design-tokens, shared widgets, Dio+refresh+idempotency, go_router, l10n. **ЗАКРЫТ.** |
+| S7 | 13–14 | Auth (register/login/refresh/recovery), PinInput, legal-acceptance, device register. **ЗАКРЫТ.** |
+| S8 | 15–16 | Профиль (hero + меню), edit-profile, 4 роли + add/switch, notif-settings с disabled-critical, language RU/EN, FAQ accordion, feedback, rep-rights info. **ЗАКРЫТ.** |
+| S9 | 17–18 | Проекты list/archive/search, ProjectCard со светофором + прогресс, 5 фильтр-чипов, 3-step wizard, edit с archived-баннером, copy-sheet, card-menu, Money util. **ЗАКРЫТ.** |
+| S10 | 19–20 | ConsoleScreen (5 semaphore-states + banner per state), AppHouseProgress CustomPainter, Stage domain, TeamScreen, AddMemberFlow (search+found/not-found+role), RepRightsSheet с 13 DomainAction. **ЗАКРЫТ.** |
+| S11 | 21–22 | StagesScreen (tile+list + drag-and-drop reorder), StageDetailScreen с 8 computed display-states (+ overdue/late-start), PauseSheet 4 причины + обязательный комментарий для other, Create wizard (blank + 8 платформенных шаблонов + user templates), Template preview sheet, SaveAsTemplateSheet. **ЗАКРЫТ.** |
+| S12 | 23–24 | Step/Substep/StepPhoto/Question/Note domain (5 freezed моделей), StepsRepository (23 endpoints), StepsController + StepDetailController.family, полный photo-upload flow с compressImage (1920/80 JPEG + EXIF-zero через crypto SHA-256), StepDetailScreen с подшагами-чеклистом + фото-grid + вопросы-thread, ExtraWorkSheet (auto-approval на бекенде), NotesScreen с фильтрами, интеграция в StageDetailScreen. **ЗАКРЫТ.** |
+| S13 | 25–26 | Approval domain (5 scope × 4 status FSM), ApprovalsRepository (6 методов), ApprovalsController (pending/history buckets), ApprovalsScreen с tabs + scope chips, ApprovalDetailScreen со scope-dispatcher (plan/step/extra_work/deadline_change/stage_accept бодис), Approve/Reject/Resubmit sheets, Methodology с ETag-кешем статей, FTS-поиск со сниппет-подсветкой, `/methodology` global route. **ЗАКРЫТ.** |
+| S14 | 27–28 | Finance domain (Payment kind/status + Dispute + BudgetBucket), PaymentsRepository (10 методов, Idempotency-Key авто через interceptor), BudgetScreen (total/work/materials/по этапам с progress-bars + overspent-badge), PaymentsList с filter-chips, CreateAdvance (foreman picker), DistributeSheet (validation по remainingToDistribute), PaymentDetail с scope-specific CTA (Confirm/Distribute/Dispute/Resolve/Cancel по role). **ЗАКРЫТ.** |
+| S15 | 29–30 | Materials (8-status FSM, items checklist с MarkBought/Finalize/Confirm-delivery/Dispute/Resolve), Selfpurchase (3-status + approve/reject), Tools (my tools CRUD + ToolIssuance FSM issued→confirmed→return_requested→returned). Console плитки «Материалы/Самозакуп/Инструмент». Профиль — «Мои инструменты». **ЗАКРЫТ.** |
+| S16 | 31–32 | Chat domain + WS `/chats` SocketService (11 events, JWT auth, reconnect 1s→30s), ChatsRepository (14 методов), MessagesController.family с real-time подписками + 15-min edit window, ProjectChatsScreen + ChatConversationScreen (reverse list + long-press edit/delete), Documents (7 categories, filter chips), Feed (cursor + FeedCategory mapping 9 категорий с приоритетом approval над stage_), ExportSheet (PDF/ZIP). **ЗАКРЫТ.** |
+| S17 | 33–34 | FCM push (soft-fail init + token register + foreground local notifications), DeepLinkRouter (6 payload-видов → go_router пути), NotificationsScreen + NotificationsController (in-memory, unread badge), ConnectivityBanner (offline-пилюля глобально), OfflineQueue (JSON-persist, drain on online, 5 retry), NotificationSettings lock-icon + tooltip для critical, AppHouseProgress — pulse-анимация + glow at 100%, глобальный `/notifications` route, mobile-ci GitHub Actions workflow (analyze → test → build APK), `mobile/README_RELEASE.md` (чек-лист TestFlight/Play Internal). 176 тестов, analyze clean. **ЗАКРЫТ.** |
 
 ## Как ведётся работа (обязательная дисциплина)
 

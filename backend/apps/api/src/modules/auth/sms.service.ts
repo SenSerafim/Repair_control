@@ -15,7 +15,15 @@ export class SmsService {
   async sendRecoveryCode(phone: string, code: string): Promise<void> {
     const provider = this.cfg.get<string>('SMS_PROVIDER', 'stub');
     if (provider === 'stub') {
-      this.logger.log(`[STUB SMS] ${phone} → code ${code}`);
+      const stubCode = this.cfg.get<string>('SMS_STUB_CODE', '123456');
+      this.logger.warn(
+        `╔══════════════════════════════════════════════════╗\n` +
+          `║ [SMS STUB — реальный SMS не отправлен]           ║\n` +
+          `║ phone:  ${phone.padEnd(41)} ║\n` +
+          `║ code:   ${code.padEnd(41)} ║\n` +
+          `║ accept: ${stubCode.padEnd(41)} ║\n` +
+          `╚══════════════════════════════════════════════════╝`,
+      );
       return;
     }
     // В следующих итерациях: вызов провайдера с API_KEY из конфига.

@@ -22,6 +22,8 @@ export interface AppConfig {
     secretKey: string;
     bucket: string;
     presignTtlSeconds: number;
+    region: string;
+    pathStyle: boolean;
   };
   redis: { url: string };
   logging: { level: string; pretty: boolean };
@@ -67,6 +69,8 @@ export const appConfigFactory = (env: Record<string, string | undefined>): AppCo
     secretKey: env.MINIO_SECRET_KEY ?? 'minioadmin',
     bucket: env.MINIO_BUCKET ?? 'repair-control',
     presignTtlSeconds: Number(env.MINIO_PRESIGN_TTL_SECONDS ?? 300),
+    region: env.MINIO_REGION ?? 'us-east-1',
+    pathStyle: env.MINIO_PATH_STYLE !== 'false',
   },
   redis: {
     url:

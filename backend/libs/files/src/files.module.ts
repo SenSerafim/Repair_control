@@ -21,6 +21,8 @@ export class FilesModule {
             secretKey: cfg.get<string>('MINIO_SECRET_KEY', 'minioadmin'),
             bucket: cfg.get<string>('MINIO_BUCKET', 'repair-control'),
             presignTtlSeconds: cfg.get<number>('MINIO_PRESIGN_TTL_SECONDS', 300),
+            region: cfg.get<string>('MINIO_REGION', 'us-east-1'),
+            pathStyle: cfg.get<boolean>('MINIO_PATH_STYLE', true),
           }),
           inject: [ConfigService],
         },

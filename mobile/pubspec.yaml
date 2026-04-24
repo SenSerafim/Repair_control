@@ -1,0 +1,128 @@
+name: repair_control
+description: "Repair Control — мобильное приложение для контроля ремонтных работ."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Immutable models + codegen
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # Networking
+  dio: ^5.7.0
+  http: ^1.2.2
+  retry: ^3.1.2
+  # Generated API client from backend/docs/openapi.v1.json
+  repair_control_api:
+    path: lib/api
+
+  # Routing
+  go_router: ^14.6.1
+
+  # Local storage
+  drift: ^2.20.3
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  flutter_secure_storage: ^9.2.2
+
+  # Real-time
+  socket_io_client: ^2.0.3+1
+
+  # Push notifications (активируется в S17, зависимости закладываем сейчас)
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^17.2.4
+
+  # Media
+  image_picker: ^1.1.2
+  camera: ^0.11.0+2
+  image: ^4.3.0
+  crypto: ^3.0.5
+  cached_network_image: ^3.4.1
+  photo_view: ^0.15.0
+  file_picker: ^8.1.4
+
+  # Documents
+  pdfx: ^2.8.0
+  open_filex: ^4.5.0
+
+  # Utils
+  intl: ^0.20.2
+  collection: ^1.18.0
+  uuid: ^4.5.1
+  equatable: ^2.0.7
+  dartz: ^0.10.1
+  connectivity_plus: ^6.1.0
+  flutter_dotenv: ^5.2.1
+  permission_handler: ^11.3.1
+
+  # UI
+  cupertino_icons: ^1.0.8
+  flutter_animate: ^4.5.0
+  lottie: ^3.1.3
+  flutter_svg: ^2.0.16
+  skeletonizer: ^2.1.3
+
+  # Monitoring
+  sentry_flutter: ^8.14.0
+  logger: ^2.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  # Codegen
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.6.3
+  drift_dev: ^2.20.3
+
+  # Linter
+  very_good_analysis: ^6.0.0
+
+  # Testing
+  mocktail: ^1.0.4
+  golden_toolkit: ^0.15.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/env/.env.dev
+    - assets/env/.env.staging
+    - assets/env/.env.prod
+    - assets/images/
+    - assets/lottie/
+
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Manrope-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Manrope-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Manrope-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Manrope-Black.ttf
+          weight: 900
+
+  generate: true

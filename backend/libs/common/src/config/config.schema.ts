@@ -23,6 +23,12 @@ export const configValidationSchema = Joi.object({
 
   SMS_PROVIDER: Joi.string().valid('stub', 'smsc', 'smsaero', 'stream').default('stub'),
   SMS_API_KEY: Joi.string().allow('').default(''),
+  // Заглушка пока не подключён реальный SMS-провайдер. При SMS_PROVIDER=stub
+  // любой звонок `sendRecoveryCode` будет использовать этот фиксированный код
+  // вместо случайного (удобно для тестирования без SMS).
+  SMS_STUB_CODE: Joi.string()
+    .pattern(/^[0-9]{4,6}$/)
+    .default('123456'),
 
   MINIO_ENDPOINT: Joi.string().default('localhost'),
   MINIO_PORT: Joi.number().default(9000),
@@ -31,6 +37,8 @@ export const configValidationSchema = Joi.object({
   MINIO_SECRET_KEY: Joi.string().required(),
   MINIO_BUCKET: Joi.string().default('repair-control'),
   MINIO_PRESIGN_TTL_SECONDS: Joi.number().default(300),
+  MINIO_REGION: Joi.string().default('us-east-1'),
+  MINIO_PATH_STYLE: Joi.boolean().default(true),
 
   FILE_MAX_SIZE_MB: Joi.number().default(25),
   FILE_ALLOWED_MIMES: Joi.string().default(

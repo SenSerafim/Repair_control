@@ -14,6 +14,8 @@ const buildService = () => {
     secretKey: 'b',
     bucket: 'test',
     presignTtlSeconds: 300,
+    region: 'us-east-1',
+    pathStyle: true,
   };
   const minio = {
     presignedPutObject: jest.fn().mockResolvedValue('https://presigned-put/example'),

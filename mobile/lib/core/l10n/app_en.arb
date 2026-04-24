@@ -1,0 +1,22 @@
+{
+  "@@locale": "en",
+  "appTitle": "Repair Control",
+  "common_retry": "Retry",
+  "common_cancel": "Cancel",
+  "common_save": "Save",
+  "common_close": "Close",
+  "common_loading": "Loading…",
+  "auth_welcome_title": "Repair Control",
+  "auth_welcome_subtitle": "Repair control for customer, representative, foreman and master.",
+  "auth_login": "Sign in",
+  "auth_register": "Sign up",
+  "auth_recover_password": "Recover password",
+  "nav_projects": "Projects",
+  "nav_contractors": "Team",
+  "nav_chats": "Chats",
+  "nav_profile": "Profile",
+  "error_network_title": "No connection",
+  "error_network_subtitle": "Check the internet and try again.",
+  "error_server_title": "Server is unreachable",
+  "error_server_subtitle": "We are already aware. Please try later."
+}

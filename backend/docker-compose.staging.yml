@@ -14,13 +14,16 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
 
-  minio:
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+  # Staging использует внешний Selectel S3 — локальный MinIO container отключён.
+  # Если нужно вернуться на локальный MinIO — раскомментируйте блок ниже
+  # и проставьте MINIO_ENDPOINT=minio / MINIO_USE_SSL=false в api.environment.
+  # minio:
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+  #   ports:
+  #     - "${MINIO_API_PORT:-9000}:9000"
+  #     - "${MINIO_CONSOLE_PORT:-9001}:9001"
 
   api:
     build:
@@ -31,7 +34,6 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }
-      minio:    { condition: service_healthy }
     environment:
       NODE_ENV: staging
       PORT: 3000
@@ -46,12 +48,15 @@ services:
       BCRYPT_COST: 12
       SMS_PROVIDER: ${SMS_PROVIDER:-stub}
       SMS_API_KEY: ${SMS_API_KEY:-}
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_USE_SSL: "false"
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
-      MINIO_BUCKET: ${MINIO_BUCKET:-repair-control}
+      # Selectel S3 (s3.ru-7.storage.selcloud.ru, bucket repair-bucket-test).
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-s3.ru-7.storage.selcloud.ru}
+      MINIO_PORT: ${MINIO_PORT:-443}
+      MINIO_USE_SSL: "${MINIO_USE_SSL:-true}"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-repair-bucket-test}
+      MINIO_REGION: ${MINIO_REGION:-ru-7}
+      MINIO_PATH_STYLE: "${MINIO_PATH_STYLE:-true}"
       MINIO_PRESIGN_TTL_SECONDS: 300
       FILE_MAX_SIZE_MB: 25
       FILE_ALLOWED_MIMES: "image/jpeg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"

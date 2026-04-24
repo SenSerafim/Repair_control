@@ -1,0 +1,22 @@
+{
+  "@@locale": "ru",
+  "appTitle": "Repair Control",
+  "common_retry": "Повторить",
+  "common_cancel": "Отмена",
+  "common_save": "Сохранить",
+  "common_close": "Закрыть",
+  "common_loading": "Загрузка…",
+  "auth_welcome_title": "Repair Control",
+  "auth_welcome_subtitle": "Контроль ремонта для заказчика, представителя, бригадира и мастера.",
+  "auth_login": "Войти",
+  "auth_register": "Регистрация",
+  "auth_recover_password": "Восстановить пароль",
+  "nav_projects": "Проекты",
+  "nav_contractors": "Команда",
+  "nav_chats": "Чаты",
+  "nav_profile": "Профиль",
+  "error_network_title": "Нет соединения",
+  "error_network_subtitle": "Проверьте интернет и попробуйте снова.",
+  "error_server_title": "Сервер не отвечает",
+  "error_server_subtitle": "Мы уже знаем о проблеме. Попробуйте позже."
+}

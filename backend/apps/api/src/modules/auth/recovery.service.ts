@@ -21,7 +21,7 @@ export class RecoveryService {
     const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user) return { sent: true };
 
-    const code = this.generateCode();
+    const code = this.nextCode();
     const expiresAt = new Date(this.clock.now().getTime() + 10 * 60 * 1000); // 10 минут
     await this.prisma.recoveryAttempt.create({
       data: {
@@ -98,7 +98,17 @@ export class RecoveryService {
     return latest;
   }
 
-  private generateCode(): string {
+  /**
+   * Возвращает следующий код для отправки. В режиме SMS_PROVIDER=stub —
+   * фиксированный SMS_STUB_CODE (по умолчанию «123456»), чтобы можно было
+   * тестировать recovery без реального SMS-провайдера. В любом другом
+   * режиме — криптографически случайный 6-значный код.
+   */
+  private nextCode(): string {
+    const provider = this.cfg.get<string>('SMS_PROVIDER', 'stub');
+    if (provider === 'stub') {
+      return this.cfg.get<string>('SMS_STUB_CODE', '123456');
+    }
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 }

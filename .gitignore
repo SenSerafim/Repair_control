@@ -8,11 +8,58 @@
 .env.prod
 .env.local
 .env.test
+.env.staging
+
+# mobile/assets/env/.env.* содержат только публичные values (API URL,
+# VAPID public key, flavor). Коммитим для воспроизводимости dev-сборки.
+!mobile/assets/env/.env.dev
+!mobile/assets/env/.env.staging
+!mobile/assets/env/.env.prod
+
+# Secrets — Firebase Admin SDK key, APNs .p8, etc.
+backend/secrets/
+*-firebase-adminsdk-*.json
+*.p8
 
 # Node / build artefacts
 node_modules/
 dist/
 build/
+
+# Flutter / Mobile
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/coverage/
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/ephemeral/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Runner.xcworkspace/xcuserdata/
+mobile/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+mobile/ios/Runner.xcodeproj/xcuserdata/
+mobile/ios/GoogleService-Info.plist
+mobile/android/.gradle/
+mobile/android/.idea/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/app/google-services.json
+mobile/android/app/debug/
+mobile/android/app/release/
+mobile/android/app/profile/
+mobile/macos/Flutter/ephemeral/
+mobile/*.iml
+mobile/.idea/
+mobile/lib/api/
+mobile/lib/core/l10n/gen/
+mobile/**/*.g.dart
+mobile/**/*.freezed.dart
+mobile/**/*.mocks.dart
 
 # Локальная документация (ТЗ, расшифровки созвонов) — не коммитить
 docs/*

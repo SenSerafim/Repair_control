@@ -63,7 +63,7 @@ export class DocumentsService {
     const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
     if (!doc) throw new NotFoundError(ErrorCodes.DOCUMENT_NOT_FOUND, 'document not found');
     if (doc.deletedAt) throw new ConflictError(ErrorCodes.DOCUMENT_DELETED, 'document deleted');
-    // Проверяем, что файл реально лежит в MinIO
+    // Проверяем, что файл реально лежит в S3-хранилище
     try {
       await this.files.statObject(doc.fileKey);
     } catch {

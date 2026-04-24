@@ -1,6 +1,6 @@
 # Repair Control — Backend
 
-NestJS + Prisma + PostgreSQL + Redis + MinIO + Socket.IO + BullMQ. Full S1–S5 complete.
+NestJS + Prisma + PostgreSQL + Redis + S3-совместимое хранилище (MinIO для dev, Selectel Object Storage для prod) + Socket.IO + BullMQ. Full S1–S5 complete.
 
 - **Версия API**: `1.0.0` (замороженная после S5). OpenAPI: `/api/docs`; JSON: `backend/docs/openapi.v1.json`.
 - **Postman**: `backend/postman/repair-control.v1.json` (162 endpoint, 22 папки).
@@ -59,7 +59,16 @@ cp .env.staging.example .env.staging   # отредактировать секр
 docker compose -f docker-compose.yml -f docker-compose.staging.yml --env-file .env.staging up -d
 ```
 
-Поднимает: postgres / redis / minio / **api** (Docker image) / **admin-web** (nginx + Vite build).
+Поднимает: postgres / redis / **api** (Docker image) / **admin-web** (nginx + Vite build).
+Файлы — внешний **Selectel Object Storage** (`s3.ru-7.storage.selcloud.ru`, bucket `repair-bucket-test`, region `ru-7`). Локальный MinIO в staging выключен (см. `docker-compose.staging.yml`).
+
+Чтобы вернуться к локальному MinIO на staging — раскомментируйте блок `minio:` в `docker-compose.staging.yml` и выставьте в `.env.staging`:
+```
+MINIO_ENDPOINT=minio
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+MINIO_REGION=us-east-1
+```
 
 Админка доступна на `http://localhost:8080`. Default login: `+79990000000` / `staging-demo-12345`.
 
@@ -111,7 +120,9 @@ backend/
 Docker proxy не освободил порт. Рестарт Docker Desktop + `docker compose up -d --force-recreate`.
 
 ### `Unable to get bucket region`
-MinIO bucket ещё не создан. `FilesService.onModuleInit` создаёт его автоматически при первом старте — если не сработало, проверьте MinIO console (`:9001`) и создайте `repair-control` (или `repair-control-test` для e2e) вручную.
+Bucket ещё не создан. `FilesService.onModuleInit` создаёт его автоматически при первом старте — если не сработало:
+- **MinIO (dev)**: откройте консоль `:9001` и создайте `repair-control` (или `repair-control-test` для e2e) вручную.
+- **Selectel (prod)**: зайдите в <https://my.selectel.ru/storage>, создайте bucket `repair-bucket-test` в регионе `ru-7`.
 
 ### Chromium / puppeteer не стартует в Docker
 Используется `@sparticuz/chromium`. Dockerfile уже подтянул нужные alpine-зависимости (nss, freetype, harfbuzz, ttf-freefont). В dev-среде без chromium PDF-экспорт падает в fallback — plaintext.
