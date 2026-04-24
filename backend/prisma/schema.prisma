@@ -1,0 +1,1260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemRole {
+  customer
+  representative
+  contractor
+  master
+  admin
+}
+
+enum DevicePlatform {
+  ios
+  android
+}
+
+enum ProjectStatus {
+  active
+  archived
+}
+
+enum StageStatus {
+  pending
+  active
+  paused
+  review
+  done
+  rejected
+}
+
+enum PauseReason {
+  materials
+  approval
+  force_majeure
+  other
+}
+
+enum StepType {
+  regular
+  extra
+}
+
+enum StepStatus {
+  pending
+  in_progress
+  done
+  pending_approval
+  rejected
+}
+
+enum QuestionStatus {
+  open
+  answered
+  closed
+}
+
+enum NoteScope {
+  personal
+  for_me
+  stage
+}
+
+enum PaymentKind {
+  advance
+  distribution
+  correction
+}
+
+enum PaymentStatus {
+  pending
+  confirmed
+  disputed
+  resolved
+  cancelled
+}
+
+enum MaterialRequestStatus {
+  draft
+  open
+  partially_bought
+  bought
+  delivered
+  disputed
+  resolved
+  cancelled
+}
+
+enum MaterialRecipient {
+  foreman
+  customer
+}
+
+enum SelfPurchaseStatus {
+  pending
+  approved
+  rejected
+}
+
+enum SelfPurchaseBy {
+  foreman
+  master
+}
+
+enum ToolIssuanceStatus {
+  issued
+  confirmed
+  return_requested
+  returned
+}
+
+enum ApprovalScope {
+  plan
+  step
+  extra_work
+  deadline_change
+  stage_accept
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum TemplateKind {
+  platform
+  user
+}
+
+enum MembershipRole {
+  customer
+  representative
+  foreman
+  master
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  cancelled
+  expired
+}
+
+enum FeedEventKind {
+  project_created
+  project_archived
+  project_restored
+  project_copied
+  membership_added
+  membership_removed
+  stage_created
+  stage_started
+  stage_paused
+  stage_resumed
+  stage_sent_to_review
+  stage_deadline_recalculated
+  stage_deadline_exceeds_project
+  stages_reordered
+  step_created
+  step_updated
+  step_completed
+  step_uncompleted
+  step_deleted
+  steps_reordered
+  substep_added
+  substep_updated
+  substep_completed
+  substep_uncompleted
+  substep_deleted
+  photo_attached
+  photo_deleted
+  extra_work_requested
+  note_created
+  note_updated
+  note_deleted
+  question_asked
+  question_answered
+  question_closed
+  progress_recalculated_on_step_change
+  approval_requested
+  approval_approved
+  approval_rejected
+  approval_cancelled
+  approval_resubmitted
+  plan_approved
+  deadline_changed
+  stage_accepted
+  stage_rejected_by_customer
+  budget_updated
+  methodology_section_created
+  methodology_section_updated
+  methodology_section_deleted
+  methodology_article_created
+  methodology_article_updated
+  methodology_article_deleted
+  payment_created
+  payment_confirmed
+  payment_cancelled
+  payment_disputed
+  payment_resolved
+  payment_distributed
+  material_request_created
+  material_request_sent
+  material_item_bought
+  material_request_finalized
+  material_delivered
+  material_disputed
+  material_resolved
+  selfpurchase_created
+  selfpurchase_approved
+  selfpurchase_rejected
+  tool_issued
+  tool_issuance_confirmed
+  tool_return_requested
+  tool_returned
+  foreman_removed
+  foreman_replaced
+  stage_budget_edit_after_start
+  // ---- S5 ----
+  chat_created
+  chat_message_sent
+  chat_participant_added
+  chat_participant_removed
+  chat_visibility_toggled
+  document_uploaded
+  document_updated
+  document_deleted
+  export_requested
+  export_completed
+  export_failed
+  feedback_received
+  admin_settings_updated
+  admin_faq_updated
+  admin_methodology_updated
+  admin_template_updated
+}
+
+// ---------- S5 Enums ----------
+
+enum ChatType {
+  project
+  stage
+  personal
+  group
+}
+
+enum DocumentCategory {
+  contract
+  act
+  estimate
+  warranty
+  photo
+  blueprint
+  other
+}
+
+enum NotificationKind {
+  // --- CRITICAL (не отключается пользователем) ---
+  approval_requested
+  approval_approved
+  approval_rejected
+  payment_created
+  payment_confirmed
+  payment_disputed
+  payment_resolved
+  stage_rejected_by_customer
+  stage_overdue
+  stage_deadline_exceeds_project
+  material_request_created
+  material_delivered
+  material_disputed
+  selfpurchase_created
+  tool_issued
+  export_completed
+  export_failed
+  // --- HIGH (отключается) ---
+  chat_message_new
+  step_completed
+  stage_completed
+  stage_paused
+  note_created_for_me
+  question_asked
+  // --- NORMAL / system ---
+  project_archived
+  membership_added
+}
+
+enum NotificationPriority {
+  critical
+  high
+  normal
+}
+
+enum ExportKind {
+  feed_pdf
+  project_zip
+}
+
+enum ExportStatus {
+  queued
+  running
+  done
+  failed
+  expired
+}
+
+// ---------- Users / Auth ----------
+
+model User {
+  id           String     @id @default(cuid())
+  phone        String     @unique
+  email        String?    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  language     String     @default("ru")
+  activeRole   SystemRole @default(customer)
+  lastSeenAt   DateTime?
+  bannedAt     DateTime?
+  banReason    String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  roles            UserRole[]
+  sessions         Session[]
+  devices          DeviceToken[]
+  recoveryAttempts RecoveryAttempt[]
+  loginAttempts    LoginAttempt[]
+  legalAcceptances LegalAcceptance[]
+
+  ownedProjects   Project[]           @relation("ProjectOwner")
+  memberships     Membership[]
+  invitationsSent ProjectInvitation[] @relation("InvitationInvitedBy")
+}
+
+model UserRole {
+  userId   String
+  role     SystemRole
+  isActive Boolean    @default(true)
+  addedAt  DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  deviceId         String
+  userAgent        String?
+  ipFingerprint    String
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DeviceToken {
+  id         String         @id @default(cuid())
+  userId     String
+  platform   DevicePlatform
+  token      String         @unique
+  lastSeenAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  userId    String?
+  phone     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone, createdAt])
+  @@index([ip, createdAt])
+}
+
+model RecoveryAttempt {
+  id           String    @id @default(cuid())
+  userId       String
+  code         String
+  attempts     Int       @default(0)
+  isUsed       Boolean   @default(false)
+  blockedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ---------- Projects ----------
+
+model Project {
+  id                   String        @id @default(cuid())
+  ownerId              String
+  title                String
+  address              String?
+  plannedStart         DateTime?
+  plannedEnd           DateTime?
+  status               ProjectStatus @default(active)
+  workBudget           BigInt        @default(0) // minor units (копейки)
+  materialsBudget      BigInt        @default(0)
+  progressCache        Int           @default(0)
+  semaphoreCache       String        @default("green")
+  planApproved         Boolean       @default(false)
+  requiresPlanApproval Boolean       @default(false)
+  archivedAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  owner            User                @relation("ProjectOwner", fields: [ownerId], references: [id])
+  memberships      Membership[]
+  invitations      ProjectInvitation[]
+  stages           Stage[]
+  feedEvents       FeedEvent[]
+  approvals        Approval[]
+  payments         Payment[]
+  materialRequests MaterialRequest[]
+  selfPurchases    SelfPurchase[]
+  chats            Chat[]
+  documents        Document[]
+  exportJobs       ExportJob[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Membership {
+  id          String         @id @default(cuid())
+  projectId   String
+  userId      String
+  role        MembershipRole
+  invitedById String?
+  stageIds    String[]       @default([])
+  permissions Json           @default("{}")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId, role])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ProjectInvitation {
+  id          String           @id @default(cuid())
+  projectId   String
+  phone       String
+  role        MembershipRole
+  invitedById String
+  status      InvitationStatus @default(pending)
+  token       String           @unique
+  createdAt   DateTime         @default(now())
+  expiresAt   DateTime
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation("InvitationInvitedBy", fields: [invitedById], references: [id])
+
+  @@index([projectId])
+  @@index([phone])
+}
+
+// ---------- Stages ----------
+
+model Stage {
+  id              String      @id @default(cuid())
+  projectId       String
+  title           String
+  orderIndex      Int
+  status          StageStatus @default(pending)
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
+  originalEnd     DateTime?
+  pauseDurationMs BigInt      @default(0)
+  workBudget      BigInt      @default(0)
+  materialsBudget BigInt      @default(0)
+  foremanIds      String[]    @default([])
+  progressCache   Int         @default(0)
+  planApproved    Boolean     @default(false)
+  startedAt       DateTime?
+  sentToReviewAt  DateTime?
+  doneAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pauses           Pause[]
+  steps            Step[]
+  approvals        Approval[]
+  payments         Payment[]
+  materialRequests MaterialRequest[]
+  selfPurchases    SelfPurchase[]
+  chats            Chat[]
+
+  @@index([projectId, orderIndex])
+  @@index([status])
+}
+
+model Pause {
+  id        String      @id @default(cuid())
+  stageId   String
+  reason    PauseReason
+  comment   String?
+  startedAt DateTime    @default(now())
+  endedAt   DateTime?
+  startedBy String
+
+  stage Stage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+}
+
+// ---------- Templates ----------
+
+model Template {
+  id          String       @id @default(cuid())
+  kind        TemplateKind
+  authorId    String?
+  title       String
+  description String?
+  payload     Json         @default("{}")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  steps TemplateStep[]
+
+  @@index([kind])
+}
+
+model TemplateStep {
+  id         String  @id @default(cuid())
+  templateId String
+  title      String
+  orderIndex Int
+  price      BigInt?
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, orderIndex])
+}
+
+// ---------- Steps / Substeps / Photos ----------
+
+model Step {
+  id          String     @id @default(cuid())
+  stageId     String
+  title       String
+  orderIndex  Int
+  type        StepType   @default(regular)
+  status      StepStatus @default(pending)
+  price       BigInt?
+  description String?
+  authorId    String
+  assigneeIds String[]   @default([])
+  doneAt      DateTime?
+  doneById    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  stage     Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  substeps  Substep[]
+  photos    StepPhoto[]
+  questions Question[]
+  approvals Approval[]
+
+  @@index([stageId, orderIndex])
+  @@index([status])
+  @@index([type])
+}
+
+model Substep {
+  id        String    @id @default(cuid())
+  stepId    String
+  text      String
+  authorId  String
+  isDone    Boolean   @default(false)
+  doneAt    DateTime?
+  doneById  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+  @@index([authorId])
+}
+
+model StepPhoto {
+  id          String   @id @default(cuid())
+  stepId      String
+  fileKey     String
+  thumbKey    String?
+  mimeType    String
+  sizeBytes   Int
+  uploadedBy  String
+  exifCleared Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+}
+
+// ---------- Notes / Questions ----------
+
+model Note {
+  id          String    @id @default(cuid())
+  scope       NoteScope
+  authorId    String
+  addresseeId String?
+  projectId   String?
+  stageId     String?
+  text        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([authorId, scope, createdAt])
+  @@index([addresseeId, scope])
+  @@index([stageId])
+  @@index([projectId])
+}
+
+model Question {
+  id          String         @id @default(cuid())
+  stepId      String
+  authorId    String
+  addresseeId String
+  text        String
+  status      QuestionStatus @default(open)
+  answer      String?
+  answeredAt  DateTime?
+  answeredBy  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  step Step @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId, status])
+  @@index([addresseeId, status])
+}
+
+// ---------- Approvals ----------
+
+model Approval {
+  id               String         @id @default(cuid())
+  scope            ApprovalScope
+  projectId        String
+  stageId          String?
+  stepId           String?
+  payload          Json           @default("{}")
+  requestedById    String
+  addresseeId      String
+  status           ApprovalStatus @default(pending)
+  attemptNumber    Int            @default(1)
+  requiresReassign Boolean        @default(false)
+  decidedAt        DateTime?
+  decidedById      String?
+  decisionComment  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage       Stage?               @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  step        Step?                @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  attempts    ApprovalAttempt[]
+  attachments ApprovalAttachment[]
+
+  @@index([projectId, status])
+  @@index([addresseeId, status])
+  @@index([stageId])
+  @@index([stepId])
+  @@index([scope, status])
+}
+
+model ApprovalAttempt {
+  id            String   @id @default(cuid())
+  approvalId    String
+  attemptNumber Int
+  action        String
+  actorId       String
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  approval Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+
+  @@index([approvalId, createdAt])
+}
+
+model ApprovalAttachment {
+  id         String   @id @default(cuid())
+  approvalId String
+  fileKey    String
+  thumbKey   String?
+  mimeType   String
+  sizeBytes  Int
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  approval Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+
+  @@index([approvalId])
+}
+
+// ---------- Methodology ----------
+
+model MethodologySection {
+  id         String   @id @default(cuid())
+  title      String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  articles MethodologyArticle[]
+
+  @@index([orderIndex])
+}
+
+model MethodologyArticle {
+  id         String   @id @default(cuid())
+  sectionId  String
+  title      String
+  body       String
+  orderIndex Int
+  version    Int      @default(1)
+  etag       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  section         MethodologySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  referencePhotos ReferencePhoto[]
+
+  @@index([sectionId, orderIndex])
+}
+
+model ReferencePhoto {
+  id         String  @id @default(cuid())
+  articleId  String
+  fileKey    String
+  caption    String?
+  orderIndex Int
+
+  article MethodologyArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, orderIndex])
+}
+
+// ---------- Payments ----------
+
+model Payment {
+  id              String        @id @default(cuid())
+  projectId       String
+  stageId         String?
+  parentPaymentId String?
+  kind            PaymentKind
+  fromUserId      String
+  toUserId        String
+  amount          BigInt
+  resolvedAmount  BigInt?
+  comment         String?
+  photoKey        String?
+  status          PaymentStatus @default(pending)
+  idempotencyKey  String?       @unique
+  createdAt       DateTime      @default(now())
+  confirmedAt     DateTime?
+  disputedAt      DateTime?
+  resolvedAt      DateTime?
+  cancelledAt     DateTime?
+  updatedAt       DateTime      @updatedAt
+
+  project  Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage    Stage?           @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  parent   Payment?         @relation("PaymentParent", fields: [parentPaymentId], references: [id], onDelete: SetNull)
+  children Payment[]        @relation("PaymentParent")
+  disputes PaymentDispute[]
+
+  @@index([projectId, status])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([parentPaymentId])
+  @@index([stageId])
+}
+
+model PaymentDispute {
+  id         String    @id @default(cuid())
+  paymentId  String
+  openedById String
+  reason     String
+  status     String    @default("open")
+  resolution String?
+  resolvedAt DateTime?
+  resolvedBy String?
+  createdAt  DateTime  @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, status])
+}
+
+// ---------- Materials ----------
+
+model MaterialRequest {
+  id             String                @id @default(cuid())
+  projectId      String
+  stageId        String?
+  createdById    String
+  recipient      MaterialRecipient
+  title          String
+  comment        String?
+  status         MaterialRequestStatus @default(draft)
+  finalizedAt    DateTime?
+  deliveredAt    DateTime?
+  deliveredById  String?
+  idempotencyKey String?               @unique
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  project  Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage    Stage?            @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  items    MaterialItem[]
+  disputes MaterialDispute[]
+
+  @@index([projectId, status])
+  @@index([stageId])
+}
+
+model MaterialItem {
+  id           String    @id @default(cuid())
+  requestId    String
+  name         String
+  qty          Decimal   @db.Decimal(12, 3)
+  unit         String?
+  note         String?
+  pricePerUnit BigInt?
+  totalPrice   BigInt?
+  isBought     Boolean   @default(false)
+  boughtAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  request MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+model MaterialDispute {
+  id         String    @id @default(cuid())
+  requestId  String
+  openedById String
+  reason     String
+  status     String    @default("open")
+  resolution String?
+  resolvedAt DateTime?
+  resolvedBy String?
+  createdAt  DateTime  @default(now())
+
+  request MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, status])
+}
+
+// ---------- SelfPurchase ----------
+
+model SelfPurchase {
+  id              String             @id @default(cuid())
+  projectId       String
+  stageId         String?
+  byUserId        String
+  byRole          SelfPurchaseBy
+  addresseeId     String
+  amount          BigInt
+  comment         String?
+  photoKeys       String[]           @default([])
+  status          SelfPurchaseStatus @default(pending)
+  decidedAt       DateTime?
+  decidedById     String?
+  decisionComment String?
+  idempotencyKey  String?            @unique
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage   Stage?  @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([addresseeId, status])
+}
+
+// ---------- Tools ----------
+
+model ToolItem {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  totalQty  Int
+  issuedQty Int      @default(0)
+  unit      String?  @default("шт")
+  photoKey  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issuances ToolIssuance[]
+
+  @@index([ownerId])
+}
+
+model ToolIssuance {
+  id                String             @id @default(cuid())
+  toolItemId        String
+  projectId         String?
+  stageId           String?
+  toUserId          String
+  issuedById        String
+  qty               Int
+  returnedQty       Int?
+  status            ToolIssuanceStatus @default(issued)
+  issuedAt          DateTime           @default(now())
+  confirmedAt       DateTime?
+  returnedAt        DateTime?
+  returnConfirmedAt DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  toolItem ToolItem @relation(fields: [toolItemId], references: [id], onDelete: Cascade)
+
+  @@index([toolItemId, status])
+  @@index([toUserId, status])
+  @@index([projectId])
+}
+
+// ---------- Idempotency ----------
+
+model IdempotencyRecord {
+  key         String   @id
+  userId      String
+  endpoint    String
+  requestHash String
+  statusCode  Int?
+  response    Json?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([userId, endpoint])
+  @@index([expiresAt])
+}
+
+// ---------- Feed (outbox) ----------
+
+model FeedEvent {
+  id        String        @id @default(cuid())
+  projectId String?
+  kind      FeedEventKind
+  actorId   String?
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([kind, createdAt])
+}
+
+// ---------- S5: Chats ----------
+
+model Chat {
+  id                String    @id @default(cuid())
+  type              ChatType
+  projectId         String?
+  stageId           String?
+  title             String?
+  visibleToCustomer Boolean   @default(false)
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
+
+  project      Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage        Stage?            @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@index([projectId, createdAt])
+  @@index([stageId])
+  @@index([type])
+}
+
+model ChatParticipant {
+  id                String    @id @default(cuid())
+  chatId            String
+  userId            String
+  joinedAt          DateTime  @default(now())
+  leftAt            DateTime?
+  lastReadMessageId String?
+  lastReadAt        DateTime?
+  mutedUntil        DateTime?
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId, leftAt])
+}
+
+model ChatMessage {
+  id              String    @id @default(cuid())
+  chatId          String
+  authorId        String
+  text            String?
+  attachmentKeys  String[]  @default([])
+  forwardedFromId String?
+  editedAt        DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  chat          Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  forwardedFrom ChatMessage?  @relation("ChatMessageForward", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwardedBy   ChatMessage[] @relation("ChatMessageForward")
+
+  @@index([chatId, createdAt])
+  @@index([authorId])
+}
+
+// ---------- S5: Documents ----------
+
+model Document {
+  id           String           @id @default(cuid())
+  projectId    String
+  stageId      String?
+  stepId       String?
+  category     DocumentCategory
+  title        String
+  fileKey      String
+  thumbKey     String?
+  thumbStatus  String           @default("pending")
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([stageId])
+  @@index([stepId])
+  @@index([category])
+}
+
+// ---------- S5: Notifications ----------
+
+model NotificationSetting {
+  id          String           @id @default(cuid())
+  userId      String
+  kind        NotificationKind
+  pushEnabled Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([userId, kind])
+  @@index([userId])
+}
+
+model NotificationLog {
+  id            String               @id @default(cuid())
+  userId        String
+  deviceTokenId String?
+  kind          NotificationKind
+  priority      NotificationPriority
+  title         String
+  body          String
+  deepLink      String?
+  projectId     String?
+  payload       Json                 @default("{}")
+  sentAt        DateTime             @default(now())
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+
+  @@index([userId, sentAt])
+  @@index([projectId, sentAt])
+  @@index([kind])
+}
+
+// ---------- S5: FAQ / Feedback / AppSettings ----------
+
+model FaqSection {
+  id         String   @id @default(cuid())
+  title      String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  items FaqItem[]
+
+  @@index([orderIndex])
+}
+
+model FaqItem {
+  id         String   @id @default(cuid())
+  sectionId  String
+  question   String
+  answer     String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  section FaqSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, orderIndex])
+}
+
+model FeedbackMessage {
+  id             String    @id @default(cuid())
+  userId         String
+  text           String
+  attachmentKeys String[]  @default([])
+  status         String    @default("new")
+  readById       String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+// ---------- S5: Export jobs (PDF/ZIP) ----------
+
+// ---------- S5 Admin Panel (2026-04-22) ----------
+
+enum LegalKind {
+  privacy
+  tos
+  data_processing_consent
+}
+
+model LegalDocument {
+  id            String    @id @default(cuid())
+  kind          LegalKind
+  version       Int
+  title         String
+  bodyMd        String
+  publishedAt   DateTime?
+  publishedById String?
+  isActive      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  acceptances LegalAcceptance[]
+
+  @@unique([kind, version])
+  @@index([kind, isActive])
+  @@index([kind, publishedAt])
+}
+
+model LegalAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  documentId String
+  acceptedAt DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId])
+}
+
+enum BroadcastStatus {
+  draft
+  queued
+  sent
+  failed
+}
+
+model BroadcastCampaign {
+  id             String          @id @default(cuid())
+  title          String
+  body           String
+  deepLink       String?
+  filter         Json            @default("{}")
+  createdById    String
+  createdAt      DateTime        @default(now())
+  sentAt         DateTime?
+  targetCount    Int             @default(0)
+  queuedCount    Int             @default(0)
+  deliveredCount Int             @default(0)
+  failedCount    Int             @default(0)
+  status         BroadcastStatus @default(draft)
+
+  @@index([createdById, createdAt])
+  @@index([status])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
+model ExportJob {
+  id              String       @id @default(cuid())
+  projectId       String
+  requestedById   String
+  kind            ExportKind
+  filtersPayload  Json         @default("{}")
+  status          ExportStatus @default(queued)
+  progressPct     Int          @default(0)
+  resultFileKey   String?
+  resultSizeBytes Int?
+  error           String?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([requestedById, createdAt])
+  @@index([expiresAt])
+}

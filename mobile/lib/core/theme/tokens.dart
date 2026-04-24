@@ -1,0 +1,183 @@
+import 'package:flutter/material.dart';
+
+/// Дизайн-токены Repair Control.
+///
+/// Источник: `design/Кластер *.html` (CSS variables) + ТЗ §4.
+/// Запрещено использовать хардкод цветов/радиусов/теней где-либо кроме этого файла.
+class AppColors {
+  const AppColors._();
+
+  // Бренд
+  static const Color brand = Color(0xFF4F6EF7);
+  static const Color brandDark = Color(0xFF3A56D4);
+  static const Color brandLight = Color(0xFFEEF2FF);
+  static const Color brandMid = Color(0xFF6B83F5);
+  static const Color brandGlow = Color(0x2E4F6EF7); // 0.18 alpha
+
+  // Светофор — зелёный
+  static const Color greenDot = Color(0xFF10B981);
+  static const Color greenDark = Color(0xFF059669);
+  static const Color greenLight = Color(0xFFD1FAE5);
+
+  // Светофор — жёлтый
+  static const Color yellowDot = Color(0xFFF59E0B);
+  static const Color yellowText = Color(0xFF92400E);
+  static const Color yellowBg = Color(0xFFFEF3C7);
+
+  // Светофор — красный
+  static const Color redDot = Color(0xFFDC2626);
+  static const Color redText = Color(0xFF991B1B);
+  static const Color redBg = Color(0xFFFEE2E2);
+
+  // Светофор — синий (informational)
+  static const Color blueDot = Color(0xFF4F6EF7);
+  static const Color blueText = Color(0xFF1E40AF);
+  static const Color blueBg = Color(0xFFEEF2FF);
+
+  // Акцент (согласования)
+  static const Color purple = Color(0xFF6D28D9);
+  static const Color purpleBg = Color(0xFFEDE9FE);
+
+  // Нейтральная шкала
+  static const Color n0 = Color(0xFFFFFFFF);
+  static const Color n50 = Color(0xFFF8FAFF);
+  static const Color n100 = Color(0xFFF1F4FD);
+  static const Color n200 = Color(0xFFE4E9F7);
+  static const Color n300 = Color(0xFFC9D2EE);
+  static const Color n400 = Color(0xFF8E9BBF);
+  static const Color n500 = Color(0xFF5F6E99);
+  static const Color n600 = Color(0xFF3D4B70);
+  static const Color n700 = Color(0xFF2A3357);
+  static const Color n800 = Color(0xFF1A2240);
+  static const Color n900 = Color(0xFF0D1229);
+
+  // Системные (tints для overlay)
+  static const Color overlayBackdrop = Color(0x73000000); // 0.45
+  static const Color whiteGhost = Color(0x1AFFFFFF); // 0.1
+}
+
+class AppRadius {
+  const AppRadius._();
+
+  static const double r8 = 8;
+  static const double r12 = 12;
+  static const double r16 = 16;
+  static const double r20 = 20;
+  static const double r24 = 24;
+  static const double r28 = 28;
+  static const double pill = 100;
+
+  static BorderRadius all(double value) => BorderRadius.circular(value);
+
+  static BorderRadius get card => BorderRadius.circular(r16);
+  static BorderRadius get input => BorderRadius.circular(r12);
+  static BorderRadius get buttonSm => BorderRadius.circular(r16);
+  static BorderRadius get container => BorderRadius.circular(r20);
+  static BorderRadius get bottomSheet => const BorderRadius.only(
+        topLeft: Radius.circular(r28),
+        topRight: Radius.circular(r28),
+      );
+}
+
+class AppShadows {
+  const AppShadows._();
+
+  /// Лёгкая, для карточек списков.
+  static const List<BoxShadow> sh1 = [
+    BoxShadow(
+      color: Color(0x0F0D1229), // rgba(13,18,41,0.06)
+      offset: Offset(0, 1),
+      blurRadius: 3,
+    ),
+    BoxShadow(
+      color: Color(0x124F6EF7), // rgba(79,110,247,0.07)
+      offset: Offset(0, 4),
+      blurRadius: 16,
+    ),
+  ];
+
+  /// Средняя, для инпутов / elevated.
+  static const List<BoxShadow> sh2 = [
+    BoxShadow(
+      color: Color(0x140D1229), // 0.08
+      offset: Offset(0, 2),
+      blurRadius: 8,
+    ),
+    BoxShadow(
+      color: Color(0x1A4F6EF7), // 0.10
+      offset: Offset(0, 8),
+      blurRadius: 24,
+    ),
+  ];
+
+  /// Глубокая, для модалок и тостов.
+  static const List<BoxShadow> sh3 = [
+    BoxShadow(
+      color: Color(0x1A0D1229), // 0.10
+      offset: Offset(0, 4),
+      blurRadius: 16,
+    ),
+    BoxShadow(
+      color: Color(0x244F6EF7), // 0.14
+      offset: Offset(0, 16),
+      blurRadius: 40,
+    ),
+  ];
+
+  /// Бренд-тень под активные кнопки.
+  static const List<BoxShadow> shBlue = [
+    BoxShadow(
+      color: Color(0x594F6EF7), // 0.35
+      offset: Offset(0, 4),
+      blurRadius: 20,
+    ),
+  ];
+
+  /// Успех.
+  static const List<BoxShadow> shGreen = [
+    BoxShadow(
+      color: Color(0x4D059669), // 0.30
+      offset: Offset(0, 4),
+      blurRadius: 16,
+    ),
+  ];
+
+  /// Опасность.
+  static const List<BoxShadow> shRed = [
+    BoxShadow(
+      color: Color(0x40DC2626), // 0.25
+      offset: Offset(0, 4),
+      blurRadius: 16,
+    ),
+  ];
+}
+
+class AppSpacing {
+  const AppSpacing._();
+
+  static const double x2 = 2;
+  static const double x4 = 4;
+  static const double x6 = 6;
+  static const double x8 = 8;
+  static const double x10 = 10;
+  static const double x12 = 12;
+  static const double x14 = 14;
+  static const double x16 = 16;
+  static const double x20 = 20;
+  static const double x24 = 24;
+  static const double x32 = 32;
+  static const double x40 = 40;
+
+  static const EdgeInsets screen = EdgeInsets.symmetric(horizontal: x16);
+  static const EdgeInsets cardInset = EdgeInsets.all(x14);
+  static const EdgeInsets bottomSheet =
+      EdgeInsets.fromLTRB(x20, x14, x20, x40 + x4);
+}
+
+class AppDurations {
+  const AppDurations._();
+
+  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration normal = Duration(milliseconds: 250);
+  static const Duration slow = Duration(milliseconds: 400);
+}

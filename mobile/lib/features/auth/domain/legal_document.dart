@@ -1,0 +1,57 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'legal_document.freezed.dart';
+part 'legal_document.g.dart';
+
+/// Соответствует backend enum `LegalKind`.
+enum LegalKind {
+  @JsonValue('privacy_policy')
+  privacyPolicy,
+  @JsonValue('terms_of_service')
+  termsOfService,
+  @JsonValue('data_processing_consent')
+  dataProcessingConsent;
+
+  String get apiValue => switch (this) {
+        LegalKind.privacyPolicy => 'privacy_policy',
+        LegalKind.termsOfService => 'terms_of_service',
+        LegalKind.dataProcessingConsent => 'data_processing_consent',
+      };
+
+  String get title => switch (this) {
+        LegalKind.privacyPolicy => 'Политика конфиденциальности',
+        LegalKind.termsOfService => 'Пользовательское соглашение',
+        LegalKind.dataProcessingConsent => 'Согласие на обработку ПДн',
+      };
+}
+
+@freezed
+class LegalDocument with _$LegalDocument {
+  const factory LegalDocument({
+    required LegalKind kind,
+    required String title,
+    required int version,
+    required String bodyMd,
+    DateTime? publishedAt,
+  }) = _LegalDocument;
+
+  factory LegalDocument.fromJson(Map<String, dynamic> json) =>
+      _$LegalDocumentFromJson(json);
+}
+
+/// Ответ `GET /api/me/legal-acceptance` — карта kind → статус.
+@freezed
+class LegalAcceptanceStatus with _$LegalAcceptanceStatus {
+  const factory LegalAcceptanceStatus({
+    required bool required_,
+    required bool accepted,
+    int? version,
+  }) = _LegalAcceptanceStatus;
+
+  factory LegalAcceptanceStatus.fromJson(Map<String, dynamic> json) =>
+      LegalAcceptanceStatus(
+        required_: json['required'] as bool? ?? false,
+        accepted: json['accepted'] as bool? ?? false,
+        version: (json['version'] as num?)?.toInt(),
+      );
+}
