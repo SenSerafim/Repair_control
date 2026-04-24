@@ -38,7 +38,25 @@ async function request<T>(
   return (await res.json()) as T;
 }
 
+function qs(params?: Record<string, unknown>): string {
+  if (!params) return '';
+  const u = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === '') continue;
+    u.set(k, String(v));
+  }
+  const s = u.toString();
+  return s ? `?${s}` : '';
+}
+
+export interface BroadcastFilter {
+  roles?: string[];
+  userIds?: string[];
+  projectIds?: string[];
+}
+
 export const api = {
+  // ────────── Auth ──────────
   login: (phone: string, password: string) =>
     request<{ accessToken: string; refreshToken: string; userId: string }>(
       '/api/auth/login',
@@ -47,7 +65,19 @@ export const api = {
     ),
   me: () => request<any>('/api/auth/me'),
 
-  // Feedback
+  // ────────── Dashboard / audit ──────────
+  stats: () => request<Record<string, any>>('/api/admin/stats'),
+  audit: (params?: {
+    userId?: string;
+    actorId?: string;
+    action?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }) => request<any[]>(`/api/admin/audit${qs(params)}`),
+
+  // ────────── Feedback ──────────
   listFeedback: (status?: string) =>
     request<any[]>(`/api/admin/feedback${status ? `?status=${status}` : ''}`),
   patchFeedback: (id: string, status: 'new' | 'read' | 'archived') =>
@@ -56,7 +86,7 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
 
-  // FAQ
+  // ────────── FAQ ──────────
   listFaq: () => request<any[]>(`/api/admin/faq-sections`),
   createSection: (title: string, orderIndex: number) =>
     request<any>(`/api/admin/faq-sections`, {
@@ -75,7 +105,7 @@ export const api = {
     }),
   deleteItem: (id: string) => request<void>(`/api/admin/faq-items/${id}`, { method: 'DELETE' }),
 
-  // Settings
+  // ────────── Settings ──────────
   listSettings: () => request<any[]>(`/api/admin/settings`),
   putSetting: (key: string, value: string) =>
     request<any>(`/api/admin/settings`, {
@@ -83,7 +113,89 @@ export const api = {
       body: JSON.stringify({ key, value }),
     }),
 
-  // Notification logs
+  // ────────── Notification logs ──────────
   logs: (userId?: string) =>
     request<any[]>(`/api/admin/notification-logs${userId ? `?userId=${userId}` : ''}`),
+
+  // ────────── Users (admin) ──────────
+  listUsers: (params?: {
+    q?: string;
+    role?: string;
+    banned?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => request<{ items: any[]; total: number }>(`/api/admin/users${qs(params)}`),
+  getUser: (id: string) => request<any>(`/api/admin/users/${id}`),
+  userAudit: (id: string) => request<any[]>(`/api/admin/users/${id}/audit`),
+  banUser: (id: string, reason: string) =>
+    request<any>(`/api/admin/users/${id}/ban`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  unbanUser: (id: string) => request<any>(`/api/admin/users/${id}/unban`, { method: 'POST' }),
+  resetPassword: (id: string) =>
+    request<{ id: string; tempPassword: string }>(`/api/admin/users/${id}/reset-password`, {
+      method: 'POST',
+    }),
+  forceLogout: (id: string) =>
+    request<{ revokedSessions: number }>(`/api/admin/users/${id}/sessions`, {
+      method: 'DELETE',
+    }),
+  setUserRoles: (id: string, roles: string[]) =>
+    request<any>(`/api/admin/users/${id}/roles`, {
+      method: 'PATCH',
+      body: JSON.stringify({ roles }),
+    }),
+
+  // ────────── Projects (admin) ──────────
+  listProjects: (params?: {
+    q?: string;
+    status?: string;
+    ownerId?: string;
+    limit?: number;
+    offset?: number;
+  }) => request<{ items: any[]; total: number }>(`/api/admin/projects${qs(params)}`),
+  getProject: (id: string) => request<any>(`/api/admin/projects/${id}`),
+  forceArchive: (id: string, reason: string) =>
+    request<any>(`/api/admin/projects/${id}/force-archive`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  // ────────── Legal documents ──────────
+  listLegal: (kind?: string) =>
+    request<any[]>(`/api/admin/legal/documents${kind ? `?kind=${kind}` : ''}`),
+  getLegal: (id: string) => request<any>(`/api/admin/legal/documents/${id}`),
+  createLegal: (kind: string, title: string, bodyMd: string) =>
+    request<any>('/api/admin/legal/documents', {
+      method: 'POST',
+      body: JSON.stringify({ kind, title, bodyMd }),
+    }),
+  updateLegal: (id: string, data: { title?: string; bodyMd?: string }) =>
+    request<any>(`/api/admin/legal/documents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  publishLegal: (id: string) =>
+    request<any>(`/api/admin/legal/documents/${id}/publish`, { method: 'POST' }),
+
+  // ────────── Broadcasts ──────────
+  listBroadcasts: (status?: string) =>
+    request<any[]>(`/api/admin/broadcasts${status ? `?status=${status}` : ''}`),
+  getBroadcast: (id: string) => request<any>(`/api/admin/broadcasts/${id}`),
+  previewBroadcast: (filter: BroadcastFilter) =>
+    request<{ count: number; sampleUserIds: string[] }>('/api/admin/broadcasts/preview', {
+      method: 'POST',
+      body: JSON.stringify({ filter }),
+    }),
+  sendBroadcast: (data: {
+    title: string;
+    body: string;
+    deepLink?: string;
+    filter: BroadcastFilter;
+  }) =>
+    request<any>('/api/admin/broadcasts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };

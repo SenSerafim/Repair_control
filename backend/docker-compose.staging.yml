@@ -83,9 +83,13 @@ services:
       WS_PING_TIMEOUT_MS: 20000
     ports:
       - "${API_PORT:-3000}:3000"
-    # На старте api-контейнер применяет миграции и запускает сид (опционально)
+    # На старте api-контейнер применяет миграции и запускает сид (опционально).
+    # `exec node` обязателен, чтобы node стал PID 1 под tini и pino
+    # выгружал stdout без буферизации. Без exec NestJS с bufferLogs=true
+    # висит silent после startup.
+    # Путь — nest-cli CLI с nested `apps/api/`: dist/apps/api/apps/api/src/main.js.
     command: >
-      sh -c "npx prisma migrate deploy && node dist/apps/api/main.js"
+      sh -c "npx prisma migrate deploy && exec node dist/apps/api/apps/api/src/main.js"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/healthz | grep -q '\"status\":\"ok\"'"]
       interval: 30s

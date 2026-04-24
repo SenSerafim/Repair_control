@@ -1,0 +1,38 @@
+# Override для self-hosted сервера с ограниченными ресурсами.
+#
+# Подключается поверх docker-compose.yml + docker-compose.staging.yml:
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.staging.yml \
+#     -f docker-compose.server.yml \
+#     --env-file .env.staging up -d postgres api
+#
+# Особенности:
+# - postgres публикуется только на 127.0.0.1:5432 (не наружу)
+# - контейнерный redis отключён (`replicas: 0`) — используется хостовый
+#   redis-server, который уже работает на localhost:6379
+# - api работает в `network_mode: host`, чтобы видеть хостовый redis и
+#   postgres-docker-proxy через localhost. Это также обходит баг
+#   `@nestjs/bullmq`: `BullModule.registerQueue({name})` в модулях,
+#   не импортирующих `QueuesModule`, создаёт ioredis-клиент к 127.0.0.1.
+services:
+  postgres:
+    ports: !override
+      - '127.0.0.1:5432:5432'
+
+  # Отключаем контейнерный redis — на хосте уже есть.
+  redis:
+    deploy:
+      replicas: 0
+
+  api:
+    network_mode: host
+    ports: !reset []
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/${POSTGRES_DB:-repair_control}?schema=public
+      REDIS_URL: redis://localhost:6379
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+    # network_mode: host несовместим с depends_on service-health условиями
+    # (healthcheck у postgres привязан к bridge-сети).
+    depends_on: !reset []

@@ -1,4 +1,4 @@
-package com.repaircontrol.mobile
+package com.repaircontrol.app
 
 import io.flutter.embedding.android.FlutterActivity
 
