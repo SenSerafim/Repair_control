@@ -68,7 +68,7 @@ services:
       # S5
       SENTRY_DSN: ${SENTRY_DSN:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      LOG_PRETTY: "false"
+      LOG_PRETTY: "${LOG_PRETTY:-true}"
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       FCM_ENABLED: ${FCM_ENABLED:-false}
       FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
@@ -91,7 +91,11 @@ services:
     command: >
       sh -c "npx prisma migrate deploy && exec node dist/apps/api/apps/api/src/main.js"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/healthz | grep -q '\"status\":\"ok\"'"]
+      # `db:true,redis:true` достаточно для healthy. Status может быть
+      # `degraded` если minio listBuckets медленно отвечает (>500ms),
+      # но это не блокирует работу API.
+      test:
+        ["CMD-SHELL", "wget -q -O- http://localhost:3000/healthz | grep -q '\"db\":true' && wget -q -O- http://localhost:3000/healthz | grep -q '\"redis\":true'"]
       interval: 30s
       timeout: 10s
       retries: 5

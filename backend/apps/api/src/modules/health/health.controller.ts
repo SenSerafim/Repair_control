@@ -59,7 +59,9 @@ export class HealthController {
 
   private async checkMinio(): Promise<boolean> {
     try {
-      await withTimeout(this.minio.listBuckets(), 500);
+      // 2000 ms потому что Selectel-S3 в ru-7 иногда отвечает с задержкой
+      // (geo-latency + DNS-resolve). Локальный MinIO укладывается в 50ms.
+      await withTimeout(this.minio.listBuckets(), 2000);
       return true;
     } catch {
       return false;
