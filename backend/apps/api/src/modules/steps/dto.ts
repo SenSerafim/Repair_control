@@ -48,6 +48,11 @@ export class CreateStepDto {
   @ArrayMaxSize(50)
   @IsString({ each: true })
   assigneeIds?: string[];
+
+  @ApiPropertyOptional({ description: 'ID статьи методички (опционально)' })
+  @IsOptional()
+  @IsString()
+  methodologyArticleId?: string;
 }
 
 export class UpdateStepDto {
@@ -75,6 +80,11 @@ export class UpdateStepDto {
   @ArrayMaxSize(50)
   @IsString({ each: true })
   assigneeIds?: string[];
+
+  @ApiPropertyOptional({ description: 'ID статьи методички (null для очистки)' })
+  @IsOptional()
+  @IsString()
+  methodologyArticleId?: string | null;
 }
 
 export class ReorderStepItemDto {

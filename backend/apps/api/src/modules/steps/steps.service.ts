@@ -20,6 +20,7 @@ export interface CreateStepInput {
   description?: string;
   orderIndex?: number;
   assigneeIds?: string[];
+  methodologyArticleId?: string | null;
   actorUserId: string;
 }
 
@@ -28,6 +29,7 @@ export interface UpdateStepInput {
   price?: number;
   description?: string;
   assigneeIds?: string[];
+  methodologyArticleId?: string | null;
   actorUserId: string;
 }
 
@@ -66,6 +68,19 @@ export class StepsService {
     const orderIndex = input.orderIndex ?? count;
     const initialStatus: Step['status'] = type === 'extra' ? 'pending_approval' : 'pending';
 
+    if (input.methodologyArticleId) {
+      const article = await this.prisma.methodologyArticle.findUnique({
+        where: { id: input.methodologyArticleId },
+        select: { id: true },
+      });
+      if (!article) {
+        throw new InvalidInputError(
+          ErrorCodes.STEP_METHODOLOGY_NOT_FOUND,
+          'methodology article not found',
+        );
+      }
+    }
+
     const step = await this.prisma.$transaction(async (tx) => {
       const s = await tx.step.create({
         data: {
@@ -78,6 +93,7 @@ export class StepsService {
           description: input.description,
           authorId: input.actorUserId,
           assigneeIds: input.assigneeIds ?? [],
+          methodologyArticleId: input.methodologyArticleId ?? null,
         },
       });
       await this.feed.emit({
@@ -142,12 +158,30 @@ export class StepsService {
     if (!existing) throw new NotFoundError(ErrorCodes.STEP_NOT_FOUND, 'step not found');
     await this.validateAssignees(existing.stage.projectId, input.assigneeIds);
 
+    if (input.methodologyArticleId) {
+      const article = await this.prisma.methodologyArticle.findUnique({
+        where: { id: input.methodologyArticleId },
+        select: { id: true },
+      });
+      if (!article) {
+        throw new InvalidInputError(
+          ErrorCodes.STEP_METHODOLOGY_NOT_FOUND,
+          'methodology article not found',
+        );
+      }
+    }
+
     const data: Prisma.StepUpdateInput = {
       title: input.title,
       description: input.description,
       price: input.price !== undefined ? BigInt(input.price) : undefined,
       assigneeIds: input.assigneeIds,
     };
+    if (input.methodologyArticleId !== undefined) {
+      // null чистит, string — устанавливает
+      (data as { methodologyArticleId?: string | null }).methodologyArticleId =
+        input.methodologyArticleId;
+    }
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.step.update({ where: { id: stepId }, data });
       await this.feed.emit({

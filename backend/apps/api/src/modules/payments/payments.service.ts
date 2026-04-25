@@ -261,7 +261,12 @@ export class PaymentsService {
     return this.serialize(updated);
   }
 
-  async dispute(paymentId: string, reason: string, actorUserId: string): Promise<Payment> {
+  async dispute(
+    paymentId: string,
+    reason: string,
+    actorUserId: string,
+    photoKeys: string[] = [],
+  ): Promise<Payment> {
     const payment = await this.prisma.payment.findUnique({ where: { id: paymentId } });
     if (!payment) throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'payment not found');
     if (payment.fromUserId !== actorUserId && payment.toUserId !== actorUserId) {
@@ -283,14 +288,14 @@ export class PaymentsService {
         data: { status: 'disputed', disputedAt: this.clock.now() },
       });
       await tx.paymentDispute.create({
-        data: { paymentId, openedById: actorUserId, reason },
+        data: { paymentId, openedById: actorUserId, reason, photoKeys },
       });
       await this.feed.emit({
         tx,
         kind: 'payment_disputed',
         projectId: payment.projectId,
         actorId: actorUserId,
-        payload: { paymentId, reason },
+        payload: { paymentId, reason, photoCount: photoKeys.length },
       });
       return u;
     });

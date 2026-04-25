@@ -73,6 +73,7 @@ export const ErrorCodes = {
   STEP_REORDER_MISMATCH: 'steps.reorder_mismatch',
   STEP_TITLE_REQUIRED: 'steps.title_required',
   STEP_EXTRA_REQUIRES_PRICE: 'steps.extra_requires_price',
+  STEP_METHODOLOGY_NOT_FOUND: 'steps.methodology_not_found',
   SUBSTEP_NOT_FOUND: 'substeps.not_found',
   SUBSTEP_EDIT_AUTHOR_ONLY: 'substeps.edit_author_only',
   PHOTO_NOT_FOUND: 'photos.not_found',

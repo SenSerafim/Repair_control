@@ -251,4 +251,43 @@ describe('Sprint 4 DoD — Payments + Materials', () => {
     expect(budget.body.materials.planned).toBe(50_000_00);
     expect(budget.body.materials.remaining).toBe(50_000_00 - expectedSpent);
   });
+
+  it('ROAD_TO_100: PaymentDispute сохраняет photoKeys[]', async () => {
+    const customer = await reg('+79990002001', 'customer');
+    const foreman = await reg('+79990002002', 'contractor');
+    const cAuth = { Authorization: `Bearer ${customer.token}` };
+    const fAuth = { Authorization: `Bearer ${foreman.token}` };
+
+    const proj = await request(server())
+      .post('/api/projects')
+      .set(cAuth)
+      .send({ title: 'Спор', plannedStart: '2026-07-01', plannedEnd: '2026-12-31' })
+      .expect(201);
+    const projectId = proj.body.id as string;
+    await request(server())
+      .post(`/api/projects/${projectId}/members`)
+      .set(cAuth)
+      .send({ userId: foreman.userId, role: 'foreman' })
+      .expect(201);
+
+    const advance = await request(server())
+      .post(`/api/projects/${projectId}/payments`)
+      .set(cAuth)
+      .set(idem('disp-photo-1'))
+      .send({ toUserId: foreman.userId, amount: 100_000_00 })
+      .expect(201);
+
+    const photoKeys = ['payments/dispute/p1.jpg', 'payments/dispute/p2.jpg'];
+    await request(server())
+      .post(`/api/payments/${advance.body.id}/dispute`)
+      .set(fAuth)
+      .send({ reason: 'Сумма меньше договорённой', photoKeys })
+      .expect(200);
+
+    const dispute = await ctx.prisma.paymentDispute.findFirst({
+      where: { paymentId: advance.body.id },
+    });
+    expect(dispute).not.toBeNull();
+    expect(dispute!.photoKeys).toEqual(photoKeys);
+  });
 });

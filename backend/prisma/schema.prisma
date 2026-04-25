@@ -339,6 +339,7 @@ model User {
   ownedProjects   Project[]           @relation("ProjectOwner")
   memberships     Membership[]
   invitationsSent ProjectInvitation[] @relation("InvitationInvitedBy")
+  subscriptions   Subscription[]
 }
 
 model UserRole {
@@ -567,30 +568,33 @@ model TemplateStep {
 // ---------- Steps / Substeps / Photos ----------
 
 model Step {
-  id          String     @id @default(cuid())
-  stageId     String
-  title       String
-  orderIndex  Int
-  type        StepType   @default(regular)
-  status      StepStatus @default(pending)
-  price       BigInt?
-  description String?
-  authorId    String
-  assigneeIds String[]   @default([])
-  doneAt      DateTime?
-  doneById    String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                    String     @id @default(cuid())
+  stageId               String
+  title                 String
+  orderIndex            Int
+  type                  StepType   @default(regular)
+  status                StepStatus @default(pending)
+  price                 BigInt?
+  description           String?
+  authorId              String
+  assigneeIds           String[]   @default([])
+  methodologyArticleId  String?
+  doneAt                DateTime?
+  doneById              String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 
-  stage     Stage       @relation(fields: [stageId], references: [id], onDelete: Cascade)
-  substeps  Substep[]
-  photos    StepPhoto[]
-  questions Question[]
-  approvals Approval[]
+  stage              Stage               @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  methodologyArticle MethodologyArticle? @relation(fields: [methodologyArticleId], references: [id], onDelete: SetNull)
+  substeps           Substep[]
+  photos             StepPhoto[]
+  questions          Question[]
+  approvals          Approval[]
 
   @@index([stageId, orderIndex])
   @@index([status])
   @@index([type])
+  @@index([methodologyArticleId])
 }
 
 model Substep {
@@ -753,6 +757,7 @@ model MethodologyArticle {
 
   section         MethodologySection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   referencePhotos ReferencePhoto[]
+  steps           Step[]
 
   @@index([sectionId, orderIndex])
 }
@@ -810,6 +815,7 @@ model PaymentDispute {
   paymentId  String
   openedById String
   reason     String
+  photoKeys  String[]  @default([])
   status     String    @default("open")
   resolution String?
   resolvedAt DateTime?
@@ -1257,4 +1263,31 @@ model ExportJob {
   @@index([projectId, status])
   @@index([requestedById, createdAt])
   @@index([expiresAt])
+}
+
+// ---------- Pro / Subscription stubs (ТЗ §5.7 — заложить, не реализовывать) ----------
+
+model Subscription {
+  id        String    @id @default(cuid())
+  userId    String
+  plan      String    @default("free")
+  validTo   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([plan])
+}
+
+model FeatureFlag {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  plan      String   @default("free")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([plan, enabled])
 }

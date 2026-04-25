@@ -97,7 +97,7 @@ export class PaymentsController {
     @Param('id') id: string,
     @Body() dto: DisputePaymentDto,
   ) {
-    return this.payments.dispute(id, dto.reason, req.user.userId);
+    return this.payments.dispute(id, dto.reason, req.user.userId, dto.photoKeys ?? []);
   }
 
   @Post('payments/:id/resolve')

@@ -269,4 +269,59 @@ describe('Sprint 3 DoD — Approvals + Steps extra_work', () => {
     const stepAfter = await ctx.prisma.step.findUnique({ where: { id: step.body.id } });
     expect(stepAfter!.status).toBe('rejected');
   });
+
+  it('ROAD_TO_100: step.methodologyArticleId — set / clear / 404', async () => {
+    const customer = await registerAndLogin('+79991111101', 'customer');
+    const cAuth = { Authorization: `Bearer ${customer.token}` };
+    const proj = await request(server())
+      .post('/api/projects')
+      .set(cAuth)
+      .send({ title: 'Меф проект', plannedStart: '2026-06-01', plannedEnd: '2026-12-31' })
+      .expect(201);
+    const projectId = proj.body.id as string;
+    const stg = await request(server())
+      .post(`/api/projects/${projectId}/stages`)
+      .set(cAuth)
+      .send({ title: 'Этап', plannedStart: '2026-06-10', plannedEnd: '2026-06-20' })
+      .expect(201);
+    const stageId = stg.body.id as string;
+
+    // Сидим методичку прямо через prisma
+    const section = await ctx.prisma.methodologySection.create({
+      data: { title: 'Электрика', orderIndex: 0 },
+    });
+    const article = await ctx.prisma.methodologyArticle.create({
+      data: {
+        sectionId: section.id,
+        title: 'Распайка',
+        body: 'тело',
+        orderIndex: 0,
+        version: 1,
+        etag: 'v1',
+      },
+    });
+
+    // 404 на несуществующую статью
+    await request(server())
+      .post(`/api/stages/${stageId}/steps`)
+      .set(cAuth)
+      .send({ title: 'Шаг', methodologyArticleId: 'nonexistent_xxx' })
+      .expect(400);
+
+    // Создание со статьёй
+    const step = await request(server())
+      .post(`/api/stages/${stageId}/steps`)
+      .set(cAuth)
+      .send({ title: 'Шаг', methodologyArticleId: article.id })
+      .expect(201);
+    expect(step.body.methodologyArticleId).toBe(article.id);
+
+    // Очистка через PATCH
+    const cleared = await request(server())
+      .patch(`/api/steps/${step.body.id}`)
+      .set(cAuth)
+      .send({ methodologyArticleId: null })
+      .expect(200);
+    expect(cleared.body.methodologyArticleId).toBeNull();
+  });
 });
