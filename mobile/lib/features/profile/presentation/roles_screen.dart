@@ -55,22 +55,28 @@ class _RolesScreenState extends ConsumerState<RolesScreen> {
     }
     final picked = await showAppBottomSheet<SystemRole>(
       context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppBottomSheetHeader(
-            title: 'Добавить роль',
-            subtitle: 'Вы сможете переключаться между ролями в любой момент.',
-          ),
-          for (final r in available) ...[
-            RoleCard(
-              role: r,
-              selected: false,
-              onTap: () => Navigator.of(context).pop(r),
+      // Builder обязателен (см. profile_screen._confirmLogout) — Navigator.of
+      // должен резолвиться от sheet-context, а не от parent State.context,
+      // который может быть unmounted к моменту tap'а.
+      child: Builder(
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppBottomSheetHeader(
+              title: 'Добавить роль',
+              subtitle:
+                  'Вы сможете переключаться между ролями в любой момент.',
             ),
-            const SizedBox(height: AppSpacing.x10),
+            for (final r in available) ...[
+              RoleCard(
+                role: r,
+                selected: false,
+                onTap: () => Navigator.of(ctx).pop(r),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+            ],
           ],
-        ],
+        ),
       ),
     );
     if (picked != null) {

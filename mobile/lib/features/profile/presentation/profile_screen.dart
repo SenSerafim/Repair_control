@@ -124,31 +124,41 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    // Builder обязателен: showAppBottomSheet pushes на root-navigator, а
+    // `context` родителя ссылается на shell-navigator. `Navigator.of(ctx)`
+    // из builder-scope находит ближайший — root, и pop корректно закрывает
+    // sheet даже после того как ProfileScreen unmounted (race-condition
+    // при logout → router redirect → ShellRoute disposed).
     final confirmed = await showAppBottomSheet<bool>(
       context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppBottomSheetHeader(
-            title: 'Выйти из аккаунта?',
-            subtitle:
-                'Потребуется ввести телефон и пароль, чтобы войти снова.',
-          ),
-          AppButton(
-            label: 'Да, выйти',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-          const SizedBox(height: AppSpacing.x8),
-          AppButton(
-            label: 'Отмена',
-            variant: AppButtonVariant.secondary,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-        ],
+      child: Builder(
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppBottomSheetHeader(
+              title: 'Выйти из аккаунта?',
+              subtitle:
+                  'Потребуется ввести телефон и пароль, чтобы войти снова.',
+            ),
+            AppButton(
+              label: 'Да, выйти',
+              variant: AppButtonVariant.destructive,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            AppButton(
+              label: 'Отмена',
+              variant: AppButtonVariant.secondary,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed ?? false) {
+      // logout() меняет authState → unauthenticated → GoRouter redirect
+      // на welcome. Сами Navigator.pop() не вызываем — sheet уже закрыт
+      // builder'ом, остальное за router'ом.
       await ref.read(authControllerProvider.notifier).logout();
     }
   }
@@ -163,29 +173,31 @@ class ProfileScreen extends ConsumerWidget {
     final current = ref.read(themeModeProvider);
     final picked = await showAppBottomSheet<ThemeMode>(
       context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppBottomSheetHeader(
-            title: 'Тема приложения',
-            subtitle: 'Выберите внешний вид интерфейса',
-          ),
-          for (final m in ThemeMode.values)
-            ListTile(
-              leading: Icon(
-                switch (m) {
-                  ThemeMode.light => Icons.light_mode_outlined,
-                  ThemeMode.dark => Icons.dark_mode_outlined,
-                  ThemeMode.system => Icons.brightness_auto_outlined,
-                },
-              ),
-              title: Text(_themeModeLabel(m)),
-              trailing: m == current
-                  ? const Icon(Icons.check_rounded, color: AppColors.brand)
-                  : null,
-              onTap: () => Navigator.of(context).pop(m),
+      child: Builder(
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppBottomSheetHeader(
+              title: 'Тема приложения',
+              subtitle: 'Выберите внешний вид интерфейса',
             ),
-        ],
+            for (final m in ThemeMode.values)
+              ListTile(
+                leading: Icon(
+                  switch (m) {
+                    ThemeMode.light => Icons.light_mode_outlined,
+                    ThemeMode.dark => Icons.dark_mode_outlined,
+                    ThemeMode.system => Icons.brightness_auto_outlined,
+                  },
+                ),
+                title: Text(_themeModeLabel(m)),
+                trailing: m == current
+                    ? const Icon(Icons.check_rounded, color: AppColors.brand)
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(m),
+              ),
+          ],
+        ),
       ),
     );
     if (picked != null) {
