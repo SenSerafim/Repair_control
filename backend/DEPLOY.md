@@ -34,7 +34,8 @@ export image.
 | push в `dev_v1` | `:dev_v1` + `:sha-<7chars>` |
 | ручной (workflow_dispatch) | `:<branch>` + `:sha-<7chars>` |
 
-Образ: `ghcr.io/softspace-dev/repair-control/backend:<tag>`.
+Образ: `ghcr.io/senserafim/repair_control/backend:<tag>` (GHCR приводит owner/repo
+в lowercase автоматически).
 
 ## Первичная настройка сервера
 
@@ -49,8 +50,8 @@ ssh admin@193.181.209.219
 echo "<PAT>" | docker login ghcr.io -u <github-username> --password-stdin
 
 # 3. Сделать packages публичными (опционально, упрощает pull без PAT):
-#    https://github.com/orgs/softspace-dev/packages
-#    → repair-control/backend → Package settings → Change visibility → Public
+#    https://github.com/SenSerafim?tab=packages
+#    → repair_control/backend → Package settings → Change visibility → Public
 ```
 
 Если package публичный — шаги 1-2 не нужны, `docker pull` работает анонимно.
@@ -82,11 +83,11 @@ echo "<PAT>" | docker login ghcr.io -u <github-username> --password-stdin
 Если последний build сломан, откатимся на предыдущий SHA:
 
 ```bash
-# 1. Найти sha рабочего билда (https://github.com/softspace-dev/repair-control/pkgs/container/repair-control%2Fbackend)
+# 1. Найти sha рабочего билда (https://github.com/SenSerafim/Repair_control/pkgs/container/repair_control%2Fbackend)
 # 2. На сервере:
 ssh admin@193.181.209.219
 cd /home/admin/repair-control/backend
-API_IMAGE=ghcr.io/softspace-dev/repair-control/backend:sha-90d0e1d \
+API_IMAGE=ghcr.io/senserafim/repair_control/backend:sha-90d0e1d \
   docker compose -f docker-compose.yml -f docker-compose.staging.yml \
   --env-file .env.staging up -d api
 ```

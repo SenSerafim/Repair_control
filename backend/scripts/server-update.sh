@@ -14,7 +14,7 @@
 #
 # Переменные окружения:
 #   API_IMAGE — override образа (например, sha-abc1234 для отката).
-#               По умолчанию: ghcr.io/softspace-dev/repair-control/backend:main
+#               По умолчанию: ghcr.io/senserafim/repair_control/backend:main
 
 set -euo pipefail
 

@@ -31,9 +31,9 @@ services:
     # 14GB диска не хватает на multi-stage build (ENOSPC при export).
     #
     # Override через .env.staging:
-    #   API_IMAGE=ghcr.io/softspace-dev/repair-control/backend:main
+    #   API_IMAGE=ghcr.io/senserafim/repair_control/backend:main
     # Default — main с GHCR (production), для PR можно подменить на :sha-XXX.
-    image: ${API_IMAGE:-ghcr.io/softspace-dev/repair-control/backend:main}
+    image: ${API_IMAGE:-ghcr.io/senserafim/repair_control/backend:main}
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
