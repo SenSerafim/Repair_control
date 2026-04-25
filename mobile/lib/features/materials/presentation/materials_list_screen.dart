@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/materials_controller.dart';
@@ -17,17 +18,19 @@ class MaterialsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(materialsControllerProvider(projectId));
+    final canCreate = ref.watch(canProvider(DomainAction.materialsManage));
 
     return AppScaffold(
       showBack: true,
       title: 'Материалы',
       padding: EdgeInsets.zero,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline_rounded),
-          onPressed: () =>
-              context.push('/projects/$projectId/materials/new'),
-        ),
+        if (canCreate)
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            onPressed: () =>
+                context.push('/projects/$projectId/materials/new'),
+          ),
       ],
       body: async.when(
         loading: () => const AppLoadingState(skeleton: AppListSkeleton()),
@@ -38,8 +41,6 @@ class MaterialsListScreen extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            final canCreate =
-                ref.watch(canProvider(DomainAction.materialsManage));
             return AppEmptyState(
               title: 'Заявок ещё нет',
               subtitle:
@@ -52,23 +53,69 @@ class MaterialsListScreen extends ConsumerWidget {
                   : null,
             );
           }
+          // ТЗ §5.1 + Gaps §5.1: материалы со `stageId=null` — общие
+          // проекта, отдельная секция в списке (бригадир может видеть «по
+          // всему проекту», customer — для проектных закупок).
+          final shared = items.where((r) => r.stageId == null).toList();
+          final perStage = items.where((r) => r.stageId != null).toList();
           return RefreshIndicator(
             onRefresh: () async =>
                 ref.invalidate(materialsControllerProvider(projectId)),
-            child: ListView.separated(
+            child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
-              itemCount: items.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.x10),
-              itemBuilder: (_, i) => MaterialRequestCard(
-                request: items[i],
-                onTap: () => context.push(
-                  '/projects/$projectId/materials/${items[i].id}',
-                ),
-              ),
+              children: [
+                if (shared.isNotEmpty) ...[
+                  const _SectionHeader(label: 'Общие материалы проекта'),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final r in shared) ...[
+                    MaterialRequestCard(
+                      request: r,
+                      onTap: () => context.push(
+                        '/projects/$projectId/materials/${r.id}',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.x10),
+                  ],
+                  const SizedBox(height: AppSpacing.x12),
+                ],
+                if (perStage.isNotEmpty) ...[
+                  const _SectionHeader(label: 'По этапам'),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final r in perStage) ...[
+                    MaterialRequestCard(
+                      request: r,
+                      onTap: () => context.push(
+                        '/projects/$projectId/materials/${r.id}',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.x10),
+                  ],
+                ],
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.x4, top: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.tiny.copyWith(
+          color: AppColors.n400,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }

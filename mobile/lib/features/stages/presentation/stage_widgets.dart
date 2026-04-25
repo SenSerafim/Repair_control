@@ -5,6 +5,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/status_pill.dart';
 import '../domain/stage.dart';
+import '../domain/traffic_light.dart';
 
 /// Расширенный StageStatus: включает 2 computed-состояния из ТЗ §2.4.
 enum StageDisplayStatus {
@@ -39,25 +40,39 @@ enum StageDisplayStatus {
         StageDisplayStatus.lateStart => Semaphore.red,
       };
 
+  /// Полная формула ТЗ §2.4: делегирует [computeTrafficLight] для
+  /// определения «цветовой ветки» и докручивает её до конкретного
+  /// `StageDisplayStatus` (нужен для текста badge'а и логики CTA).
   static StageDisplayStatus of(Stage s, {DateTime? now}) {
     final when = now ?? DateTime.now();
     final base = s.status;
     if (base == StageStatus.done) return StageDisplayStatus.done;
     if (base == StageStatus.rejected) return StageDisplayStatus.rejected;
+    if (base == StageStatus.paused) return StageDisplayStatus.paused;
+    if (base == StageStatus.review) return StageDisplayStatus.review;
+
+    // lateStart важнее overdue — он сигнализирует «не нажали Старт»,
+    // в то время как overdue говорит о просрочке уже работающего этапа.
     if (s.isLateStart(when)) return StageDisplayStatus.lateStart;
-    if (s.plannedEnd != null &&
-        s.plannedEnd!.isBefore(when) &&
-        base != StageStatus.done) {
+    if (s.plannedEnd != null && s.plannedEnd!.isBefore(when)) {
       return StageDisplayStatus.overdue;
     }
-    return switch (base) {
-      StageStatus.pending => StageDisplayStatus.pending,
-      StageStatus.active => StageDisplayStatus.active,
-      StageStatus.paused => StageDisplayStatus.paused,
-      StageStatus.review => StageDisplayStatus.review,
-      _ => StageDisplayStatus.pending,
-    };
+    return base == StageStatus.active
+        ? StageDisplayStatus.active
+        : StageDisplayStatus.pending;
   }
+
+  /// Цветовая ветка светофора по ТЗ §2.4 (для banner'ов и progress-bars).
+  TrafficLight get trafficLight => switch (this) {
+        StageDisplayStatus.pending => TrafficLight.grey,
+        StageDisplayStatus.active => TrafficLight.green,
+        StageDisplayStatus.paused => TrafficLight.yellow,
+        StageDisplayStatus.review => TrafficLight.blue,
+        StageDisplayStatus.done => TrafficLight.green,
+        StageDisplayStatus.rejected => TrafficLight.red,
+        StageDisplayStatus.overdue => TrafficLight.red,
+        StageDisplayStatus.lateStart => TrafficLight.red,
+      };
 }
 
 class StageStatusBadge extends StatelessWidget {

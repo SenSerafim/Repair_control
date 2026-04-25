@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -55,17 +58,21 @@ class PaymentDetailScreen extends ConsumerWidget {
                       child: const SizedBox(height: 1),
                     ),
                     _AmountHeader(payment: p),
+                    if (p.parentPaymentId != null) ...[
+                      const SizedBox(height: AppSpacing.x12),
+                      _ParentLink(parentId: p.parentPaymentId!),
+                    ],
                     const SizedBox(height: AppSpacing.x12),
                     _InfoCard(payment: p),
                     if (p.comment != null && p.comment!.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x12),
                       _CommentCard(comment: p.comment!),
                     ],
-                    if (p.children.isNotEmpty) ...[
+                    if (p.activeChildren.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x16),
-                      const Text('Распределение', style: AppTextStyles.h2),
+                      _DistributionHeader(parent: p),
                       const SizedBox(height: AppSpacing.x8),
-                      for (final c in p.children) ...[
+                      for (final c in p.activeChildren) ...[
                         _ChildRow(payment: c),
                         const SizedBox(height: AppSpacing.x6),
                       ],
@@ -246,43 +253,125 @@ class _ChildRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x12,
-        vertical: AppSpacing.x10,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.n100,
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.call_split_rounded,
-            color: AppColors.brand,
-            size: 18,
-          ),
-          const SizedBox(width: AppSpacing.x10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  Money.format(payment.effectiveAmount),
-                  style: AppTextStyles.subtitle,
-                ),
-                Text(
-                  payment.status.displayName,
-                  style: AppTextStyles.caption.copyWith(
-                    color: payment.status.semaphore.text,
-                    fontWeight: FontWeight.w700,
+    return GestureDetector(
+      onTap: () => context.push(AppRoutes.paymentDetailWith(payment.id)),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: AppColors.n0,
+          border: Border.all(color: AppColors.n200),
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: Row(
+          children: [
+            AppAvatar(seed: payment.toUserId, size: 36),
+            const SizedBox(width: AppSpacing.x10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    Money.format(payment.effectiveAmount),
+                    style: AppTextStyles.subtitle,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    payment.status.displayName,
+                    style: AppTextStyles.caption.copyWith(
+                      color: payment.status.semaphore.text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.n300,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ParentLink extends ConsumerWidget {
+  const _ParentLink({required this.parentId});
+
+  final String parentId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => context.push(AppRoutes.paymentDetailWith(parentId)),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: AppColors.brandLight,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.account_tree_outlined,
+              color: AppColors.brand,
+              size: 20,
+            ),
+            SizedBox(width: AppSpacing.x10),
+            Expanded(
+              child: Text(
+                'Из аванса бригадира',
+                style: AppTextStyles.subtitle,
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.brand,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DistributionHeader extends StatelessWidget {
+  const _DistributionHeader({required this.parent});
+
+  final Payment parent;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = parent.remainingToDistribute;
+    final overspent = remaining < 0;
+    return Row(
+      children: [
+        const Expanded(
+          child: Text('Распределение', style: AppTextStyles.h2),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x10,
+            vertical: 4,
+          ),
+          decoration: BoxDecoration(
+            color: overspent ? AppColors.redBg : AppColors.brandLight,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            overspent
+                ? 'Превышение ${Money.format(-remaining)}'
+                : 'Остаток ${Money.format(remaining)}',
+            style: AppTextStyles.caption.copyWith(
+              color: overspent ? AppColors.redDot : AppColors.brand,
+              fontWeight: FontWeight.w800,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -327,14 +416,26 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buttons = <Widget>[];
-    final canConfirm =
-        payment.status == PaymentStatus.pending && payment.toUserId == meId;
+    final hasConfirm =
+        ref.watch(canProvider(DomainAction.financePaymentConfirm));
+    final hasCreate =
+        ref.watch(canProvider(DomainAction.financePaymentCreate));
+    final hasDispute =
+        ref.watch(canProvider(DomainAction.financePaymentDispute));
+    final hasResolve =
+        ref.watch(canProvider(DomainAction.financePaymentResolve));
+
+    final canConfirm = hasConfirm &&
+        payment.status == PaymentStatus.pending &&
+        payment.toUserId == meId;
     final canCancel = payment.status == PaymentStatus.pending &&
         payment.fromUserId == meId;
-    final canDispute = payment.status == PaymentStatus.confirmed &&
+    final canDispute = hasDispute &&
+        payment.status == PaymentStatus.confirmed &&
         (payment.toUserId == meId || payment.fromUserId == meId);
-    final canResolve = payment.status == PaymentStatus.disputed;
-    final canDistribute = payment.kind == PaymentKind.advance &&
+    final canResolve = hasResolve && payment.status == PaymentStatus.disputed;
+    final canDistribute = hasCreate &&
+        payment.kind == PaymentKind.advance &&
         payment.status == PaymentStatus.confirmed &&
         payment.remainingToDistribute > 0 &&
         payment.toUserId == meId;

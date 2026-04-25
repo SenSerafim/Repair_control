@@ -111,14 +111,42 @@ class SocketService {
     _socket = socket;
   }
 
-  void joinChat(String chatId) {
-    _socket?.emit('chat:join', {'chatId': chatId});
+  /// Подписка на чаты — backend ожидает `rooms:join` с массивом
+  /// `chatIds` и ack-callback `{ ok: true|false, joined: [...] }`.
+  /// Возвращает Future<bool> — успешен ли join (для UI-фидбэка).
+  Future<bool> joinChat(String chatId) => joinChats([chatId]);
+
+  Future<bool> joinChats(List<String> chatIds) async {
+    final socket = _socket;
+    if (socket == null || chatIds.isEmpty) return false;
+    final completer = Completer<bool>();
+    socket.emitWithAck(
+      'rooms:join',
+      {'chatIds': chatIds},
+      ack: (dynamic data) {
+        final ok = data is Map && data['ok'] == true;
+        if (!completer.isCompleted) completer.complete(ok);
+      },
+    );
+    // Защита от подвисания: 5s timeout — если ack не пришёл,
+    // считаем join не выполненным (но reconnect продолжит работу).
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => false,
+    );
   }
 
-  void leaveChat(String chatId) {
-    _socket?.emit('chat:leave', {'chatId': chatId});
+  Future<void> leaveChat(String chatId) => leaveChats([chatId]);
+
+  Future<void> leaveChats(List<String> chatIds) async {
+    final socket = _socket;
+    if (socket == null || chatIds.isEmpty) return;
+    socket.emit('rooms:leave', {'chatIds': chatIds});
   }
 
+  /// `presence:typing` (client → server) — backend требует поля
+  /// `chatId` и `typing` (bool). Сервер бродкастит обратно `presence:typing`
+  /// с `userId` всем кроме отправителя.
   void typing(String chatId, {required bool typing}) {
     _socket?.emit('presence:typing', {'chatId': chatId, 'typing': typing});
   }

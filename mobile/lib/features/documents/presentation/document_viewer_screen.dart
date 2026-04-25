@@ -8,6 +8,7 @@ import 'package:pdfx/pdfx.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../application/documents_controller.dart';
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
 
@@ -39,8 +40,8 @@ class _DocumentViewerScreenState
 
   Future<void> _load() async {
     try {
-      final repo = ref.read(documentsRepositoryProvider);
-      final doc = await repo.get(widget.documentId);
+      final controller = ref.read(documentsControllerProvider);
+      final doc = await ref.read(documentByIdProvider(widget.documentId).future);
       if (!doc.isPdf) {
         if (mounted) {
           setState(() {
@@ -50,7 +51,7 @@ class _DocumentViewerScreenState
         }
         return;
       }
-      final url = await repo.downloadUrl(doc.id);
+      final url = await controller.downloadUrl(doc.id);
       final bytes = await Dio().get<List<int>>(
         url,
         options: Options(responseType: ResponseType.bytes),
@@ -131,7 +132,7 @@ class _DocumentViewerScreenState
   Future<void> _download() async {
     try {
       final url = await ref
-          .read(documentsRepositoryProvider)
+          .read(documentsControllerProvider)
           .downloadUrl(widget.documentId);
       if (!mounted) return;
       AppToast.show(

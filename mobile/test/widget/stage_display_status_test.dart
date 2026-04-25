@@ -94,7 +94,11 @@ void main() {
       expect(d.semaphore, Semaphore.red);
     });
 
-    test('paused с прошедшим дедлайном → overdue', () {
+    test('paused с прошедшим дедлайном → paused (yellow важнее red)', () {
+      // ТЗ §2.4: пауза не списывает срок — дедлайн сдвинется
+      // автоматически после resume. Поэтому семантически этап остаётся
+      // в yellow, не падает в red, чтобы пользователь не видел ложный
+      // overdue, пока пауза активна.
       final d = StageDisplayStatus.of(
         stageOf(
           status: StageStatus.paused,
@@ -103,7 +107,7 @@ void main() {
         ),
         now: now,
       );
-      expect(d, StageDisplayStatus.overdue);
+      expect(d, StageDisplayStatus.paused);
     });
 
     test('review не считается overdue (на приёмке)', () {

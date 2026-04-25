@@ -56,6 +56,60 @@ class AppColors {
   static const Color whiteGhost = Color(0x1AFFFFFF); // 0.1
 }
 
+/// Dark-палитра (Этап 7.5 ROAD_TO_100). Material 3 dark-инверсия brand-цвета,
+/// контраст ≥4.5 для текста по WCAG AA. Используется через `Theme.of(context)`
+/// или `themeMode == ThemeMode.dark` гейтом.
+class AppColorsDark {
+  const AppColorsDark._();
+
+  // Бренд (тот же hue, повышенная яркость для тёмного фона)
+  static const Color brand = Color(0xFF7C8FFF);
+  static const Color brandDark = Color(0xFF5566D6);
+  static const Color brandLight = Color(0xFF1E2440);
+  static const Color brandMid = Color(0xFF8896F2);
+  static const Color brandGlow = Color(0x4F7C8FFF);
+
+  // Светофор зелёный
+  static const Color greenDot = Color(0xFF34D399);
+  static const Color greenDark = Color(0xFF10B981);
+  static const Color greenLight = Color(0xFF052E16);
+
+  // Светофор жёлтый
+  static const Color yellowDot = Color(0xFFFCD34D);
+  static const Color yellowText = Color(0xFFFEF3C7);
+  static const Color yellowBg = Color(0xFF422006);
+
+  // Светофор красный
+  static const Color redDot = Color(0xFFF87171);
+  static const Color redText = Color(0xFFFCA5A5);
+  static const Color redBg = Color(0xFF450A0A);
+
+  // Синий action
+  static const Color blueDot = Color(0xFF7C8FFF);
+  static const Color blueText = Color(0xFFBFCAFF);
+  static const Color blueBg = Color(0xFF1E2440);
+
+  // Purple
+  static const Color purple = Color(0xFFA78BFA);
+  static const Color purpleBg = Color(0xFF2E1065);
+
+  // Нейтрали (инверсия n0..n900)
+  static const Color n0 = Color(0xFF0D1229);
+  static const Color n50 = Color(0xFF131836);
+  static const Color n100 = Color(0xFF1A2240);
+  static const Color n200 = Color(0xFF2A3357);
+  static const Color n300 = Color(0xFF3D4B70);
+  static const Color n400 = Color(0xFF5F6E99);
+  static const Color n500 = Color(0xFF8E9BBF);
+  static const Color n600 = Color(0xFFC9D2EE);
+  static const Color n700 = Color(0xFFE4E9F7);
+  static const Color n800 = Color(0xFFF1F4FD);
+  static const Color n900 = Color(0xFFFFFFFF);
+
+  static const Color overlayBackdrop = Color(0xB3000000);
+  static const Color whiteGhost = Color(0x33FFFFFF);
+}
+
 class AppRadius {
   const AppRadius._();
 
@@ -148,6 +202,57 @@ class AppShadows {
       color: Color(0x40DC2626), // 0.25
       offset: Offset(0, 4),
       blurRadius: 16,
+    ),
+  ];
+
+  // ──────────────────────────────────────────────────────────────────
+  // Glow-эффекты (дизайн `Кластер C/E`): мягкое сияние под active /
+  // success / danger / 100%-complete состояниями. Без offset — равномерный
+  // ореол. Используется на active step-checkbox, payment-amount, hero badges.
+  // ──────────────────────────────────────────────────────────────────
+
+  /// Зелёный glow — checked-checkbox, success-burst.
+  static const List<BoxShadow> glowGreen = [
+    BoxShadow(
+      color: Color(0x4010B981), // rgba(16,185,129, 0.25)
+      blurRadius: 12,
+      spreadRadius: 1,
+    ),
+  ];
+
+  /// Синий glow — focused input/active card, primary action.
+  static const List<BoxShadow> glowBlue = [
+    BoxShadow(
+      color: Color(0x404F6EF7), // rgba(79,110,247, 0.25)
+      blurRadius: 12,
+      spreadRadius: 1,
+    ),
+  ];
+
+  /// Жёлтый glow — paused-state, attention/warning.
+  static const List<BoxShadow> glowYellow = [
+    BoxShadow(
+      color: Color(0x40F59E0B), // rgba(245,158,11, 0.25)
+      blurRadius: 12,
+      spreadRadius: 1,
+    ),
+  ];
+
+  /// Красный glow — overdue/disputed status indicator.
+  static const List<BoxShadow> glowRed = [
+    BoxShadow(
+      color: Color(0x40DC2626),
+      blurRadius: 12,
+      spreadRadius: 1,
+    ),
+  ];
+
+  /// Золотой glow — 100%-complete (HouseProgress, StageDone celebration).
+  static const List<BoxShadow> glowGold = [
+    BoxShadow(
+      color: Color(0x66F59E0B), // более яркий, alpha 0.4
+      blurRadius: 16,
+      spreadRadius: 2,
     ),
   ];
 }

@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -13,6 +18,7 @@ import '../../steps/domain/step.dart';
 import '../../steps/presentation/extra_work_sheet.dart';
 import '../../steps/presentation/step_widgets.dart';
 import '../application/stages_controller.dart';
+import '../data/stages_repository.dart';
 import '../domain/stage.dart';
 import 'pause_sheet.dart';
 import 'save_as_template_sheet.dart';
@@ -382,7 +388,7 @@ class _StatusBanner extends StatelessWidget {
       StageDisplayStatus.review => (
           Icons.check_circle_outline,
           'На приёмке',
-          'Ждём решения заказчика. Решение — в Sprint 13.',
+          'Заказчик увидит этап в согласованиях и подтвердит/отклонит приёмку.',
           AppColors.blueDot,
         ),
       StageDisplayStatus.done => (
@@ -541,35 +547,107 @@ class _CtaGroupState extends ConsumerState<_CtaGroup> {
     return (failure as dynamic)?.userMessage as String? ?? 'Не удалось';
   }
 
+  /// Бэк возвращает 409 `approvals.plan_not_approved`, когда план обязателен,
+  /// но ещё не одобрен. Локально мы перехватываем код и предлагаем
+  /// перейти на экран согласования плана, не показывая generic-ошибку.
+  Future<void> _tryStart() async {
+    setState(() => _busy = true);
+    try {
+      // Идём через repo напрямую, чтобы видеть `ApiError.code`. Контроллер
+      // потом подхватит обновление через invalidate.
+      await ref.read(stagesRepositoryProvider).start(
+            projectId: widget.projectId,
+            stageId: widget.stage.id,
+          );
+      ref.invalidate(stagesControllerProvider(widget.projectId));
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message: 'Этап запущен',
+        kind: AppToastKind.success,
+      );
+    } on StagesException catch (e) {
+      if (!mounted) return;
+      if (e.apiError.code == 'approvals.plan_not_approved') {
+        await _showPlanRequiredDialog();
+      } else {
+        AppToast.show(
+          context,
+          message: e.failure.userMessage,
+          kind: AppToastKind.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showPlanRequiredDialog() async {
+    final go = await showAppBottomSheet<bool>(
+      context: context,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AppBottomSheetHeader(
+            title: 'План не согласован',
+            subtitle: 'Этап нельзя запустить, пока заказчик не одобрит план '
+                'работ. Откройте экран согласования плана и отправьте '
+                'запрос или дождитесь решения.',
+          ),
+          AppButton(
+            label: 'Открыть согласование плана',
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          AppButton(
+            label: 'Позже',
+            variant: AppButtonVariant.ghost,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+        ],
+      ),
+    );
+    if ((go ?? false) && mounted) {
+      unawaited(
+        context.push(AppRoutes.projectPlanApprovalWith(widget.projectId)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final stagesController =
         ref.read(stagesControllerProvider(widget.projectId).notifier);
+    final canStart = ref.watch(canProvider(DomainAction.stageStart));
+    final canPause = ref.watch(canProvider(DomainAction.stagePause));
+    final canManageStage =
+        ref.watch(canProvider(DomainAction.stageManage));
+    final canRequestApproval =
+        ref.watch(canProvider(DomainAction.approvalRequest));
     final buttons = <Widget>[];
 
     switch (widget.display) {
       case StageDisplayStatus.pending:
       case StageDisplayStatus.lateStart:
-        buttons.add(
-          AppButton(
-            label: widget.canStart
-                ? 'Запустить этап'
-                : 'План не согласован',
-            isLoading: _busy,
-            onPressed: widget.canStart
-                ? () => _run(
-                      () => _wrap(
-                        () => stagesController.start(widget.stage.id),
-                        successMessage: 'Этап запущен',
+        if (canStart) {
+          buttons.add(
+            AppButton(
+              label: widget.canStart
+                  ? 'Запустить этап'
+                  : 'План не согласован',
+              isLoading: _busy,
+              onPressed: widget.canStart
+                  ? _tryStart
+                  : () => context.push(
+                        AppRoutes.projectPlanApprovalWith(widget.projectId),
                       ),
-                    )
-                : null,
-          ),
-        );
+            ),
+          );
+        }
       case StageDisplayStatus.active:
       case StageDisplayStatus.overdue:
-        buttons
-          ..add(
+        if (canRequestApproval) {
+          buttons.add(
             AppButton(
               label: 'Отправить на приёмку',
               isLoading: _busy,
@@ -580,9 +658,13 @@ class _CtaGroupState extends ConsumerState<_CtaGroup> {
                 ),
               ),
             ),
-          )
-          ..add(const SizedBox(height: AppSpacing.x8))
-          ..add(
+          );
+        }
+        if (canPause) {
+          if (buttons.isNotEmpty) {
+            buttons.add(const SizedBox(height: AppSpacing.x8));
+          }
+          buttons.add(
             AppButton(
               label: 'Поставить на паузу',
               variant: AppButtonVariant.secondary,
@@ -596,28 +678,33 @@ class _CtaGroupState extends ConsumerState<_CtaGroup> {
                       ),
             ),
           );
+        }
       case StageDisplayStatus.paused:
-        buttons.add(
-          AppButton(
-            label: 'Возобновить',
-            isLoading: _busy,
-            onPressed: () => _run(
-              () => _wrap(
-                () => stagesController.resume(widget.stage.id),
-                successMessage: 'Этап возобновлён',
+        if (canPause) {
+          buttons.add(
+            AppButton(
+              label: 'Возобновить',
+              isLoading: _busy,
+              onPressed: () => _run(
+                () => _wrap(
+                  () => stagesController.resume(widget.stage.id),
+                  successMessage: 'Этап возобновлён',
+                ),
               ),
             ),
-          ),
-        );
+          );
+        }
       case StageDisplayStatus.review:
       case StageDisplayStatus.done:
       case StageDisplayStatus.rejected:
-        buttons.add(const SizedBox.shrink());
+        break;
     }
 
-    buttons
-      ..add(const SizedBox(height: AppSpacing.x12))
-      ..add(
+    if (canManageStage) {
+      if (buttons.isNotEmpty) {
+        buttons.add(const SizedBox(height: AppSpacing.x12));
+      }
+      buttons.add(
         AppButton(
           label: 'Сохранить как шаблон',
           variant: AppButtonVariant.ghost,
@@ -631,6 +718,9 @@ class _CtaGroupState extends ConsumerState<_CtaGroup> {
                   ),
         ),
       );
+    }
+
+    if (buttons.isEmpty) return const SizedBox.shrink();
     return Column(children: buttons);
   }
 }

@@ -57,12 +57,18 @@ class DefaultFirebaseOptions {
     measurementId: 'G-CCMJGS94NM',
   );
 
-  /// iOS — TODO: добавить после регистрации iOS app в Firebase.
-  /// См. `GoogleService-Info.plist`:
+  /// iOS — bundleId: com.repaircontrol.app.
+  ///
+  /// PENDING: после регистрации iOS app в Firebase Console заполнить apiKey + appId
+  /// из `GoogleService-Info.plist`:
   ///   GOOGLE_APP_ID → appId
   ///   API_KEY → apiKey
-  ///   GCM_SENDER_ID → messagingSenderId
-  ///   BUNDLE_ID → iosBundleId
+  ///   GCM_SENDER_ID → messagingSenderId (уже корректен)
+  ///   BUNDLE_ID → iosBundleId (уже корректен)
+  ///
+  /// Команда: `flutterfire configure -p mobile/ -i com.repaircontrol.app`
+  /// Также: положить `GoogleService-Info.plist` в `mobile/ios/Runner/`,
+  /// загрузить APNs auth key в Firebase Project Settings → Cloud Messaging.
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: '',
     appId: '',

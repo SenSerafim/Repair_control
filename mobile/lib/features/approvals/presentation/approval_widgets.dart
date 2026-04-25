@@ -158,23 +158,50 @@ class ApprovalCard extends StatelessWidget {
 }
 
 /// Таймлайн попыток — для ApprovalDetail.
+///
+/// Дизайн `d-approvals-history`: stacked-cards. Новейшая попытка сверху,
+/// предыдущие — в стопке за ней с нарастающим offset (-4px x 2, -8px x 2...)
+/// и спадающей opacity (1.0 → 0.85 → 0.70 → 0.55). Отображается до 4 попыток
+/// одновременно, остальные — fade-out.
 class ApprovalAttemptsList extends StatelessWidget {
-  const ApprovalAttemptsList({required this.attempts, super.key});
+  const ApprovalAttemptsList({
+    required this.attempts,
+    this.maxVisible = 4,
+    super.key,
+  });
 
   final List<ApprovalAttempt> attempts;
+  final int maxVisible;
+
+  static const double _cardHeight = 86;
+  static const double _stepOffset = 4;
 
   @override
   Widget build(BuildContext context) {
     if (attempts.isEmpty) return const SizedBox.shrink();
+    // Новейшие сверху (descending по createdAt).
     final sorted = [...attempts]
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    return Column(
-      children: [
-        for (final a in sorted) ...[
-          _AttemptRow(attempt: a),
-          const SizedBox(height: AppSpacing.x6),
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final visible = sorted.take(maxVisible).toList();
+    // Высота: основной card + (N-1) × offset за счёт хвостов.
+    final stackHeight =
+        _cardHeight + (visible.length - 1) * _stepOffset * 2 + AppSpacing.x6;
+    return SizedBox(
+      height: stackHeight,
+      child: Stack(
+        children: [
+          for (var i = visible.length - 1; i >= 0; i--)
+            Positioned(
+              top: i * _stepOffset * 2,
+              left: i * _stepOffset,
+              right: i * _stepOffset,
+              child: Opacity(
+                opacity: 1 - (i * 0.15).clamp(0.0, 0.6),
+                child: _AttemptRow(attempt: visible[i]),
+              ),
+            ),
         ],
-      ],
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -6,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
+import '../../../core/realtime/socket_service.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -30,11 +34,59 @@ class _ChatConversationScreenState
     extends ConsumerState<ChatConversationScreen> {
   final _input = TextEditingController();
   bool _sending = false;
+  bool _isTyping = false;
+  Timer? _typingDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _input.addListener(_onInputChanged);
+    // Регистрируем чат как «открытый» — FcmService при foreground push'е
+    // подавит local-notification если chatId совпадает.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(currentChatIdProvider.notifier).state = widget.chatId;
+      }
+    });
+  }
 
   @override
   void dispose() {
-    _input.dispose();
+    _input
+      ..removeListener(_onInputChanged)
+      ..dispose();
+    _typingDebounce?.cancel();
+    if (_isTyping) {
+      // Финальный «typing=false» при выходе из чата.
+      ref
+          .read(socketServiceProvider)
+          .typing(widget.chatId, typing: false);
+    }
+    // Сбрасываем «открытый чат» если ещё мы.
+    final container = ProviderScope.containerOf(context, listen: false);
+    if (container.read(currentChatIdProvider) == widget.chatId) {
+      container.read(currentChatIdProvider.notifier).state = null;
+    }
     super.dispose();
+  }
+
+  void _onInputChanged() {
+    final hasText = _input.text.trim().isNotEmpty;
+    if (hasText && !_isTyping) {
+      _isTyping = true;
+      ref.read(socketServiceProvider).typing(widget.chatId, typing: true);
+    }
+    // Отправляем typing=false если 3 сек тишины (бэк сам отзовёт через 5 сек,
+    // мы же — раньше, чтобы UI у других обновился быстрее).
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(seconds: 3), () {
+      if (_isTyping) {
+        _isTyping = false;
+        ref
+            .read(socketServiceProvider)
+            .typing(widget.chatId, typing: false);
+      }
+    });
   }
 
   Future<void> _send({List<String>? attachmentKeys}) async {
@@ -51,6 +103,14 @@ class _ChatConversationScreenState
     setState(() => _sending = false);
     if (failure == null) {
       _input.clear();
+      // После успешной отправки — typing=false (если был активен).
+      _typingDebounce?.cancel();
+      if (_isTyping) {
+        _isTyping = false;
+        ref
+            .read(socketServiceProvider)
+            .typing(widget.chatId, typing: false);
+      }
     } else {
       AppToast.show(
         context,
@@ -158,6 +218,8 @@ class _ChatConversationScreenState
                     icon: Icons.chat_bubble_outline_rounded,
                   );
                 }
+                final canWrite =
+                    ref.watch(canProvider(DomainAction.chatWrite));
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.all(AppSpacing.x12),
@@ -165,22 +227,26 @@ class _ChatConversationScreenState
                   itemBuilder: (_, i) => _Bubble(
                     message: msgs[i],
                     isMine: msgs[i].authorId == me,
-                    onEdit: () => _promptEdit(msgs[i]),
-                    onDelete: () => ref
-                        .read(messagesProvider(widget.chatId).notifier)
-                        .delete(msgs[i].id),
+                    onEdit: canWrite ? () => _promptEdit(msgs[i]) : null,
+                    onDelete: canWrite
+                        ? () => ref
+                            .read(messagesProvider(widget.chatId).notifier)
+                            .delete(msgs[i].id)
+                        : null,
                     onForward: () => _openForwardSheet(msgs[i]),
                   ),
                 );
               },
             ),
           ),
-          _ComposeBar(
-            controller: _input,
-            sending: _sending,
-            onSend: _send,
-            onAttach: _openAttach,
-          ),
+          _TypingBar(chatId: widget.chatId, meId: me),
+          if (ref.watch(canProvider(DomainAction.chatWrite)))
+            _ComposeBar(
+              controller: _input,
+              sending: _sending,
+              onSend: _send,
+              onAttach: _openAttach,
+            ),
         ],
       ),
     );
@@ -498,35 +564,44 @@ class _Bubble extends StatelessWidget {
 
   final Message message;
   final bool isMine;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final VoidCallback onForward;
+
+  /// 15-мин окно редактирования (ТЗ §10.2): после истечения сервер вернёт
+  /// CHAT_MESSAGE_EDIT_WINDOW_EXPIRED. На клиенте дублируем UX-гейтом.
+  bool get _editWindowOpen =>
+      message.canEdit(byUserId: message.authorId, now: DateTime.now());
 
   @override
   Widget build(BuildContext context) {
-    final align = isMine ? Alignment.centerRight : Alignment.centerLeft;
     final bgColor = isMine ? AppColors.brand : AppColors.n100;
     final txtColor = isMine ? AppColors.n0 : AppColors.n800;
     final body = message.isDeleted
         ? 'Сообщение удалено'
         : (message.text ?? (message.hasAttachments ? 'Вложение' : ''));
-    return Align(
-      alignment: align,
-      child: GestureDetector(
-        onLongPress: message.isDeleted ? null : () => _showActions(context),
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.78,
+    final bubble = GestureDetector(
+      onLongPress: message.isDeleted ? null : () => _showActions(context),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.7,
+        ),
+        margin: const EdgeInsets.only(bottom: AppSpacing.x6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x12,
+          vertical: AppSpacing.x8,
+        ),
+        decoration: BoxDecoration(
+          color: bgColor,
+          // Дизайн `Кластер F`: outgoing — острый угол снизу-справа,
+          // incoming — острый угол снизу-слева (классический «хвостик»).
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(AppRadius.r16),
+            topRight: const Radius.circular(AppRadius.r16),
+            bottomLeft: Radius.circular(isMine ? AppRadius.r16 : 4),
+            bottomRight: Radius.circular(isMine ? 4 : AppRadius.r16),
           ),
-          margin: const EdgeInsets.only(bottom: AppSpacing.x6),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x12,
-            vertical: AppSpacing.x8,
-          ),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(AppRadius.r16),
-          ),
+        ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -590,7 +665,26 @@ class _Bubble extends StatelessWidget {
               ),
             ],
           ),
-        ),
+      ),
+    );
+    // Incoming сообщения: avatar отправителя (32×32) слева — по дизайну
+    // `Кластер F` chat-conversation. Outgoing: bubble прижат вправо без
+    // аватара (свои сообщения не нуждаются в идентификации).
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMine) ...[
+            AppAvatar(
+              seed: message.authorId,
+              size: 32,
+            ),
+            const SizedBox(width: AppSpacing.x6),
+          ],
+          Flexible(child: bubble),
+        ],
       ),
     );
   }
@@ -611,26 +705,41 @@ class _Bubble extends StatelessWidget {
             },
           ),
           if (isMine) ...[
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Редактировать'),
-              onTap: () {
-                Navigator.of(context).pop();
-                onEdit();
-              },
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.delete_outline, color: AppColors.redDot),
-              title: const Text(
-                'Удалить',
-                style: TextStyle(color: AppColors.redDot),
+            if (onEdit != null)
+              ListTile(
+                enabled: _editWindowOpen,
+                leading: Icon(
+                  Icons.edit_outlined,
+                  color: _editWindowOpen ? null : AppColors.n400,
+                ),
+                title: Text(
+                  _editWindowOpen
+                      ? 'Редактировать'
+                      : 'Редактирование недоступно — окно истекло',
+                  style: TextStyle(
+                    color: _editWindowOpen ? null : AppColors.n500,
+                  ),
+                ),
+                onTap: _editWindowOpen
+                    ? () {
+                        Navigator.of(context).pop();
+                        onEdit!();
+                      }
+                    : null,
               ),
-              onTap: () {
-                Navigator.of(context).pop();
-                onDelete();
-              },
-            ),
+            if (onDelete != null)
+              ListTile(
+                leading:
+                    const Icon(Icons.delete_outline, color: AppColors.redDot),
+                title: const Text(
+                  'Удалить',
+                  style: TextStyle(color: AppColors.redDot),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onDelete!();
+                },
+              ),
           ],
         ],
       ),
@@ -717,6 +826,52 @@ class _ComposeBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Узкая полоска «X печатает…» над `_ComposeBar`. Слушает
+/// `typingUsersProvider(chatId)` — он наполняется в MessagesController
+/// из WS-события `presence:typing` и сбрасывается через 5s бездействия.
+class _TypingBar extends ConsumerWidget {
+  const _TypingBar({required this.chatId, required this.meId});
+
+  final String chatId;
+  final String? meId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final typing = ref.watch(typingUsersProvider(chatId));
+    final others = typing.where((u) => u != meId).toList();
+    if (others.isEmpty) return const SizedBox.shrink();
+    final label = others.length == 1
+        ? 'Печатает…'
+        : '${others.length} участника печатают…';
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x16,
+        vertical: 6,
+      ),
+      color: AppColors.n50,
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 1.5),
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.n500,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

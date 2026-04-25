@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -19,16 +21,18 @@ class ToolIssuancesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(toolIssuancesProvider(projectId));
+    final canIssue = ref.watch(canProvider(DomainAction.toolsIssue));
 
     return AppScaffold(
       showBack: true,
       title: 'Инструмент на объекте',
       padding: EdgeInsets.zero,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline_rounded),
-          onPressed: () => _showIssue(context, ref),
-        ),
+        if (canIssue)
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            onPressed: () => _showIssue(context, ref),
+          ),
       ],
       body: async.when(
         loading: () => const AppLoadingState(),
@@ -40,10 +44,12 @@ class ToolIssuancesScreen extends ConsumerWidget {
           if (items.isEmpty) {
             return AppEmptyState(
               title: 'Выдач ещё не было',
-              subtitle: 'Выдайте инструмент мастеру — он подтвердит получение.',
+              subtitle: canIssue
+                  ? 'Выдайте инструмент мастеру — он подтвердит получение.'
+                  : 'Бригадир пока не выдал ни одного инструмента.',
               icon: Icons.construction_outlined,
-              actionLabel: 'Выдать',
-              onAction: () => _showIssue(context, ref),
+              actionLabel: canIssue ? 'Выдать' : null,
+              onAction: canIssue ? () => _showIssue(context, ref) : null,
             );
           }
           final me = ref.read(authControllerProvider).userId;

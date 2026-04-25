@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/system_role.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -24,7 +27,7 @@ class ChatsScreen extends StatelessWidget {
             'групповые и чаты этапов.',
         icon: Icons.chat_bubble_outline_rounded,
         actionLabel: 'К проектам',
-        onAction: () => context.go('/projects'),
+        onAction: () => context.go(AppRoutes.projects),
       ),
     );
   }
@@ -58,7 +61,16 @@ class ProjectChatsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(projectChatsProvider(projectId)),
         ),
         data: (chats) {
-          if (chats.isEmpty) {
+          // ТЗ §10.2 + §6.2: customer не видит чат этапа, если бригадир
+          // явно не включил `visibleToCustomer`. Бэкенд так же фильтрует,
+          // но клиент дублирует на случай stale-данных.
+          final role = ref.watch(activeRoleProvider);
+          final visible = chats.where((c) {
+            if (role != SystemRole.customer) return true;
+            if (c.type != ChatType.stage) return true;
+            return c.visibleToCustomer;
+          }).toList();
+          if (visible.isEmpty) {
             return const AppEmptyState(
               title: 'Чатов пока нет',
               subtitle:
@@ -71,12 +83,13 @@ class ProjectChatsScreen extends ConsumerWidget {
                 ref.invalidate(projectChatsProvider(projectId)),
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.x16),
-              itemCount: chats.length,
+              itemCount: visible.length,
               separatorBuilder: (_, __) =>
                   const SizedBox(height: AppSpacing.x8),
               itemBuilder: (_, i) => _ChatRow(
-                chat: chats[i],
-                onTap: () => context.push('/chats/${chats[i].id}'),
+                chat: visible[i],
+                onTap: () =>
+                    context.push(AppRoutes.chatDetailWith(visible[i].id)),
               ),
             ),
           );
@@ -113,24 +126,15 @@ class _ChatRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.brandLight,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-              ),
-              child: Icon(
-                chat.type == ChatType.group
-                    ? Icons.group_outlined
-                    : chat.type == ChatType.stage
-                        ? Icons.dashboard_outlined
-                        : chat.type == ChatType.personal
-                            ? Icons.person_outline_rounded
-                            : Icons.forum_outlined,
-                color: AppColors.brand,
-              ),
+            // Project/group/stage чаты — quad-color avatar (палитра по chat.id);
+            // personal — фиксированный blue (более «личное» восприятие).
+            AppAvatar(
+              seed: chat.id,
+              name: titleText,
+              size: 44,
+              palette: chat.type == ChatType.personal
+                  ? AvatarPalette.blue
+                  : null,
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(

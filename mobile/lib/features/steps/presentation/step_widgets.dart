@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Step;
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
+import '../../../shared/widgets/app_step_checkbox.dart';
 import '../../../shared/widgets/status_pill.dart';
 import '../domain/step.dart';
 
@@ -142,6 +143,8 @@ class StepRow extends StatelessWidget {
   }
 }
 
+/// Компактный чекбокс для шага. Делегирует на `AppStepCheckbox` —
+/// дизайн-system виджет с green-glow и точным CSS из Кластера C.
 class _CheckBubble extends StatelessWidget {
   const _CheckBubble({required this.isDone, required this.onTap});
 
@@ -150,39 +153,7 @@ class _CheckBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: AppDurations.fast,
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: isDone ? AppColors.greenDot : Colors.transparent,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isDone ? AppColors.greenDot : AppColors.n300,
-            width: 2,
-          ),
-          boxShadow: isDone
-              ? [
-                  BoxShadow(
-                    color: AppColors.greenDot.withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: isDone
-            ? const Icon(
-                Icons.check_rounded,
-                color: AppColors.n0,
-                size: 14,
-              )
-            : null,
-      ),
-    );
+    return AppStepCheckbox(checked: isDone, onTap: onTap);
   }
 }
 

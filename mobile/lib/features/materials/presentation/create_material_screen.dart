@@ -6,6 +6,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/presentation/money_input.dart';
+import '../../stages/application/stages_controller.dart';
 import '../application/materials_controller.dart';
 import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
@@ -26,6 +27,9 @@ class _CreateMaterialScreenState
   final _title = TextEditingController();
   final _comment = TextEditingController();
   MaterialRecipient _recipient = MaterialRecipient.foreman;
+
+  /// `null` = общая заявка проекта (бэк допускает stageId=null, ТЗ §5.1).
+  String? _stageId;
   final _items = <_ItemDraft>[_ItemDraft()];
   bool _submitting = false;
   String? _error;
@@ -69,6 +73,7 @@ class _CreateMaterialScreenState
           recipient: _recipient,
           title: _title.text.trim(),
           items: items,
+          stageId: _stageId,
           comment:
               _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
@@ -114,6 +119,14 @@ class _CreateMaterialScreenState
                     onSelected: (_) => setState(() => _recipient = r),
                   ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            const Text('Этап', style: AppTextStyles.caption),
+            const SizedBox(height: AppSpacing.x6),
+            _StagePicker(
+              projectId: widget.projectId,
+              selectedStageId: _stageId,
+              onChanged: (id) => setState(() => _stageId = id),
             ),
             const SizedBox(height: AppSpacing.x16),
             const Text('Название заявки', style: AppTextStyles.caption),
@@ -163,6 +176,56 @@ class _CreateMaterialScreenState
             const SizedBox(height: AppSpacing.x24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StagePicker extends ConsumerWidget {
+  const _StagePicker({
+    required this.projectId,
+    required this.selectedStageId,
+    required this.onChanged,
+  });
+
+  final String projectId;
+  final String? selectedStageId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(stagesControllerProvider(projectId));
+    return async.when(
+      loading: () => const SizedBox(
+        height: 32,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => Text(
+        'Не удалось загрузить этапы',
+        style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
+      ),
+      data: (stages) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ChoiceChip(
+            label: const Text('Общая заявка'),
+            selected: selectedStageId == null,
+            onSelected: (_) => onChanged(null),
+          ),
+          for (final s in stages)
+            ChoiceChip(
+              label: Text(s.title),
+              selected: selectedStageId == s.id,
+              onSelected: (_) => onChanged(s.id),
+            ),
+        ],
       ),
     );
   }

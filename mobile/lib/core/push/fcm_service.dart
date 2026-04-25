@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 
+import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/chat/application/chats_controller.dart';
 import '../../features/notifications/application/notifications_controller.dart';
 import '../../firebase_options.dart';
 import '../config/app_providers.dart';
@@ -31,6 +33,8 @@ class FcmService {
   StreamSubscription<RemoteMessage>? _onMessageSub;
   StreamSubscription<RemoteMessage>? _onOpenedSub;
   StreamSubscription<String>? _tokenRefreshSub;
+  ProviderSubscription<AuthState>? _authSub;
+  String? _currentToken;
 
   /// Инициализирует Firebase + permissions + subscriptions.
   /// Возвращает true при успехе, false если FCM недоступен.
@@ -76,25 +80,43 @@ class FcmService {
       logger.w('getInitialMessage failed: $e');
     }
 
-    // Регистрация device-token. На web обязателен VAPID key —
-    // либо через --dart-define=VAPID_KEY=..., либо из
-    // assets/env/.env.<flavor> (AppEnv.vapidKey).
+    // Получаем FCM-токен (на web обязателен VAPID key — через
+    // --dart-define=VAPID_KEY=... или AppEnv.vapidKey). Регистрацию
+    // устройства на бэкенде делаем только когда пользователь
+    // аутентифицирован (см. подписку ниже): иначе POST /api/me/devices
+    // вернёт 401, потому что Authorization-заголовка ещё нет.
     try {
       const vapidFromDefine = String.fromEnvironment('VAPID_KEY');
       final vapidFromEnv = container.read(appEnvProvider).vapidKey;
       final vapidKey = vapidFromDefine.isNotEmpty
           ? vapidFromDefine
           : (vapidFromEnv.isNotEmpty ? vapidFromEnv : null);
-      final token = await FirebaseMessaging.instance.getToken(
+      _currentToken = await FirebaseMessaging.instance.getToken(
         vapidKey: vapidKey,
       );
-      if (token != null) await _registerDevice(token);
+      await _maybeRegisterDevice();
     } catch (e) {
       logger.w('FCM getToken failed: $e');
     }
 
     _tokenRefreshSub =
-        FirebaseMessaging.instance.onTokenRefresh.listen(_registerDevice);
+        FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+      _currentToken = token;
+      unawaited(_maybeRegisterDevice());
+    });
+
+    // Когда auth переходит в authenticated — регистрируем устройство
+    // с уже полученным FCM-токеном (или дожидаемся onTokenRefresh).
+    _authSub = container.listen<AuthState>(
+      authControllerProvider,
+      (prev, next) {
+        final wasAuth = prev?.status == AuthStatus.authenticated;
+        final isAuth = next.status == AuthStatus.authenticated;
+        if (!wasAuth && isAuth) {
+          unawaited(_maybeRegisterDevice());
+        }
+      },
+    );
 
     _initialized = true;
     return true;
@@ -104,6 +126,15 @@ class FcmService {
     await _onMessageSub?.cancel();
     await _onOpenedSub?.cancel();
     await _tokenRefreshSub?.cancel();
+    _authSub?.close();
+  }
+
+  Future<void> _maybeRegisterDevice() async {
+    final token = _currentToken;
+    if (token == null) return;
+    final auth = container.read(authControllerProvider);
+    if (auth.status != AuthStatus.authenticated) return;
+    await _registerDevice(token);
   }
 
   Future<void> _registerDevice(String token) async {
@@ -120,6 +151,19 @@ class FcmService {
 
   void _onForeground(RemoteMessage message) {
     _recordAndMaybeRoute(message, autoRoute: false);
+
+    // Push suppression: если пользователь сейчас открыл этот же чат —
+    // local-notification избыточен (real-time WS уже доставит сообщение).
+    final kind = message.data['kind']?.toString();
+    final chatId = message.data['chatId']?.toString();
+    if (kind == 'chat_message_new' && chatId != null) {
+      final openChatId = container.read(currentChatIdProvider);
+      if (openChatId == chatId) {
+        logger.d('Push suppressed (in chat $chatId)');
+        return;
+      }
+    }
+
     // Показываем локальный push для foreground.
     final title = message.notification?.title ?? message.data['title'] as String?;
     final body = message.notification?.body ?? message.data['body'] as String?;

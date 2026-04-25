@@ -107,9 +107,10 @@ class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
   Future<AuthFailure?> dispute({
     required String id,
     required String reason,
+    List<String>? photoKeys,
   }) async {
     try {
-      final p = await _repo.dispute(id: id, reason: reason);
+      final p = await _repo.dispute(id: id, reason: reason, photoKeys: photoKeys);
       _upsert(p);
       _invalidateBudgetAndProject();
       return null;

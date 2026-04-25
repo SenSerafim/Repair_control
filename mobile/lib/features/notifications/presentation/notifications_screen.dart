@@ -174,6 +174,10 @@ class _NotifTile extends StatelessWidget {
             AppColors.yellowDot,
             Icons.dashboard_outlined,
           ),
+        NotificationRoute.document => (
+            AppColors.brand,
+            Icons.insert_drive_file_outlined,
+          ),
         NotificationRoute.export => (
             AppColors.greenDark,
             Icons.cloud_download_outlined,

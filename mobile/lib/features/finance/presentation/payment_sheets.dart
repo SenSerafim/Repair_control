@@ -1,10 +1,15 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../profile/data/profile_repository.dart';
 import '../../projects/domain/membership.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../team/application/team_controller.dart';
@@ -41,14 +46,38 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _amount.addListener(_onAmountChanged);
+  }
+
+  @override
   void dispose() {
-    _amount.dispose();
+    _amount
+      ..removeListener(_onAmountChanged)
+      ..dispose();
     _comment.dispose();
     super.dispose();
   }
 
+  void _onAmountChanged() {
+    // Перерисовываем status row под input — это live-валидация остатка.
+    setState(() {});
+  }
+
+  int? get _amountKop => MoneyInput.readKopecks(_amount);
+  int get _remainingAfter =>
+      widget.parent.remainingToDistribute - (_amountKop ?? 0);
+  bool get _exceedsRemaining =>
+      (_amountKop ?? 0) > widget.parent.remainingToDistribute;
+  bool get _canSubmit =>
+      _toUserId != null &&
+      (_amountKop ?? 0) > 0 &&
+      !_exceedsRemaining &&
+      !_submitting;
+
   Future<void> _submit() async {
-    final amountKop = MoneyInput.readKopecks(_amount);
+    final amountKop = _amountKop;
     if (amountKop == null || amountKop <= 0) {
       setState(() => _error = 'Укажите сумму');
       return;
@@ -166,6 +195,11 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
             label: 'Сумма',
             hint: 'Не больше остатка',
           ),
+          const SizedBox(height: 6),
+          _RemainingHint(
+            remainingAfter: _remainingAfter,
+            exceeds: _exceedsRemaining,
+          ),
           const SizedBox(height: AppSpacing.x12),
           const Text('Комментарий', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.x6),
@@ -179,7 +213,7 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
           AppButton(
             label: 'Отправить',
             isLoading: _submitting,
-            onPressed: _submit,
+            onPressed: _canSubmit ? _submit : null,
           ),
         ],
       ),
@@ -231,43 +265,107 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// Диспут по выплате (обязателен reason).
+/// Диспут по выплате (обязателен reason ≥30 символов по ТЗ §4.4).
 Future<bool> showDisputePaymentSheet(
   BuildContext context,
   WidgetRef ref, {
   required Payment payment,
 }) async {
-  final reasonController = TextEditingController();
   final result = await showAppBottomSheet<bool>(
     context: context,
-    child: _DisputeBody(
-      payment: payment,
-      controller: reasonController,
-    ),
+    isScrollControlled: true,
+    child: _DisputeBody(payment: payment),
   );
-  reasonController.dispose();
   return result ?? false;
 }
 
 class _DisputeBody extends ConsumerStatefulWidget {
-  const _DisputeBody({required this.payment, required this.controller});
+  const _DisputeBody({required this.payment});
   final Payment payment;
-  final TextEditingController controller;
 
   @override
   ConsumerState<_DisputeBody> createState() => _DisputeBodyState();
 }
 
 class _DisputeBodyState extends ConsumerState<_DisputeBody> {
+  /// Минимум содержательных символов в причине (ТЗ §4.4 + §3.3 — не менее
+  /// 30, чтобы потом было что разбирать в resolve).
+  static const _reasonMinChars = 30;
+  static const _maxPhotos = 10;
+
+  final _reason = TextEditingController();
+  final List<String> _photoKeys = [];
   bool _submitting = false;
+  bool _uploading = false;
   String? _error;
 
-  Future<void> _submit() async {
-    final reason = widget.controller.text.trim();
-    if (reason.isEmpty) {
-      setState(() => _error = 'Опишите причину спора');
-      return;
+  @override
+  void initState() {
+    super.initState();
+    _reason.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  int get _trimmedLen => _reason.text.trim().length;
+  bool get _canSubmit =>
+      _trimmedLen >= _reasonMinChars && !_submitting && !_uploading;
+
+  Future<void> _pickAndUpload() async {
+    if (_photoKeys.length >= _maxPhotos || _uploading) return;
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1920,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _uploading = true;
+      _error = null;
+    });
+    try {
+      final repo = ref.read(profileRepositoryProvider);
+      final file = File(picked.path);
+      final size = await file.length();
+      final name = picked.name;
+      final mime = name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      final presigned = await repo.presignUpload(
+        originalName: name,
+        mimeType: mime,
+        sizeBytes: size,
+        scope: 'payment_dispute',
+      );
+      final bytes = await file.readAsBytes();
+      final raw = Dio();
+      await raw.put<void>(
+        presigned.url,
+        data: bytes,
+        options: Options(
+          headers: {...presigned.headers, 'Content-Type': mime},
+        ),
+      );
+      if (!mounted) return;
+      setState(() => _photoKeys.add(presigned.key));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Не удалось загрузить фото');
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  void _removePhoto(int i) {
+    setState(() => _photoKeys.removeAt(i));
+  }
+
+  Future<void> _submit() async {
+    if (!_canSubmit) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -276,7 +374,11 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
         .read(
           paymentsControllerProvider(widget.payment.projectId).notifier,
         )
-        .dispute(id: widget.payment.id, reason: reason);
+        .dispute(
+          id: widget.payment.id,
+          reason: _reason.text.trim(),
+          photoKeys: _photoKeys.isEmpty ? null : List.unmodifiable(_photoKeys),
+        );
     if (!mounted) return;
     setState(() => _submitting = false);
     if (failure == null) {
@@ -293,63 +395,172 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const AppBottomSheetHeader(
-          title: 'Открыть спор',
-          subtitle:
-              'Расскажите, что не так. Это заморозит выплату до разрешения.',
-        ),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.x12),
-          decoration: BoxDecoration(
-            color: AppColors.redBg,
-            border: Border.all(color: const Color(0xFFFECACA)),
-            borderRadius: BorderRadius.circular(AppRadius.r12),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final remaining = _reasonMinChars - _trimmedLen;
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AppBottomSheetHeader(
+            title: 'Открыть спор',
+            subtitle:
+                'Расскажите, что не так. Это заморозит выплату до разрешения.',
           ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.report_problem_outlined,
-                size: 16,
-                color: AppColors.redDot,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Другая сторона получит push-уведомление',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.redDot,
-                    fontWeight: FontWeight.w700,
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            decoration: BoxDecoration(
+              color: AppColors.redBg,
+              border:
+                  Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.report_problem_outlined,
+                  size: 16,
+                  color: AppColors.redDot,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Другая сторона получит push-уведомление',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.redDot,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          if (_error != null) ...[
+            AppInlineError(message: _error!),
+            const SizedBox(height: AppSpacing.x12),
+          ],
+          const Text(
+            'Причина (минимум 30 символов)',
+            style: AppTextStyles.caption,
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          TextField(
+            controller: _reason,
+            autofocus: true,
+            minLines: 4,
+            maxLines: 8,
+            maxLength: 2000,
+            decoration: _dec(
+              'Например, «Перевод не поступил на счёт», '
+              '«Сумма не совпадает с актом»…',
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              remaining <= 0
+                  ? '✓ можно отправлять'
+                  : 'осталось $remaining символов',
+              style: AppTextStyles.caption.copyWith(
+                color: remaining <= 0 ? AppColors.greenDark : AppColors.n400,
+                fontWeight: FontWeight.w600,
               ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          // Photo upload (ROAD_TO_100 6.2): presign → PUT → photoKeys[]
+          // отправляются в POST /payments/:id/dispute.
+          const Text(
+            'Фото-доказательства (необязательно, до $_maxPhotos)',
+            style: AppTextStyles.caption,
+          ),
+          const SizedBox(height: AppSpacing.x6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var i = 0; i < _photoKeys.length; i++)
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandLight,
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    border:
+                        Border.all(color: AppColors.brand.withValues(alpha: 0.3)),
+                  ),
+                  child: Stack(
+                    children: [
+                      const Center(
+                        child: Icon(
+                          Icons.image_rounded,
+                          color: AppColors.brand,
+                        ),
+                      ),
+                      Positioned(
+                        right: 2,
+                        top: 2,
+                        child: GestureDetector(
+                          onTap: () => _removePhoto(i),
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: const BoxDecoration(
+                              color: AppColors.redDot,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 12,
+                              color: AppColors.n0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_photoKeys.length < _maxPhotos)
+                GestureDetector(
+                  onTap: _uploading ? null : _pickAndUpload,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.n100,
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                      border: Border.all(
+                        color: AppColors.n300,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: _uploading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(
+                              Icons.add_a_photo_outlined,
+                              color: AppColors.n500,
+                            ),
+                    ),
+                  ),
+                ),
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.x12),
-        if (_error != null) ...[
-          AppInlineError(message: _error!),
-          const SizedBox(height: AppSpacing.x12),
+          const SizedBox(height: AppSpacing.x16),
+          AppButton(
+            label: 'Открыть спор',
+            variant: AppButtonVariant.destructive,
+            isLoading: _submitting,
+            onPressed: _canSubmit ? _submit : null,
+          ),
         ],
-        TextField(
-          controller: widget.controller,
-          autofocus: true,
-          minLines: 3,
-          maxLines: 6,
-          maxLength: 2000,
-          decoration: _dec('Например, «Сумма не совпадает»'),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        AppButton(
-          label: 'Открыть спор',
-          variant: AppButtonVariant.destructive,
-          isLoading: _submitting,
-          onPressed: _submit,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -489,6 +700,43 @@ class _ResolveBodyState extends ConsumerState<_ResolveBody> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RemainingHint extends StatelessWidget {
+  const _RemainingHint({
+    required this.remainingAfter,
+    required this.exceeds,
+  });
+
+  final int remainingAfter;
+  final bool exceeds;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = exceeds ? AppColors.redDot : AppColors.n500;
+    final label = exceeds
+        ? 'Превышение аванса на ${Money.format(-remainingAfter)}'
+        : 'Останется ${Money.format(remainingAfter)} после распределения';
+    return Row(
+      children: [
+        Icon(
+          exceeds ? Icons.warning_amber_rounded : Icons.info_outline,
+          size: 14,
+          color: color,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontWeight: exceeds ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

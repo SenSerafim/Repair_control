@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_theme_mode.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -78,6 +79,12 @@ class ProfileScreen extends ConsumerWidget {
                     hint: profile.language == 'ru' ? 'Русский' : 'English',
                     onTap: () => context.push(AppRoutes.profileLanguage),
                   ),
+                  ProfileMenuItem(
+                    icon: Icons.dark_mode_outlined,
+                    label: 'Тема',
+                    hint: _themeModeLabel(ref.watch(themeModeProvider)),
+                    onTap: () => _showThemeSheet(context, ref),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.x12),
@@ -143,6 +150,46 @@ class ProfileScreen extends ConsumerWidget {
     );
     if (confirmed ?? false) {
       await ref.read(authControllerProvider.notifier).logout();
+    }
+  }
+
+  String _themeModeLabel(ThemeMode m) => switch (m) {
+        ThemeMode.light => 'Светлая',
+        ThemeMode.dark => 'Тёмная',
+        ThemeMode.system => 'Системная',
+      };
+
+  Future<void> _showThemeSheet(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(themeModeProvider);
+    final picked = await showAppBottomSheet<ThemeMode>(
+      context: context,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AppBottomSheetHeader(
+            title: 'Тема приложения',
+            subtitle: 'Выберите внешний вид интерфейса',
+          ),
+          for (final m in ThemeMode.values)
+            ListTile(
+              leading: Icon(
+                switch (m) {
+                  ThemeMode.light => Icons.light_mode_outlined,
+                  ThemeMode.dark => Icons.dark_mode_outlined,
+                  ThemeMode.system => Icons.brightness_auto_outlined,
+                },
+              ),
+              title: Text(_themeModeLabel(m)),
+              trailing: m == current
+                  ? const Icon(Icons.check_rounded, color: AppColors.brand)
+                  : null,
+              onTap: () => Navigator.of(context).pop(m),
+            ),
+        ],
+      ),
+    );
+    if (picked != null) {
+      await ref.read(themeModeProvider.notifier).setMode(picked);
     }
   }
 }

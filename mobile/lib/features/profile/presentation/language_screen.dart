@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_locale.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -21,6 +22,9 @@ class _LanguageScreenState extends ConsumerState<LanguageScreen> {
     final current = ref.read(profileControllerProvider).value?.language;
     if (current == code) return;
     setState(() => _saving = true);
+    // Применяем локально мгновенно (UI обновляется без ожидания бэка) —
+    // переключатель должен быть отзывчивым. Бэк синхронизируется ниже.
+    await ref.read(appLocaleProvider.notifier).setLocale(code);
     final failure = await ref
         .read(profileControllerProvider.notifier)
         .updateProfile(language: code);

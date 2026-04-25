@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -83,7 +84,8 @@ class PaymentsListScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x10),
                     itemBuilder: (_, i) => PaymentCard(
                       payment: filtered[i],
-                      onTap: () => context.push('/payments/${filtered[i].id}'),
+                      onTap: () => context
+                          .push(AppRoutes.paymentDetailWith(filtered[i].id)),
                     ),
                   ),
                 );

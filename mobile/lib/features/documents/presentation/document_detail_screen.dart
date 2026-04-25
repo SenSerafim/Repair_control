@@ -6,18 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../chat/data/chats_repository.dart';
 import '../../chat/domain/chat.dart';
+import '../application/documents_controller.dart';
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
-
-final _docProvider = FutureProvider.autoDispose
-    .family<Document, String>((ref, id) async {
-  return ref.read(documentsRepositoryProvider).get(id);
-});
 
 /// f-doc-detail — превью + meta + Download/Share/Delete.
 class DocumentDetailScreen extends ConsumerWidget {
@@ -27,7 +26,7 @@ class DocumentDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(_docProvider(documentId));
+    final async = ref.watch(documentByIdProvider(documentId));
 
     return AppScaffold(
       showBack: true,
@@ -37,7 +36,7 @@ class DocumentDetailScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось открыть',
-          onRetry: () => ref.invalidate(_docProvider(documentId)),
+          onRetry: () => ref.invalidate(documentByIdProvider(documentId)),
         ),
         data: (doc) => _DetailView(doc: doc),
       ),
@@ -52,10 +51,11 @@ class _DetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDelete = ref.watch(canProvider(DomainAction.documentDelete));
     return ListView(
       children: [
         GestureDetector(
-          onTap: () => context.push('/documents/${doc.id}/view'),
+          onTap: () => context.push(AppRoutes.documentViewWith(doc.id)),
           child: _Preview(doc: doc),
         ),
         const SizedBox(height: AppSpacing.x16),
@@ -64,7 +64,8 @@ class _DetailView extends ConsumerWidget {
         AppButton(
           label: 'Открыть',
           icon: Icons.visibility_outlined,
-          onPressed: () => context.push('/documents/${doc.id}/view'),
+          onPressed: () =>
+              context.push(AppRoutes.documentViewWith(doc.id)),
         ),
         const SizedBox(height: AppSpacing.x8),
         AppButton(
@@ -80,13 +81,15 @@ class _DetailView extends ConsumerWidget {
           icon: Icons.share_outlined,
           onPressed: () => _share(context, ref),
         ),
-        const SizedBox(height: AppSpacing.x8),
-        AppButton(
-          label: 'Удалить',
-          variant: AppButtonVariant.destructive,
-          icon: Icons.delete_outline_rounded,
-          onPressed: () => _confirmDelete(context, ref),
-        ),
+        if (canDelete) ...[
+          const SizedBox(height: AppSpacing.x8),
+          AppButton(
+            label: 'Удалить',
+            variant: AppButtonVariant.destructive,
+            icon: Icons.delete_outline_rounded,
+            onPressed: () => _confirmDelete(context, ref),
+          ),
+        ],
       ],
     );
   }
@@ -94,7 +97,7 @@ class _DetailView extends ConsumerWidget {
   Future<void> _download(BuildContext context, WidgetRef ref) async {
     try {
       final url = await ref
-          .read(documentsRepositoryProvider)
+          .read(documentsControllerProvider)
           .downloadUrl(doc.id);
       await Clipboard.setData(ClipboardData(text: url));
       if (!context.mounted) return;
@@ -130,12 +133,12 @@ class _DetailView extends ConsumerWidget {
           // backend не предоставляет прямой POST /chats/.../share.
           try {
             final url = await ref
-                .read(documentsRepositoryProvider)
+                .read(documentsControllerProvider)
                 .downloadUrl(doc.id);
             if (!context.mounted) return;
             await Clipboard.setData(ClipboardData(text: url));
             if (!context.mounted) return;
-            unawaited(context.push('/chats/$id'));
+            unawaited(context.push(AppRoutes.chatDetailWith(id)));
             AppToast.show(
               context,
               message: 'Ссылка скопирована — вставьте в чат',
@@ -153,7 +156,7 @@ class _DetailView extends ConsumerWidget {
         onCopyLink: () async {
           try {
             final url = await ref
-                .read(documentsRepositoryProvider)
+                .read(documentsControllerProvider)
                 .downloadUrl(doc.id);
             if (!context.mounted) return;
             await Clipboard.setData(ClipboardData(text: url));
@@ -197,7 +200,10 @@ class _DetailView extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(documentsRepositoryProvider).delete(doc.id);
+      await ref.read(documentsControllerProvider).delete(
+            id: doc.id,
+            projectId: doc.projectId,
+          );
       if (!context.mounted) return;
       Navigator.of(context).pop();
     } on DocumentsException catch (e) {

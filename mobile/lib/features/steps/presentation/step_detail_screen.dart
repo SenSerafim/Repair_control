@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -148,7 +150,54 @@ class _Header extends StatelessWidget {
               ],
             ),
           ],
+          if (step.methodologyArticleId != null) ...[
+            const SizedBox(height: AppSpacing.x12),
+            _MethodologyLink(articleId: step.methodologyArticleId!),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _MethodologyLink extends StatelessWidget {
+  const _MethodologyLink({required this.articleId});
+
+  final String articleId;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(
+        AppRoutes.methodologyArticleWith(articleId),
+      ),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: AppColors.brandLight,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.menu_book_outlined,
+              color: AppColors.brand,
+              size: 20,
+            ),
+            SizedBox(width: AppSpacing.x10),
+            Expanded(
+              child: Text(
+                'Открыть методичку',
+                style: AppTextStyles.subtitle,
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.brand,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -398,7 +447,7 @@ class _PhotoThumb extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
-                color: Colors.black54,
+                color: AppColors.overlayBackdrop,
                 shape: BoxShape.circle,
               ),
               child: const Icon(

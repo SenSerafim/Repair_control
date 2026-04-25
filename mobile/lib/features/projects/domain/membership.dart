@@ -57,14 +57,45 @@ class Membership with _$Membership {
     ProjectMemberUser? user,
   }) = _Membership;
 
-  static Membership parse(Map<String, dynamic> json) => Membership(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        userId: json['userId'] as String,
-        role: MembershipRole.fromString(json['role'] as String?),
-        addedAt: DateTime.parse(json['addedAt'] as String),
-        user: json['user'] is Map<String, dynamic>
-            ? ProjectMemberUser.parse(json['user'] as Map<String, dynamic>)
-            : null,
-      );
+  static Membership parse(Map<String, dynamic> json) {
+    final m = Membership(
+      id: json['id'] as String,
+      projectId: json['projectId'] as String,
+      userId: json['userId'] as String,
+      role: MembershipRole.fromString(json['role'] as String?),
+      addedAt: DateTime.parse(json['addedAt'] as String),
+      user: json['user'] is Map<String, dynamic>
+          ? ProjectMemberUser.parse(json['user'] as Map<String, dynamic>)
+          : null,
+    );
+    final rights = _parseRights(json['representativeRights']);
+    if (rights.isNotEmpty) {
+      MembershipRights._cache[m.id] = rights;
+    }
+    return m;
+  }
+}
+
+List<String> _parseRights(Object? raw) {
+  if (raw is List) {
+    return raw.map((e) => e.toString()).toList(growable: false);
+  }
+  return const <String>[];
+}
+
+/// Side-channel хранилище `representativeRights` без модификации
+/// freezed-generated `Membership` (json-поле приходит с бэка отдельно
+/// от основной модели — экспонируется через extension).
+///
+/// Заполняется в `Membership.parse(...)`; читается через
+/// `membership.representativeRights` extension.
+class MembershipRights {
+  MembershipRights._();
+  static final Map<String, List<String>> _cache = {};
+  static List<String> of(String membershipId) =>
+      _cache[membershipId] ?? const <String>[];
+}
+
+extension MembershipRightsExt on Membership {
+  List<String> get representativeRights => MembershipRights.of(id);
 }

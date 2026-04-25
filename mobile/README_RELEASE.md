@@ -1,25 +1,31 @@
 # Repair Control — mobile release checklist
 
-Чек-лист Sprint 17 (релиз). Используется при подготовке первого публичного
-билда в TestFlight Internal / Google Play Internal Testing.
+Чек-лист Sprint 17 + Phase 1–11 dovodка (релиз). Используется при подготовке
+первого публичного билда в TestFlight Internal / Google Play Internal Testing.
 
 ## Перед релизом
 
 ### Код
 - [ ] `flutter analyze` — `No issues found!`
-- [ ] `flutter test` — все тесты зелёные (≥ 176 тестов)
+- [ ] `flutter test` — все тесты зелёные (≥ 280 тестов на момент Phase 11)
+- [ ] `flutter test --coverage` — coverage ≥ 70% lines (gate в CI)
 - [ ] Version bump в `mobile/pubspec.yaml` (`version: 1.0.0+1`)
-- [ ] Ветка `main` — прогон `mobile-ci` зелёный
+- [ ] Ветка `main` — прогон `mobile-ci` зелёный (analyze + test + APK build)
 - [ ] Sentry DSN прописан в `.env.staging` / `.env.prod` (не коммитим)
+- [ ] Все feature-flag'и Phase 1–11 включены в prod-сборке
 
 ### Firebase / FCM
 - [ ] `mobile/android/app/google-services.json` (из Firebase Console)
 - [ ] `mobile/ios/Runner/GoogleService-Info.plist` (из Firebase Console)
 - [ ] APNs key загружен в Firebase → Cloud Messaging
 - [ ] Test push через `POST /me/devices` + cloud function отправителя
-- [ ] Deep-link payloads вручную проверены для 6 типов (approval / payment /
-      chat / material / stage / step)
+- [ ] Deep-link payloads вручную проверены для всех 6 типов из ТЗ §15.2:
+      approval / payment / stage / **document** / **export** / chat
 - [ ] `NotificationSettings` — «Критичные» disabled, lock-иконка есть
+- [ ] **Push suppression**: при открытом чате `kind=chat_message_new` не
+      показывает local-notification (Phase 7)
+- [ ] FCM-token регистрируется только после login (Phase 1 — раньше шёл
+      запрос с null-token и получал 401)
 
 ### iOS
 - [ ] Apple Developer аккаунт настроен
@@ -77,14 +83,23 @@
 - [ ] Sentry получает события (проверь release tag)
 - [ ] Grafana dashboards зелёные 24 ч (API latency, WS connections)
 - [ ] Load test `k6` parallel 50 — нет 5xx, p95 < 800 ms
-- [ ] Оффлайн тест: выключить сеть → отметить шаг → включить сеть →
-      `offline_queue` дренирует без ошибок
+- [ ] **Оффлайн тест Phase 8**: выключить сеть → выполнить 5 действий
+      (отметить шаг, поставить паузу, открыть спор, создать заметку,
+      пометить материал купленным) → включить сеть → `OfflineQueue` дренирует
+      без ошибок, banner «Синхронизация N действий…» исчезает.
+- [ ] **WebSocket тест Phase 7**: 2 устройства в одном чате →
+      сообщения приходят в течение 1 сек, edit/delete внутри 15-min окна
+      работают, typing-индикатор появляется/исчезает.
+- [ ] **Light/dark mode** проверен (хотя dark — backlog, не должно крашить).
 
 ## Документация
-- [ ] `CLAUDE.md` обновлён (статусы спринтов S6–S17)
+- [ ] `CLAUDE.md` обновлён (статусы спринтов S6–S17 + Phase 1–11 dovodка)
 - [ ] `Сводное_ТЗ_и_Спринты.md` §9 синхронизирован с фактом
 - [ ] OpenAPI `backend/docs/openapi.v1.json` заморожен в 1.0.0
 - [ ] Этот чек-лист приложен к release tag
+- [ ] Скриншоты экранов всех 6 кластеров (A–F) для App Store / Play Console:
+      Welcome / Login / Console / StageDetail / ApprovalDetail /
+      PaymentDetail / ChatConversation / Profile
 
 ## Риски на день релиза
 

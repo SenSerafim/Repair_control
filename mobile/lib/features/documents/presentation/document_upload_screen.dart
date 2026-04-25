@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../application/documents_controller.dart';
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
 
@@ -89,24 +90,14 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
     });
     try {
       final mime = _mime(_file!.name);
-      final repo = ref.read(documentsRepositoryProvider);
-      final presigned = await repo.presignUpload(
-        projectId: widget.projectId,
-        category: _category,
-        title: title,
-        mimeType: mime,
-        sizeBytes: _size,
-      );
       final bytes = await File(_file!.path!).readAsBytes();
-      await repo.uploadToStorage(
-        presigned: presigned,
-        bytes: bytes,
-        mimeType: mime,
-      );
-      await repo.confirm(
-        documentId: presigned.documentId,
-        fileKey: presigned.fileKey,
-      );
+      await ref.read(documentsControllerProvider).upload(
+            projectId: widget.projectId,
+            category: _category,
+            title: title,
+            mimeType: mime,
+            bytes: bytes,
+          );
       if (!mounted) return;
       Navigator.of(context).pop(true);
       AppToast.show(
@@ -254,46 +245,7 @@ class DottedBorderBox extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _DashedBorderPainter(),
-      child: Container(
-        height: 160,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(AppSpacing.x16),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.n300
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    const dash = 8.0;
-    const gap = 6.0;
-    final rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(AppRadius.r20),
-    );
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-    for (final m in metrics) {
-      var d = 0.0;
-      while (d < m.length) {
-        final end = (d + dash).clamp(0.0, m.length);
-        canvas.drawPath(m.extractPath(d, end), paint);
-        d = end + gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) => AppDashedBorder(child: child);
 }
 
 class _CategoryChip extends StatelessWidget {

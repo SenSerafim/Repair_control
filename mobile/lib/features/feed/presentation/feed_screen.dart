@@ -5,77 +5,118 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../data/feed_repository.dart';
+import '../../exports/presentation/export_sheet.dart';
+import '../application/feed_controller.dart';
 import '../domain/feed_event.dart';
 
-final _categoryFilterProvider =
-    StateProvider.autoDispose<FeedCategory?>((_) => null);
-
-final _feedProvider = FutureProvider.autoDispose
-    .family<List<FeedEvent>, String>((ref, projectId) async {
-  final page = await ref
-      .read(feedRepositoryProvider)
-      .list(projectId: projectId, limit: 100);
-  return page.items;
-});
-
 /// f-feed / f-feed-empty / f-feed-filtered.
-class FeedScreen extends ConsumerWidget {
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({required this.projectId, super.key});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(_feedProvider(projectId));
-    final filter = ref.watch(_categoryFilterProvider);
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scroll
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Триггерим loadMore когда осталось <300px до конца — даём UX-запас,
+    // чтобы спиннер появлялся раньше чем пользователь упрётся в дно.
+    if (_scroll.position.pixels >=
+        _scroll.position.maxScrollExtent - 300) {
+      ref.read(feedControllerProvider(widget.projectId).notifier).loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(feedControllerProvider(widget.projectId));
+    final ctrl = ref.read(feedControllerProvider(widget.projectId).notifier);
 
     return AppScaffold(
       showBack: true,
       title: 'Лента',
       padding: EdgeInsets.zero,
+      actions: [
+        IconButton(
+          tooltip: 'Экспорт',
+          icon: const Icon(Icons.cloud_download_outlined),
+          onPressed: () =>
+              showExportSheet(context, ref, projectId: widget.projectId),
+        ),
+      ],
       body: Column(
         children: [
           _CategoryFilter(
-            selected: filter,
-            onChanged: (v) =>
-                ref.read(_categoryFilterProvider.notifier).state = v,
+            selected: state.filter,
+            onChanged: ctrl.setFilter,
           ),
           Expanded(
-            child: async.when(
-              loading: () =>
-                  const AppLoadingState(skeleton: AppListSkeleton()),
-              error: (e, _) => AppErrorState(
-                title: 'Не удалось загрузить',
-                onRetry: () => ref.invalidate(_feedProvider(projectId)),
-              ),
-              data: (events) {
-                final filtered = filter == null
-                    ? events
-                    : events.where((e) => e.category == filter).toList();
-                if (filtered.isEmpty) {
-                  return AppEmptyState(
-                    title: filter == null
-                        ? 'Лента пуста'
-                        : 'Нет событий в этой категории',
-                    icon: Icons.stream_outlined,
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async =>
-                      ref.invalidate(_feedProvider(projectId)),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.x16),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.x8),
-                    itemBuilder: (_, i) => _FeedRow(event: filtered[i]),
-                  ),
-                );
-              },
-            ),
+            child: _body(state, ctrl),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _body(FeedState state, FeedController ctrl) {
+    if (state.isLoading && state.items.isEmpty) {
+      return const AppLoadingState(skeleton: AppListSkeleton());
+    }
+    if (state.error != null && state.items.isEmpty) {
+      return AppErrorState(
+        title: 'Не удалось загрузить',
+        onRetry: ctrl.refresh,
+      );
+    }
+    final filtered = state.visible;
+    if (filtered.isEmpty) {
+      return AppEmptyState(
+        title: state.filter == null
+            ? 'Лента пуста'
+            : 'Нет событий в этой категории',
+        icon: Icons.stream_outlined,
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: ctrl.refresh,
+      child: ListView.separated(
+        controller: _scroll,
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        itemCount: filtered.length + (state.isLoadingMore ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x8),
+        itemBuilder: (_, i) {
+          if (i == filtered.length) {
+            return const Padding(
+              padding: EdgeInsets.all(AppSpacing.x12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
+          return _FeedRow(event: filtered[i]);
+        },
       ),
     );
   }

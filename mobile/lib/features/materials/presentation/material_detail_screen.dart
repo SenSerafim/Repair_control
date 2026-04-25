@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -155,7 +157,10 @@ class _ItemRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canMarkBought = !item.isBought &&
+    final hasManage =
+        ref.watch(canProvider(DomainAction.materialsManage));
+    final canMarkBought = hasManage &&
+        !item.isBought &&
         (request.status == MaterialRequestStatus.open ||
             request.status == MaterialRequestStatus.partiallyBought);
     return Container(
@@ -288,46 +293,61 @@ class _Actions extends ConsumerWidget {
     final buttons = <Widget>[];
     final ctrl =
         ref.read(materialsControllerProvider(projectId).notifier);
+    final canManage =
+        ref.watch(canProvider(DomainAction.materialsManage));
+    final canFinalize =
+        ref.watch(canProvider(DomainAction.materialFinalize));
 
     switch (request.status) {
       case MaterialRequestStatus.draft:
-        buttons.add(AppButton(
-          label: 'Отправить заказчику/бригадиру',
-          onPressed: () => ctrl.send(request.id),
-        ));
+        if (canManage) {
+          buttons.add(AppButton(
+            label: 'Отправить заказчику/бригадиру',
+            onPressed: () => ctrl.send(request.id),
+          ));
+        }
       case MaterialRequestStatus.partiallyBought:
       case MaterialRequestStatus.bought:
-        if (request.allItemsBought) {
+        if (request.allItemsBought && canFinalize) {
           buttons.add(AppButton(
             label: 'Финализировать (в бюджет)',
             variant: AppButtonVariant.success,
             onPressed: () => ctrl.finalizeRequest(request.id),
           ));
         }
-        buttons
-          ..add(const SizedBox(height: AppSpacing.x8))
-          ..add(AppButton(
+        if (canManage) {
+          if (buttons.isNotEmpty) {
+            buttons.add(const SizedBox(height: AppSpacing.x8));
+          }
+          buttons.add(AppButton(
             label: 'Открыть спор',
             variant: AppButtonVariant.destructive,
             onPressed: () => _dispute(context, ref),
           ));
+        }
       case MaterialRequestStatus.delivered:
-        buttons.add(AppButton(
-          label: 'Подтвердить доставку',
-          variant: AppButtonVariant.success,
-          onPressed: () => ctrl.confirmDelivery(request.id),
-        ));
+        if (canManage) {
+          buttons.add(AppButton(
+            label: 'Подтвердить доставку',
+            variant: AppButtonVariant.success,
+            onPressed: () => ctrl.confirmDelivery(request.id),
+          ));
+        }
       case MaterialRequestStatus.disputed:
-        buttons.add(AppButton(
-          label: 'Разрешить спор',
-          onPressed: () => _resolve(context, ref),
-        ));
+        if (canManage) {
+          buttons.add(AppButton(
+            label: 'Разрешить спор',
+            onPressed: () => _resolve(context, ref),
+          ));
+        }
       case MaterialRequestStatus.open:
-        buttons.add(AppButton(
-          label: 'Открыть спор',
-          variant: AppButtonVariant.destructive,
-          onPressed: () => _dispute(context, ref),
-        ));
+        if (canManage) {
+          buttons.add(AppButton(
+            label: 'Открыть спор',
+            variant: AppButtonVariant.destructive,
+            onPressed: () => _dispute(context, ref),
+          ));
+        }
       case MaterialRequestStatus.resolved:
       case MaterialRequestStatus.cancelled:
         return const SizedBox.shrink();
@@ -372,7 +392,8 @@ class _Actions extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.x12),
             decoration: BoxDecoration(
               color: AppColors.redBg,
-              border: Border.all(color: const Color(0xFFFECACA)),
+              border:
+                  Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(AppRadius.r12),
             ),
             child: Row(

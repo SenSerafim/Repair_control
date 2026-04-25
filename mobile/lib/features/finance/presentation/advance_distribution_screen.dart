@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -120,7 +121,7 @@ class _View extends StatelessWidget {
             _ChildRow(
               child: c,
               member: memberLookup(c.toUserId),
-              onTap: () => context.push('/payments/${c.id}'),
+              onTap: () => context.push(AppRoutes.paymentDetailWith(c.id)),
             ),
             const SizedBox(height: AppSpacing.x8),
           ],
@@ -173,12 +174,8 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFECFDF5), Color(0xFFF0FDF9)],
-        ),
-        border: Border.all(color: const Color(0xFFA7F3D0)),
+        color: AppColors.greenLight,
+        border: Border.all(color: AppColors.greenDot.withValues(alpha: 0.4)),
         borderRadius: BorderRadius.circular(AppRadius.r16),
       ),
       child: Column(

@@ -8,23 +8,35 @@ class DeepLinkRouter {
   const DeepLinkRouter._();
 
   /// Вернуть URL для перехода или `null`, если payload не содержит
-  /// распознаваемых полей.
+  /// распознаваемых полей. Покрывает 6 типов deep-link'ов из ТЗ §15.2:
+  /// approval, payment, stage, document, export, chat.
   static String? routeFor(Map<String, dynamic> data) {
     String? s(Object? v) => v?.toString();
+    final kind = s(data['kind']);
     final approvalId = s(data['approvalId']);
     final paymentId = s(data['paymentId']);
     final chatId = s(data['chatId']);
     final materialId = s(data['materialId']);
     final stepId = s(data['stepId']);
     final stageId = s(data['stageId']);
+    final documentId = s(data['documentId']);
+    // Backend posts both `jobId` (legacy) и `exportId` (новое).
+    final exportId = s(data['exportId'] ?? data['jobId']);
     final projectId = s(data['projectId']);
 
     // Global-level routes without project context.
     if (paymentId != null) return '/payments/$paymentId';
     if (chatId != null) return '/chats/$chatId';
+    if (documentId != null) return '/documents/$documentId';
 
     if (projectId == null) return null;
 
+    // Export deep-link: открывает список экспортов проекта (отдельная
+    // карточка с jobId не нужна — списка достаточно для скачивания).
+    if (exportId != null ||
+        (kind != null && kind.startsWith('export_'))) {
+      return '/projects/$projectId/exports';
+    }
     if (approvalId != null) {
       return '/projects/$projectId/approvals/$approvalId';
     }
@@ -51,6 +63,7 @@ class DeepLinkRouter {
     }
     if (kind.startsWith('payment_')) return NotificationRoute.payment;
     if (kind.startsWith('chat_')) return NotificationRoute.chat;
+    if (kind.startsWith('document_')) return NotificationRoute.document;
     if (kind.startsWith('material_') ||
         kind.startsWith('selfpurchase_') ||
         kind == 'tool_issued') {
@@ -73,6 +86,7 @@ enum NotificationRoute {
   chat,
   materials,
   stage,
+  document,
   export,
   other,
 }

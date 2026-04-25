@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -19,17 +21,20 @@ class TeamScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(teamControllerProvider(projectId));
+    final canManage =
+        ref.watch(canProvider(DomainAction.projectInviteMember));
 
     return AppScaffold(
       showBack: true,
       title: 'Команда проекта',
       padding: EdgeInsets.zero,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.person_add_alt_1_outlined),
-          onPressed: () =>
-              showAddMemberSheet(context, ref, projectId: projectId),
-        ),
+        if (canManage)
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            onPressed: () =>
+                showAddMemberSheet(context, ref, projectId: projectId),
+          ),
       ],
       body: async.when(
         loading: () => const AppLoadingState(),
@@ -42,13 +47,16 @@ class TeamScreen extends ConsumerWidget {
           if (team.isEmpty) {
             return AppEmptyState(
               title: 'Пока нет участников',
-              subtitle:
-                  'Пригласите представителя, бригадира или мастера — '
-                  'они получат доступ к проекту сразу после входа.',
+              subtitle: canManage
+                  ? 'Пригласите представителя, бригадира или мастера — '
+                      'они получат доступ к проекту сразу после входа.'
+                  : 'Заказчик ещё не пригласил участников.',
               icon: Icons.people_outline_rounded,
-              actionLabel: 'Добавить',
-              onAction: () =>
-                  showAddMemberSheet(context, ref, projectId: projectId),
+              actionLabel: canManage ? 'Добавить' : null,
+              onAction: canManage
+                  ? () => showAddMemberSheet(context, ref,
+                      projectId: projectId)
+                  : null,
             );
           }
           final grouped = <MembershipRole, List<Membership>>{
@@ -127,15 +135,9 @@ class _MemberRow extends ConsumerWidget {
     final name = user == null
         ? 'Участник'
         : '${user.firstName} ${user.lastName}'.trim();
-    final initials = user == null || name.isEmpty
-        ? '?'
-        : name
-            .split(' ')
-            .where((s) => s.isNotEmpty)
-            .map((s) => s[0].toUpperCase())
-            .take(2)
-            .join();
     final isRepresentative = member.role == MembershipRole.representative;
+    final canManage =
+        ref.watch(canProvider(DomainAction.projectInviteMember));
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
@@ -146,19 +148,11 @@ class _MemberRow extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.brandLight,
-            backgroundImage: user?.avatarUrl != null
-                ? NetworkImage(user!.avatarUrl!)
-                : null,
-            child: user?.avatarUrl == null
-                ? Text(
-                    initials,
-                    style: AppTextStyles.subtitle
-                        .copyWith(color: AppColors.brand),
-                  )
-                : null,
+          AppAvatar(
+            seed: member.userId,
+            name: name,
+            imageUrl: user?.avatarUrl,
+            size: 40,
           ),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
@@ -176,7 +170,8 @@ class _MemberRow extends ConsumerWidget {
               ],
             ),
           ),
-          PopupMenuButton<String>(
+          if (canManage)
+            PopupMenuButton<String>(
             onSelected: (v) async {
               if (v == 'rights' && isRepresentative) {
                 await showRepRightsSheet(
@@ -244,6 +239,8 @@ class _InvitationRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pending = invitation.status == InvitationStatus.pending;
+    final canManage =
+        ref.watch(canProvider(DomainAction.projectInviteMember));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -272,7 +269,7 @@ class _InvitationRow extends ConsumerWidget {
               ],
             ),
           ),
-          if (pending)
+          if (pending && canManage)
             TextButton(
               onPressed: () async {
                 final failure = await ref

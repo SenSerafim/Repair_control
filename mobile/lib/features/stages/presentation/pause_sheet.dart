@@ -33,6 +33,10 @@ class _PauseBody extends ConsumerStatefulWidget {
 }
 
 class _PauseBodyState extends ConsumerState<_PauseBody> {
+  /// ТЗ §2.4: для причины `other` комментарий обязателен и должен быть
+  /// содержательным (не «...» в две буквы), иначе бэк потом не разберётся.
+  static const _otherCommentMinChars = 10;
+
   PauseReason? _reason;
   final _comment = TextEditingController();
   bool _submitting = false;
@@ -46,9 +50,11 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
 
   bool get _commentRequired => _reason == PauseReason.other;
 
-  bool get _canSubmit =>
-      _reason != null &&
-      !(_commentRequired && _comment.text.trim().isEmpty);
+  bool get _canSubmit {
+    if (_reason == null) return false;
+    if (!_commentRequired) return true;
+    return _comment.text.trim().length >= _otherCommentMinChars;
+  }
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
@@ -104,7 +110,7 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
         if (_commentRequired) ...[
           const SizedBox(height: AppSpacing.x8),
           const Text(
-            'Комментарий (обязательно)',
+            'Комментарий (обязательно, минимум 10 символов)',
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: AppSpacing.x6),
@@ -123,6 +129,23 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
                 borderRadius: BorderRadius.circular(AppRadius.r12),
                 borderSide:
                     const BorderSide(color: AppColors.n200, width: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              () {
+                final remaining =
+                    _otherCommentMinChars - _comment.text.trim().length;
+                if (remaining <= 0) return '✓ можно отправлять';
+                return 'осталось $remaining';
+              }(),
+              style: AppTextStyles.caption.copyWith(
+                color: _comment.text.trim().length >= _otherCommentMinChars
+                    ? AppColors.greenDark
+                    : AppColors.n400,
               ),
             ),
           ),

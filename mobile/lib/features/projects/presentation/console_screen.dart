@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
+import '../../stages/domain/traffic_light.dart';
 import '../application/project_controller.dart';
 import '../domain/project.dart';
 import 'card_menu_sheet.dart';
@@ -47,6 +49,15 @@ class ConsoleScreen extends ConsumerWidget {
               ref.invalidate(projectControllerProvider(projectId)),
         ),
         data: (project) {
+          // Если стадии уже загружены — пересчитаем светофор локально
+          // (зеркало `progressCache.semaphoreCache` на бэке) и подменим
+          // в копии Project, чтобы баннер сразу отражал свежее состояние.
+          final stages = stagesAsync.value ?? const <Stage>[];
+          final effective = stages.isEmpty
+              ? project
+              : project.copyWith(
+                  semaphore: computeProjectTrafficLight(stages).semaphore,
+                );
           return RefreshIndicator(
             onRefresh: () async {
               ref
@@ -64,14 +75,14 @@ class ConsoleScreen extends ConsumerWidget {
                   },
                   child: const SizedBox(height: 1),
                 ),
-                _Header(project: project),
+                _Header(project: effective),
                 const SizedBox(height: AppSpacing.x16),
                 _HouseAndStats(
-                  project: project,
-                  stages: stagesAsync.value ?? const [],
+                  project: effective,
+                  stages: stages,
                 ),
                 const SizedBox(height: AppSpacing.x20),
-                ..._bannerFor(context, project),
+                ..._bannerFor(context, effective),
                 const SizedBox(height: AppSpacing.x16),
                 const Text('Этапы', style: AppTextStyles.h2),
                 const SizedBox(height: AppSpacing.x10),
@@ -99,15 +110,10 @@ class ConsoleScreen extends ConsumerWidget {
                 ? 'Отправьте план этапов на согласование заказчику.'
                 : 'Добавьте этапы, затем можно начинать работы.',
             color: AppColors.n500,
-            actionLabel: p.requiresPlanApproval
-                ? 'Отправить план (S13)'
-                : null,
+            actionLabel:
+                p.requiresPlanApproval ? 'Согласование плана' : null,
             onAction: p.requiresPlanApproval
-                ? () => AppToast.show(
-                      context,
-                      message:
-                          'Согласования доступны в Sprint 13.',
-                    )
+                ? () => context.push(AppRoutes.projectPlanApprovalWith(p.id))
                 : null,
           ),
         ];
@@ -147,11 +153,8 @@ class ConsoleScreen extends ConsumerWidget {
             title: 'Ждут согласования',
             subtitle: 'Есть запросы на согласование или смену дедлайна.',
             color: AppColors.blueDot,
-            actionLabel: 'Открыть согласования (S13)',
-            onAction: () => AppToast.show(
-              context,
-              message: 'Экран согласований появится в Sprint 13.',
-            ),
+            actionLabel: 'Открыть согласования',
+            onAction: () => context.push('/projects/${p.id}/approvals'),
           ),
         ];
     }
@@ -165,31 +168,33 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
+    return AppGradientHero(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      borderRadius: AppRadius.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(project.title, style: AppTextStyles.h1, maxLines: 2),
+          Text(
+            project.title,
+            style: AppTextStyles.h1.copyWith(color: AppColors.n0),
+            maxLines: 2,
+          ),
           const SizedBox(height: AppSpacing.x6),
           if (project.addressLine().isNotEmpty)
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.place_outlined,
                   size: 14,
-                  color: AppColors.n400,
+                  color: AppColors.n0.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     project.addressLine(),
-                    style: AppTextStyles.caption,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.n0.withValues(alpha: 0.7),
+                    ),
                     maxLines: 2,
                   ),
                 ),

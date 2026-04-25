@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/application/auth_controller.dart';
+import '../../features/projects/domain/membership.dart';
+import '../../features/team/application/team_controller.dart';
 import 'domain_actions.dart';
 import 'system_role.dart';
 
@@ -120,6 +122,59 @@ final canProvider = Provider.family<bool, DomainAction>((ref, action) {
   final role = ref.watch(activeRoleProvider);
   return AccessGuard.can(role, action);
 });
+
+/// Делегированные представителю права в конкретном проекте.
+///
+/// Источник: `Membership.representativeRights` (JSONB на бэке, массив строк
+/// = `DomainAction.value`). Парсится в `Membership.parse(...)` и кэшируется
+/// в `MembershipRights`. Здесь — конвертация из строк в `Set<DomainAction>`
+/// + автоинвалидация при перезагрузке team.
+final representativeRightsProvider =
+    Provider.autoDispose.family<Set<DomainAction>, String>((ref, projectId) {
+  final me = ref.watch(authControllerProvider).userId;
+  if (me == null) return const <DomainAction>{};
+  final teamAsync = ref.watch(teamControllerProvider(projectId));
+  return teamAsync.when(
+    data: (team) {
+      final mine = team.members.where(
+        (m) => m.userId == me && m.role == MembershipRole.representative,
+      );
+      if (mine.isEmpty) return const <DomainAction>{};
+      final rights = mine.first.representativeRights;
+      final result = <DomainAction>{};
+      for (final raw in rights) {
+        final action = _domainActionFromString(raw);
+        if (action != null) result.add(action);
+      }
+      return result;
+    },
+    loading: () => const <DomainAction>{},
+    error: (_, __) => const <DomainAction>{},
+  );
+});
+
+DomainAction? _domainActionFromString(String raw) {
+  for (final a in DomainAction.values) {
+    if (a.name == raw || a.toString().split('.').last == raw) return a;
+  }
+  return null;
+}
+
+/// Тот же `canProvider`, но с учётом делегированных представителю прав
+/// в конкретном проекте. Используется в экранах, где экшен зависит от
+/// проекта (approval-decide, finance-confirm, и т.д.) — там, где нужно
+/// honor RepresentativeRights для роли representative.
+final canInProjectProvider =
+    Provider.family<bool, ({DomainAction action, String projectId})>(
+  (ref, params) {
+    final role = ref.watch(activeRoleProvider);
+    if (AccessGuard.can(role, params.action)) return true;
+    if (role != SystemRole.representative) return false;
+    final delegated =
+        ref.watch(representativeRightsProvider(params.projectId));
+    return delegated.contains(params.action);
+  },
+);
 
 /// Wrapper-виджет: показывает [child] только если у текущей роли есть
 /// право на [action]. Иначе — `SizedBox.shrink()` или [fallback].

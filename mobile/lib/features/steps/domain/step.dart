@@ -83,6 +83,11 @@ class Step with _$Step {
     @Default(0) int substepsCount,
     @Default(0) int substepsDone,
     @Default(0) int photosCount,
+
+    /// Опциональная ссылка на статью методички. Если бэк прислал id —
+    /// `StepDetailScreen` показывает кнопку «Открыть методичку»
+    /// (deep-link на `/methodology/articles/:id`).
+    String? methodologyArticleId,
   }) = _Step;
 
   static Step parse(Map<String, dynamic> json) => Step(
@@ -113,6 +118,7 @@ class Step with _$Step {
         photosCount: (json['photosCount'] as num?)?.toInt() ??
             (json['photos'] as List<dynamic>?)?.length ??
             0,
+        methodologyArticleId: json['methodologyArticleId'] as String?,
       );
 }
 

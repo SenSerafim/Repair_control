@@ -3,22 +3,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../data/documents_repository.dart';
+import '../../exports/presentation/export_sheet.dart';
+import '../../stages/application/stages_controller.dart';
+import '../application/documents_controller.dart';
 import '../domain/document.dart';
 
 final _filterProvider =
     StateProvider.autoDispose<DocumentCategory?>((_) => null);
 
+/// Активный фильтр по этапу (`null` = все этапы).
+final _stageFilterProvider = StateProvider.autoDispose<String?>((_) => null);
+
 final _listProvider = FutureProvider.autoDispose
     .family<List<Document>, String>((ref, projectId) async {
   final filter = ref.watch(_filterProvider);
-  return ref.read(documentsRepositoryProvider).list(
+  final stageId = ref.watch(_stageFilterProvider);
+  return ref.watch(
+    documentsListProvider(
+      DocumentsListParams(
         projectId: projectId,
         category: filter,
-      );
+        stageId: stageId,
+      ),
+    ).future,
+  );
 });
 
 /// f-docs / f-docs-empty / f-docs-filter.
@@ -31,6 +45,7 @@ class DocumentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_listProvider(projectId));
     final filter = ref.watch(_filterProvider);
+    final canWrite = ref.watch(canProvider(DomainAction.documentWrite));
 
     return AppScaffold(
       showBack: true,
@@ -38,17 +53,25 @@ class DocumentsScreen extends ConsumerWidget {
       padding: EdgeInsets.zero,
       actions: [
         IconButton(
-          tooltip: 'Загрузить',
-          onPressed: () async {
-            final uploaded = await context.push<bool>(
-              '/projects/$projectId/documents/upload',
-            );
-            if (uploaded ?? false) {
-              ref.invalidate(_listProvider(projectId));
-            }
-          },
-          icon: const Icon(Icons.upload_file_rounded, color: AppColors.brand),
+          tooltip: 'Экспорт',
+          icon: const Icon(Icons.cloud_download_outlined),
+          onPressed: () =>
+              showExportSheet(context, ref, projectId: projectId),
         ),
+        if (canWrite)
+          IconButton(
+            tooltip: 'Загрузить',
+            onPressed: () async {
+              final uploaded = await context.push<bool>(
+                '/projects/$projectId/documents/upload',
+              );
+              if (uploaded ?? false) {
+                ref.invalidate(_listProvider(projectId));
+              }
+            },
+            icon:
+                const Icon(Icons.upload_file_rounded, color: AppColors.brand),
+          ),
       ],
       body: Column(
         children: [
@@ -57,6 +80,7 @@ class DocumentsScreen extends ConsumerWidget {
             onChanged: (v) =>
                 ref.read(_filterProvider.notifier).state = v,
           ),
+          _StageFilter(projectId: projectId),
           Expanded(
             child: async.when(
               loading: () => const AppLoadingState(
@@ -89,8 +113,8 @@ class DocumentsScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x8),
                     itemBuilder: (_, i) => _DocRow(
                       doc: docs[i],
-                      onTap: () =>
-                          context.push('/documents/${docs[i].id}'),
+                      onTap: () => context
+                          .push(AppRoutes.documentDetailWith(docs[i].id)),
                     ),
                   ),
                 );
@@ -221,5 +245,82 @@ class _DocRow extends StatelessWidget {
     if (bytes < 1024) return '$bytes Б';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} КБ';
     return '${(bytes / 1024 / 1024).toStringAsFixed(1)} МБ';
+  }
+}
+
+class _StageFilter extends ConsumerWidget {
+  const _StageFilter({required this.projectId});
+
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stagesAsync = ref.watch(stagesControllerProvider(projectId));
+    final selected = ref.watch(_stageFilterProvider);
+    return stagesAsync.when(
+      loading: () => const SizedBox(height: 36),
+      error: (_, __) => const SizedBox(height: 36),
+      data: (stages) {
+        if (stages.isEmpty) return const SizedBox(height: 0);
+        return SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+            children: [
+              _stageChip(
+                'Все этапы',
+                active: selected == null,
+                onTap: () =>
+                    ref.read(_stageFilterProvider.notifier).state = null,
+              ),
+              for (final s in stages) ...[
+                const SizedBox(width: AppSpacing.x6),
+                _stageChip(
+                  s.title,
+                  active: selected == s.id,
+                  onTap: () =>
+                      ref.read(_stageFilterProvider.notifier).state = s.id,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _stageChip(
+    String label, {
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return Center(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x12,
+            vertical: AppSpacing.x6,
+          ),
+          decoration: BoxDecoration(
+            color: active ? AppColors.brand : AppColors.n0,
+            border: Border.all(
+              color: active ? AppColors.brand : AppColors.n200,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: active ? AppColors.n0 : AppColors.n700,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -92,7 +90,9 @@ class AuthController extends Notifier<AuthState> {
         activeRole: role,
         userId: result.userId,
       );
-      unawaited(_registerDeviceSafely(deviceId));
+      // Регистрацию device-token на бэкенде выполняет FcmService — он
+      // подписан на authControllerProvider и сделает POST /api/me/devices
+      // с реальным FCM-токеном после флипа в authenticated.
       return null;
     } on AuthException catch (e) {
       return e.failure;
@@ -154,18 +154,4 @@ class AuthController extends Notifier<AuthState> {
     await _storage.writeAccessToken(t.accessToken);
     await _storage.writeRefreshToken(t.refreshToken);
   }
-
-  Future<void> _registerDeviceSafely(String deviceId) async {
-    try {
-      final platform = Platform.isIOS ? 'ios' : 'android';
-      // В S17 здесь будет реальный FCM token. Пока — placeholder.
-      final token = 'stub-$deviceId-${DateTime.now().millisecondsSinceEpoch}';
-      await _repo.registerDevice(platform: platform, token: token);
-    } on AuthException {
-      // Не критично — push придёт после S17.
-    }
-  }
 }
-
-// Лёгкий хелпер вместо import 'dart:async' Future.unawaited.
-void unawaited(Future<void> future) {}

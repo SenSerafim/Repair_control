@@ -116,11 +116,16 @@ class PaymentsRepository {
   Future<Payment> dispute({
     required String id,
     required String reason,
+    List<String>? photoKeys,
   }) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/payments/$id/dispute',
-          data: {'reason': reason},
+          data: {
+            'reason': reason,
+            if (photoKeys != null && photoKeys.isNotEmpty)
+              'photoKeys': photoKeys,
+          },
         );
         return Payment.parse(r.data!);
       });

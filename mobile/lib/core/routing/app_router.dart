@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/approvals/presentation/approval_detail_screen.dart';
 import '../../features/approvals/presentation/approvals_screen.dart';
+import '../../features/approvals/presentation/plan_approval_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/legal_acceptance_modal.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -16,6 +17,7 @@ import '../../features/documents/presentation/document_detail_screen.dart';
 import '../../features/documents/presentation/document_upload_screen.dart';
 import '../../features/documents/presentation/document_viewer_screen.dart';
 import '../../features/documents/presentation/documents_screen.dart';
+import '../../features/exports/presentation/exports_list_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/finance/presentation/advance_distribution_screen.dart';
 import '../../features/finance/presentation/budget_screen.dart';
@@ -223,6 +225,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ],
                   ),
                   GoRoute(
+                    path: 'plan-approval',
+                    pageBuilder: slideLeftPage(
+                      (_, state) => PlanApprovalScreen(
+                        projectId: state.pathParameters['projectId']!,
+                      ),
+                    ),
+                  ),
+                  GoRoute(
                     path: 'budget',
                     pageBuilder: slideLeftPage(
                       (_, state) => BudgetScreen(
@@ -345,6 +355,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'feed',
                     pageBuilder: slideLeftPage(
                       (_, state) => FeedScreen(
+                        projectId: state.pathParameters['projectId']!,
+                      ),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'exports',
+                    pageBuilder: slideLeftPage(
+                      (_, state) => ExportsListScreen(
                         projectId: state.pathParameters['projectId']!,
                       ),
                     ),

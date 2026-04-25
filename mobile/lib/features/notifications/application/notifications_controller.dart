@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/notifications_store.dart';
 import '../domain/app_notification.dart';
 
-/// In-memory список уведомлений. В Sprint 17.1 можно будет добавить
-/// drift-persistence, чтобы пережить рестарт приложения.
+/// Список уведомлений с persist на диск (NotificationsStore).
+/// Восстанавливается при старте приложения, ограничен 200 записями.
 final notificationsProvider =
     NotifierProvider<NotificationsController, List<AppNotification>>(
   NotificationsController.new,
@@ -13,8 +16,21 @@ final notificationsProvider =
 class NotificationsController extends Notifier<List<AppNotification>> {
   static const _uuid = Uuid();
 
+  NotificationsStore get _store => ref.read(notificationsStoreProvider);
+
   @override
-  List<AppNotification> build() => const [];
+  List<AppNotification> build() {
+    // Асинхронная загрузка с диска — build() не должен возвращать Future,
+    // поэтому стартуем с пустого списка и подменяем после load().
+    Future.microtask(_hydrate);
+    return const [];
+  }
+
+  Future<void> _hydrate() async {
+    final loaded = await _store.load();
+    if (loaded.isEmpty) return;
+    state = loaded;
+  }
 
   /// Добавляет уведомление (из FcmService.onMessage и initial).
   void push({
@@ -32,23 +48,31 @@ class NotificationsController extends Notifier<List<AppNotification>> {
       data: data,
     );
     state = [note, ...state];
+    _persist();
   }
 
   void markRead(String id) {
     state = [
       for (final n in state) if (n.id == id) n.copyWith(read: true) else n,
     ];
+    _persist();
   }
 
   void markAllRead() {
     state = [for (final n in state) n.copyWith(read: true)];
+    _persist();
   }
 
   void clear() {
     state = const [];
+    _persist();
   }
 
   int get unreadCount => state.where((n) => !n.read).length;
+
+  void _persist() {
+    unawaited(_store.save(state));
+  }
 }
 
 final unreadNotificationsCountProvider = Provider<int>((ref) {

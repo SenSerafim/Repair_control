@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/config/app_locale.dart';
 import 'core/config/app_providers.dart';
+import 'core/config/app_theme_mode.dart';
 import 'core/push/fcm_service.dart';
 import 'core/realtime/socket_autoconnect.dart';
 import 'core/routing/app_router.dart';
@@ -59,11 +61,29 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(appLocaleProvider);
 
+    // Реакция на state-конфликты при drain offline-очереди (gaps §2.4):
+    // показываем Toast и просим пользователя перезагрузить экран.
+    ref.listen(offlineConflictsProvider, (_, next) {
+      next.whenData((conflict) {
+        final ctx = router.routerDelegate.navigatorKey.currentContext;
+        if (ctx == null || !ctx.mounted) return;
+        AppToast.show(
+          ctx,
+          message: conflict.userMessage,
+          kind: AppToastKind.info,
+        );
+      });
+    });
+
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'Repair Control',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) =>
           ConnectivityBanner(child: child ?? const SizedBox.shrink()),
@@ -73,7 +93,7 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('ru'), Locale('en')],
-      locale: const Locale('ru'),
+      locale: locale,
     );
   }
 }

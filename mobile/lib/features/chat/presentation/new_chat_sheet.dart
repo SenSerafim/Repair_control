@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -86,7 +87,7 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
           );
       if (!mounted) return;
       Navigator.of(context).pop();
-      unawaited(context.push('/chats/${chat.id}'));
+      unawaited(context.push(AppRoutes.chatDetailWith(chat.id)));
     } on ChatsException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.failure.userMessage);
@@ -117,7 +118,7 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
           );
       if (!mounted) return;
       Navigator.of(context).pop();
-      unawaited(context.push('/chats/${chat.id}'));
+      unawaited(context.push(AppRoutes.chatDetailWith(chat.id)));
     } on ChatsException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.failure.userMessage);

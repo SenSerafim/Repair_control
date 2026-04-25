@@ -172,10 +172,21 @@ class Payment with _$Payment {
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;
 
 extension PaymentX on Payment {
+  /// Активные children — backend отфильтровывает cancelled, мы зеркалим.
+  Iterable<Payment> get activeChildren =>
+      children.where((c) => c.status != PaymentStatus.cancelled);
+
+  /// Сумма активных распределений с учётом resolve-корректировок.
   int get distributedAmount =>
-      children.fold<int>(0, (acc, c) => acc + c.amount);
-  int get remainingToDistribute => amount - distributedAmount;
+      activeChildren.fold<int>(0, (acc, c) => acc + c.effectiveAmount);
+
+  /// Сколько ещё можно распределить — учитывает корректировку родителя.
+  int get remainingToDistribute => effectiveAmount - distributedAmount;
 
   /// Итоговая сумма с учётом resolve-корректировки.
   int get effectiveAmount => resolvedAmount ?? amount;
+
+  /// Получатель — для удобной типизации в UI (chat avatar нужен toUserId).
+  bool get isAdvance => kind == PaymentKind.advance;
+  bool get isDistribution => kind == PaymentKind.distribution;
 }

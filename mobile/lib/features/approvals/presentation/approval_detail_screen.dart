@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -60,6 +63,10 @@ class ApprovalDetailScreen extends ConsumerWidget {
                         child: const SizedBox(height: 1),
                       ),
                       _Header(approval: approval),
+                      if (approval.requiresReassign) ...[
+                        const SizedBox(height: AppSpacing.x12),
+                        _RequiresReassignBanner(approval: approval),
+                      ],
                       const SizedBox(height: AppSpacing.x16),
                       _ScopeBody(approval: approval),
                       if (approval.decisionComment?.isNotEmpty ??
@@ -447,47 +454,56 @@ class _BottomActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = <Widget>[];
+    final canDecide = ref.watch(canProvider(DomainAction.approvalDecide));
+    final canRequest = ref.watch(canProvider(DomainAction.approvalRequest));
 
     switch (approval.status) {
       case ApprovalStatus.pending:
-        actions
-          ..add(
-            AppButton(
-              label: 'Одобрить',
-              variant: AppButtonVariant.success,
-              onPressed: () =>
-                  showApproveSheet(context, ref, approval: approval),
-            ),
-          )
-          ..add(const SizedBox(height: AppSpacing.x8))
-          ..add(
-            AppButton(
-              label: 'Отклонить',
-              variant: AppButtonVariant.destructive,
-              onPressed: () =>
-                  showRejectSheet(context, ref, approval: approval),
-            ),
-          )
-          ..add(const SizedBox(height: AppSpacing.x8))
-          ..add(
+        if (canDecide) {
+          actions
+            ..add(
+              AppButton(
+                label: 'Одобрить',
+                variant: AppButtonVariant.success,
+                onPressed: () =>
+                    showApproveSheet(context, ref, approval: approval),
+              ),
+            )
+            ..add(const SizedBox(height: AppSpacing.x8))
+            ..add(
+              AppButton(
+                label: 'Отклонить',
+                variant: AppButtonVariant.destructive,
+                onPressed: () =>
+                    showRejectSheet(context, ref, approval: approval),
+              ),
+            )
+            ..add(const SizedBox(height: AppSpacing.x8));
+        }
+        if (canRequest) {
+          actions.add(
             AppButton(
               label: 'Отменить заявку',
               variant: AppButtonVariant.ghost,
               onPressed: () => _cancel(context, ref),
             ),
           );
+        }
       case ApprovalStatus.rejected:
-        actions.add(
-          AppButton(
-            label: 'Отправить повторно',
-            onPressed: () =>
-                showResubmitSheet(context, ref, approval: approval),
-          ),
-        );
+        if (canRequest) {
+          actions.add(
+            AppButton(
+              label: 'Отправить повторно',
+              onPressed: () =>
+                  showResubmitSheet(context, ref, approval: approval),
+            ),
+          );
+        }
       case ApprovalStatus.approved:
       case ApprovalStatus.cancelled:
         return const SizedBox.shrink();
     }
+    if (actions.isEmpty) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -520,6 +536,63 @@ class _BottomActions extends ConsumerWidget {
       context,
       message: failure == null ? 'Заявка отменена' : failure.userMessage,
       kind: failure == null ? AppToastKind.success : AppToastKind.error,
+    );
+  }
+}
+
+/// Баннер «Бригадир удалён со стадии» — требует переназначения, иначе
+/// approval не сможет быть закрыт нормальным flow (gaps §3.3).
+class _RequiresReassignBanner extends StatelessWidget {
+  const _RequiresReassignBanner({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: AppColors.redBg,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.redDot,
+            size: 22,
+          ),
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Бригадир удалён со стадии',
+                  style: AppTextStyles.subtitle
+                      .copyWith(color: AppColors.redText),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Согласование зависло — переназначьте бригадира в команде '
+                  'проекта, чтобы можно было одобрить или отклонить.',
+                  style: AppTextStyles.body,
+                ),
+                const SizedBox(height: AppSpacing.x10),
+                AppButton(
+                  label: 'Открыть команду',
+                  variant: AppButtonVariant.destructive,
+                  onPressed: () => context.push(
+                    '/projects/${approval.projectId}/team',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
