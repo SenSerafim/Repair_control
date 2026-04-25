@@ -163,15 +163,21 @@ class AuthRepository {
   Future<Map<String, LegalAcceptanceStatus>> legalAcceptanceStatus() async {
     return _call(
       () async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/me/legal-acceptance',
-        );
-        return r.data!.map(
-          (k, v) => MapEntry(
-            k,
-            LegalAcceptanceStatus.fromJson(v as Map<String, dynamic>),
-          ),
-        );
+        final r = await _dio.get<dynamic>('/api/me/legal-acceptance');
+        // Сервер возвращает map { kind: { required, accepted, version } }.
+        // При нестандартном ответе (например, ошибка пробилась как 200) —
+        // считаем что нет pending acceptance (контроллер ничего не покажет).
+        final raw = r.data;
+        if (raw is! Map<String, dynamic>) {
+          return const <String, LegalAcceptanceStatus>{};
+        }
+        final result = <String, LegalAcceptanceStatus>{};
+        raw.forEach((k, v) {
+          if (v is Map<String, dynamic>) {
+            result[k] = LegalAcceptanceStatus.fromJson(v);
+          }
+        });
+        return result;
       },
     );
   }

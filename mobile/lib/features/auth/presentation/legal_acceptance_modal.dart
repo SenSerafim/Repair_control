@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../application/auth_controller.dart';
 import '../application/legal_controller.dart';
 import '../data/auth_repository.dart';
 import '../domain/legal_document.dart';
@@ -116,10 +117,19 @@ class _LegalAcceptanceModalState
 }
 
 /// Утилита — показывает модалы для всех pending legal-kinds по очереди.
+///
+/// Безопасна к вызову с unauthenticated state: refresh упадёт в 401,
+/// RefreshInterceptor отработает logout, controller установит failure и
+/// pendingKinds останется пустым — модалка не покажется.
 Future<void> showPendingLegalAcceptance(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  // Дёргаем legal-acceptance только для аутентифицированных пользователей —
+  // иначе бессмысленный 401 и redirect на welcome.
+  final auth = ref.read(authControllerProvider);
+  if (auth.status != AuthStatus.authenticated) return;
+
   await ref.read(legalControllerProvider.notifier).refresh();
   for (final kind in ref.read(legalControllerProvider).pendingKinds) {
     if (!context.mounted) return;

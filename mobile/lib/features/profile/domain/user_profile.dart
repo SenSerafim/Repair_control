@@ -38,17 +38,22 @@ class UserProfile with _$UserProfile {
 
   static UserProfile parse(Map<String, dynamic> json) {
     final rolesRaw = json['roles'] as List<dynamic>? ?? const [];
+    // Defensive parsing: при неожиданном ответе сервера (например, body
+    // ошибки 401/500 пробившийся через transport, или неполный объект)
+    // не падаем с TypeError, а возвращаем пустой профиль — controller
+    // потом расценивает это как logout-сигнал.
     return UserProfile(
-      id: json['id'] as String,
-      phone: json['phone'] as String,
+      id: (json['id'] as String?) ?? '',
+      phone: (json['phone'] as String?) ?? '',
       firstName: (json['firstName'] as String?) ?? '',
       lastName: (json['lastName'] as String?) ?? '',
       email: json['email'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
-      language: json['language'] as String? ?? 'ru',
+      language: (json['language'] as String?) ?? 'ru',
       activeRole: SystemRole.fromString(json['activeRole'] as String?),
       roles: rolesRaw
-          .map((r) => UserRoleEntry.parse(r as Map<String, dynamic>))
+          .whereType<Map<String, dynamic>>()
+          .map(UserRoleEntry.parse)
           .toList(),
     );
   }

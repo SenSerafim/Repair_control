@@ -49,7 +49,14 @@ class DioFactory {
         sendTimeout: const Duration(seconds: 30),
         headers: {'Content-Type': 'application/json'},
         responseType: ResponseType.json,
-        validateStatus: (status) => status != null && status < 500,
+        // Только 2xx считаем успехом. 4xx/5xx → DioException → ловит
+        // RefreshInterceptor (на 401 пытается refresh, при провале —
+        // onSessionExpired/logout) или _call() в репозиториях. Раньше
+        // здесь стояло `< 500`, из-за чего 401 проходил как success
+        // и парсеры падали на TypeError при попытке десериализовать
+        // тело ошибки как DTO (см. логи app crash на 401 /api/me).
+        validateStatus: (status) =>
+            status != null && status >= 200 && status < 300,
       ),
     );
   }
