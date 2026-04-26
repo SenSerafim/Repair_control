@@ -108,6 +108,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.recovery,
         builder: (_, __) => const RecoveryScreen(),
       ),
+      // P2.4: deep-link /invite/:code (root-level).
+      // repair-control://invite/123456 (Android scheme + iOS URL Type)
+      // или https-link с тем же path попадает сюда. Перенаправляем на
+      // вложенный /projects/join-by-code?code=123456.
+      GoRoute(
+        path: '/invite/:code',
+        redirect: (_, state) {
+          final code = state.pathParameters['code'];
+          if (code == null || code.isEmpty) return AppRoutes.projects;
+          return AppRoutes.projectsJoinByCodeWith(code);
+        },
+      ),
       ShellRoute(
         builder: (context, state, child) => _HomeShell(child: child),
         routes: [

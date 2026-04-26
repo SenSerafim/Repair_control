@@ -206,6 +206,35 @@ export class PaymentsController {
     });
   }
 
+  /**
+   * P1.5: «Движение средств» — детальный money-flow для customer / representative.canSeeBudget.
+   * advances + distributions + approved selfpurchases + material purchases + totals.
+   */
+  @Get('projects/:projectId/money-flow')
+  @RequireAccess({
+    action: 'finance.budget.view',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async moneyFlow(@Req() req: { user: AuthenticatedUser }, @Param('projectId') projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId: req.user.userId },
+      select: { role: true, permissions: true, stageIds: true },
+    });
+    const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
+    return this.budget.getMoneyFlow(projectId, {
+      userId: req.user.userId,
+      isOwner: project?.ownerId === req.user.userId,
+      membershipRole: membership?.role,
+      assignedStageIds: membership?.stageIds ?? [],
+      canSeeBudget: perms.canSeeBudget === true,
+    });
+  }
+
   @Get('stages/:stageId/budget')
   @RequireAccess({
     action: 'finance.budget.view',

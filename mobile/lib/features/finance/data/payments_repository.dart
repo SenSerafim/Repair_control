@@ -5,6 +5,7 @@ import '../../../core/config/app_providers.dart';
 import '../../../core/error/api_error.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../domain/budget.dart';
+import '../domain/money_flow.dart';
 import '../domain/payment.dart';
 
 class PaymentsException implements Exception {
@@ -22,6 +23,14 @@ class PaymentsRepository {
           '/api/projects/$projectId/budget',
         );
         return ProjectBudget.parse(r.data!);
+      });
+
+  /// P1.5: «Движение средств» — для customer / representative.canSeeBudget.
+  Future<MoneyFlow> moneyFlow(String projectId) => _call(() async {
+        final r = await _dio.get<Map<String, dynamic>>(
+          '/api/projects/$projectId/money-flow',
+        );
+        return MoneyFlow.parse(r.data!);
       });
 
   Future<StageBudget?> stageBudget(String stageId) => _call(() async {

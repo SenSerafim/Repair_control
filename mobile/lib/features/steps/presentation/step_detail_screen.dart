@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -637,9 +639,31 @@ class _ActionCtas extends ConsumerWidget {
         StepsKey(projectId: projectId, stageId: stageId),
       ).notifier,
     );
+    final role = ref.watch(activeRoleProvider);
+
+    // P1.4.a: иерархия отчётности master → foreman → customer (TODO §2A.1).
+    // Заказчик/представитель — только наблюдатель шага. Кнопок нет
+    // (extra_work approval идёт через ApprovalDetailScreen).
+    if (role == SystemRole.customer || role == SystemRole.representative) {
+      return const SizedBox.shrink();
+    }
+
+    // Текст CTA меняется по роли — мастер «отправляет на проверку»,
+    // бригадир «отмечает выполненным» (бекенд — один и тот же endpoint
+    // POST /steps/:id/complete; разделение review/done — будущий рефакторинг).
+    final completeLabel = role == SystemRole.master
+        ? 'Отправить бригадиру на проверку'
+        : 'Отметить выполненным';
+    final uncompleteLabel = role == SystemRole.master
+        ? 'Отозвать с проверки'
+        : 'Отменить «Выполнено»';
+    final successMsg = role == SystemRole.master
+        ? 'Отправлено бригадиру'
+        : 'Шаг выполнен';
+
     if (step.isDone) {
       return AppButton(
-        label: 'Отменить «Выполнено»',
+        label: uncompleteLabel,
         variant: AppButtonVariant.secondary,
         onPressed: () async {
           final failure = await controller.uncomplete(step.id);
@@ -654,16 +678,14 @@ class _ActionCtas extends ConsumerWidget {
       );
     }
     return AppButton(
-      label: 'Отметить выполненным',
+      label: completeLabel,
       variant: AppButtonVariant.success,
       onPressed: () async {
         final failure = await controller.complete(step.id);
         if (context.mounted) {
           AppToast.show(
             context,
-            message: failure == null
-                ? 'Шаг выполнен'
-                : failure.userMessage,
+            message: failure == null ? successMsg : failure.userMessage,
             kind: failure == null
                 ? AppToastKind.success
                 : AppToastKind.error,

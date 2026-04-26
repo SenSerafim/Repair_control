@@ -27,6 +27,62 @@ export interface BudgetViewerContext {
   isOwner: boolean;
   membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
   assignedStageIds?: string[];
+  canSeeBudget?: boolean;
+}
+
+// ---------- P1.5: Money flow («Движение средств») ----------
+
+export interface AdvanceFlow {
+  id: string;
+  toUserId: string;
+  toUserName: string;
+  amount: number;
+  status: string;
+  createdAt: Date;
+  confirmedAt: Date | null;
+}
+
+export interface DistributionFlow {
+  id: string;
+  parentPaymentId: string | null;
+  fromUserId: string;
+  toUserId: string;
+  toUserName: string;
+  amount: number;
+  status: string;
+  createdAt: Date;
+}
+
+export interface ApprovedSelfpurchaseFlow {
+  id: string;
+  byUserId: string;
+  byUserName: string;
+  amount: number;
+  comment: string | null;
+  decidedAt: Date | null;
+}
+
+export interface MaterialPurchaseFlow {
+  requestId: string;
+  title: string;
+  totalSpent: number;
+  itemCount: number;
+}
+
+export interface MoneyFlowTotals {
+  advances: number;
+  distributed: number;
+  undistributed: number;
+  approvedSelfpurchases: number;
+  materials: number;
+}
+
+export interface MoneyFlowDTO {
+  advances: AdvanceFlow[];
+  distributions: DistributionFlow[];
+  approvedSelfpurchases: ApprovedSelfpurchaseFlow[];
+  materialPurchases: MaterialPurchaseFlow[];
+  totals: MoneyFlowTotals;
 }
 
 /**
@@ -198,6 +254,150 @@ export class BudgetCalculator {
         Money.ofKopeks(stage.workBudget).plus(Money.ofKopeks(stage.materialsBudget)),
         workSpent.plus(materialsSpent),
       ),
+    };
+  }
+
+  /**
+   * P1.5: Возвращает «Движение средств» проекта — авансы customer→foreman,
+   * распределения foreman→master, одобренные самозакупы foreman→customer
+   * и закупки материалов. Доступно только owner / representative.canSeeBudget.
+   * Для master/foreman/outsider — пустой объект.
+   */
+  async getMoneyFlow(projectId: string, viewer: BudgetViewerContext): Promise<MoneyFlowDTO> {
+    const empty: MoneyFlowDTO = {
+      advances: [],
+      distributions: [],
+      approvedSelfpurchases: [],
+      materialPurchases: [],
+      totals: {
+        advances: 0,
+        distributed: 0,
+        undistributed: 0,
+        approvedSelfpurchases: 0,
+        materials: 0,
+      },
+    };
+    const allowed = viewer.isOwner || viewer.canSeeBudget === true;
+    if (!allowed) return empty;
+
+    const advances = await this.prisma.payment.findMany({
+      where: { projectId, kind: 'advance' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const distributions = await this.prisma.payment.findMany({
+      where: { projectId, kind: 'distribution' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const approvedSp = await this.prisma.selfPurchase.findMany({
+      where: { projectId, status: 'approved', byRole: 'foreman' },
+      orderBy: { decidedAt: 'desc' },
+    });
+    const materialReqs = await this.prisma.materialRequest.findMany({
+      where: {
+        projectId,
+        status: { in: ['bought', 'partially_bought', 'delivered', 'resolved'] },
+        finalizedAt: { not: null },
+      },
+      include: { items: { where: { isBought: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Подгружаем имена юзеров одной выборкой по уникальным ID.
+    const userIds = new Set<string>();
+    advances.forEach((p) => userIds.add(p.toUserId));
+    distributions.forEach((p) => userIds.add(p.toUserId));
+    approvedSp.forEach((sp) => userIds.add(sp.byUserId));
+    const users =
+      userIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: [...userIds] } },
+            select: { id: true, firstName: true, lastName: true },
+          })
+        : [];
+    const userById = new Map(users.map((u) => [u.id, u]));
+
+    const totalAdvances = advances.reduce(
+      (acc, p) =>
+        p.status === 'confirmed' || p.status === 'resolved'
+          ? acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount))
+          : acc,
+      Money.zero(),
+    );
+    const totalDistributed = distributions.reduce(
+      (acc, p) =>
+        p.status === 'confirmed' || p.status === 'resolved'
+          ? acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount))
+          : acc,
+      Money.zero(),
+    );
+    const totalApprovedSp = approvedSp.reduce(
+      (acc, sp) => acc.plus(Money.ofKopeks(sp.amount)),
+      Money.zero(),
+    );
+    const totalMaterials = materialReqs.reduce(
+      (acc, r) =>
+        acc.plus(
+          r.items.reduce(
+            (inner, it) => inner.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+            Money.zero(),
+          ),
+        ),
+      Money.zero(),
+    );
+
+    const fmtUser = (id: string) => {
+      const u = userById.get(id);
+      if (!u) return '—';
+      return `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || '—';
+    };
+
+    return {
+      advances: advances.map((p) => ({
+        id: p.id,
+        toUserId: p.toUserId,
+        toUserName: fmtUser(p.toUserId),
+        amount: Number(p.resolvedAmount ?? p.amount),
+        status: p.status,
+        createdAt: p.createdAt,
+        confirmedAt: p.confirmedAt,
+      })),
+      distributions: distributions.map((p) => ({
+        id: p.id,
+        parentPaymentId: p.parentPaymentId,
+        fromUserId: p.fromUserId,
+        toUserId: p.toUserId,
+        toUserName: fmtUser(p.toUserId),
+        amount: Number(p.resolvedAmount ?? p.amount),
+        status: p.status,
+        createdAt: p.createdAt,
+      })),
+      approvedSelfpurchases: approvedSp.map((sp) => ({
+        id: sp.id,
+        byUserId: sp.byUserId,
+        byUserName: fmtUser(sp.byUserId),
+        amount: Number(sp.amount),
+        comment: sp.comment,
+        decidedAt: sp.decidedAt,
+      })),
+      materialPurchases: materialReqs.map((r) => {
+        const totalSpent = r.items.reduce(
+          (acc, it) => acc.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+          Money.zero(),
+        );
+        return {
+          requestId: r.id,
+          title: r.title ?? 'Запрос материалов',
+          totalSpent: Number(totalSpent.kopeks()),
+          itemCount: r.items.length,
+        };
+      }),
+      totals: {
+        advances: Number(totalAdvances.kopeks()),
+        distributed: Number(totalDistributed.kopeks()),
+        undistributed: Number(totalAdvances.minus(totalDistributed).kopeks()),
+        approvedSelfpurchases: Number(totalApprovedSp.kopeks()),
+        materials: Number(totalMaterials.kopeks()),
+      },
     };
   }
 
