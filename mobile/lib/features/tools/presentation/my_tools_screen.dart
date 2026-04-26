@@ -108,9 +108,20 @@ class MyToolsScreen extends ConsumerWidget {
                 label: 'Добавить',
                 onPressed: () async {
                   final total = int.tryParse(qty.text);
-                  if (name.text.trim().isEmpty ||
-                      total == null ||
-                      total <= 0) {
+                  if (name.text.trim().isEmpty) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Введите название инструмента',
+                      kind: AppToastKind.error,
+                    );
+                    return;
+                  }
+                  if (total == null || total <= 0) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Укажите количество (целое число > 0)',
+                      kind: AppToastKind.error,
+                    );
                     return;
                   }
                   final failure =
@@ -196,9 +207,22 @@ class MyToolsScreen extends ConsumerWidget {
                 label: 'Сохранить',
                 onPressed: () async {
                   final total = int.tryParse(qty.text);
-                  if (name.text.trim().isEmpty ||
-                      total == null ||
-                      total < tool.issuedQty) {
+                  if (name.text.trim().isEmpty) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Название не должно быть пустым',
+                      kind: AppToastKind.error,
+                    );
+                    return;
+                  }
+                  if (total == null || total < tool.issuedQty) {
+                    AppToast.show(
+                      ctx,
+                      message: total == null
+                          ? 'Укажите количество (целое число)'
+                          : 'Нельзя меньше выданных (${tool.issuedQty})',
+                      kind: AppToastKind.error,
+                    );
                     return;
                   }
                   final failure =

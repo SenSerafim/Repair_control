@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/error/api_error.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -11,6 +12,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
+import '../data/tools_repository.dart';
 import '../domain/tool.dart';
 
 class ToolIssuancesScreen extends ConsumerWidget {
@@ -36,10 +38,20 @@ class ToolIssuancesScreen extends ConsumerWidget {
       ],
       body: async.when(
         loading: () => const AppLoadingState(),
-        error: (e, _) => AppErrorState(
-          title: 'Не удалось загрузить',
-          onRetry: () => ref.invalidate(toolIssuancesProvider(projectId)),
-        ),
+        error: (e, _) {
+          if (e is ToolsException &&
+              e.apiError.kind == ApiErrorKind.forbidden) {
+            return const AppEmptyState(
+              title: 'Раздел недоступен',
+              subtitle: 'У вашей роли нет доступа к инструменту проекта.',
+              icon: Icons.lock_outline_rounded,
+            );
+          }
+          return AppErrorState(
+            title: 'Не удалось загрузить',
+            onRetry: () => ref.invalidate(toolIssuancesProvider(projectId)),
+          );
+        },
         data: (items) {
           if (items.isEmpty) {
             return AppEmptyState(
@@ -154,7 +166,28 @@ class ToolIssuancesScreen extends ConsumerWidget {
                 label: 'Выдать',
                 onPressed: () async {
                   final q = int.tryParse(qty.text);
-                  if (toolId == null || toUserId == null || q == null) {
+                  if (toolId == null) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Выберите инструмент',
+                      kind: AppToastKind.error,
+                    );
+                    return;
+                  }
+                  if (toUserId == null) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Выберите получателя',
+                      kind: AppToastKind.error,
+                    );
+                    return;
+                  }
+                  if (q == null || q <= 0) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Укажите количество (целое число > 0)',
+                      kind: AppToastKind.error,
+                    );
                     return;
                   }
                   final failure = await ref
@@ -225,7 +258,14 @@ class ToolIssuancesScreen extends ConsumerWidget {
                 label: 'Вернуть',
                 onPressed: () async {
                   final q = int.tryParse(qty.text);
-                  if (q == null || q < 0 || q > iss.qty) return;
+                  if (q == null || q < 0 || q > iss.qty) {
+                    AppToast.show(
+                      ctx,
+                      message: 'Укажите кол-во от 0 до ${iss.qty}',
+                      kind: AppToastKind.error,
+                    );
+                    return;
+                  }
                   await ref
                       .read(toolIssuancesProvider(projectId).notifier)
                       .requestReturn(id: iss.id, returnedQty: q);
