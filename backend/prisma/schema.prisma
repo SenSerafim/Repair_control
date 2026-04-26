@@ -471,11 +471,19 @@ model Membership {
 model ProjectInvitation {
   id          String           @id @default(cuid())
   projectId   String
-  phone       String
+  /// Для phone-flow (S2). Для invite-by-code (P2) — пустая строка.
+  phone       String           @default("")
   role        MembershipRole
   invitedById String
   status      InvitationStatus @default(pending)
+  /// 6-значный код приглашения (P2) или random-token для phone-flow (S2). Уникальный.
   token       String           @unique
+  /// Делегированные права при акцепте (для роли representative).
+  permissions Json?
+  /// Если приглашают на конкретные этапы — список Stage.id.
+  stageIds    String[]         @default([])
+  acceptedBy  String?
+  acceptedAt  DateTime?
   createdAt   DateTime         @default(now())
   expiresAt   DateTime
 
@@ -484,6 +492,7 @@ model ProjectInvitation {
 
   @@index([projectId])
   @@index([phone])
+  @@index([token, status])
 }
 
 // ---------- Stages ----------

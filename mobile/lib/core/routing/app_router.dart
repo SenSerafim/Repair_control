@@ -46,6 +46,7 @@ import '../../features/projects/presentation/archive_screen.dart';
 import '../../features/projects/presentation/console_screen.dart';
 import '../../features/projects/presentation/create_project_screen.dart';
 import '../../features/projects/presentation/edit_project_screen.dart';
+import '../../features/projects/presentation/join_by_code_screen.dart';
 import '../../features/projects/presentation/projects_screen.dart';
 import '../../features/projects/presentation/search_screen.dart';
 import '../../features/selfpurchase/presentation/selfpurchases_screen.dart';
@@ -126,6 +127,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'search',
                 pageBuilder: fadePage((_, __) => const SearchScreen()),
+              ),
+              // P2: invite-by-code — путь объявлен ДО :projectId, чтобы
+              // 'join-by-code' не попал в paramsMatcher как projectId.
+              GoRoute(
+                path: 'join-by-code',
+                pageBuilder: slideUpPage(
+                  (_, state) => JoinByCodeScreen(
+                    prefilledCode: state.uri.queryParameters['code'],
+                  ),
+                ),
               ),
               GoRoute(
                 path: ':projectId',

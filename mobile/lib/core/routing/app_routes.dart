@@ -20,6 +20,9 @@ class AppRoutes {
   static const projectsCreate = '/projects/create';
   static const projectsArchive = '/projects/archive';
   static const projectsSearch = '/projects/search';
+  static const projectsJoinByCode = '/projects/join-by-code';
+  static String projectsJoinByCodeWith(String code) =>
+      '/projects/join-by-code?code=$code';
   static const projectDetail = '/projects/:projectId';
   static const projectEdit = '/projects/:projectId/edit';
 

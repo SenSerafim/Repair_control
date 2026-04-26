@@ -20,7 +20,9 @@ import {
   AddMemberDto,
   CopyProjectDto,
   CreateProjectDto,
+  GenerateInviteCodeDto,
   InviteByPhoneDto,
+  JoinByCodeDto,
   SearchUserDto,
   UpdateMembershipDto,
   UpdateProjectDto,
@@ -42,6 +44,13 @@ export class ProjectsController {
   @RequireAccess({ action: 'project.create' })
   async create(@Req() req: { user: AuthenticatedUser }, @Body() dto: CreateProjectDto) {
     return this.projects.create({ ownerId: req.user.userId, ...dto });
+  }
+
+  // P2: invite-by-code — оба эндпоинта объявлены РАНЬШЕ `:projectId` чтобы
+  // 'join-by-code' не попал в paramsMatcher как projectId.
+  @Post('join-by-code')
+  async joinByCode(@Req() req: { user: AuthenticatedUser }, @Body() dto: JoinByCodeDto) {
+    return this.invitations.joinByCode(req.user.userId, dto.code);
   }
 
   @Get()
@@ -186,6 +195,26 @@ export class ProjectsController {
   @Get(':projectId/invitations')
   async listInvitations(@Param('projectId') projectId: string) {
     return this.invitations.listForProject(projectId);
+  }
+
+  @Post(':projectId/invitations/generate-code')
+  @RequireAccess({
+    action: 'project.invite_member',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async generateInviteCode(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Body() dto: GenerateInviteCodeDto,
+  ) {
+    return this.invitations.generateCode({
+      projectId,
+      byUserId: req.user.userId,
+      role: dto.role,
+      permissions: dto.permissions,
+      stageIds: dto.stageIds,
+    });
   }
 
   @Delete(':projectId/invitations/:invitationId')

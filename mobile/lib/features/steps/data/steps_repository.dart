@@ -27,8 +27,8 @@ class PresignedPhoto {
   });
 
   factory PresignedPhoto.fromJson(Map<String, dynamic> json) => PresignedPhoto(
-        fileKey: json['fileKey'] as String? ?? json['key'] as String,
-        url: json['url'] as String,
+        fileKey: (json['fileKey'] ?? json['key']) as String,
+        url: (json['url'] ?? json['uploadUrl']) as String,
         method: (json['method'] as String?) ?? 'PUT',
         headers: (json['headers'] as Map<String, dynamic>? ?? const {})
             .map((k, v) => MapEntry(k, v.toString())),

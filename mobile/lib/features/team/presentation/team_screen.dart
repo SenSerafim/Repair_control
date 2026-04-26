@@ -10,6 +10,7 @@ import '../../projects/domain/membership.dart';
 import '../application/team_controller.dart';
 import '../domain/invitation.dart';
 import 'add_member_sheet.dart';
+import 'generate_invite_code_sheet.dart';
 import 'rep_rights_sheet.dart';
 
 /// s-team — команда проекта.
@@ -30,12 +31,22 @@ class TeamScreen extends ConsumerWidget {
       title: 'Команда проекта',
       padding: EdgeInsets.zero,
       actions: [
-        if (canManage)
+        if (canManage) ...[
+          IconButton(
+            icon: const Icon(Icons.qr_code_2_rounded),
+            tooltip: 'Сгенерировать код приглашения',
+            onPressed: () => showGenerateInviteCodeSheet(
+              context,
+              ref,
+              projectId: projectId,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined),
             onPressed: () =>
                 showAddMemberSheet(context, ref, projectId: projectId),
           ),
+        ],
       ],
       body: async.when(
         loading: () => const AppLoadingState(),

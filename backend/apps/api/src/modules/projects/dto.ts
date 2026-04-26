@@ -148,3 +148,29 @@ export class SearchUserDto {
   @IsString()
   email?: string;
 }
+
+// ---------- P2: invite-by-code ----------
+
+export class GenerateInviteCodeDto {
+  @ApiProperty({ enum: ['customer', 'representative', 'foreman', 'master'] })
+  @IsEnum(['customer', 'representative', 'foreman', 'master'])
+  role!: 'customer' | 'representative' | 'foreman' | 'master';
+
+  @ApiProperty({ required: false, type: 'object' })
+  @IsOptional()
+  permissions?: Record<string, boolean>;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  stageIds?: string[];
+}
+
+export class JoinByCodeDto {
+  @ApiProperty()
+  @IsString()
+  @Length(6, 6, { message: 'code must be exactly 6 digits' })
+  @Matches(/^\d{6}$/, { message: 'code must contain only digits' })
+  code!: string;
+}

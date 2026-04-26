@@ -182,8 +182,8 @@ class PresignedUpload {
 
   factory PresignedUpload.fromJson(Map<String, dynamic> json) =>
       PresignedUpload(
-        key: json['key'] as String,
-        url: json['url'] as String,
+        key: (json['key'] ?? json['fileKey']) as String,
+        url: (json['url'] ?? json['uploadUrl']) as String,
         method: json['method'] as String? ?? 'PUT',
         headers: (json['headers'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, v.toString())),

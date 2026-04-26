@@ -29,6 +29,11 @@ class ProjectsScreen extends ConsumerWidget {
       padding: EdgeInsets.zero,
       actions: [
         IconButton(
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+          tooltip: 'Присоединиться по коду',
+          onPressed: () => context.push(AppRoutes.projectsJoinByCode),
+        ),
+        IconButton(
           icon: const Icon(Icons.search_rounded),
           onPressed: () => context.push(AppRoutes.projectsSearch),
         ),
