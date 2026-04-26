@@ -121,17 +121,63 @@ export class PaymentsController {
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
   async list(
+    @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
     @Query('status') status?: PaymentStatus,
     @Query('kind') kind?: PaymentKind,
     @Query('userId') userId?: string,
   ) {
-    return this.payments.listForProject(projectId, { status, kind, userId });
+    const viewer = await this.buildProjectViewer(req.user.userId, projectId);
+    return this.payments.listForProject(projectId, viewer, { status, kind, userId });
   }
 
   @Get('payments/:id')
-  async get(@Param('id') id: string) {
-    return this.payments.get(id);
+  async get(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    if (!payment) {
+      // Тонкий случай — пускаем сервис вернуть NotFoundError, чтобы не дублировать.
+      return this.payments.get(id);
+    }
+    const viewer = await this.buildProjectViewer(req.user.userId, payment.projectId);
+    return this.payments.get(id, viewer);
+  }
+
+  @Get('payments/:id/children')
+  async children(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    const viewer = payment
+      ? await this.buildProjectViewer(req.user.userId, payment.projectId)
+      : { userId: req.user.userId };
+    return this.payments.listChildren(id, viewer);
+  }
+
+  private async buildProjectViewer(userId: string, projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId },
+      select: { role: true, permissions: true },
+    });
+    const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
+    return {
+      userId,
+      isOwner: project?.ownerId === userId,
+      membershipRole: membership?.role as
+        | 'customer'
+        | 'representative'
+        | 'foreman'
+        | 'master'
+        | undefined,
+      canSeeBudget: perms.canSeeBudget === true,
+    };
   }
 
   @Get('projects/:projectId/budget')

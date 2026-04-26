@@ -34,6 +34,17 @@ export interface DistributeInput {
   idempotencyKey?: string;
 }
 
+/**
+ * Контекст наблюдателя для проверки видимости платежей (TODO §2A.2).
+ * Заполняется в контроллере на основе Membership + ProjectOwner + RepresentativeRights.
+ */
+export interface PaymentViewer {
+  userId: string;
+  isOwner?: boolean;
+  membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
+  canSeeBudget?: boolean;
+}
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -360,13 +371,39 @@ export class PaymentsService {
 
   async listForProject(
     projectId: string,
+    viewer: PaymentViewer,
     filter?: { status?: PaymentStatus; kind?: PaymentKind; userId?: string },
   ): Promise<Payment[]> {
     const where: Prisma.PaymentWhereInput = { projectId };
     if (filter?.status) where.status = filter.status;
     if (filter?.kind) where.kind = filter.kind;
+
+    // Роль-зависимая видимость (TODO §2A.2):
+    // owner / canSeeBudget — все платежи проекта.
+    // foreman — только те, где он отправитель/получатель (advance к нему +
+    //   distribution от него + споры).
+    // master — только свои входящие/исходящие платежи.
+    // outsider — пусто.
+    const canSeeAll =
+      viewer.isOwner ||
+      (viewer.membershipRole === 'representative' && viewer.canSeeBudget === true);
+    const ownAnds: Prisma.PaymentWhereInput[] = [];
+    if (!canSeeAll) {
+      if (viewer.membershipRole === 'foreman' || viewer.membershipRole === 'master') {
+        ownAnds.push({
+          OR: [{ fromUserId: viewer.userId }, { toUserId: viewer.userId }],
+        });
+      } else {
+        return [];
+      }
+    }
     if (filter?.userId) {
-      where.OR = [{ fromUserId: filter.userId }, { toUserId: filter.userId }];
+      ownAnds.push({
+        OR: [{ fromUserId: filter.userId }, { toUserId: filter.userId }],
+      });
+    }
+    if (ownAnds.length > 0) {
+      where.AND = ownAnds;
     }
     const rows = await this.prisma.payment.findMany({
       where,
@@ -375,13 +412,63 @@ export class PaymentsService {
     return rows.map((p) => this.serialize(p));
   }
 
-  async get(id: string): Promise<Payment> {
+  async get(id: string, viewer?: PaymentViewer): Promise<Payment> {
     const p = await this.prisma.payment.findUnique({
       where: { id },
-      include: { children: true, disputes: true },
+      include: {
+        children: true,
+        disputes: true,
+        project: { select: { ownerId: true } },
+      },
     });
     if (!p) throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'payment not found');
-    return this.serialize(p);
+    if (viewer) {
+      const isOwnerOfProject = viewer.isOwner === true || p.project?.ownerId === viewer.userId;
+      const canSeeAll =
+        isOwnerOfProject ||
+        (viewer.membershipRole === 'representative' && viewer.canSeeBudget === true);
+      const isParty = p.fromUserId === viewer.userId || p.toUserId === viewer.userId;
+      if (!canSeeAll && !isParty) {
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'payment not visible to viewer');
+      }
+    }
+    const rest: Record<string, unknown> = { ...p };
+    delete rest.project;
+    return this.serialize(rest as typeof p);
+  }
+
+  async listChildren(parentId: string, viewer: PaymentViewer): Promise<Payment[]> {
+    const parent = await this.prisma.payment.findUnique({
+      where: { id: parentId },
+      select: {
+        id: true,
+        projectId: true,
+        fromUserId: true,
+        toUserId: true,
+        project: { select: { ownerId: true } },
+      },
+    });
+    if (!parent) throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'parent payment not found');
+    const isOwnerOfProject = viewer.isOwner === true || parent.project?.ownerId === viewer.userId;
+    const canSeeAll =
+      isOwnerOfProject ||
+      (viewer.membershipRole === 'representative' && viewer.canSeeBudget === true) ||
+      // Бригадир-родитель аванса видит все распределения этого аванса.
+      parent.toUserId === viewer.userId ||
+      parent.fromUserId === viewer.userId;
+    const where: Prisma.PaymentWhereInput = { parentPaymentId: parentId };
+    if (!canSeeAll) {
+      if (viewer.membershipRole === 'master') {
+        where.OR = [{ fromUserId: viewer.userId }, { toUserId: viewer.userId }];
+      } else {
+        return [];
+      }
+    }
+    const rows = await this.prisma.payment.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((p) => this.serialize(p));
   }
 
   private serialize<T extends { amount: bigint; resolvedAmount?: bigint | null }>(p: T): T {

@@ -14,6 +14,15 @@ import { FeedService } from '../feed/feed.service';
 const ALLOWED_PHOTO_MIMES = new Set(['image/jpeg', 'image/png']);
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 
+/**
+ * Контекст наблюдателя для проверки видимости фото шага (TODO §2A.2 ⁴).
+ * Заполняется в контроллере на основе Membership.
+ */
+export interface StepPhotosViewer {
+  userId: string;
+  membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
+}
+
 @Injectable()
 export class StepPhotosService {
   constructor(
@@ -95,7 +104,19 @@ export class StepPhotosService {
     return photo;
   }
 
-  async listForStep(stepId: string) {
+  async listForStep(stepId: string, viewer?: StepPhotosViewer) {
+    // Видимость фото шагов (TODO §2A.2):
+    // - master видит фото только своих шагов (он в step.assigneeIds);
+    // - остальные роли видят все фото шага.
+    if (viewer?.membershipRole === 'master') {
+      const step = await this.prisma.step.findUnique({
+        where: { id: stepId },
+        select: { assigneeIds: true },
+      });
+      if (!step || !step.assigneeIds.includes(viewer.userId)) {
+        return [];
+      }
+    }
     const photos = await this.prisma.stepPhoto.findMany({
       where: { stepId },
       orderBy: { createdAt: 'desc' },

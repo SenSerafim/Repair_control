@@ -24,6 +24,15 @@ export interface FeedFilters {
   actorId?: string;
 }
 
+/** Контекст наблюдателя ленты — для role-based видимости (TODO §2A.2). */
+export interface FeedListViewer {
+  userId: string;
+  isOwner?: boolean;
+  membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
+  assignedStageIds?: string[];
+  foremanStageIds?: string[];
+}
+
 @Injectable()
 export class ExportService {
   constructor(
@@ -126,15 +135,44 @@ export class ExportService {
 
   // ---------- Feed listing with cursor ----------
 
-  async listFeed(projectId: string, q: FeedFilters & { cursor?: string; limit?: number }) {
+  async listFeed(
+    projectId: string,
+    q: FeedFilters & { cursor?: string; limit?: number },
+    viewer?: FeedListViewer,
+  ) {
     const limit = Math.min(Math.max(q.limit ?? 50, 1), 200);
     const cursor = decodeCursor<{ createdAtIso: string; id: string }>(q.cursor);
+
+    const ands: Prisma.FeedEventWhereInput[] = [];
+    if (q.stageId) {
+      // Поддерживаем оба варианта: новый stageId column и старый payload.stageId (бэкфилл).
+      ands.push({
+        OR: [
+          { stageId: q.stageId },
+          { stageId: null, payload: { path: ['stageId'], equals: q.stageId } },
+        ],
+      });
+    }
+
+    // Role-based видимость по матрице 2A.2:
+    if (viewer && !viewer.isOwner && viewer.membershipRole !== 'representative') {
+      if (viewer.membershipRole === 'master') {
+        const stages = viewer.assignedStageIds ?? [];
+        ands.push({
+          OR: [{ stageId: null }, { stageId: { in: stages } }],
+        });
+      } else if (viewer.membershipRole === 'foreman') {
+        const stages = [...(viewer.foremanStageIds ?? []), ...(viewer.assignedStageIds ?? [])];
+        ands.push({
+          OR: [{ stageId: null }, { stageId: { in: stages } }],
+        });
+      }
+    }
 
     const where: Prisma.FeedEventWhereInput = {
       projectId,
       ...(Array.isArray(q.kind) && q.kind.length > 0 ? { kind: { in: q.kind as any } } : {}),
       ...(q.actorId ? { actorId: q.actorId } : {}),
-      ...(q.stageId ? { payload: { path: ['stageId'], equals: q.stageId } } : {}),
       ...(q.dateFrom || q.dateTo
         ? {
             createdAt: {
@@ -151,6 +189,7 @@ export class ExportService {
             ],
           }
         : {}),
+      ...(ands.length > 0 ? { AND: ands } : {}),
     };
     const items = await this.prisma.feedEvent.findMany({
       where,

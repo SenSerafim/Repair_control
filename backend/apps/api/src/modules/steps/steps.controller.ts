@@ -12,11 +12,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AccessGuard, RequireAccess } from '@app/rbac';
+import { PrismaService } from '@app/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 import { StepsService } from './steps.service';
 import { SubstepsService } from './substeps.service';
-import { StepPhotosService } from './step-photos.service';
+import { StepPhotosService, StepPhotosViewer } from './step-photos.service';
 import {
   AddSubstepDto,
   ConfirmPhotoDto,
@@ -36,6 +37,7 @@ export class StepsController {
     private readonly steps: StepsService,
     private readonly substeps: SubstepsService,
     private readonly photos: StepPhotosService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ----- Steps -----
@@ -204,8 +206,23 @@ export class StepsController {
   }
 
   @Get('steps/:stepId/photos')
-  async listPhotos(@Param('stepId') stepId: string) {
-    return this.photos.listForStep(stepId);
+  async listPhotos(@Req() req: { user: AuthenticatedUser }, @Param('stepId') stepId: string) {
+    const step = await this.prisma.step.findUnique({
+      where: { id: stepId },
+      select: { stage: { select: { projectId: true } } },
+    });
+    let viewer: StepPhotosViewer | undefined;
+    if (step) {
+      const membership = await this.prisma.membership.findFirst({
+        where: { projectId: step.stage.projectId, userId: req.user.userId },
+        select: { role: true },
+      });
+      viewer = {
+        userId: req.user.userId,
+        membershipRole: membership?.role as StepPhotosViewer['membershipRole'],
+      };
+    }
+    return this.photos.listForStep(stepId, viewer);
   }
 
   @Delete('photos/:photoId')

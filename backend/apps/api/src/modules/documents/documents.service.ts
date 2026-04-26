@@ -7,6 +7,7 @@ import {
   Clock,
   ConflictError,
   ErrorCodes,
+  ForbiddenError,
   InvalidInputError,
   NotFoundError,
   PrismaService,
@@ -15,6 +16,17 @@ import { FilesService } from '@app/files';
 import { FeedService } from '../feed/feed.service';
 import { QUEUE_DOCUMENT_THUMBNAILS } from '../queues/queues.module';
 import { PresignUploadDto } from './dto';
+
+/**
+ * Контекст наблюдателя для проверки видимости документов (TODO §2A.2).
+ * Заполняется в контроллере на основе Membership + RepresentativeRights.
+ */
+export interface DocumentViewer {
+  userId: string;
+  isOwner?: boolean;
+  membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
+  canSeeBudget?: boolean;
+}
 
 @Injectable()
 export class DocumentsService {
@@ -93,26 +105,59 @@ export class DocumentsService {
   async list(
     projectId: string,
     filters: { stageId?: string; stepId?: string; category?: DocumentCategory; q?: string } = {},
+    viewer?: DocumentViewer,
   ): Promise<Document[]> {
     const where: Prisma.DocumentWhereInput = {
       projectId,
       deletedAt: null,
       ...(filters.stageId ? { stageId: filters.stageId } : {}),
       ...(filters.stepId ? { stepId: filters.stepId } : {}),
-      ...(filters.category ? { category: filters.category } : {}),
       ...(filters.q
         ? {
             OR: [{ title: { contains: filters.q, mode: 'insensitive' } }],
           }
         : {}),
     };
+
+    // Категорийная видимость по роли (TODO §2A.2):
+    // master не видит contract/act/estimate;
+    // representative без canSeeBudget не видит estimate.
+    const blocked: DocumentCategory[] = [];
+    if (viewer?.membershipRole === 'master') {
+      blocked.push('contract', 'act', 'estimate');
+    } else if (viewer?.membershipRole === 'representative' && viewer.canSeeBudget !== true) {
+      blocked.push('estimate');
+    }
+    if (filters.category) {
+      if (blocked.includes(filters.category)) {
+        return [];
+      }
+      where.category = filters.category;
+    } else if (blocked.length > 0) {
+      where.category = { notIn: blocked };
+    }
+
     return this.prisma.document.findMany({ where, orderBy: { createdAt: 'desc' } });
   }
 
-  async get(id: string): Promise<Document> {
+  async get(id: string, viewer?: DocumentViewer): Promise<Document> {
     const doc = await this.prisma.document.findUnique({ where: { id } });
     if (!doc || doc.deletedAt) {
       throw new NotFoundError(ErrorCodes.DOCUMENT_NOT_FOUND, 'document not found');
+    }
+    if (viewer && viewer.membershipRole === 'master') {
+      const restricted: DocumentCategory[] = ['contract', 'act', 'estimate'];
+      if (restricted.includes(doc.category)) {
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'document category forbidden for master');
+      }
+    }
+    if (
+      viewer &&
+      viewer.membershipRole === 'representative' &&
+      viewer.canSeeBudget !== true &&
+      doc.category === 'estimate'
+    ) {
+      throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'estimate hidden without canSeeBudget');
     }
     return doc;
   }

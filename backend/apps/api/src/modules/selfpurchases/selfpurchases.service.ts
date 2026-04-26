@@ -28,6 +28,20 @@ export interface DecideSelfPurchaseInput {
   actorUserId: string;
 }
 
+/**
+ * Контекст наблюдателя для проверки видимости самозакупов (TODO §2A.2).
+ * - master → видит только byUserId=self;
+ * - foreman → свои byUserId=self + входящие addresseeId=self;
+ * - owner / canApprove-представитель → только byRole=foreman;
+ * - остальные → ничего.
+ */
+export interface SelfPurchaseViewer {
+  userId: string;
+  isOwner?: boolean;
+  membershipRole?: 'customer' | 'representative' | 'foreman' | 'master';
+  canApprove?: boolean;
+}
+
 @Injectable()
 export class SelfPurchasesService {
   constructor(
@@ -181,11 +195,32 @@ export class SelfPurchasesService {
 
   async listForProject(
     projectId: string,
+    viewer: SelfPurchaseViewer,
     filter?: { status?: SelfPurchaseStatus; byUserId?: string },
   ): Promise<SelfPurchase[]> {
     const where: Prisma.SelfPurchaseWhereInput = { projectId };
     if (filter?.status) where.status = filter.status;
-    if (filter?.byUserId) where.byUserId = filter.byUserId;
+
+    // Видимость по матрице 2A.2:
+    // - owner / representative.canApprove → видят только foreman→customer (byRole=foreman);
+    // - foreman → свои (byRole=foreman, fromUserId=self) + входящие master→foreman (addresseeId=self);
+    // - master → только свои (byUserId=self).
+    const ands: Prisma.SelfPurchaseWhereInput[] = [];
+    if (viewer.isOwner || (viewer.membershipRole === 'representative' && viewer.canApprove)) {
+      ands.push({ byRole: 'foreman' });
+    } else if (viewer.membershipRole === 'foreman') {
+      ands.push({
+        OR: [{ byUserId: viewer.userId }, { addresseeId: viewer.userId }],
+      });
+    } else if (viewer.membershipRole === 'master') {
+      ands.push({ byUserId: viewer.userId });
+    } else {
+      return [];
+    }
+
+    if (filter?.byUserId) ands.push({ byUserId: filter.byUserId });
+    if (ands.length > 0) where.AND = ands;
+
     const rows = await this.prisma.selfPurchase.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -193,9 +228,21 @@ export class SelfPurchasesService {
     return rows.map((r) => this.serialize(r));
   }
 
-  async get(id: string): Promise<SelfPurchase> {
+  async get(id: string, viewer?: SelfPurchaseViewer): Promise<SelfPurchase> {
     const sp = await this.prisma.selfPurchase.findUnique({ where: { id } });
     if (!sp) throw new NotFoundError(ErrorCodes.SELFPURCHASE_NOT_FOUND, 'selfpurchase not found');
+    if (viewer) {
+      const isParty = sp.byUserId === viewer.userId || sp.addresseeId === viewer.userId;
+      const isOwnerView =
+        viewer.isOwner || (viewer.membershipRole === 'representative' && viewer.canApprove);
+      // Owner видит только foreman→customer; не видит master→foreman.
+      if (isOwnerView && sp.byRole !== 'foreman') {
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'master self-purchase hidden from customer');
+      }
+      if (!isOwnerView && !isParty) {
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'selfpurchase not visible to viewer');
+      }
+    }
     return this.serialize(sp);
   }
 

@@ -979,6 +979,7 @@ model IdempotencyRecord {
 model FeedEvent {
   id        String        @id @default(cuid())
   projectId String?
+  stageId   String?
   kind      FeedEventKind
   actorId   String?
   payload   Json          @default("{}")
@@ -987,6 +988,7 @@ model FeedEvent {
   project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
+  @@index([projectId, stageId, createdAt])
   @@index([kind, createdAt])
 }
 

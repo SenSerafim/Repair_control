@@ -34,7 +34,13 @@ const mkPrisma = (documents: Doc[] = []) => {
           if (where.deletedAt === null && d.deletedAt !== null) return false;
           if (where.stageId && d.stageId !== where.stageId) return false;
           if (where.stepId && d.stepId !== where.stepId) return false;
-          if (where.category && d.category !== where.category) return false;
+          if (where.category) {
+            if (typeof where.category === 'string') {
+              if (d.category !== where.category) return false;
+            } else if (where.category.notIn) {
+              if ((where.category.notIn as string[]).includes(d.category)) return false;
+            }
+          }
           return true;
         });
         return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -282,5 +288,95 @@ describe('DocumentsService', () => {
     await svc.softDelete('d1', 'u1');
     expect(state.docs.get('d1')?.deletedAt).not.toBeNull();
     expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'document_deleted' }));
+  });
+
+  // ---------- P0.7.c: role-based видимость ----------
+
+  const mkDoc = (id: string, category: string): Doc => ({
+    id,
+    projectId: 'p1',
+    stageId: null,
+    stepId: null,
+    category,
+    title: `${id}.pdf`,
+    fileKey: `k/${id}`,
+    thumbKey: null,
+    thumbStatus: 'done',
+    mimeType: 'application/pdf',
+    sizeBytes: 100,
+    uploadedById: 'u1',
+    deletedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  it('list: master не видит contract/act/estimate', async () => {
+    const docs = [
+      mkDoc('d1', 'contract'),
+      mkDoc('d2', 'act'),
+      mkDoc('d3', 'estimate'),
+      mkDoc('d4', 'photo'),
+      mkDoc('d5', 'blueprint'),
+    ];
+    const state = mkPrisma(docs);
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    const list = await svc.list('p1', {}, { userId: 'm1', membershipRole: 'master' });
+    expect(list.map((d) => d.id).sort()).toEqual(['d4', 'd5']);
+  });
+
+  it('list: representative без canSeeBudget не видит estimate', async () => {
+    const docs = [mkDoc('d1', 'estimate'), mkDoc('d2', 'photo')];
+    const state = mkPrisma(docs);
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    const list = await svc.list(
+      'p1',
+      {},
+      { userId: 'r1', membershipRole: 'representative', canSeeBudget: false },
+    );
+    expect(list.map((d) => d.id)).toEqual(['d2']);
+  });
+
+  it('list: owner видит все категории', async () => {
+    const docs = [mkDoc('d1', 'contract'), mkDoc('d2', 'estimate'), mkDoc('d3', 'photo')];
+    const state = mkPrisma(docs);
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    const list = await svc.list(
+      'p1',
+      {},
+      { userId: 'o1', isOwner: true, membershipRole: 'customer' },
+    );
+    expect(list).toHaveLength(3);
+  });
+
+  it('get: master получает 403 на contract', async () => {
+    const state = mkPrisma([mkDoc('d1', 'contract')]);
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    await expect(svc.get('d1', { userId: 'm1', membershipRole: 'master' })).rejects.toThrow(
+      /forbidden/i,
+    );
   });
 });

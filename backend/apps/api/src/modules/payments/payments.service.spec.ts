@@ -72,16 +72,27 @@ const mkPrisma = () => {
         return p;
       }),
       findMany: jest.fn(({ where }: any) => {
-        return [...payments.values()].filter((p) => {
-          if (where.projectId && p.projectId !== where.projectId) return false;
-          if (where.status) {
-            if (where.status.in) {
-              if (!where.status.in.includes(p.status)) return false;
-            } else if (p.status !== where.status) return false;
+        const matches = (p: PaymentRow, w: any): boolean => {
+          if (!w) return true;
+          if (w.projectId && p.projectId !== w.projectId) return false;
+          if (w.status) {
+            if (w.status.in) {
+              if (!w.status.in.includes(p.status)) return false;
+            } else if (p.status !== w.status) return false;
           }
-          if (where.kind && p.kind !== where.kind) return false;
+          if (w.kind && p.kind !== w.kind) return false;
+          if (w.parentPaymentId && p.parentPaymentId !== w.parentPaymentId) return false;
+          if (w.fromUserId && p.fromUserId !== w.fromUserId) return false;
+          if (w.toUserId && p.toUserId !== w.toUserId) return false;
+          if (Array.isArray(w.OR)) {
+            if (!w.OR.some((sub: any) => matches(p, sub))) return false;
+          }
+          if (Array.isArray(w.AND)) {
+            if (!w.AND.every((sub: any) => matches(p, sub))) return false;
+          }
           return true;
-        });
+        };
+        return [...payments.values()].filter((p) => matches(p, where));
       }),
       create: jest.fn(({ data }: any) => {
         const now = new Date();
@@ -453,5 +464,139 @@ describe('PaymentsService.get not found', () => {
     const st = mkPrisma();
     const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
     await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
+  });
+});
+
+// ---------- P0.7.a/b: role-based видимость ----------
+
+describe('PaymentsService.listForProject — visibility', () => {
+  const seed = () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
+    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
+    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
+    st.memberships.push({ projectId: 'p1', userId: 'master2', role: 'master' });
+
+    // advance customer1 → foreman1
+    st.payments.set('adv', {
+      id: 'adv',
+      projectId: 'p1',
+      stageId: null,
+      parentPaymentId: null,
+      kind: 'advance',
+      fromUserId: 'customer1',
+      toUserId: 'foreman1',
+      amount: 100000n,
+      resolvedAmount: null,
+      status: 'confirmed',
+      idempotencyKey: null,
+      confirmedAt: NOW,
+      disputedAt: null,
+      resolvedAt: null,
+      cancelledAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    // distribution foreman1 → master1
+    st.payments.set('d1', {
+      id: 'd1',
+      projectId: 'p1',
+      stageId: null,
+      parentPaymentId: 'adv',
+      kind: 'distribution',
+      fromUserId: 'foreman1',
+      toUserId: 'master1',
+      amount: 30000n,
+      resolvedAmount: null,
+      status: 'pending',
+      idempotencyKey: null,
+      confirmedAt: null,
+      disputedAt: null,
+      resolvedAt: null,
+      cancelledAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    // distribution foreman1 → master2
+    st.payments.set('d2', {
+      id: 'd2',
+      projectId: 'p1',
+      stageId: null,
+      parentPaymentId: 'adv',
+      kind: 'distribution',
+      fromUserId: 'foreman1',
+      toUserId: 'master2',
+      amount: 20000n,
+      resolvedAmount: null,
+      status: 'pending',
+      idempotencyKey: null,
+      confirmedAt: null,
+      disputedAt: null,
+      resolvedAt: null,
+      cancelledAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    return st;
+  };
+
+  it('owner видит все 3 платежа', async () => {
+    const st = seed();
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const list = await svc.listForProject('p1', {
+      userId: 'customer1',
+      isOwner: true,
+      membershipRole: 'customer',
+    });
+    expect(list.map((p) => p.id).sort()).toEqual(['adv', 'd1', 'd2']);
+  });
+
+  it('master1 видит только d1', async () => {
+    const st = seed();
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const list = await svc.listForProject('p1', {
+      userId: 'master1',
+      membershipRole: 'master',
+    });
+    expect(list.map((p) => p.id)).toEqual(['d1']);
+  });
+
+  it('foreman1 видит advance + 2 distribution (свои исходящие)', async () => {
+    const st = seed();
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const list = await svc.listForProject('p1', {
+      userId: 'foreman1',
+      membershipRole: 'foreman',
+    });
+    expect(list.map((p) => p.id).sort()).toEqual(['adv', 'd1', 'd2']);
+  });
+
+  it('outsider (customer без isOwner) → пусто', async () => {
+    const st = seed();
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const list = await svc.listForProject('p1', {
+      userId: 'noone',
+      membershipRole: 'customer', // не owner
+    });
+    expect(list).toEqual([]);
+  });
+
+  it('representative с canSeeBudget видит всё', async () => {
+    const st = seed();
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const list = await svc.listForProject('p1', {
+      userId: 'rep1',
+      membershipRole: 'representative',
+      canSeeBudget: true,
+    });
+    expect(list).toHaveLength(3);
+  });
+
+  it('master2 не видит платёж master1 (P0.7.a get)', async () => {
+    const st = seed();
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    await expect(svc.get('d1', { userId: 'master2', membershipRole: 'master' })).rejects.toThrow(
+      /payment not visible/i,
+    );
   });
 });

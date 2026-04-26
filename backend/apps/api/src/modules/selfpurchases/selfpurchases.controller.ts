@@ -13,10 +13,11 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SelfPurchaseStatus } from '@prisma/client';
 import { AccessGuard, RequireAccess } from '@app/rbac';
+import { PrismaService } from '@app/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
-import { SelfPurchasesService } from './selfpurchases.service';
+import { SelfPurchasesService, SelfPurchaseViewer } from './selfpurchases.service';
 import { CreateSelfPurchaseDto, DecideSelfPurchaseDto } from './dto';
 
 @ApiTags('selfpurchases')
@@ -24,7 +25,28 @@ import { CreateSelfPurchaseDto, DecideSelfPurchaseDto } from './dto';
 @UseGuards(JwtAuthGuard, AccessGuard)
 @Controller()
 export class SelfPurchasesController {
-  constructor(private readonly svc: SelfPurchasesService) {}
+  constructor(
+    private readonly svc: SelfPurchasesService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private async buildViewer(userId: string, projectId: string): Promise<SelfPurchaseViewer> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId },
+      select: { role: true, permissions: true },
+    });
+    const perms = (membership?.permissions ?? {}) as { canApprove?: boolean };
+    return {
+      userId,
+      isOwner: project?.ownerId === userId,
+      membershipRole: membership?.role as SelfPurchaseViewer['membershipRole'],
+      canApprove: perms.canApprove === true,
+    };
+  }
 
   @Post('projects/:projectId/selfpurchases')
   @Idempotent()
@@ -52,21 +74,30 @@ export class SelfPurchasesController {
 
   @Get('projects/:projectId/selfpurchases')
   @RequireAccess({
-    action: 'selfpurchase.create',
+    action: 'chat.read',
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
   async list(
+    @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
     @Query('status') status?: SelfPurchaseStatus,
     @Query('byUserId') byUserId?: string,
   ) {
-    return this.svc.listForProject(projectId, { status, byUserId });
+    const viewer = await this.buildViewer(req.user.userId, projectId);
+    return this.svc.listForProject(projectId, viewer, { status, byUserId });
   }
 
   @Get('selfpurchases/:id')
-  async get(@Param('id') id: string) {
-    return this.svc.get(id);
+  async get(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    const sp = await this.prisma.selfPurchase.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    const viewer = sp
+      ? await this.buildViewer(req.user.userId, sp.projectId)
+      : { userId: req.user.userId };
+    return this.svc.get(id, viewer);
   }
 
   @Post('selfpurchases/:id/approve')

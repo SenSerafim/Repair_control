@@ -13,7 +13,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AccessGuard, RequireAccess } from '@app/rbac';
-import { DocumentsService } from './documents.service';
+import { PrismaService } from '@app/common';
+import { DocumentsService, DocumentViewer } from './documents.service';
 import { ListDocumentsQueryDto, PatchDocumentDto, PresignUploadDto } from './dto';
 
 @ApiTags('documents')
@@ -21,7 +22,28 @@ import { ListDocumentsQueryDto, PatchDocumentDto, PresignUploadDto } from './dto
 @UseGuards(AuthGuard('jwt'), AccessGuard)
 @Controller()
 export class DocumentsController {
-  constructor(private readonly docs: DocumentsService) {}
+  constructor(
+    private readonly docs: DocumentsService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private async buildViewer(userId: string, projectId: string): Promise<DocumentViewer> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId },
+      select: { role: true, permissions: true },
+    });
+    const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
+    return {
+      userId,
+      isOwner: project?.ownerId === userId,
+      membershipRole: membership?.role as DocumentViewer['membershipRole'],
+      canSeeBudget: perms.canSeeBudget === true,
+    };
+  }
 
   @Post('projects/:projectId/documents/presign-upload')
   @RequireAccess({
@@ -49,8 +71,13 @@ export class DocumentsController {
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
-  list(@Param('projectId') projectId: string, @Query() q: ListDocumentsQueryDto) {
-    return this.docs.list(projectId, q);
+  async list(
+    @Param('projectId') projectId: string,
+    @Query() q: ListDocumentsQueryDto,
+    @Req() req: any,
+  ) {
+    const viewer = await this.buildViewer(req.user.userId, projectId);
+    return this.docs.list(projectId, q, viewer);
   }
 
   @Get('documents/:id')
@@ -59,8 +86,15 @@ export class DocumentsController {
     resource: 'document',
     resourceIdFrom: { source: 'params', key: 'id' },
   })
-  get(@Param('id') id: string) {
-    return this.docs.get(id);
+  async get(@Param('id') id: string, @Req() req: any) {
+    const doc = await this.prisma.document.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    const viewer = doc
+      ? await this.buildViewer(req.user.userId, doc.projectId)
+      : { userId: req.user.userId };
+    return this.docs.get(id, viewer);
   }
 
   @Get('documents/:id/download')
