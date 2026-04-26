@@ -124,9 +124,20 @@ class _RejectBody extends ConsumerStatefulWidget {
 }
 
 class _RejectBodyState extends ConsumerState<_RejectBody> {
+  static const int _minLength = 10;
   final _comment = TextEditingController();
   bool _submitting = false;
   String? _error;
+  int _length = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _comment.addListener(() {
+      final l = _comment.text.trim().length;
+      if (l != _length) setState(() => _length = l);
+    });
+  }
 
   @override
   void dispose() {
@@ -136,8 +147,9 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
 
   Future<void> _submit() async {
     final comment = _comment.text.trim();
-    if (comment.isEmpty) {
-      setState(() => _error = 'Объясните причину отклонения');
+    if (comment.length < _minLength) {
+      setState(() => _error =
+          'Объясните причину отклонения (минимум $_minLength символов)');
       return;
     }
     setState(() {
@@ -165,6 +177,7 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
 
   @override
   Widget build(BuildContext context) {
+    final canSubmit = _length >= _minLength && !_submitting;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,12 +199,23 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
           maxLength: 2000,
           decoration: _textDec('Что именно не так?'),
         ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            _length < _minLength
+                ? 'Ещё ${_minLength - _length} симв.'
+                : 'OK',
+            style: AppTextStyles.tiny.copyWith(
+              color: _length < _minLength ? AppColors.redText : AppColors.greenDark,
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.x12),
         AppButton(
           label: 'Отклонить',
           variant: AppButtonVariant.destructive,
           isLoading: _submitting,
-          onPressed: _submit,
+          onPressed: canSubmit ? _submit : null,
         ),
       ],
     );

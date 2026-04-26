@@ -177,6 +177,24 @@ class _ListView extends StatelessWidget {
       itemCount: stages.length,
       buildDefaultDragHandles: false,
       onReorder: (old, nw) => onReorder(stages, old, nw),
+      // Визуальный feedback во время drag: scale + elevation + opacity (P1.3).
+      proxyDecorator: (child, index, animation) => AnimatedBuilder(
+        animation: animation,
+        builder: (context, c) {
+          final t = Curves.easeOut.transform(animation.value);
+          return Transform.scale(
+            scale: 1.0 + 0.03 * t,
+            child: Material(
+              color: Colors.transparent,
+              elevation: 8 * t,
+              borderRadius: AppRadius.card,
+              shadowColor: Colors.black.withValues(alpha: 0.25),
+              child: Opacity(opacity: 0.95, child: c),
+            ),
+          );
+        },
+        child: child,
+      ),
       itemBuilder: (_, i) {
         final s = stages[i];
         return Padding(

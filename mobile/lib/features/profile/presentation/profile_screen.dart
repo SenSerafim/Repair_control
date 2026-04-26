@@ -64,13 +64,25 @@ class ProfileScreen extends ConsumerWidget {
               ProfileMenuGroup(
                 items: [
                   ProfileMenuItem(
+                    icon: Icons.history_rounded,
+                    label: 'Лента уведомлений',
+                    hint: 'Все push-уведомления',
+                    onTap: () => context.push(AppRoutes.notifications),
+                  ),
+                  ProfileMenuItem(
+                    icon: Icons.fact_check_outlined,
+                    label: 'Мои согласования',
+                    hint: 'История и активные запросы',
+                    onTap: () => context.push(AppRoutes.approvals),
+                  ),
+                  ProfileMenuItem(
                     icon: Icons.construction_outlined,
                     label: 'Мои инструменты',
                     onTap: () => context.push('/profile/tools'),
                   ),
                   ProfileMenuItem(
                     icon: Icons.notifications_outlined,
-                    label: 'Уведомления',
+                    label: 'Настройки уведомлений',
                     onTap: () => context.push(AppRoutes.profileNotifSettings),
                   ),
                   ProfileMenuItem(
