@@ -18,6 +18,7 @@ export 'app_step_checkbox.dart';
 export 'app_toast.dart';
 export 'app_traffic_badge.dart';
 export 'connectivity_banner.dart';
+export 'hierarchy_badge.dart';
 export 'photo_gallery_screen.dart';
 export 'photo_picker_sheet.dart';
 export 'pin_input.dart';

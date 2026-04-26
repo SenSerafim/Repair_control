@@ -352,6 +352,21 @@ export class ApprovalsService {
       );
     }
 
+    // Gaps §3.3: master не может запрашивать план / приёмку этапа мимо бригадира.
+    // План и приёмку этапа всегда инициирует бригадир (или представитель с правом).
+    if (input.scope === 'plan' || input.scope === 'stage_accept') {
+      const requesterMembership = await client.membership.findFirst({
+        where: { projectId: input.projectId, userId: input.requestedById },
+        select: { role: true, permissions: true },
+      });
+      if (requesterMembership?.role === 'master') {
+        throw new ForbiddenError(
+          ErrorCodes.FORBIDDEN,
+          'master cannot request plan/stage_accept; foreman initiates it',
+        );
+      }
+    }
+
     switch (input.scope) {
       case 'step':
       case 'extra_work':
