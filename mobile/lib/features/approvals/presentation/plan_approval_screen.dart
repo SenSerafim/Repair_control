@@ -78,8 +78,12 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canDecide = ref.watch(canProvider(DomainAction.approvalDecide));
-    final canRequest = ref.watch(canProvider(DomainAction.approvalRequest));
+    final canDecide = ref.watch(canInProjectProvider(
+      (action: DomainAction.approvalDecide, projectId: project.id),
+    ));
+    final canRequest = ref.watch(canInProjectProvider(
+      (action: DomainAction.approvalRequest, projectId: project.id),
+    ));
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),

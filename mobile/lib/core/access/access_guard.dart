@@ -143,8 +143,11 @@ final representativeRightsProvider =
       final rights = mine.first.representativeRights;
       final result = <DomainAction>{};
       for (final raw in rights) {
-        final action = _domainActionFromString(raw);
-        if (action != null) result.add(action);
+        // Поддержка обоих форматов: булевы флаги (`canApprove`) и старые
+        // имена `DomainAction.value`.
+        result.addAll(_expandFlag(raw));
+        final direct = _domainActionFromString(raw);
+        if (direct != null) result.add(direct);
       }
       return result;
     },
@@ -153,11 +156,59 @@ final representativeRightsProvider =
   );
 });
 
+/// Маппинг булевых флагов `RepresentativeRights` (бекенд) → набор
+/// `DomainAction`. Источник истины — `backend/libs/rbac/src/rbac.matrix.ts`.
+const _representativeFlagToActions = <String, List<DomainAction>>{
+  'canEditStages': [
+    DomainAction.projectEdit,
+    DomainAction.stageManage,
+    DomainAction.stageStart,
+    DomainAction.stagePause,
+    DomainAction.stepManage,
+    DomainAction.stepAddSubstep,
+    DomainAction.documentWrite,
+    DomainAction.documentDelete,
+  ],
+  'canApprove': [
+    DomainAction.approvalRequest,
+    DomainAction.approvalDecide,
+  ],
+  'canSeeBudget': [
+    DomainAction.financeBudgetView,
+    DomainAction.feedExport,
+  ],
+  'canCreatePayments': [
+    DomainAction.financePaymentCreate,
+    DomainAction.financePaymentConfirm,
+    DomainAction.financePaymentDispute,
+    DomainAction.financePaymentResolve,
+  ],
+  'canManageMaterials': [
+    DomainAction.materialsManage,
+    DomainAction.materialFinalize,
+  ],
+  'canManageTools': [
+    DomainAction.toolsManage,
+    DomainAction.toolsIssue,
+    DomainAction.toolsReturn,
+  ],
+  'canInviteMembers': [
+    DomainAction.projectInviteMember,
+  ],
+  'canAddRepresentative': [
+    DomainAction.projectInviteMember,
+  ],
+};
+
 DomainAction? _domainActionFromString(String raw) {
   for (final a in DomainAction.values) {
     if (a.name == raw || a.toString().split('.').last == raw) return a;
   }
   return null;
+}
+
+Set<DomainAction> _expandFlag(String flag) {
+  return _representativeFlagToActions[flag]?.toSet() ?? const {};
 }
 
 /// Тот же `canProvider`, но с учётом делегированных представителю прав

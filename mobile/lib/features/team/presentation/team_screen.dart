@@ -21,8 +21,9 @@ class TeamScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(teamControllerProvider(projectId));
-    final canManage =
-        ref.watch(canProvider(DomainAction.projectInviteMember));
+    final canManage = ref.watch(canInProjectProvider(
+      (action: DomainAction.projectInviteMember, projectId: projectId),
+    ));
 
     return AppScaffold(
       showBack: true,
@@ -136,8 +137,9 @@ class _MemberRow extends ConsumerWidget {
         ? 'Участник'
         : '${user.firstName} ${user.lastName}'.trim();
     final isRepresentative = member.role == MembershipRole.representative;
-    final canManage =
-        ref.watch(canProvider(DomainAction.projectInviteMember));
+    final canManage = ref.watch(canInProjectProvider(
+      (action: DomainAction.projectInviteMember, projectId: projectId),
+    ));
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
@@ -239,8 +241,9 @@ class _InvitationRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pending = invitation.status == InvitationStatus.pending;
-    final canManage =
-        ref.watch(canProvider(DomainAction.projectInviteMember));
+    final canManage = ref.watch(canInProjectProvider(
+      (action: DomainAction.projectInviteMember, projectId: projectId),
+    ));
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
+import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -359,13 +362,29 @@ class _StagesCarousel extends StatelessWidget {
   }
 }
 
-class _NavGrid extends StatelessWidget {
+class _NavGrid extends ConsumerWidget {
   const _NavGrid({required this.projectId});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(activeRoleProvider);
+    // Самозакуп/Инструмент = поле бригадира/мастера. Заказчику и
+    // представителю эти разделы не показываем — бэкенд для них вернёт 403.
+    final canSelfPurchase = role == SystemRole.contractor ||
+        role == SystemRole.master ||
+        role == SystemRole.admin ||
+        ref.watch(canInProjectProvider(
+          (action: DomainAction.selfPurchaseCreate, projectId: projectId),
+        ));
+    final canTools = role == SystemRole.contractor ||
+        role == SystemRole.master ||
+        role == SystemRole.admin ||
+        ref.watch(canInProjectProvider(
+          (action: DomainAction.toolsManage, projectId: projectId),
+        ));
+
     final tiles = <_NavTileSpec>[
       _NavTileSpec(
         icon: Icons.dashboard_outlined,
@@ -402,16 +421,18 @@ class _NavGrid extends StatelessWidget {
         label: 'Материалы',
         onTap: () => context.push('/projects/$projectId/materials'),
       ),
-      _NavTileSpec(
-        icon: Icons.shopping_bag_outlined,
-        label: 'Самозакуп',
-        onTap: () => context.push('/projects/$projectId/selfpurchases'),
-      ),
-      _NavTileSpec(
-        icon: Icons.construction_outlined,
-        label: 'Инструмент',
-        onTap: () => context.push('/projects/$projectId/tools'),
-      ),
+      if (canSelfPurchase)
+        _NavTileSpec(
+          icon: Icons.shopping_bag_outlined,
+          label: 'Самозакуп',
+          onTap: () => context.push('/projects/$projectId/selfpurchases'),
+        ),
+      if (canTools)
+        _NavTileSpec(
+          icon: Icons.construction_outlined,
+          label: 'Инструмент',
+          onTap: () => context.push('/projects/$projectId/tools'),
+        ),
       _NavTileSpec(
         icon: Icons.chat_bubble_outline_rounded,
         label: 'Чаты',

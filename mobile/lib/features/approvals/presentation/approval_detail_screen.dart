@@ -454,8 +454,12 @@ class _BottomActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = <Widget>[];
-    final canDecide = ref.watch(canProvider(DomainAction.approvalDecide));
-    final canRequest = ref.watch(canProvider(DomainAction.approvalRequest));
+    final canDecide = ref.watch(canInProjectProvider(
+      (action: DomainAction.approvalDecide, projectId: approval.projectId),
+    ));
+    final canRequest = ref.watch(canInProjectProvider(
+      (action: DomainAction.approvalRequest, projectId: approval.projectId),
+    ));
 
     switch (approval.status) {
       case ApprovalStatus.pending:

@@ -45,7 +45,9 @@ class DocumentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_listProvider(projectId));
     final filter = ref.watch(_filterProvider);
-    final canWrite = ref.watch(canProvider(DomainAction.documentWrite));
+    final canWrite = ref.watch(canInProjectProvider(
+      (action: DomainAction.documentWrite, projectId: projectId),
+    ));
 
     return AppScaffold(
       showBack: true,

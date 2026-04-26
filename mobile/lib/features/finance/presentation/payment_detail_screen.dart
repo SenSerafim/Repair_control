@@ -416,14 +416,30 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buttons = <Widget>[];
-    final hasConfirm =
-        ref.watch(canProvider(DomainAction.financePaymentConfirm));
-    final hasCreate =
-        ref.watch(canProvider(DomainAction.financePaymentCreate));
-    final hasDispute =
-        ref.watch(canProvider(DomainAction.financePaymentDispute));
-    final hasResolve =
-        ref.watch(canProvider(DomainAction.financePaymentResolve));
+    final hasConfirm = ref.watch(canInProjectProvider(
+      (
+        action: DomainAction.financePaymentConfirm,
+        projectId: payment.projectId
+      ),
+    ));
+    final hasCreate = ref.watch(canInProjectProvider(
+      (
+        action: DomainAction.financePaymentCreate,
+        projectId: payment.projectId
+      ),
+    ));
+    final hasDispute = ref.watch(canInProjectProvider(
+      (
+        action: DomainAction.financePaymentDispute,
+        projectId: payment.projectId
+      ),
+    ));
+    final hasResolve = ref.watch(canInProjectProvider(
+      (
+        action: DomainAction.financePaymentResolve,
+        projectId: payment.projectId
+      ),
+    ));
 
     final canConfirm = hasConfirm &&
         payment.status == PaymentStatus.pending &&

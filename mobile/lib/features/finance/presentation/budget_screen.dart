@@ -23,10 +23,12 @@ class BudgetScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(projectBudgetProvider(projectId));
-    final canCreatePayment =
-        ref.watch(canProvider(DomainAction.financePaymentCreate));
-    final canEditBudget =
-        ref.watch(canProvider(DomainAction.financeBudgetEdit));
+    final canCreatePayment = ref.watch(canInProjectProvider(
+      (action: DomainAction.financePaymentCreate, projectId: projectId),
+    ));
+    final canEditBudget = ref.watch(canInProjectProvider(
+      (action: DomainAction.financeBudgetEdit, projectId: projectId),
+    ));
 
     return AppScaffold(
       showBack: true,

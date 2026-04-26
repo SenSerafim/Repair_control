@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/access/system_role.dart';
+import '../../../core/error/api_error.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -13,6 +14,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../stages/application/stages_controller.dart';
 import '../application/selfpurchase_controller.dart';
+import '../data/selfpurchase_repository.dart';
 import '../domain/self_purchase.dart';
 
 /// Активный фильтр на экране самозакупов.
@@ -57,11 +59,21 @@ class SelfpurchasesScreen extends ConsumerWidget {
       ],
       body: async.when(
         loading: () => const AppLoadingState(),
-        error: (e, _) => AppErrorState(
-          title: 'Не удалось загрузить',
-          onRetry: () =>
-              ref.invalidate(selfpurchasesControllerProvider(projectId)),
-        ),
+        error: (e, _) {
+          if (e is SelfPurchaseException &&
+              e.apiError.kind == ApiErrorKind.forbidden) {
+            return const AppEmptyState(
+              title: 'Раздел недоступен',
+              subtitle: 'У вашей роли нет доступа к самозакупам.',
+              icon: Icons.lock_outline_rounded,
+            );
+          }
+          return AppErrorState(
+            title: 'Не удалось загрузить',
+            onRetry: () =>
+                ref.invalidate(selfpurchasesControllerProvider(projectId)),
+          );
+        },
         data: (items) {
           final filtered = _applyFilter(items, filter, me);
           return Column(

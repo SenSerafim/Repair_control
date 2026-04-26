@@ -77,6 +77,16 @@ class Membership with _$Membership {
 }
 
 List<String> _parseRights(Object? raw) {
+  // Бекенд возвращает RepresentativeRights как объект с булевыми флагами
+  // (`{canApprove: true, canSeeBudget: true, ...}`). Старый формат — массив
+  // строк — оставлен для обратной совместимости.
+  if (raw is Map) {
+    final result = <String>[];
+    raw.forEach((k, v) {
+      if (v == true) result.add(k.toString());
+    });
+    return List.unmodifiable(result);
+  }
   if (raw is List) {
     return raw.map((e) => e.toString()).toList(growable: false);
   }
