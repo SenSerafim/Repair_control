@@ -9,6 +9,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/notifications_controller.dart';
 import '../domain/app_notification.dart';
+import '../domain/notification_l10n.dart';
 
 /// s-notifications / f-notifications / c-notifications / f-notifications-empty.
 class NotificationsScreen extends ConsumerWidget {
@@ -79,6 +80,16 @@ class _NotifTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = _styleFor(notification.category);
+    final title = renderNotifTitle(
+      notification.kind,
+      notification.data,
+      fallback: notification.title,
+    );
+    final bodyText = renderNotifBody(
+      notification.kind,
+      notification.data,
+      fallback: notification.body,
+    );
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -112,7 +123,7 @@ class _NotifTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          notification.title,
+                          title.isEmpty ? notification.title : title,
                           style: AppTextStyles.subtitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -129,10 +140,10 @@ class _NotifTile extends StatelessWidget {
                         ),
                     ],
                   ),
-                  if (notification.body.isNotEmpty) ...[
+                  if (bodyText.isNotEmpty || notification.body.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      notification.body,
+                      bodyText.isEmpty ? notification.body : bodyText,
                       style: AppTextStyles.caption,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

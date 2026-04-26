@@ -7,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/domain/membership.dart';
 import '../application/team_controller.dart';
+import '../domain/representative_rights_l10n.dart';
 
 /// s-rep-rights-inline — чек-лист прав представителя, привязан к Membership.
 ///
@@ -176,7 +177,10 @@ class _RightRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label, style: AppTextStyles.body),
-                  Text(action.value, style: AppTextStyles.micro),
+                  Text(
+                    kRightsRu[action]?.description ?? action.value,
+                    style: AppTextStyles.micro,
+                  ),
                 ],
               ),
             ),

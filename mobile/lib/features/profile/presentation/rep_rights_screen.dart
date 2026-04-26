@@ -4,6 +4,7 @@ import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../team/domain/representative_rights_l10n.dart';
 
 /// s-rep-rights — информационный экран о правах представителя.
 /// Реальные права настраиваются в консоли проекта (S10,
@@ -123,21 +124,42 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = kRightsRu[action];
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x16,
         vertical: AppSpacing.x12,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.check_circle_outline,
-            color: AppColors.brand,
-            size: 18,
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.check_circle_outline,
+              color: AppColors.brand,
+              size: 18,
+            ),
           ),
           const SizedBox(width: AppSpacing.x10),
           Expanded(
-            child: Text(action.value, style: AppTextStyles.body),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label?.title ?? action.value,
+                  style: AppTextStyles.body,
+                ),
+                if (label != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    label.description,
+                    style:
+                        AppTextStyles.micro.copyWith(color: AppColors.n400),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),

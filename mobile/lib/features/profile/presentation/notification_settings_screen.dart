@@ -128,7 +128,9 @@ class _SettingRow extends StatelessWidget {
           ),
           if (setting.critical)
             const Tooltip(
-              message: 'Критичные уведомления нельзя отключить',
+              message:
+                  'Критичные уведомления (оплаты, согласования, '
+                  'просрочки) — отключить нельзя.',
               child: Icon(
                 Icons.lock_rounded,
                 size: 18,
