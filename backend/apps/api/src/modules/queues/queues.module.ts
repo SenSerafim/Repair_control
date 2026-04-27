@@ -16,20 +16,37 @@ export const QUEUE_DOCUMENT_THUMBNAILS = 'documents.thumbnails';
   imports: [
     RedisClientModule,
     BullModule.forRootAsync({
-      useFactory: () => ({
-        connection: {
-          url:
-            process.env.REDIS_URL ??
-            `redis://${process.env.REDIS_HOST ?? 'localhost'}:${process.env.REDIS_PORT ?? 6379}`,
-          maxRetriesPerRequest: null,
-        },
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 2000 },
-          removeOnComplete: { count: 1000, age: 7 * 24 * 3600 },
-          removeOnFail: { count: 1000, age: 7 * 24 * 3600 },
-        },
-      }),
+      useFactory: () => {
+        // BullMQ (bullmq@5) принимает host/port отдельно, а не url.
+        // Если REDIS_URL задан — парсим его руками. Это исправляет
+        // регрессию ECONNREFUSED 127.0.0.1:6379 при наличии REDIS_URL=redis://redis:6379
+        // (BullMQ молча игнорировал поле `url` и фоллбэчил на дефолты).
+        const raw = process.env.REDIS_URL;
+        let host = process.env.REDIS_HOST ?? 'localhost';
+        let port = Number(process.env.REDIS_PORT ?? 6379);
+        if (raw) {
+          try {
+            const u = new URL(raw);
+            if (u.hostname) host = u.hostname;
+            if (u.port) port = Number(u.port);
+          } catch {
+            // оставляем host/port из env vars
+          }
+        }
+        return {
+          connection: {
+            host,
+            port,
+            maxRetriesPerRequest: null,
+          },
+          defaultJobOptions: {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 },
+            removeOnComplete: { count: 1000, age: 7 * 24 * 3600 },
+            removeOnFail: { count: 1000, age: 7 * 24 * 3600 },
+          },
+        };
+      },
     }),
     BullModule.registerQueue(
       { name: QUEUE_EXPORTS },
