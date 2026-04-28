@@ -641,9 +641,9 @@ class _ActionCtas extends ConsumerWidget {
     );
     final role = ref.watch(activeRoleProvider);
 
-    // P1.4.a: иерархия отчётности master → foreman → customer (TODO §2A.1).
+    // Иерархия отчётности master → foreman → customer.
     // Заказчик/представитель — только наблюдатель шага. Кнопок нет
-    // (extra_work approval идёт через ApprovalDetailScreen).
+    // (approval по доп.работе и приёмке этапа идёт через ApprovalDetailScreen).
     if (role == SystemRole.customer || role == SystemRole.representative) {
       return const SizedBox.shrink();
     }

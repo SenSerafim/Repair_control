@@ -15,14 +15,17 @@ class MethodologySection with _$MethodologySection {
   }) = _MethodologySection;
 
   static MethodologySection parse(Map<String, dynamic> json) {
+    final sectionId = json['id'] as String;
     final articlesRaw = json['articles'] as List<dynamic>? ?? const [];
     return MethodologySection(
-      id: json['id'] as String,
+      id: sectionId,
       title: json['title'] as String,
       orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
       articles: articlesRaw
-          .map((e) =>
-              MethodologyArticleSummary.parse(e as Map<String, dynamic>))
+          .map((e) => MethodologyArticleSummary.parse(
+                e as Map<String, dynamic>,
+                fallbackSectionId: sectionId,
+              ))
           .toList()
         ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -41,10 +44,13 @@ class MethodologyArticleSummary with _$MethodologyArticleSummary {
     required int version,
   }) = _MethodologyArticleSummary;
 
-  static MethodologyArticleSummary parse(Map<String, dynamic> json) =>
+  static MethodologyArticleSummary parse(
+    Map<String, dynamic> json, {
+    String? fallbackSectionId,
+  }) =>
       MethodologyArticleSummary(
         id: json['id'] as String,
-        sectionId: json['sectionId'] as String,
+        sectionId: (json['sectionId'] as String?) ?? fallbackSectionId ?? '',
         title: json['title'] as String,
         orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
         version: (json['version'] as num?)?.toInt() ?? 1,

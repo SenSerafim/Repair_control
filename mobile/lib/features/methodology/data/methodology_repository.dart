@@ -17,8 +17,7 @@ class MethodologyRepository {
 
   final Dio _dio;
 
-  /// In-memory ETag-кеш статей. Для 50 статей хватит; в S17 при офлайн-
-  /// очереди можно переехать в drift.
+  /// In-memory ETag-кеш статей.
   final Map<String, MethodologyArticle> _articleCache = {};
 
   Future<List<MethodologySection>> listSections() => _call(() async {

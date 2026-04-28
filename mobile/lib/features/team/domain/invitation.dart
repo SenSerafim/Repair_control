@@ -38,13 +38,43 @@ class Invitation with _$Invitation {
     required DateTime createdAt,
   }) = _Invitation;
 
-  static Invitation parse(Map<String, dynamic> json) => Invitation(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        phone: json['phone'] as String,
-        role: MembershipRole.fromString(json['role'] as String?),
-        status: InvitationStatus.fromString(json['status'] as String?),
-        expiresAt: DateTime.parse(json['expiresAt'] as String),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+  static Invitation parse(Map<String, dynamic> json) {
+    final id = (json['id'] as String?) ?? '';
+    final token = json['token'] as String?;
+    if (id.isNotEmpty && token != null && token.isNotEmpty) {
+      InvitationTokens._cache[id] = token;
+    }
+    return Invitation(
+      id: id,
+      projectId: (json['projectId'] as String?) ?? '',
+      phone: (json['phone'] as String?) ?? '',
+      role: MembershipRole.fromString(json['role'] as String?),
+      status: InvitationStatus.fromString(json['status'] as String?),
+      expiresAt: _parseDate(json['expiresAt']),
+      createdAt: _parseDate(json['createdAt']),
+    );
+  }
+}
+
+DateTime _parseDate(Object? raw) {
+  if (raw is String && raw.isNotEmpty) {
+    return DateTime.tryParse(raw) ?? DateTime.now();
+  }
+  return DateTime.now();
+}
+
+/// Side-channel хранилище для invite-токенов: 6-значный код приходит от
+/// бэкенда в `token`, но не хранится во freezed-модели (избегаем codegen).
+/// Заполняется в `Invitation.parse(...)`; читается через
+/// `invitation.token` extension.
+class InvitationTokens {
+  InvitationTokens._();
+  static final Map<String, String> _cache = {};
+  static String? of(String invitationId) => _cache[invitationId];
+}
+
+extension InvitationTokenExt on Invitation {
+  /// 6-значный код приглашения — заполняется при парсинге ответа на
+  /// `POST /invitations` или `POST /invitations/generate-code`.
+  String? get token => InvitationTokens.of(id);
 }

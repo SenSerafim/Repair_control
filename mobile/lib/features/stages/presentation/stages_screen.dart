@@ -91,6 +91,8 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                   : null,
             );
           }
+          final canManage =
+              ref.watch(canProvider(DomainAction.stageManage));
           return Column(
             children: [
               Expanded(
@@ -110,20 +112,21 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                         ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.x16),
-                decoration: const BoxDecoration(
-                  color: AppColors.n0,
-                  border: Border(
-                    top: BorderSide(color: AppColors.n200),
+              if (canManage)
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  decoration: const BoxDecoration(
+                    color: AppColors.n0,
+                    border: Border(
+                      top: BorderSide(color: AppColors.n200),
+                    ),
+                  ),
+                  child: AppButton(
+                    label: 'Добавить этап',
+                    onPressed: () => context
+                        .push('/projects/${widget.projectId}/stages/create'),
                   ),
                 ),
-                child: AppButton(
-                  label: 'Добавить этап',
-                  onPressed: () => context
-                      .push('/projects/${widget.projectId}/stages/create'),
-                ),
-              ),
             ],
           );
         },

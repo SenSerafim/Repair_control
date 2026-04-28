@@ -7,8 +7,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../team/domain/representative_rights_l10n.dart';
 
 /// s-rep-rights — информационный экран о правах представителя.
-/// Реальные права настраиваются в консоли проекта (S10,
-/// Membership.representativeRights JSONB).
+/// Реальные права настраиваются в консоли проекта (Membership.representativeRights).
 class RepRightsScreen extends StatelessWidget {
   const RepRightsScreen({super.key});
 

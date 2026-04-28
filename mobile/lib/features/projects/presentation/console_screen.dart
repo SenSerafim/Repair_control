@@ -70,14 +70,6 @@ class ConsoleScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               children: [
-                Hero(
-                  tag: 'project-${project.id}',
-                  flightShuttleBuilder: (ctx, anim, dir, fromCtx, toCtx) {
-                    final fromHero = fromCtx.widget as Hero;
-                    return fromHero.child;
-                  },
-                  child: const SizedBox(height: 1),
-                ),
                 _Header(project: effective),
                 const SizedBox(height: AppSpacing.x16),
                 _HouseAndStats(
@@ -252,7 +244,7 @@ class _HouseAndStats extends StatelessWidget {
                 value: '$done',
                 suffix: '/$total',
                 hint: total == 0
-                    ? 'Добавьте в S11'
+                    ? 'Этапы пока не созданы'
                     : '${total - done} осталось',
                 progress: total == 0 ? 0 : done / total,
                 progressColor: project.semaphore.dot,
@@ -333,7 +325,8 @@ class _StagesCarousel extends StatelessWidget {
                   SizedBox(width: AppSpacing.x12),
                   Expanded(
                     child: Text(
-                      'Пока нет этапов. Добавьте в Sprint 11.',
+                      'Этапов пока нет — нажмите «Этапы», '
+                      'чтобы добавить первый.',
                       style: AppTextStyles.caption,
                     ),
                   ),

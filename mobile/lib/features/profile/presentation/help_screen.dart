@@ -27,10 +27,13 @@ class HelpScreen extends ConsumerWidget {
         ),
         data: (sections) {
           if (sections.isEmpty) {
-            return const AppEmptyState(
-              title: 'FAQ пока пуст',
-              subtitle: 'Разделы помощи скоро появятся.',
+            return AppEmptyState(
+              title: 'Помощь временно недоступна',
+              subtitle:
+                  'Не удалось получить разделы. Потяните вниз, чтобы обновить.',
               icon: Icons.help_outline,
+              onAction: () => ref.read(faqProvider.notifier).refresh(),
+              actionLabel: 'Обновить',
             );
           }
           return ListView(

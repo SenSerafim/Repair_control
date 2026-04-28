@@ -16,41 +16,31 @@ import 'system_role.dart';
 class AccessGuard {
   const AccessGuard._();
 
+  // Иерархия ролей по убыванию полномочий:
+  // admin ≥ customer ≥ representative ≥ contractor (бригадир) ≥ master.
+  //
+  // Принципы:
+  // • customer — владелец, может ВСЁ кроме методички (она глобальная).
+  // • representative — действует от имени заказчика, имеет почти всё,
+  //   кроме архивации и удаления документов (необратимые действия
+  //   делегируются явно через representativeRights).
+  // • contractor (бригадир) — управляет работой: этапы, шаги, материалы,
+  //   инструмент, чаты команды. НЕ управляет проектом и финансами
+  //   (создание выплат — да, но не их «resolve»).
+  // • master — исполнитель: ведёт свои шаги (фото, отметки),
+  //   подтверждает выплаты по своим работам, читает чаты/документы.
   static final Map<SystemRole, Set<DomainAction>> _matrix = {
+    // Админ — суперпользователь.
     SystemRole.admin: Set.of(DomainAction.values),
+
+    // Заказчик — владелец проекта. Может ВСЁ внутри своего проекта,
+    // включая архивацию, бюджет, удаление документов, модерирование
+    // чатов. Не может только редактировать общую методичку.
     SystemRole.customer: {
       DomainAction.projectCreate,
       DomainAction.projectEdit,
       DomainAction.projectArchive,
       DomainAction.projectInviteMember,
-      DomainAction.approvalList,
-      DomainAction.approvalDecide,
-      DomainAction.financeBudgetView,
-      DomainAction.financeBudgetEdit,
-      DomainAction.financePaymentCreate,
-      DomainAction.financePaymentConfirm,
-      DomainAction.financePaymentDispute,
-      DomainAction.financePaymentResolve,
-      DomainAction.chatRead,
-      DomainAction.chatWrite,
-      DomainAction.chatCreatePersonal,
-      DomainAction.documentRead,
-      DomainAction.documentWrite,
-      DomainAction.feedExport,
-      DomainAction.noteManage,
-      DomainAction.methodologyRead,
-    },
-    SystemRole.representative: {
-      // Делегированные права хранятся в membership.representativeRights
-      // (JSONB). Матрица — базовые права без делегирования.
-      DomainAction.chatRead,
-      DomainAction.chatWrite,
-      DomainAction.documentRead,
-      DomainAction.financeBudgetView,
-      DomainAction.noteManage,
-      DomainAction.methodologyRead,
-    },
-    SystemRole.contractor: {
       DomainAction.stageManage,
       DomainAction.stageStart,
       DomainAction.stagePause,
@@ -61,9 +51,11 @@ class AccessGuard {
       DomainAction.approvalRequest,
       DomainAction.approvalDecide,
       DomainAction.financeBudgetView,
+      DomainAction.financeBudgetEdit,
       DomainAction.financePaymentCreate,
       DomainAction.financePaymentConfirm,
       DomainAction.financePaymentDispute,
+      DomainAction.financePaymentResolve,
       DomainAction.materialsManage,
       DomainAction.materialFinalize,
       DomainAction.selfPurchaseCreate,
@@ -85,13 +77,93 @@ class AccessGuard {
       DomainAction.questionManage,
       DomainAction.methodologyRead,
     },
-    SystemRole.master: {
+
+    // Представитель — действует от имени заказчика. По умолчанию имеет
+    // почти всё кроме необратимых действий (архивация проекта, удаление
+    // документов, окончательный resolve выплат) и редактирования бюджета.
+    // Эти полномочия делегируются явными флагами в representativeRights
+    // и проверяются через canInProjectProvider.
+    SystemRole.representative: {
+      DomainAction.projectEdit,
+      DomainAction.projectInviteMember,
+      DomainAction.stageManage,
+      DomainAction.stageStart,
+      DomainAction.stagePause,
       DomainAction.stepManage,
       DomainAction.stepAddSubstep,
       DomainAction.stepPhotoUpload,
+      DomainAction.approvalList,
       DomainAction.approvalRequest,
+      DomainAction.approvalDecide,
       DomainAction.financeBudgetView,
+      DomainAction.financePaymentCreate,
       DomainAction.financePaymentConfirm,
+      DomainAction.financePaymentDispute,
+      DomainAction.materialsManage,
+      DomainAction.selfPurchaseConfirm,
+      DomainAction.toolsManage,
+      DomainAction.chatRead,
+      DomainAction.chatWrite,
+      DomainAction.chatCreatePersonal,
+      DomainAction.chatCreateGroup,
+      DomainAction.documentRead,
+      DomainAction.documentWrite,
+      DomainAction.feedExport,
+      DomainAction.noteManage,
+      DomainAction.questionManage,
+      DomainAction.methodologyRead,
+    },
+
+    // Бригадир — управляет работой команды. Меньше прав, чем
+    // представитель: не редактирует проект, не приглашает представителя
+    // (только мастеров), не имеет доступа к финансовым resolve.
+    SystemRole.contractor: {
+      DomainAction.projectInviteMember, // ограничено мастерами в UI
+      DomainAction.stageManage,
+      DomainAction.stageStart,
+      DomainAction.stagePause,
+      DomainAction.stepManage,
+      DomainAction.stepAddSubstep,
+      DomainAction.stepPhotoUpload,
+      DomainAction.approvalList,
+      DomainAction.approvalRequest,
+      DomainAction.approvalDecide, // в пределах своих этапов
+      DomainAction.financeBudgetView,
+      DomainAction.financePaymentCreate,
+      DomainAction.financePaymentConfirm,
+      DomainAction.financePaymentDispute,
+      DomainAction.materialsManage,
+      DomainAction.materialFinalize,
+      DomainAction.selfPurchaseCreate,
+      DomainAction.selfPurchaseConfirm,
+      DomainAction.toolsManage,
+      DomainAction.toolsIssue,
+      DomainAction.toolsReturn,
+      DomainAction.chatRead,
+      DomainAction.chatWrite,
+      DomainAction.chatCreatePersonal,
+      DomainAction.chatCreateGroup,
+      DomainAction.chatToggleCustomerVisibility,
+      DomainAction.chatModerate,
+      DomainAction.documentRead,
+      DomainAction.documentWrite,
+      DomainAction.feedExport,
+      DomainAction.noteManage,
+      DomainAction.questionManage,
+      DomainAction.methodologyRead,
+    },
+
+    // Мастер — исполнитель. Минимум прав: ведёт свои шаги (фото,
+    // подшаги), подтверждает выплаты по своим работам, читает чаты
+    // и документы. Не может управлять этапами или приглашать кого-либо.
+    SystemRole.master: {
+      DomainAction.stepManage, // только свои шаги (assignee)
+      DomainAction.stepAddSubstep,
+      DomainAction.stepPhotoUpload,
+      DomainAction.approvalList,
+      DomainAction.approvalRequest, // доп.работа
+      DomainAction.financeBudgetView,
+      DomainAction.financePaymentConfirm, // подтверждение получения
       DomainAction.financePaymentDispute,
       DomainAction.selfPurchaseCreate,
       DomainAction.toolsReturn,
@@ -210,6 +282,40 @@ DomainAction? _domainActionFromString(String raw) {
 Set<DomainAction> _expandFlag(String flag) {
   return _representativeFlagToActions[flag]?.toSet() ?? const {};
 }
+
+/// Какие роли участника может пригласить текущий пользователь в проекте.
+///
+/// Правила (соответствуют backend RBAC):
+/// - admin / customer: представитель + бригадир + мастер (любые, любое количество);
+/// - representative с canInviteMembers: представитель + бригадир + мастер
+///   (любые, любое количество — действует от имени заказчика);
+/// - contractor (бригадир): только мастер;
+/// - master: ничего пригласить не может.
+final invitableRolesProvider =
+    Provider.family<List<MembershipRole>, String>((ref, projectId) {
+  final role = ref.watch(activeRoleProvider);
+  if (role == null) return const [];
+  if (role == SystemRole.admin || role == SystemRole.customer) {
+    return const [
+      MembershipRole.representative,
+      MembershipRole.foreman,
+      MembershipRole.master,
+    ];
+  }
+  if (role == SystemRole.contractor) {
+    return const [MembershipRole.master];
+  }
+  if (role == SystemRole.representative) {
+    final delegated = ref.watch(representativeRightsProvider(projectId));
+    if (!delegated.contains(DomainAction.projectInviteMember)) return const [];
+    return const [
+      MembershipRole.representative,
+      MembershipRole.foreman,
+      MembershipRole.master,
+    ];
+  }
+  return const [];
+});
 
 /// Тот же `canProvider`, но с учётом делегированных представителю прав
 /// в конкретном проекте. Используется в экранах, где экшен зависит от

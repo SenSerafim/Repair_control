@@ -113,26 +113,21 @@ class StageCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Hero(
-        tag: 'stage-${stage.id}',
-        flightShuttleBuilder: (_, __, dir, fromCtx, toCtx) {
-          final hero =
-              (dir == HeroFlightDirection.push ? fromCtx : toCtx).widget
-                  as Hero;
-          return hero.child;
-        },
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.n0,
-          borderRadius: AppRadius.card,
-          border: Border.all(color: AppColors.n200, width: 1.5),
-          boxShadow: AppShadows.sh1,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.n0,
+            borderRadius: AppRadius.card,
+            border: Border.all(color: AppColors.n200, width: 1.5),
+            boxShadow: AppShadows.sh1,
+          ),
+          child: ClipRRect(
+            borderRadius: AppRadius.card,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             Container(
               height: 3,
               decoration: BoxDecoration(
@@ -218,11 +213,11 @@ class StageCard extends StatelessWidget {
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+              ],
+            ),
           ),
         ),
+      ),
     );
   }
 

@@ -12,17 +12,21 @@ void main() {
       }
     });
 
-    test('customer — финансы и согласования, не управление этапами', () {
+    test('customer — владелец, имеет всё внутри проекта', () {
+      // По новой матрице customer = всё (в том числе этапы и фото).
+      // Не имеет только глобальной правки методички (это admin-only).
       expect(AccessGuard.can(SystemRole.customer, DomainAction.projectCreate),
           isTrue);
-      expect(
-          AccessGuard.can(SystemRole.customer, DomainAction.approvalDecide),
+      expect(AccessGuard.can(SystemRole.customer, DomainAction.approvalDecide),
+          isTrue);
+      expect(AccessGuard.can(SystemRole.customer, DomainAction.stageStart),
           isTrue);
       expect(
-          AccessGuard.can(SystemRole.customer, DomainAction.stageStart),
-          isFalse);
-      expect(
           AccessGuard.can(SystemRole.customer, DomainAction.stepPhotoUpload),
+          isTrue);
+      expect(AccessGuard.can(SystemRole.customer, DomainAction.documentDelete),
+          isTrue);
+      expect(AccessGuard.can(SystemRole.customer, DomainAction.methodologyEdit),
           isFalse);
     });
 
@@ -54,16 +58,34 @@ void main() {
           isFalse);
     });
 
-    test('representative — базовые права без делегирования', () {
+    test('representative — почти всё, кроме необратимого', () {
+      // Представитель действует от имени заказчика — имеет основные
+      // полномочия. Бэкенд проверяет конкретные representativeRights.
       expect(AccessGuard.can(SystemRole.representative, DomainAction.chatRead),
           isTrue);
       expect(
           AccessGuard.can(
               SystemRole.representative, DomainAction.approvalDecide),
-          isFalse);
+          isTrue);
       expect(
           AccessGuard.can(
               SystemRole.representative, DomainAction.financePaymentCreate),
+          isTrue);
+      expect(
+          AccessGuard.can(SystemRole.representative, DomainAction.stageManage),
+          isTrue);
+      // Необратимые действия — нет.
+      expect(
+          AccessGuard.can(
+              SystemRole.representative, DomainAction.projectArchive),
+          isFalse);
+      expect(
+          AccessGuard.can(
+              SystemRole.representative, DomainAction.financePaymentResolve),
+          isFalse);
+      expect(
+          AccessGuard.can(
+              SystemRole.representative, DomainAction.documentDelete),
           isFalse);
     });
 

@@ -1,6 +1,5 @@
 import * as crypto from 'crypto';
 import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
-import { nanoid } from 'nanoid';
 import { Clock, ErrorCodes, NotFoundError, PrismaService } from '@app/common';
 import { MembershipRole } from './members.service';
 
@@ -30,26 +29,46 @@ export class InvitationsService {
     actorUserId: string;
     phone: string;
     role: MembershipRole;
+    permissions?: Record<string, boolean>;
+    stageIds?: string[];
   }) {
     const project = await this.prisma.project.findUnique({ where: { id: params.projectId } });
     if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
 
-    const token = nanoid(32);
     const expiresAt = new Date(
       this.clock.now().getTime() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000,
     );
 
-    return this.prisma.projectInvitation.create({
-      data: {
-        projectId: params.projectId,
-        phone: params.phone,
-        role: params.role,
-        invitedById: params.actorUserId,
-        token,
-        expiresAt,
-      },
-      select: { id: true, token: true, expiresAt: true, phone: true, role: true },
-    });
+    // Генерируем numeric 6-значный token (как generateCode), чтобы получатель
+    // мог ввести его в «Присоединиться по коду». Дубликат при коллизии — повтор.
+    for (let i = 0; i < CODE_GEN_MAX_RETRIES; i++) {
+      const token = generateNumericCode(CODE_LENGTH);
+      try {
+        return await this.prisma.projectInvitation.create({
+          data: {
+            projectId: params.projectId,
+            phone: params.phone,
+            role: params.role,
+            invitedById: params.actorUserId,
+            token,
+            permissions: params.permissions ?? undefined,
+            stageIds: params.stageIds ?? [],
+            expiresAt,
+          },
+        });
+      } catch (e: unknown) {
+        if (
+          typeof e === 'object' &&
+          e !== null &&
+          'code' in e &&
+          (e as { code?: string }).code === 'P2002'
+        ) {
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw new ConflictException('failed to generate unique code, retry');
   }
 
   async listForProject(projectId: string) {

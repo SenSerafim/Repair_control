@@ -47,7 +47,10 @@ void main() {
       }
     });
 
-    test('НЕ имеет производственных actions (stage/step/material/tools)', () {
+    test('заказчик имеет полный доступ к производственным actions', () {
+      // По новой матрице заказчик — владелец проекта и может всё:
+      // от создания этапов до выдачи инструмента и удаления документов.
+      // Бэкенд дополнительно проверяет ownerId === userId.
       for (final a in [
         DomainAction.stageManage,
         DomainAction.stageStart,
@@ -60,8 +63,8 @@ void main() {
         DomainAction.toolsReturn,
         DomainAction.documentDelete,
       ]) {
-        expect(AccessGuard.can(SystemRole.customer, a), isFalse,
-            reason: 'customer не должен иметь $a');
+        expect(AccessGuard.can(SystemRole.customer, a), isTrue,
+            reason: 'customer должен иметь $a');
       }
     });
   });
@@ -88,21 +91,22 @@ void main() {
         DomainAction.chatToggleCustomerVisibility,
         DomainAction.chatModerate,
         DomainAction.documentWrite,
-        DomainAction.documentDelete,
+        DomainAction.projectInviteMember, // приглашает мастеров
       ]) {
         expect(AccessGuard.can(SystemRole.contractor, a), isTrue,
             reason: 'contractor должен иметь $a');
       }
     });
 
-    test('НЕ имеет projectCreate / financePaymentResolve / financeBudgetEdit',
-        () {
+    test('НЕ имеет projectCreate / projectArchive / payment.resolve / '
+        'budgetEdit / documentDelete', () {
       for (final a in [
         DomainAction.projectCreate,
         DomainAction.projectEdit,
-        DomainAction.projectInviteMember,
+        DomainAction.projectArchive,
         DomainAction.financePaymentResolve,
         DomainAction.financeBudgetEdit,
+        DomainAction.documentDelete,
       ]) {
         expect(AccessGuard.can(SystemRole.contractor, a), isFalse,
             reason: 'contractor не должен иметь $a');
@@ -151,12 +155,22 @@ void main() {
   });
 
   group('AccessGuard — representative', () {
-    test('базовые права без делегирования', () {
+    test('почти все права (действует от имени заказчика)', () {
+      // Базовый набор — представитель имеет почти всё.
       for (final a in [
         DomainAction.chatRead,
         DomainAction.chatWrite,
         DomainAction.documentRead,
+        DomainAction.documentWrite,
         DomainAction.financeBudgetView,
+        DomainAction.financePaymentCreate,
+        DomainAction.financePaymentConfirm,
+        DomainAction.approvalDecide,
+        DomainAction.stageManage,
+        DomainAction.stepManage,
+        DomainAction.materialsManage,
+        DomainAction.toolsManage,
+        DomainAction.projectInviteMember,
         DomainAction.noteManage,
         DomainAction.methodologyRead,
       ]) {
@@ -165,19 +179,17 @@ void main() {
       }
     });
 
-    test('НЕ имеет approval/finance write actions без делегирования', () {
+    test('НЕ имеет необратимых действий без делегирования', () {
+      // Несколько ключевых необратимых: архивация проекта, удаление
+      // документов, окончательный resolve выплат, редактирование бюджета.
       for (final a in [
-        DomainAction.approvalDecide,
-        DomainAction.financePaymentCreate,
-        DomainAction.financePaymentConfirm,
+        DomainAction.projectArchive,
         DomainAction.financePaymentResolve,
         DomainAction.financeBudgetEdit,
-        DomainAction.documentWrite,
         DomainAction.documentDelete,
-        DomainAction.stageManage,
       ]) {
         expect(AccessGuard.can(SystemRole.representative, a), isFalse,
-            reason: 'representative БЕЗ делегирования не должен иметь $a');
+            reason: 'representative без делегирования не должен иметь $a');
       }
     });
   });
@@ -208,20 +220,21 @@ void main() {
       );
     });
 
-    test('approvalDecide — customer/contractor/admin (не master/rep)', () {
+    test('approvalDecide — customer/contractor/representative/admin (не master)',
+        () {
       expect(AccessGuard.can(SystemRole.customer, DomainAction.approvalDecide),
           isTrue);
       expect(
           AccessGuard.can(SystemRole.contractor, DomainAction.approvalDecide),
           isTrue);
+      expect(
+        AccessGuard.can(SystemRole.representative, DomainAction.approvalDecide),
+        isTrue,
+      );
       expect(AccessGuard.can(SystemRole.admin, DomainAction.approvalDecide),
           isTrue);
       expect(AccessGuard.can(SystemRole.master, DomainAction.approvalDecide),
           isFalse);
-      expect(
-        AccessGuard.can(SystemRole.representative, DomainAction.approvalDecide),
-        isFalse,
-      );
     });
   });
 }

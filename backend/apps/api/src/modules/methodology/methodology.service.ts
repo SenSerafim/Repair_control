@@ -27,7 +27,14 @@ export class MethodologyService {
       include: {
         articles: {
           orderBy: { orderIndex: 'asc' },
-          select: { id: true, title: true, orderIndex: true, version: true, etag: true },
+          select: {
+            id: true,
+            sectionId: true,
+            title: true,
+            orderIndex: true,
+            version: true,
+            etag: true,
+          },
         },
       },
     });

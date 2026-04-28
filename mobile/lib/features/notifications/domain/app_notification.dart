@@ -5,7 +5,7 @@ import '../../../core/push/deep_link_router.dart';
 part 'app_notification.freezed.dart';
 
 /// Локальная запись о полученном уведомлении. Хранится в памяти
-/// NotificationsController'а; в Sprint 17.1 переедет в drift.
+/// NotificationsController'а.
 @freezed
 class AppNotification with _$AppNotification {
   const factory AppNotification({

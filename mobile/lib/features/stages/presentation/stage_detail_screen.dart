@@ -74,17 +74,6 @@ class StageDetailScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                Hero(
-                  tag: 'stage-${stage.id}',
-                  flightShuttleBuilder: (_, __, dir, fromCtx, toCtx) {
-                    final hero = (dir == HeroFlightDirection.push
-                            ? fromCtx
-                            : toCtx)
-                        .widget as Hero;
-                    return hero.child;
-                  },
-                  child: const SizedBox(height: 1),
-                ),
                 _HeaderCard(stage: stage, display: display),
                 const SizedBox(height: AppSpacing.x12),
                 _StatusBanner(
@@ -225,7 +214,8 @@ class _StepsSection extends ConsumerWidget {
   ) async {
     final title = await showAppBottomSheet<String>(
       context: context,
-      child: _CreateRegularStepBody(),
+      isScrollControlled: true,
+      child: const _CreateRegularStepBody(),
     );
     if (title == null || title.isEmpty) return;
     final failure = await ref
@@ -242,6 +232,8 @@ class _StepsSection extends ConsumerWidget {
 }
 
 class _CreateRegularStepBody extends StatefulWidget {
+  const _CreateRegularStepBody();
+
   @override
   State<_CreateRegularStepBody> createState() =>
       _CreateRegularStepBodyState();
@@ -249,6 +241,7 @@ class _CreateRegularStepBody extends StatefulWidget {
 
 class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
   final _controller = TextEditingController();
+  String? _error;
 
   @override
   void dispose() {
@@ -256,42 +249,82 @@ class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
     super.dispose();
   }
 
+  void _submit() {
+    final title = _controller.text.trim();
+    if (title.length < 2) {
+      setState(() => _error = 'Минимум 2 символа');
+      return;
+    }
+    if (title.length > 200) {
+      setState(() => _error = 'Максимум 200 символов');
+      return;
+    }
+    Navigator.of(context).pop(title);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const AppBottomSheetHeader(
-          title: 'Новый шаг',
-          subtitle:
-              'Основной шаг — включается в прогресс этапа. Для доп.работы '
-              'используйте отдельную кнопку сверху.',
-        ),
-        TextField(
-          controller: _controller,
-          autofocus: true,
-          maxLength: 200,
-          decoration: InputDecoration(
-            hintText: 'Что нужно сделать?',
-            hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-            filled: true,
-            fillColor: AppColors.n0,
-            contentPadding: const EdgeInsets.all(12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AppBottomSheetHeader(
+            title: 'Новый шаг',
+            subtitle:
+                'Основной шаг попадает в прогресс этапа. Для доп.работы '
+                'используйте отдельную кнопку сверху.',
+          ),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLength: 200,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            onChanged: (_) {
+              if (_error != null) setState(() => _error = null);
+            },
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              hintText: 'Что нужно сделать?',
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              filled: true,
+              fillColor: AppColors.n0,
+              contentPadding: const EdgeInsets.all(12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+                borderSide:
+                    const BorderSide(color: AppColors.n200, width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+                borderSide:
+                    const BorderSide(color: AppColors.n200, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+                borderSide:
+                    const BorderSide(color: AppColors.brand, width: 1.5),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        AppButton(
-          label: 'Добавить',
-          onPressed: () =>
-              Navigator.of(context).pop(_controller.text.trim()),
-        ),
-      ],
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.x6),
+            Text(
+              _error!,
+              style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.x16),
+          AppButton(
+            label: 'Добавить шаг',
+            onPressed: _submit,
+          ),
+        ],
+      ),
     );
   }
 }
