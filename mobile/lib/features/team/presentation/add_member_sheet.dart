@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/theme/text_styles.dart';
@@ -515,11 +516,17 @@ class _InviteCodeView extends ConsumerWidget {
             ),
           ),
         ),
+        AppButton(
+          label: 'Отправить через…',
+          icon: Icons.send_rounded,
+          onPressed: () => _share(shareMessage),
+        ),
+        const SizedBox(height: AppSpacing.x8),
         Row(
           children: [
             Expanded(
               child: AppButton(
-                label: 'Скопировать код',
+                label: 'Копировать код',
                 variant: AppButtonVariant.secondary,
                 onPressed: () => _copy(context, token, 'Код'),
               ),
@@ -527,7 +534,8 @@ class _InviteCodeView extends ConsumerWidget {
             const SizedBox(width: AppSpacing.x10),
             Expanded(
               child: AppButton(
-                label: 'Скопировать сообщение',
+                label: 'Копировать текст',
+                variant: AppButtonVariant.secondary,
                 onPressed: () => _copy(context, shareMessage, 'Сообщение'),
               ),
             ),
@@ -555,6 +563,10 @@ class _InviteCodeView extends ConsumerWidget {
       message: '$label скопирован',
       kind: AppToastKind.success,
     );
+  }
+
+  static Future<void> _share(String text) async {
+    await Share.share(text, subject: 'Приглашение в проект');
   }
 
   static String _composeShareMessage({

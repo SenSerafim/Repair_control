@@ -122,11 +122,28 @@ export class StepPhotosService {
       orderBy: { createdAt: 'desc' },
     });
     return Promise.all(
-      photos.map(async (p) => ({
-        ...p,
-        downloadUrl: (await this.files.createPresignedDownload(p.fileKey)).url,
-        thumbUrl: p.thumbKey ? (await this.files.createPresignedDownload(p.thumbKey)).url : null,
-      })),
+      photos.map(async (p) => {
+        let url: string | null = null;
+        let thumbUrl: string | null = null;
+        try {
+          url = (await this.files.createPresignedDownload(p.fileKey)).url;
+        } catch {
+          url = null;
+        }
+        try {
+          thumbUrl = p.thumbKey ? (await this.files.createPresignedDownload(p.thumbKey)).url : url;
+        } catch {
+          thumbUrl = null;
+        }
+        return {
+          ...p,
+          // `url`/`thumbUrl` — то, что читает мобильный StepPhoto.parse.
+          // `downloadUrl` оставлен для backward-compat с тем, что было раньше.
+          url,
+          thumbUrl,
+          downloadUrl: url,
+        };
+      }),
     );
   }
 

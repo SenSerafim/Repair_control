@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
@@ -69,9 +75,9 @@ class _DetailView extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.x8),
         AppButton(
-          label: 'Скачать',
+          label: 'Открыть в системе',
           variant: AppButtonVariant.secondary,
-          icon: Icons.download_rounded,
+          icon: Icons.open_in_new_rounded,
           onPressed: () => _download(context, ref),
         ),
         const SizedBox(height: AppSpacing.x8),
@@ -96,21 +102,29 @@ class _DetailView extends ConsumerWidget {
 
   Future<void> _download(BuildContext context, WidgetRef ref) async {
     try {
-      final url = await ref
-          .read(documentsControllerProvider)
-          .downloadUrl(doc.id);
-      await Clipboard.setData(ClipboardData(text: url));
+      final file = await _downloadToTemp(ref);
       if (!context.mounted) return;
-      AppToast.show(
-        context,
-        message: 'Ссылка на файл скопирована',
-        kind: AppToastKind.success,
-      );
+      final result = await OpenFilex.open(file.path);
+      if (!context.mounted) return;
+      if (result.type != ResultType.done) {
+        AppToast.show(
+          context,
+          message: 'Не удалось открыть файл (${result.message})',
+          kind: AppToastKind.error,
+        );
+      }
     } on DocumentsException catch (e) {
       if (!context.mounted) return;
       AppToast.show(
         context,
         message: e.failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: 'Не удалось скачать файл',
         kind: AppToastKind.error,
       );
     }
@@ -129,8 +143,6 @@ class _DetailView extends ConsumerWidget {
         chats: chats,
         onPickChat: (id) async {
           Navigator.of(context).pop();
-          // Sharing через копирование ссылки в буфер обмена —
-          // backend не предоставляет прямой POST /chats/.../share.
           try {
             final url = await ref
                 .read(documentsControllerProvider)
@@ -176,8 +188,73 @@ class _DetailView extends ConsumerWidget {
             );
           }
         },
+        onSystemShare: () async {
+          Navigator.of(context).pop();
+          try {
+            final file = await _downloadToTemp(ref);
+            await Share.shareXFiles(
+              [XFile(file.path, mimeType: doc.mimeType)],
+              text: doc.title,
+            );
+          } on DocumentsException catch (e) {
+            if (!context.mounted) return;
+            AppToast.show(
+              context,
+              message: e.failure.userMessage,
+              kind: AppToastKind.error,
+            );
+          } catch (_) {
+            if (!context.mounted) return;
+            AppToast.show(
+              context,
+              message: 'Не удалось поделиться файлом',
+              kind: AppToastKind.error,
+            );
+          }
+        },
       ),
     );
+  }
+
+  /// Скачивает документ во временную папку. Использует presigned URL
+  /// (он не требует JWT-авторизации). Имя файла — `<id>__<title>` чтобы
+  /// избежать коллизий и сохранить расширение для open_filex.
+  Future<File> _downloadToTemp(WidgetRef ref) async {
+    final url = doc.url ??
+        await ref.read(documentsControllerProvider).downloadUrl(doc.id);
+    final tmpDir = await getTemporaryDirectory();
+    final safeTitle = doc.title.replaceAll(RegExp(r'[^A-Za-z0-9._\-А-Яа-я ]'), '_');
+    final filename = '${doc.id}__$safeTitle';
+    final ext = p.extension(filename).isEmpty
+        ? _extFromMime(doc.mimeType)
+        : '';
+    final file = File(p.join(tmpDir.path, '$filename$ext'));
+    final raw = Dio();
+    try {
+      await raw.download(url, file.path);
+    } finally {
+      raw.close();
+    }
+    return file;
+  }
+
+  String _extFromMime(String mime) {
+    switch (mime) {
+      case 'image/jpeg':
+        return '.jpg';
+      case 'image/png':
+        return '.png';
+      case 'application/pdf':
+        return '.pdf';
+      case 'application/vnd.openxmlformats-officedocument'
+          '.spreadsheetml.sheet':
+        return '.xlsx';
+      case 'application/vnd.openxmlformats-officedocument'
+          '.wordprocessingml.document':
+        return '.docx';
+      default:
+        return '';
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
@@ -229,29 +306,57 @@ class _Preview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final previewUrl = doc.thumbUrl ?? doc.url;
     return Container(
-      height: 200,
+      height: 220,
       decoration: BoxDecoration(
         color: AppColors.n100,
         borderRadius: BorderRadius.circular(AppRadius.r16),
         border: Border.all(color: AppColors.n200),
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(doc.category.icon, size: 40, color: AppColors.n400),
-          const SizedBox(height: AppSpacing.x8),
-          Text(
-            doc.isPdf
-                ? 'PDF'
-                : doc.isImage
-                    ? 'Изображение'
-                    : 'Документ',
-            style: AppTextStyles.caption.copyWith(color: AppColors.n500),
-          ),
-        ],
-      ),
+      child: doc.isImage && previewUrl != null
+          ? Image.network(
+              previewUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              loadingBuilder: (_, child, p) => p == null
+                  ? child
+                  : const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+              errorBuilder: (_, __, ___) => _PlaceholderIcon(doc: doc),
+            )
+          : _PlaceholderIcon(doc: doc),
+    );
+  }
+}
+
+class _PlaceholderIcon extends StatelessWidget {
+  const _PlaceholderIcon({required this.doc});
+  final Document doc;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(doc.category.icon, size: 40, color: AppColors.n400),
+        const SizedBox(height: AppSpacing.x8),
+        Text(
+          doc.isPdf
+              ? 'PDF — нажмите, чтобы открыть'
+              : doc.isImage
+                  ? 'Изображение'
+                  : 'Документ',
+          style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+        ),
+      ],
     );
   }
 }
@@ -320,6 +425,7 @@ class _ShareSheet extends StatelessWidget {
     required this.chats,
     required this.onPickChat,
     required this.onCopyLink,
+    required this.onSystemShare,
   });
 
   final String docTitle;
@@ -327,6 +433,7 @@ class _ShareSheet extends StatelessWidget {
   final List<Chat> chats;
   final ValueChanged<String> onPickChat;
   final VoidCallback onCopyLink;
+  final VoidCallback onSystemShare;
 
   @override
   Widget build(BuildContext context) {
@@ -338,6 +445,15 @@ class _ShareSheet extends StatelessWidget {
           title: 'Поделиться',
           subtitle: '$docTitle · $docSize',
         ),
+        _ShareTile(
+          icon: Icons.send_rounded,
+          iconBg: AppColors.brand,
+          iconColor: AppColors.n0,
+          title: 'Отправить через…',
+          subtitle: 'WhatsApp, Telegram, почта — выбор системы',
+          onTap: onSystemShare,
+        ),
+        const SizedBox(height: AppSpacing.x6),
         for (final c in chats) ...[
           _ShareTile(
             icon: Icons.forum_outlined,

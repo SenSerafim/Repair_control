@@ -99,7 +99,10 @@ export class DocumentsService {
       actorId: actorUserId,
       payload: { documentId: doc.id, category: doc.category, stageId: doc.stageId },
     });
-    return this.prisma.document.findUnique({ where: { id: documentId } }) as unknown as Document;
+    const fresh = (await this.prisma.document.findUnique({
+      where: { id: documentId },
+    })) as Document;
+    return this.attachUrls(fresh);
   }
 
   async list(
@@ -137,7 +140,8 @@ export class DocumentsService {
       where.category = { notIn: blocked };
     }
 
-    return this.prisma.document.findMany({ where, orderBy: { createdAt: 'desc' } });
+    const docs = await this.prisma.document.findMany({ where, orderBy: { createdAt: 'desc' } });
+    return Promise.all(docs.map((d) => this.attachUrls(d)));
   }
 
   async get(id: string, viewer?: DocumentViewer): Promise<Document> {
@@ -159,7 +163,7 @@ export class DocumentsService {
     ) {
       throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'estimate hidden without canSeeBudget');
     }
-    return doc;
+    return this.attachUrls(doc);
   }
 
   async download(id: string): Promise<{ url: string; expiresAt: Date }> {
@@ -211,5 +215,36 @@ export class DocumentsService {
       actorId: actorUserId,
       payload: { documentId: id },
     });
+  }
+
+  /**
+   * Прикрепляет presigned `url` (для inline-просмотра в мобильном/admin) и
+   * `thumbUrl` (PDF-превью или то же изображение для image/*).
+   *
+   * Если presign провалится (S3 недоступен) — возвращаем документ без url:
+   * клиент покажет иконку категории, ссылка на download остаётся доступна
+   * через `GET /documents/:id/download`.
+   */
+  private async attachUrls<
+    T extends { fileKey: string; thumbKey: string | null; mimeType: string },
+  >(doc: T): Promise<T & { url: string | null; thumbUrl: string | null }> {
+    let url: string | null = null;
+    let thumbUrl: string | null = null;
+    try {
+      url = (await this.files.createPresignedDownload(doc.fileKey)).url;
+    } catch {
+      url = null;
+    }
+    try {
+      if (doc.thumbKey) {
+        thumbUrl = (await this.files.createPresignedDownload(doc.thumbKey)).url;
+      } else if (doc.mimeType.startsWith('image/')) {
+        // Для изображений отдельной thumbnail нет — используем сам файл.
+        thumbUrl = url;
+      }
+    } catch {
+      thumbUrl = null;
+    }
+    return { ...doc, url, thumbUrl };
   }
 }

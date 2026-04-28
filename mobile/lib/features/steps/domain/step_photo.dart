@@ -28,7 +28,9 @@ class StepPhoto with _$StepPhoto {
         uploadedBy: json['uploadedBy'] as String? ?? '',
         exifCleared: json['exifCleared'] as bool? ?? true,
         createdAt: DateTime.parse(json['createdAt'] as String),
-        url: json['url'] as String?,
+        // Бекенд step-photos.service исторически отдаёт presigned ссылку
+        // в `downloadUrl`. Поддерживаем оба ключа.
+        url: (json['url'] as String?) ?? (json['downloadUrl'] as String?),
         thumbUrl: json['thumbUrl'] as String?,
       );
 }

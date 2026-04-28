@@ -58,11 +58,9 @@ class AccessGuard {
       DomainAction.financePaymentResolve,
       DomainAction.materialsManage,
       DomainAction.materialFinalize,
-      DomainAction.selfPurchaseCreate,
       DomainAction.selfPurchaseConfirm,
-      DomainAction.toolsManage,
-      DomainAction.toolsIssue,
-      DomainAction.toolsReturn,
+      // tools.* — заказчик инструменты НЕ видит (ТЗ §1.4, gaps §6.1).
+      // Backend RBAC явно блокирует — не запрашиваем эти эндпоинты с UI.
       DomainAction.chatRead,
       DomainAction.chatWrite,
       DomainAction.chatCreatePersonal,

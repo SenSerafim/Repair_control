@@ -204,15 +204,27 @@ class _DocRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.brandLight,
-              borderRadius: BorderRadius.circular(AppRadius.r12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: doc.isImage && (doc.thumbUrl ?? doc.url) != null
+                  ? Image.network(
+                      doc.thumbUrl ?? doc.url!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.brandLight,
+                        alignment: Alignment.center,
+                        child: Icon(doc.category.icon, color: AppColors.brand),
+                      ),
+                    )
+                  : Container(
+                      color: AppColors.brandLight,
+                      alignment: Alignment.center,
+                      child: Icon(doc.category.icon, color: AppColors.brand),
+                    ),
             ),
-            child: Icon(doc.category.icon, color: AppColors.brand),
           ),
           const SizedBox(width: AppSpacing.x12),
           Expanded(

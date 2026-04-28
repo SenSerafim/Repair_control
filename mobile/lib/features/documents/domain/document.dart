@@ -96,11 +96,15 @@ class Document with _$Document {
         thumbKey: json['thumbKey'] as String?,
         mimeType: json['mimeType'] as String,
         sizeBytes: (json['sizeBytes'] as num).toInt(),
-        uploadedBy: json['uploadedBy'] as String? ?? '',
+        // Бекенд хранит uploadedById; oldest snapshots/спеки иногда отдают
+        // uploadedBy. Принимаем оба.
+        uploadedBy: (json['uploadedById'] as String?) ??
+            (json['uploadedBy'] as String?) ??
+            '',
         confirmed: json['confirmed'] as bool? ?? true,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
-        url: json['url'] as String?,
+        url: (json['url'] as String?) ?? (json['downloadUrl'] as String?),
         thumbUrl: json['thumbUrl'] as String?,
       );
 }

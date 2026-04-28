@@ -52,6 +52,7 @@ class TeamScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить команду',
+          subtitle: e.toString(),
           onRetry: () =>
               ref.invalidate(teamControllerProvider(projectId)),
         ),
@@ -61,13 +62,18 @@ class TeamScreen extends ConsumerWidget {
               title: 'Пока нет участников',
               subtitle: canManage
                   ? 'Пригласите представителя, бригадира или мастера — '
-                      'они получат доступ к проекту сразу после входа.'
+                      'они получат доступ к проекту сразу после входа.\n\n'
+                      'Самый быстрый способ — сгенерировать 6-значный код '
+                      'и отправить его получателю в любой мессенджер.'
                   : 'Заказчик ещё не пригласил участников.',
               icon: Icons.people_outline_rounded,
-              actionLabel: canManage ? 'Добавить' : null,
+              actionLabel: canManage ? 'Сгенерировать код' : null,
               onAction: canManage
-                  ? () => showAddMemberSheet(context, ref,
-                      projectId: projectId)
+                  ? () => showGenerateInviteCodeSheet(
+                      context,
+                      ref,
+                      projectId: projectId,
+                    )
                   : null,
             );
           }

@@ -48,9 +48,9 @@ void main() {
     });
 
     test('заказчик имеет полный доступ к производственным actions', () {
-      // По новой матрице заказчик — владелец проекта и может всё:
-      // от создания этапов до выдачи инструмента и удаления документов.
-      // Бэкенд дополнительно проверяет ownerId === userId.
+      // Заказчик — владелец проекта: этапы, шаги, материалы, документы.
+      // Инструмент (`tools.*`) и самозакуп (`selfpurchase.create`) НЕ его
+      // зона — backend RBAC явно блокирует, см. ТЗ §1.4 / gaps §6.1.
       for (final a in [
         DomainAction.stageManage,
         DomainAction.stageStart,
@@ -59,12 +59,22 @@ void main() {
         DomainAction.stepPhotoUpload,
         DomainAction.materialsManage,
         DomainAction.materialFinalize,
-        DomainAction.toolsIssue,
-        DomainAction.toolsReturn,
         DomainAction.documentDelete,
       ]) {
         expect(AccessGuard.can(SystemRole.customer, a), isTrue,
             reason: 'customer должен иметь $a');
+      }
+    });
+
+    test('заказчик НЕ имеет инструмента / самозакупа (ТЗ §1.4)', () {
+      for (final a in [
+        DomainAction.toolsManage,
+        DomainAction.toolsIssue,
+        DomainAction.toolsReturn,
+        DomainAction.selfPurchaseCreate,
+      ]) {
+        expect(AccessGuard.can(SystemRole.customer, a), isFalse,
+            reason: 'customer не должен иметь $a (бекенд вернёт 403)');
       }
     });
   });
