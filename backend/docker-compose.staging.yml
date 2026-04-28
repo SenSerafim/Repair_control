@@ -60,7 +60,11 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET:-repair-bucket-test}
       MINIO_REGION: ${MINIO_REGION:-ru-7}
-      MINIO_PATH_STYLE: "${MINIO_PATH_STYLE:-true}"
+      # Virtual-Hosted (`pathStyle=false`) — обязательно для Selectel,
+      # иначе CORS-ответы не выдаются на presigned URL и admin-web в
+      # браузере не сможет показать <img src="...presigned...">. Mobile
+      # (dio) работает с любым стилем, ему всё равно.
+      MINIO_PATH_STYLE: "${MINIO_PATH_STYLE:-false}"
       MINIO_PRESIGN_TTL_SECONDS: 300
       FILE_MAX_SIZE_MB: 25
       FILE_ALLOWED_MIMES: "image/jpeg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"

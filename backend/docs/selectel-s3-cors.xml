@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<CORSConfiguration>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
   <CORSRule>
+    <ID>repair-control-default</ID>
+    <AllowedOrigin>*</AllowedOrigin>
     <AllowedMethod>GET</AllowedMethod>
     <AllowedMethod>PUT</AllowedMethod>
     <AllowedMethod>HEAD</AllowedMethod>
-    <AllowedOrigin>*</AllowedOrigin>
     <AllowedHeader>*</AllowedHeader>
     <ExposeHeader>ETag</ExposeHeader>
     <ExposeHeader>x-amz-request-id</ExposeHeader>

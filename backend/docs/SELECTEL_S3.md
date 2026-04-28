@@ -38,7 +38,10 @@ MINIO_ENDPOINT=s3.ru-7.storage.selcloud.ru
 MINIO_PORT=443
 MINIO_USE_SSL=true
 MINIO_REGION=ru-7
-MINIO_PATH_STYLE=true
+# false → virtual-hosted presigned URL.
+# CORS у Selectel включается ТОЛЬКО на virtual-hosted адресе.
+# Mobile dio работает с любым стилем, admin-web в браузере — нет.
+MINIO_PATH_STYLE=false
 MINIO_BUCKET=repair-control-staging
 MINIO_ACCESS_KEY=<Access Key ID>
 MINIO_SECRET_KEY=<Secret Access Key>
@@ -64,19 +67,42 @@ GET из admin-web блокируются без CORS.
 > адресация** (вкладка «Настройки бакета»). Без неё preflight-запросы
 > отбиваются 400.
 
-### Через AWS CLI
+### Через s3cmd (рекомендую)
 
-Готовое правило лежит в `backend/docs/selectel-s3-cors.xml`:
+Selectel принимает CORS через S3 API, но `aws s3api put-bucket-cors`
+по неизвестной причине отвечает `InternalError`. Рабочий путь — `s3cmd`:
 
 ```bash
-aws s3api put-bucket-cors \
-  --bucket repair-control-staging \
-  --cors-configuration file://backend/docs/selectel-s3-cors.xml \
-  --endpoint-url https://s3.ru-7.storage.selcloud.ru
+brew install s3cmd
+
+cat > ~/.s3cfg <<EOF
+[default]
+access_key = <Access Key ID>
+secret_key = <Secret Access Key>
+host_base = s3.ru-7.storage.selcloud.ru
+host_bucket = %(bucket)s.s3.ru-7.storage.selcloud.ru
+bucket_location = ru-7
+use_https = True
+signature_v2 = False
+EOF
+
+s3cmd setcors backend/docs/selectel-s3-cors.xml s3://repair-bucket-test
+s3cmd info s3://repair-bucket-test  # → секция CORS должна показаться
 ```
 
-Перед этим в `~/.aws/credentials` положить `[default]` со своими S3-ключами,
-а в `~/.aws/config` указать `region = ru-7`.
+XML обязан содержать namespace `xmlns="http://s3.amazonaws.com/doc/2006-03-01/"`
+(голый `<CORSConfiguration>` без namespace отбивается с MalformedXML).
+
+### Проверка preflight
+
+```bash
+curl -sS -X OPTIONS \
+  https://repair-bucket-test.s3.ru-7.storage.selcloud.ru/test-key \
+  -H 'Origin: https://admin.example.com' \
+  -H 'Access-Control-Request-Method: PUT' \
+  -D - -o /dev/null
+# Ожидаем 200 + access-control-allow-origin / -methods / -headers.
+```
 
 ## 4. Проверка
 
