@@ -1,71 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../notifications/application/notifications_controller.dart';
+import '../../profile/application/profile_controller.dart';
 import '../application/projects_list_controller.dart';
 import '../domain/project.dart';
 import 'card_menu_sheet.dart';
 import 'project_card.dart';
-import 'projects_filters.dart';
 
-/// s-projects — активные проекты: tabs (Активные/Архив) + search + filter chips.
+/// s-projects — список активных проектов.
+///
+/// Дизайн `Кластер B` (s-empty / s-projects-loading): «Мои объекты» 22/w800
+/// + 2 action-icon-кнопки (?, bell с badge), tabs Активные/Архив (2.5px
+/// underline), список ProjectCard.
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(projectsFilterProvider);
     final async = ref.watch(filteredActiveProjectsProvider);
-    final query = ref.watch(projectsSearchQueryProvider);
+    final unread = ref.watch(notificationsProvider).where((n) => !n.read).length;
 
-    return AppScaffold(
-      title: 'Мои объекты',
-      padding: EdgeInsets.zero,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.qr_code_scanner_rounded),
-          tooltip: 'Присоединиться по коду',
-          onPressed: () => context.push(AppRoutes.projectsJoinByCode),
-        ),
-        IconButton(
-          icon: const Icon(Icons.search_rounded),
-          onPressed: () => context.push(AppRoutes.projectsSearch),
-        ),
-      ],
+    return Scaffold(
+      backgroundColor: AppColors.n50,
       body: Column(
         children: [
-          _TopTabs(
+          _Header(
+            unreadNotifications: unread,
             activeIndex: 0,
             onArchiveTap: () => context.push(AppRoutes.projectsArchive),
           ),
-          const SizedBox(height: AppSpacing.x8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-            child: _SearchField(
-              value: query,
-              onChanged: (v) => ref
-                  .read(projectsSearchQueryProvider.notifier)
-                  .state = v,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x10),
-          ProjectsFilterChips(
-            selected: filter,
-            onSelected: (f) =>
-                ref.read(projectsFilterProvider.notifier).state = f,
-          ),
-          const SizedBox(height: AppSpacing.x10),
           Expanded(
             child: async.when(
-              loading: () => const AppLoadingState(
-                skeleton: AppListSkeleton(itemHeight: 110),
-              ),
+              loading: () => const _ProjectsSkeleton(),
               error: (e, _) => AppErrorState(
                 title: 'Не удалось загрузить проекты',
                 onRetry: () =>
@@ -74,20 +49,24 @@ class ProjectsScreen extends ConsumerWidget {
               data: (items) {
                 if (items.isEmpty) {
                   return _EmptyState(
-                    hasFilters:
-                        filter != ProjectsFilter.all || query.isNotEmpty,
                     onCreate: () => context.push(AppRoutes.projectsCreate),
                   );
                 }
                 return RefreshIndicator(
                   onRefresh: () =>
                       ref.read(activeProjectsProvider.notifier).refresh(),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.x10),
-                    itemBuilder: (_, i) => _CardTile(project: items[i]),
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                        sliver: SliverList.separated(
+                          itemCount: items.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.x10),
+                          itemBuilder: (_, i) => _CardTile(project: items[i]),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -95,95 +74,184 @@ class ProjectsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottom: null,
-      // ignore: deprecated_member_use
+      floatingActionButton:
+          ref.watch(canProvider(DomainAction.projectCreate))
+              ? FloatingActionButton(
+                  onPressed: () => context.push(AppRoutes.projectsCreate),
+                  backgroundColor: AppColors.brand,
+                  elevation: 4,
+                  child: Icon(
+                    PhosphorIconsBold.plus,
+                    color: AppColors.n0,
+                    size: 24,
+                  ),
+                )
+              : null,
     );
   }
 }
 
-class _TopTabs extends StatelessWidget {
-  const _TopTabs({required this.activeIndex, required this.onArchiveTap});
+class _Header extends ConsumerWidget {
+  const _Header({
+    required this.unreadNotifications,
+    required this.activeIndex,
+    required this.onArchiveTap,
+  });
 
+  final int unreadNotifications;
   final int activeIndex;
   final VoidCallback onArchiveTap;
 
   @override
-  Widget build(BuildContext context) {
-    Widget tab(String label, {required bool active, required VoidCallback onTap}) {
-      return Expanded(
-        child: GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
+        decoration: const BoxDecoration(
+          color: AppColors.n0,
+          border:
+              Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
               children: [
-                Text(
-                  label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: active ? AppColors.brand : AppColors.n400,
-                    fontWeight: FontWeight.w700,
+                const Expanded(
+                  child: Text(
+                    'Мои объекты',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.n900,
+                      letterSpacing: -0.6,
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.x8),
-                Container(
-                  height: 2.5,
-                  color: active ? AppColors.brand : Colors.transparent,
+                _IconBtn(
+                  icon: PhosphorIconsRegular.question,
+                  onTap: () => context.push(AppRoutes.profileHelp),
+                ),
+                _IconBtn(
+                  icon: PhosphorIconsRegular.bell,
+                  badge: unreadNotifications,
+                  onTap: () => context.push(AppRoutes.notifications),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _Tab(
+                  label: 'Активные',
+                  active: activeIndex == 0,
+                  onTap: () {},
+                ),
+                _Tab(
+                  label: 'Архив',
+                  active: activeIndex == 1,
+                  onTap: onArchiveTap,
+                ),
+              ],
+            ),
+          ],
         ),
-      );
-    }
-
-    return Row(
-      children: [
-        tab('Активные', active: activeIndex == 0, onTap: () {}),
-        tab('Архив', active: activeIndex == 1, onTap: onArchiveTap),
-      ],
+      ),
     );
   }
 }
 
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.value, required this.onChanged});
+class _IconBtn extends StatelessWidget {
+  const _IconBtn({required this.icon, required this.onTap, this.badge});
 
-  final String value;
-  final ValueChanged<String> onChanged;
+  final IconData icon;
+  final VoidCallback onTap;
+  final int? badge;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: TextEditingController(text: value)
-        ..selection = TextSelection.collapsed(offset: value.length),
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        prefixIcon: const Icon(
-          Icons.search_rounded,
-          size: 20,
-          color: AppColors.n400,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(icon, size: 22, color: AppColors.n400),
+            if (badge != null && badge! > 0)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.redDot,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.n0, width: 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    badge! > 99 ? '99' : '$badge',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.n0,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
-        hintText: 'Поиск по объектам',
-        hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-        filled: true,
-        fillColor: AppColors.n0,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-          borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-          borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-          borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+      ),
+    );
+  }
+}
+
+class _Tab extends StatelessWidget {
+  const _Tab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: active ? AppColors.brand : Colors.transparent,
+                width: 2.5,
+              ),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: active ? AppColors.brand : AppColors.n400,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -206,29 +274,147 @@ class _CardTile extends ConsumerWidget {
 }
 
 class _EmptyState extends ConsumerWidget {
-  const _EmptyState({required this.hasFilters, required this.onCreate});
+  const _EmptyState({required this.onCreate});
 
-  // ignore: avoid_positional_boolean_parameters
-  final bool hasFilters;
   final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canCreate = ref.watch(canProvider(DomainAction.projectCreate));
-    if (hasFilters) {
-      return const AppEmptyState(
-        title: 'Ничего не найдено',
-        subtitle: 'Попробуйте изменить поиск или сбросить фильтры.',
-        icon: Icons.search_off_rounded,
-      );
-    }
-    return AppEmptyState(
-      title: 'Пока нет проектов',
-      subtitle:
-          'Создайте первый объект — в нём будут этапы, команда и бюджет.',
-      icon: Icons.folder_outlined,
-      actionLabel: canCreate ? 'Создать проект' : null,
-      onAction: canCreate ? onCreate : null,
+    final activeRole = ref.watch(
+      profileControllerProvider.select((s) => s.valueOrNull?.activeRole),
+    );
+
+    final (title, subtitle, icon) = switch (activeRole) {
+      SystemRole.representative => (
+          'Вас ещё не добавили',
+          'Когда заказчик добавит вас в проект — он появится здесь автоматически',
+          PhosphorIconsRegular.usersThree,
+        ),
+      SystemRole.contractor || SystemRole.master => (
+          'Нет назначений',
+          'Когда заказчик или бригадир добавит вас на проект — он появится здесь',
+          PhosphorIconsRegular.wrench,
+        ),
+      _ => (
+          'Нет активных объектов',
+          'Создайте первый объект, чтобы управлять ремонтом из любой точки мира',
+          PhosphorIconsRegular.house,
+        ),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x32),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.n100,
+                borderRadius: BorderRadius.circular(AppRadius.r24),
+              ),
+              child: Icon(icon, size: 36, color: AppColors.n400),
+            ),
+            const SizedBox(height: AppSpacing.x14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n800,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.n500,
+                height: 1.55,
+              ),
+            ),
+            if (canCreate) ...[
+              const SizedBox(height: AppSpacing.x20),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260),
+                child: AppButton(
+                  label: 'Создать первый объект',
+                  icon: PhosphorIconsBold.plus,
+                  onPressed: onCreate,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProjectsSkeleton extends StatelessWidget {
+  const _ProjectsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      children: List.generate(
+        4,
+        (_) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppColors.n0,
+              border: Border.all(color: AppColors.n200),
+              borderRadius: BorderRadius.circular(AppRadius.r16),
+              boxShadow: AppShadows.sh1,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(height: 3, color: AppColors.n200),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppSkeletonRow(width: 180, height: 14),
+                      const SizedBox(height: 8),
+                      const AppSkeletonRow(width: 240, height: 11),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          AppSkeletonRow(
+                            width: 80,
+                            height: 18,
+                            radius: 100,
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: AppSkeletonRow(height: 11),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const AppSkeletonRow(height: 4, radius: 4),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

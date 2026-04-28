@@ -3,15 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/widgets/status_pill.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/projects_list_controller.dart';
 import '../domain/project.dart';
 import 'project_card.dart';
 
-/// s-search — клиентский поиск по активным + архивным проектам.
+/// s-search — клиентский поиск по активным + архивным проектам с фильтр-чипами.
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -19,10 +20,13 @@ class SearchScreen extends ConsumerStatefulWidget {
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
+enum _SearchFilter { all, overdue, atRisk, onTrack, awaiting }
+
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   Timer? _debounce;
   String _query = '';
+  _SearchFilter _filter = _SearchFilter.all;
 
   @override
   void dispose() {
@@ -38,94 +42,161 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
+  bool _matchesFilter(Project p) {
+    return switch (_filter) {
+      _SearchFilter.all => true,
+      _SearchFilter.overdue => p.semaphore == Semaphore.red,
+      _SearchFilter.atRisk => p.semaphore == Semaphore.yellow,
+      _SearchFilter.onTrack => p.semaphore == Semaphore.green,
+      _SearchFilter.awaiting => p.semaphore == Semaphore.blue,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final active = ref.watch(activeProjectsProvider).value ?? const [];
     final archived = ref.watch(archivedProjectsProvider).value ?? const [];
     final all = [...active, ...archived];
 
-    final results = _query.isEmpty
-        ? <Project>[]
-        : all
-            .where(
-              (p) =>
-                  p.title.toLowerCase().contains(_query) ||
-                  (p.address?.toLowerCase().contains(_query) ?? false),
-            )
-            .toList();
+    final results = (_query.isEmpty
+            ? all
+            : all.where(
+                (p) =>
+                    p.title.toLowerCase().contains(_query) ||
+                    (p.address?.toLowerCase().contains(_query) ?? false),
+              ))
+        .where(_matchesFilter)
+        .toList();
 
     return AppScaffold(
       showBack: true,
       title: 'Поиск',
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      backgroundColor: AppColors.n50,
+      padding: EdgeInsets.zero,
       body: Column(
         children: [
-          const SizedBox(height: AppSpacing.x12),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            onChanged: _onChanged,
-            decoration: InputDecoration(
-              prefixIcon: const Icon(
-                Icons.search_rounded,
-                size: 20,
-                color: AppColors.n400,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: AppInput(
+              controller: _controller,
+              placeholder: 'Название или адрес',
+              autofocus: true,
+              onChanged: _onChanged,
+              prefixIcon: const Padding(
+                padding: EdgeInsets.only(left: 14, right: 8),
+                child: Icon(
+                  PhosphorIconsRegular.magnifyingGlass,
+                  size: 18,
+                  color: AppColors.n400,
+                ),
               ),
-              hintText: 'Название или адрес',
-              hintStyle:
-                  AppTextStyles.body.copyWith(color: AppColors.n400),
-              filled: true,
-              fillColor: AppColors.n0,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.brand, width: 1.5),
-              ),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(
+                        PhosphorIconsRegular.xCircle,
+                        size: 18,
+                        color: AppColors.n400,
+                      ),
+                      onPressed: () {
+                        _controller.clear();
+                        _onChanged('');
+                      },
+                    ),
             ),
           ),
-          const SizedBox(height: AppSpacing.x12),
+          AppFilterChips(
+            activeId: _filter.name,
+            onSelect: (id) => setState(
+              () => _filter = _SearchFilter.values.firstWhere(
+                (f) => f.name == id,
+                orElse: () => _SearchFilter.all,
+              ),
+            ),
+            chips: const [
+              AppFilterChipSpec(id: 'all', label: 'Все'),
+              AppFilterChipSpec(id: 'overdue', label: 'Просроченные'),
+              AppFilterChipSpec(id: 'atRisk', label: 'В зоне риска'),
+              AppFilterChipSpec(id: 'onTrack', label: 'По графику'),
+              AppFilterChipSpec(id: 'awaiting', label: 'Ждут действия'),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x4),
           Expanded(
-            child: _query.isEmpty
-                ? const AppEmptyState(
-                    title: 'Начните вводить',
-                    subtitle: 'Ищем по названию и адресу проектов.',
-                    icon: Icons.search_rounded,
-                  )
+            child: _query.isEmpty && _filter == _SearchFilter.all
+                ? const _Hint()
                 : results.isEmpty
                     ? const AppEmptyState(
                         title: 'Ничего не найдено',
-                        icon: Icons.search_off_rounded,
+                        subtitle:
+                            'Попробуйте изменить запрос или сбросить фильтры',
+                        icon: PhosphorIconsRegular.magnifyingGlassMinus,
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                         itemCount: results.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: AppSpacing.x10),
-                        itemBuilder: (_, i) {
-                          final p = results[i];
-                          return ProjectCard(
-                            project: p,
-                            onTap: () =>
-                                context.push('/projects/${p.id}'),
-                          );
-                        },
+                        itemBuilder: (_, i) => ProjectCard(
+                          project: results[i],
+                          onTap: () =>
+                              context.push('/projects/${results[i].id}'),
+                        ),
                       ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.n100,
+                borderRadius: BorderRadius.circular(AppRadius.r20),
+              ),
+              child: Icon(
+                PhosphorIconsRegular.magnifyingGlass,
+                size: 26,
+                color: AppColors.n400,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            const Text(
+              'Поиск по объектам',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Введите название или адрес — мы найдём в активных и в архиве',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.n500,
+                height: 1.55,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -20,6 +20,7 @@ class ProjectController extends FamilyAsyncNotifier<Project, String> {
   Future<AuthFailure?> save({
     String? title,
     String? address,
+    String? description,
     DateTime? plannedStart,
     DateTime? plannedEnd,
     int? workBudget,
@@ -31,6 +32,7 @@ class ProjectController extends FamilyAsyncNotifier<Project, String> {
                 arg,
                 title: title,
                 address: address,
+                description: description,
                 plannedStart: plannedStart,
                 plannedEnd: plannedEnd,
                 workBudget: workBudget,
@@ -82,6 +84,7 @@ class ProjectCreator {
   Future<Project> create({
     required String title,
     String? address,
+    String? description,
     DateTime? plannedStart,
     DateTime? plannedEnd,
     int? workBudget,
@@ -90,6 +93,7 @@ class ProjectCreator {
     final p = await _ref.read(projectsRepositoryProvider).create(
           title: title,
           address: address,
+          description: description,
           plannedStart: plannedStart,
           plannedEnd: plannedEnd,
           workBudget: workBudget,

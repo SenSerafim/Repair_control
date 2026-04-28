@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
-import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../shared/utils/money.dart';
+import '../../../shared/widgets/status_pill.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../notifications/application/notifications_controller.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/domain/traffic_light.dart';
 import '../application/project_controller.dart';
 import '../domain/project.dart';
 import 'card_menu_sheet.dart';
-import 'console_widgets.dart';
 
-/// ConsoleScreen — главный экран проекта (5 состояний: plan/green/yellow/
-/// red/blue + done + loading). Соответствует s-console-* из кластера B.
+/// s-console-* — главный экран проекта (5 семафор-состояний + done + loading).
+///
+/// Дизайн `Кластер B`: ConHeader (back + title + bell) + traffic-badge
+/// + HouseProgress + StatsRow + BudgetCard + StagesScroll + NavGrid.
 class ConsoleScreen extends ConsumerWidget {
   const ConsoleScreen({required this.projectId, super.key});
 
@@ -28,177 +30,387 @@ class ConsoleScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectAsync = ref.watch(projectControllerProvider(projectId));
-    final stagesAsync = ref.watch(stagesControllerProvider(projectId));
 
-    return AppScaffold(
-      showBack: true,
-      title: 'Консоль',
-      padding: EdgeInsets.zero,
-      actions: [
-        projectAsync.whenOrNull(
-              data: (project) => IconButton(
-                icon: const Icon(Icons.more_vert_rounded),
-                onPressed: () =>
-                    showCardMenuSheet(context, ref, project: project),
-              ),
-            ) ??
-            const SizedBox.shrink(),
-      ],
+    return Scaffold(
+      backgroundColor: AppColors.n50,
       body: projectAsync.when(
-        loading: () => const AppLoadingState(),
-        error: (e, _) => AppErrorState(
-          title: 'Не удалось загрузить проект',
-          onRetry: () =>
-              ref.invalidate(projectControllerProvider(projectId)),
+        loading: () => const _ConsoleSkeleton(),
+        error: (e, _) => Center(
+          child: AppErrorState(
+            title: 'Не удалось загрузить проект',
+            onRetry: () =>
+                ref.invalidate(projectControllerProvider(projectId)),
+          ),
         ),
-        data: (project) {
-          // Если стадии уже загружены — пересчитаем светофор локально
-          // (зеркало `progressCache.semaphoreCache` на бэке) и подменим
-          // в копии Project, чтобы баннер сразу отражал свежее состояние.
-          final stages = stagesAsync.value ?? const <Stage>[];
-          final effective = stages.isEmpty
-              ? project
-              : project.copyWith(
-                  semaphore: computeProjectTrafficLight(stages).semaphore,
-                );
-          return RefreshIndicator(
+        data: (project) => _Body(projectId: projectId, project: project),
+      ),
+    );
+  }
+}
+
+class _Body extends ConsumerWidget {
+  const _Body({required this.projectId, required this.project});
+
+  final String projectId;
+  final Project project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stagesAsync = ref.watch(stagesControllerProvider(projectId));
+    final stages = stagesAsync.value ?? const <Stage>[];
+    final canSeeBudget = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.financeBudgetView,
+        projectId: projectId,
+      )),
+    );
+    final unread =
+        ref.watch(notificationsProvider).where((n) => !n.read).length;
+
+    final effectiveSemaphore = stages.isEmpty
+        ? project.semaphore
+        : computeProjectTrafficLight(stages).semaphore;
+
+    final p = stages.isEmpty
+        ? project
+        : project.copyWith(semaphore: effectiveSemaphore);
+
+    final activeStages = stages.where((s) => s.status == StageStatus.active);
+    final doneStages = stages.where((s) => s.status == StageStatus.done);
+    final activeStage = activeStages.isEmpty
+        ? null
+        : activeStages.reduce((a, b) =>
+            a.orderIndex < b.orderIndex ? a : b);
+
+    return Column(
+      children: [
+        _ConHeader(
+          project: p,
+          unreadNotifications: unread,
+          onMenu: () => showCardMenuSheet(context, ref, project: p),
+        ),
+        Expanded(
+          child: RefreshIndicator(
             onRefresh: () async {
               ref
                 ..invalidate(projectControllerProvider(projectId))
                 ..invalidate(stagesControllerProvider(projectId));
             },
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              padding: const EdgeInsets.only(bottom: 24),
               children: [
-                _Header(project: effective),
-                const SizedBox(height: AppSpacing.x16),
-                _HouseAndStats(
-                  project: effective,
+                const SizedBox(height: AppSpacing.x12),
+                _HouseSection(
+                  project: p,
                   stages: stages,
+                  activeStage: activeStage,
+                  doneCount: doneStages.length,
                 ),
-                const SizedBox(height: AppSpacing.x20),
-                ..._bannerFor(context, effective),
+                if (_bannerFor(p, stages) != null) ...[
+                  const SizedBox(height: AppSpacing.x14),
+                  _bannerFor(p, stages)!,
+                ],
+                const SizedBox(height: AppSpacing.x14),
+                _StatsRow(project: p, stages: stages),
+                if (canSeeBudget) ...[
+                  const SizedBox(height: AppSpacing.x12),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                    child: AppBudgetCard(
+                      totalLabel: 'Бюджет проекта',
+                      totalValue: '${_formatRubles(p.workBudget + p.materialsBudget)} ₽',
+                      workSpent: '0',
+                      workTotal: _formatRubles(p.workBudget),
+                      materialsSpent: '0',
+                      materialsTotal: _formatRubles(p.materialsBudget),
+                      onTap: () => context.push('/projects/$projectId/budget'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.x16),
-                const Text('Этапы', style: AppTextStyles.h2),
+                _StagesCarouselHeader(
+                  onAllTap: () =>
+                      context.push('/projects/$projectId/stages'),
+                ),
                 const SizedBox(height: AppSpacing.x10),
-                _StagesCarousel(stages: stagesAsync),
+                _StagesCarousel(projectId: projectId, stages: stages),
                 const SizedBox(height: AppSpacing.x20),
-                const Text('Разделы', style: AppTextStyles.h2),
-                const SizedBox(height: AppSpacing.x10),
-                _NavGrid(projectId: project.id),
+                _NavSections(projectId: projectId),
+                const SizedBox(height: AppSpacing.x24),
               ],
             ),
-          );
-        },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget? _bannerFor(Project p, List<Stage> stages) {
+    if (p.progressCache >= 100) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 0),
+        child: AppConsoleBanner(
+          semaphore: Semaphore.green,
+          title: 'Проект завершён!',
+          subtitle: 'Все этапы закрыты. Можно отправить в архив или '
+              'скачать ZIP-сводку.',
+        ),
+      );
+    }
+    if (!p.planApproved && p.requiresPlanApproval) {
+      return AppConsoleBanner(
+        semaphore: Semaphore.blue,
+        title: 'План на согласовании',
+        subtitle: 'Заказчик ещё не одобрил план этапов. До одобрения '
+            'старт работ заблокирован.',
+        actionLabel: 'Показать план целиком',
+        onAction: () {},
+      );
+    }
+    return switch (p.semaphore) {
+      Semaphore.green => null,
+      Semaphore.yellow => const AppConsoleBanner(
+          semaphore: Semaphore.yellow,
+          title: 'Есть отставание',
+          subtitle:
+              'Часть этапов идёт медленнее плана. Обратите внимание на сроки.',
+        ),
+      Semaphore.red => const AppConsoleBanner(
+          semaphore: Semaphore.red,
+          title: 'Есть просрочки',
+          subtitle: 'Дедлайн пройден или критическое отставание. '
+              'Нужно срочное вмешательство.',
+        ),
+      Semaphore.blue => const AppConsoleBanner(
+          semaphore: Semaphore.blue,
+          title: 'Ждёт действия',
+          subtitle: 'Этап на приёмке или ждёт согласования. '
+              'Видно, чьего хода ждём.',
+        ),
+      _ => null,
+    };
+  }
+
+  static String _formatRubles(int kopecks) {
+    final rubles = kopecks ~/ 100;
+    return NumberFormat.decimalPattern('ru').format(rubles);
+  }
+}
+
+class _ConHeader extends StatelessWidget {
+  const _ConHeader({
+    required this.project,
+    required this.unreadNotifications,
+    required this.onMenu,
+  });
+
+  final Project project;
+  final int unreadNotifications;
+  final VoidCallback onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+        decoration: const BoxDecoration(
+          color: AppColors.n0,
+          border:
+              Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                _IconShellBtn(
+                  icon: PhosphorIconsRegular.caretLeft,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Text(
+                    project.title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.n900,
+                      letterSpacing: -0.4,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _IconShellBtn(
+                      icon: PhosphorIconsRegular.bell,
+                      onTap: () =>
+                          context.push(AppRoutes.notifications),
+                    ),
+                    if (unreadNotifications > 0)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.redDot,
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: AppColors.n0, width: 2),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            unreadNotifications > 99
+                                ? '99'
+                                : '$unreadNotifications',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.n0,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                _IconShellBtn(
+                  icon: PhosphorIconsRegular.dotsThreeOutline,
+                  onTap: onMenu,
+                ),
+              ],
+            ),
+            if ((project.address ?? '').isNotEmpty ||
+                project.plannedStart != null ||
+                project.plannedEnd != null) ...[
+              const SizedBox(height: AppSpacing.x10),
+              Row(
+                children: [
+                  Icon(
+                    PhosphorIconsRegular.mapPin,
+                    size: 12,
+                    color: AppColors.n400,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _addrAndDates(project),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.n500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: AppSpacing.x10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _TrafficBadge(semaphore: project.semaphore),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  List<Widget> _bannerFor(BuildContext context, Project p) {
-    switch (p.semaphore) {
-      case Semaphore.plan:
-        return [
-          ConsoleBanner(
-            icon: Icons.schedule_outlined,
-            title: 'План не согласован',
-            subtitle: p.requiresPlanApproval
-                ? 'Отправьте план этапов на согласование заказчику.'
-                : 'Добавьте этапы, затем можно начинать работы.',
-            color: AppColors.n500,
-            actionLabel:
-                p.requiresPlanApproval ? 'Согласование плана' : null,
-            onAction: p.requiresPlanApproval
-                ? () => context.push(AppRoutes.projectPlanApprovalWith(p.id))
-                : null,
-          ),
-        ];
-      case Semaphore.green:
-        return const [
-          ConsoleBanner(
-            icon: Icons.check_circle_outline,
-            title: 'Всё по графику',
-            subtitle: 'Этапы идут в сроки, проблем нет.',
-            color: AppColors.greenDark,
-          ),
-        ];
-      case Semaphore.yellow:
-        return const [
-          ConsoleBanner(
-            icon: Icons.warning_amber_rounded,
-            title: 'Есть отставания',
-            subtitle: 'Некоторые этапы идут медленнее плана — обратите '
-                'внимание на сроки.',
-            color: AppColors.yellowDot,
-          ),
-        ];
-      case Semaphore.red:
-        return const [
-          ConsoleBanner(
-            icon: Icons.error_outline,
-            title: 'Есть просрочки',
-            subtitle: 'Дедлайн этапа прошёл. Нужно решить: перенести '
-                'срок или ускорить.',
-            color: AppColors.redDot,
-          ),
-        ];
-      case Semaphore.blue:
-        return [
-          ConsoleBanner(
-            icon: Icons.pending_actions_outlined,
-            title: 'Ждут согласования',
-            subtitle: 'Есть запросы на согласование или смену дедлайна.',
-            color: AppColors.blueDot,
-            actionLabel: 'Открыть согласования',
-            onAction: () => context.push('/projects/${p.id}/approvals'),
-          ),
-        ];
+  static String _addrAndDates(Project p) {
+    final df = DateFormat('d MMM yyyy', 'ru');
+    final parts = <String>[];
+    if ((p.address ?? '').isNotEmpty) parts.add(p.address!);
+    if (p.plannedStart != null && p.plannedEnd != null) {
+      parts.add(
+        '${df.format(p.plannedStart!)} — ${df.format(p.plannedEnd!)}',
+      );
     }
+    return parts.join(' · ');
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.project});
+class _IconShellBtn extends StatelessWidget {
+  const _IconShellBtn({required this.icon, required this.onTap});
 
-  final Project project;
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return AppGradientHero(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-      borderRadius: AppRadius.card,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            project.title,
-            style: AppTextStyles.h1.copyWith(color: AppColors.n0),
-            maxLines: 2,
+    return Material(
+      color: AppColors.n0,
+      borderRadius: BorderRadius.circular(AppRadius.r12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.n200),
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            boxShadow: AppShadows.sh1,
           ),
-          const SizedBox(height: AppSpacing.x6),
-          if (project.addressLine().isNotEmpty)
-            Row(
-              children: [
-                Icon(
-                  Icons.place_outlined,
-                  size: 14,
-                  color: AppColors.n0.withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    project.addressLine(),
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.n0.withValues(alpha: 0.7),
-                    ),
-                    maxLines: 2,
-                  ),
-                ),
-              ],
+          child: Icon(icon, size: 18, color: AppColors.n600),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrafficBadge extends StatelessWidget {
+  const _TrafficBadge({required this.semaphore});
+
+  final Semaphore semaphore;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (semaphore) {
+      Semaphore.green => 'По графику',
+      Semaphore.yellow => 'Отставание',
+      Semaphore.red => 'Просрочка',
+      Semaphore.blue => 'Ждёт действия',
+      _ => 'План',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: semaphore.bg,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: semaphore.dot,
+              shape: BoxShape.circle,
             ),
-          const SizedBox(height: AppSpacing.x12),
-          BigTrafficBadge(
-            semaphore: project.semaphore,
-            label: project.semaphoreLabel,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: semaphore.text,
+              letterSpacing: -0.1,
+            ),
           ),
         ],
       ),
@@ -206,276 +418,495 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _HouseAndStats extends StatelessWidget {
-  const _HouseAndStats({required this.project, required this.stages});
+class _HouseSection extends StatelessWidget {
+  const _HouseSection({
+    required this.project,
+    required this.stages,
+    required this.activeStage,
+    required this.doneCount,
+  });
+
+  final Project project;
+  final List<Stage> stages;
+  final Stage? activeStage;
+  final int doneCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = stages.length;
+    final percent = project.progressCache.clamp(0, 100);
+    final stageNo = activeStage != null ? activeStage!.orderIndex + 1 : doneCount;
+    final statusLabel = switch (project.semaphore) {
+      Semaphore.green => 'По графику',
+      Semaphore.yellow => 'Отставание',
+      Semaphore.red => 'Просрочка',
+      Semaphore.blue => 'Ждёт действия',
+      _ => 'Планирование',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      child: Column(
+        children: [
+          AppHouseProgress(
+            percent: percent,
+            semaphore: project.semaphore,
+            size: 160,
+            subtitle: total > 0
+                ? 'Этап $stageNo из $total · $statusLabel'
+                : 'План пока не построен',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.project, required this.stages});
 
   final Project project;
   final List<Stage> stages;
 
   @override
   Widget build(BuildContext context) {
-    final total = stages.length;
-    final done = stages.where((s) => s.status == StageStatus.done).length;
-    final active = stages.indexWhere((s) => s.status == StageStatus.active);
-    final stageLabel = total == 0
-        ? 'Этапы пока не добавлены'
-        : active >= 0
-            ? 'Этап ${active + 1} из $total · ${project.semaphoreLabel}'
-            : 'Готово $done из $total';
+    // Стат-карточки агрегируют этапы — глубже статистика недоступна на
+    // проекте без отдельного запроса /stages/:id/steps. Используем
+    // project.progressCache как индикатор прогресса.
+    final stageDone = stages.where((s) => s.status == StageStatus.done).length;
+    final stageTotal = stages.length;
 
-    final daysLeft = _daysLeft(project.plannedEnd);
-    final budget = project.totalBudget;
+    final daysToDeadline = project.plannedEnd == null
+        ? null
+        : project.plannedEnd!.difference(DateTime.now()).inDays;
 
-    return Column(
-      children: [
-        Center(
-          child: AppHouseProgress(
-            percent: project.progressCache,
-            semaphore: project.semaphore,
-            subtitle: stageLabel,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      child: Row(
+        children: [
+          Expanded(
+            child: AppStatCard(
+              label: 'ПРОГРЕСС',
+              value: '${project.progressCache}',
+              total: '100',
+              subtext: '${100 - project.progressCache}% осталось',
+              progress: project.progressCache / 100,
+              semaphore: project.semaphore,
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                label: 'Этапы',
-                value: '$done',
-                suffix: '/$total',
-                hint: total == 0
-                    ? 'Этапы пока не созданы'
-                    : '${total - done} осталось',
-                progress: total == 0 ? 0 : done / total,
-                progressColor: project.semaphore.dot,
-              ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: AppStatCard(
+              label: 'ДО ДЕДЛАЙНА',
+              value: daysToDeadline == null
+                  ? '—'
+                  : daysToDeadline >= 0
+                      ? '$daysToDeadline'
+                      : '${-daysToDeadline}',
+              subtext: daysToDeadline == null
+                  ? 'не задан'
+                  : daysToDeadline >= 0
+                      ? 'дней'
+                      : 'дн просрочено',
+              progress: 0.5,
+              semaphore: daysToDeadline != null && daysToDeadline < 0
+                  ? Semaphore.red
+                  : Semaphore.green,
             ),
-            const SizedBox(width: AppSpacing.x10),
-            Expanded(
-              child: StatCard(
-                label: 'До дедлайна',
-                value: daysLeft == null ? '—' : '${daysLeft.abs()}',
-                suffix: daysLeft == null
-                    ? null
-                    : daysLeft >= 0
-                        ? ' дн.'
-                        : ' дн. просрочено',
-                hint: project.plannedEnd == null
-                    ? 'Дата не задана'
-                    : null,
-              ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: AppStatCard(
+              label: 'ЭТАПЫ',
+              value: '$stageDone',
+              total: '$stageTotal',
+              subtext: '${stageTotal - stageDone} в работе',
+              progress: stageTotal == 0 ? 0 : stageDone / stageTotal,
+              semaphore: project.semaphore,
             ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.x10),
-        StatCard(
-          label: 'Бюджет',
-          value: Money.format(budget),
-          hint: 'Работы + материалы',
-          progress: null,
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
+}
 
-  int? _daysLeft(DateTime? end) {
-    if (end == null) return null;
-    final now = DateTime.now();
-    return end.difference(DateTime(now.year, now.month, now.day)).inDays;
+class _StagesCarouselHeader extends StatelessWidget {
+  const _StagesCarouselHeader({required this.onAllTap});
+
+  final VoidCallback onAllTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Этапы проекта',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n800,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: onAllTap,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Все этапы',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brand,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  PhosphorIconsRegular.arrowRight,
+                  size: 12,
+                  color: AppColors.brand,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _StagesCarousel extends StatelessWidget {
-  const _StagesCarousel({required this.stages});
+  const _StagesCarousel({required this.projectId, required this.stages});
 
-  final AsyncValue<List<Stage>> stages;
+  final String projectId;
+  final List<Stage> stages;
 
   @override
   Widget build(BuildContext context) {
+    if (stages.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.x14),
+          decoration: BoxDecoration(
+            color: AppColors.n0,
+            border: Border.all(color: AppColors.n200),
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                PhosphorIconsRegular.info,
+                size: 16,
+                color: AppColors.n400,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Этапов ещё нет — добавьте их, чтобы видеть прогресс',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.n500,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return SizedBox(
-      height: 120,
-      child: stages.when(
-        loading: () => const Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-        error: (e, _) => const Center(
-          child: Text(
-            'Не удалось загрузить этапы',
-            style: AppTextStyles.caption,
-          ),
-        ),
-        data: (items) {
-          if (items.isEmpty) {
-            return Container(
-              padding: const EdgeInsets.all(AppSpacing.x16),
-              decoration: BoxDecoration(
-                color: AppColors.n100,
-                borderRadius: AppRadius.card,
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.dashboard_outlined,
-                    color: AppColors.n400,
-                  ),
-                  SizedBox(width: AppSpacing.x12),
-                  Expanded(
-                    child: Text(
-                      'Этапов пока нет — нажмите «Этапы», '
-                      'чтобы добавить первый.',
-                      style: AppTextStyles.caption,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppSpacing.x10),
-            itemBuilder: (_, i) {
-              final s = items[i];
-              return StagePreviewCard(
-                index: i + 1,
-                title: s.title,
-                semaphore: s.status.semaphore,
-                progress: s.progressCache,
-              );
-            },
+      height: 188,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+        itemCount: stages.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final s = stages[i];
+          return AppStageMiniCard(
+            title: s.title,
+            statusLabel: _statusLabel(s.status),
+            statusKind: _statusKind(s.status),
+            assigneeName: s.foremanIds.isEmpty
+                ? 'Не назначен'
+                : 'Бригадир',
+            stepsLabel: '${s.progressCache}% шагов',
+            questionsLabel: 'Вопросов нет',
+            deadlineLabel: s.plannedEnd != null
+                ? 'Срок: ${DateFormat('d MMM', 'ru').format(s.plannedEnd!)}'
+                : 'Срок не задан',
+            progress: s.progressCache / 100,
+            assigneeAlert: s.foremanIds.isEmpty,
+            onTap: () => Navigator.of(context).pushNamed(
+              '/projects/$projectId/stages/${s.id}',
+            ),
           );
         },
       ),
     );
   }
+
+  static String _statusLabel(StageStatus s) => switch (s) {
+        StageStatus.pending => 'Не начат',
+        StageStatus.active => 'В работе',
+        StageStatus.paused => 'Пауза',
+        StageStatus.review => 'Приёмка',
+        StageStatus.done => 'Завершён',
+        StageStatus.rejected => 'Отклонён',
+      };
+
+  static AppStageMiniStatus _statusKind(StageStatus s) => switch (s) {
+        StageStatus.pending => AppStageMiniStatus.pending,
+        StageStatus.active => AppStageMiniStatus.active,
+        StageStatus.paused => AppStageMiniStatus.paused,
+        StageStatus.review => AppStageMiniStatus.review,
+        StageStatus.done => AppStageMiniStatus.done,
+        StageStatus.rejected => AppStageMiniStatus.rejected,
+      };
 }
 
-class _NavGrid extends ConsumerWidget {
-  const _NavGrid({required this.projectId});
+class _ConsoleSkeleton extends StatelessWidget {
+  const _ConsoleSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                AppSkeletonRow(width: 36, height: 36, radius: 12),
+                SizedBox(width: 12),
+                Expanded(child: AppSkeletonRow(height: 18)),
+                SizedBox(width: 12),
+                AppSkeletonRow(width: 36, height: 36, radius: 12),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Center(
+              child: AppSkeletonRow(width: 160, height: 130, radius: 80),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: const [
+                Expanded(child: AppSkeletonRow(height: 88, radius: 12)),
+                SizedBox(width: 8),
+                Expanded(child: AppSkeletonRow(height: 88, radius: 12)),
+                SizedBox(width: 8),
+                Expanded(child: AppSkeletonRow(height: 88, radius: 12)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const AppSkeletonRow(height: 100, radius: 16),
+            const SizedBox(height: 16),
+            const AppSkeletonRow(height: 188, radius: 16),
+            const SizedBox(height: 16),
+            Row(
+              children: const [
+                Expanded(child: AppSkeletonRow(height: 78, radius: 16)),
+                SizedBox(width: 8),
+                Expanded(child: AppSkeletonRow(height: 78, radius: 16)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Группировка нав-плиток консоли по разделам:
+/// — «Этапы и работа» (Этапы / Согласования)
+/// — «Команда и общение» (Команда / Чаты)
+/// — «Финансы» (Бюджет / Материалы / Самозакуп / Инструмент) — role-gated
+/// — «Документы и лента» (Заметки / Документы / Лента / Экспорты / Методология)
+///
+/// Сетка адаптивная: 2 в строку, последняя плитка может быть `wide`.
+class _NavSections extends ConsumerWidget {
+  const _NavSections({required this.projectId});
 
   final String projectId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final role = ref.watch(activeRoleProvider);
-    // Самозакуп/Инструмент = поле бригадира/мастера. Заказчику и
-    // представителю эти разделы не показываем — бэкенд для них вернёт 403.
-    final canSelfPurchase = role == SystemRole.contractor ||
-        role == SystemRole.master ||
-        role == SystemRole.admin ||
-        ref.watch(canInProjectProvider(
-          (action: DomainAction.selfPurchaseCreate, projectId: projectId),
-        ));
-    final canTools = role == SystemRole.contractor ||
-        role == SystemRole.master ||
-        role == SystemRole.admin ||
-        ref.watch(canInProjectProvider(
-          (action: DomainAction.toolsManage, projectId: projectId),
-        ));
+    final canBudget = ref.watch(canInProjectProvider((
+      action: DomainAction.financeBudgetView,
+      projectId: projectId,
+    )));
+    final canMaterials = ref.watch(canInProjectProvider((
+      action: DomainAction.materialsManage,
+      projectId: projectId,
+    )));
+    final canSelfPurchase = ref.watch(canInProjectProvider((
+      action: DomainAction.selfPurchaseCreate,
+      projectId: projectId,
+    )));
+    final canTools = ref.watch(canInProjectProvider((
+      action: DomainAction.toolsIssue,
+      projectId: projectId,
+    )));
+    final canApprovals = ref.watch(canInProjectProvider((
+      action: DomainAction.approvalList,
+      projectId: projectId,
+    )));
+    final canChat = ref.watch(canInProjectProvider((
+      action: DomainAction.chatRead,
+      projectId: projectId,
+    )));
 
-    final tiles = <_NavTileSpec>[
-      _NavTileSpec(
-        icon: Icons.dashboard_outlined,
+    final stagesAndWork = <AppNavTileSpec>[
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.lightning,
+        iconColor: AppColors.brand,
         label: 'Этапы',
         onTap: () => context.push('/projects/$projectId/stages'),
       ),
-      _NavTileSpec(
-        icon: Icons.people_outline_rounded,
+      if (canApprovals)
+        AppNavTileSpec(
+          icon: PhosphorIconsFill.checkSquare,
+          iconColor: AppColors.purple,
+          label: 'Согласования',
+          onTap: () => context.push('/projects/$projectId/approvals'),
+        ),
+    ];
+
+    final teamAndChat = <AppNavTileSpec>[
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.usersThree,
+        iconColor: AppColors.greenDark,
         label: 'Команда',
         onTap: () => context.push('/projects/$projectId/team'),
       ),
-      _NavTileSpec(
-        icon: Icons.rule_rounded,
-        label: 'Согласования',
-        onTap: () => context.push('/projects/$projectId/approvals'),
-      ),
-      _NavTileSpec(
-        icon: Icons.edit_note_outlined,
-        label: 'Заметки',
-        onTap: () => context.push('/projects/$projectId/notes'),
-      ),
-      _NavTileSpec(
-        icon: Icons.menu_book_outlined,
-        label: 'Методичка',
-        onTap: () => context.push('/methodology'),
-      ),
-      _NavTileSpec(
-        icon: Icons.account_balance_wallet_outlined,
-        label: 'Бюджет',
-        onTap: () => context.push('/projects/$projectId/budget'),
-      ),
-      _NavTileSpec(
-        icon: Icons.inventory_2_outlined,
-        label: 'Материалы',
-        onTap: () => context.push('/projects/$projectId/materials'),
-      ),
+      if (canChat)
+        AppNavTileSpec(
+          icon: PhosphorIconsFill.chatCircleDots,
+          iconColor: AppColors.brand,
+          label: 'Чаты проекта',
+          onTap: () => context.push('/projects/$projectId/chats'),
+        ),
+    ];
+
+    final finance = <AppNavTileSpec>[
+      if (canBudget)
+        AppNavTileSpec(
+          icon: PhosphorIconsFill.wallet,
+          iconColor: AppColors.greenDark,
+          label: 'Бюджет',
+          onTap: () => context.push('/projects/$projectId/budget'),
+        ),
+      if (canMaterials)
+        AppNavTileSpec(
+          icon: PhosphorIconsFill.package,
+          iconColor: AppColors.yellowText,
+          label: 'Материалы',
+          onTap: () => context.push('/projects/$projectId/materials'),
+        ),
       if (canSelfPurchase)
-        _NavTileSpec(
-          icon: Icons.shopping_bag_outlined,
+        AppNavTileSpec(
+          icon: PhosphorIconsFill.basket,
+          iconColor: AppColors.brand,
           label: 'Самозакуп',
-          onTap: () => context.push('/projects/$projectId/selfpurchases'),
+          onTap: () =>
+              context.push('/projects/$projectId/selfpurchases'),
         ),
       if (canTools)
-        _NavTileSpec(
-          icon: Icons.construction_outlined,
+        AppNavTileSpec(
+          icon: PhosphorIconsFill.wrench,
+          iconColor: AppColors.n700,
           label: 'Инструмент',
           onTap: () => context.push('/projects/$projectId/tools'),
         ),
-      _NavTileSpec(
-        icon: Icons.chat_bubble_outline_rounded,
-        label: 'Чаты',
-        onTap: () => context.push('/projects/$projectId/chats'),
+    ];
+
+    final docsAndFeed = <AppNavTileSpec>[
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.notepad,
+        iconColor: AppColors.brand,
+        label: 'Заметки',
+        onTap: () => context.push('/projects/$projectId/notes'),
       ),
-      _NavTileSpec(
-        icon: Icons.insert_drive_file_outlined,
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.fileText,
+        iconColor: AppColors.n700,
         label: 'Документы',
         onTap: () => context.push('/projects/$projectId/documents'),
       ),
-      _NavTileSpec(
-        icon: Icons.stream_outlined,
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.flowArrow,
+        iconColor: AppColors.greenDark,
         label: 'Лента',
         onTap: () => context.push('/projects/$projectId/feed'),
       ),
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.downloadSimple,
+        iconColor: AppColors.purple,
+        label: 'Экспорты',
+        onTap: () => context.push('/projects/$projectId/exports'),
+      ),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: tiles.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.7,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (stagesAndWork.isNotEmpty) ...[
+            const _NavSectionLabel('ЭТАПЫ И РАБОТА'),
+            const SizedBox(height: AppSpacing.x8),
+            AppNavTileGrid(tiles: stagesAndWork),
+            const SizedBox(height: AppSpacing.x16),
+          ],
+          if (teamAndChat.isNotEmpty) ...[
+            const _NavSectionLabel('КОМАНДА И ОБЩЕНИЕ'),
+            const SizedBox(height: AppSpacing.x8),
+            AppNavTileGrid(tiles: teamAndChat),
+            const SizedBox(height: AppSpacing.x16),
+          ],
+          if (finance.isNotEmpty) ...[
+            const _NavSectionLabel('ФИНАНСЫ И ЗАКУПКИ'),
+            const SizedBox(height: AppSpacing.x8),
+            AppNavTileGrid(tiles: finance),
+            const SizedBox(height: AppSpacing.x16),
+          ],
+          const _NavSectionLabel('ДОКУМЕНТЫ И ИСТОРИЯ'),
+          const SizedBox(height: AppSpacing.x8),
+          AppNavTileGrid(tiles: docsAndFeed),
+        ],
       ),
-      itemBuilder: (_, i) {
-        final t = tiles[i];
-        return ConsoleNavTile(
-          icon: t.icon,
-          label: t.label,
-          enabled: t.enabled,
-          onTap: t.onTap,
-        );
-      },
     );
   }
 }
 
-class _NavTileSpec {
-  _NavTileSpec({
-    required this.icon,
-    required this.label,
-    this.onTap,
-  });
+class _NavSectionLabel extends StatelessWidget {
+  const _NavSectionLabel(this.text);
 
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
+  final String text;
 
-  bool get enabled => onTap != null;
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: AppColors.n400,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
 }

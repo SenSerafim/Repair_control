@@ -49,6 +49,7 @@ class ProjectsRepository {
   Future<Project> create({
     required String title,
     String? address,
+    String? description,
     DateTime? plannedStart,
     DateTime? plannedEnd,
     int? workBudget,
@@ -58,6 +59,8 @@ class ProjectsRepository {
         final body = <String, dynamic>{
           'title': title,
           if (address != null && address.isNotEmpty) 'address': address,
+          if (description != null && description.isNotEmpty)
+            'description': description,
           if (plannedStart != null)
             'plannedStart': plannedStart.toIso8601String(),
           if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
@@ -75,6 +78,7 @@ class ProjectsRepository {
     String projectId, {
     String? title,
     String? address,
+    String? description,
     DateTime? plannedStart,
     DateTime? plannedEnd,
     int? workBudget,
@@ -84,6 +88,7 @@ class ProjectsRepository {
         final body = <String, dynamic>{
           if (title != null) 'title': title,
           if (address != null) 'address': address,
+          if (description != null) 'description': description,
           if (plannedStart != null)
             'plannedStart': plannedStart.toIso8601String(),
           if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
