@@ -13,6 +13,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AccessGuard, RequireAccess } from '@app/rbac';
+import { PrismaService } from '@app/common';
 import { ProjectsService } from './projects.service';
 import { MembersService } from './members.service';
 import { InvitationsService } from './invitations.service';
@@ -38,6 +39,7 @@ export class ProjectsController {
     private readonly projects: ProjectsService,
     private readonly members: MembersService,
     private readonly invitations: InvitationsService,
+    private readonly prismaForRoleLookup: PrismaService,
   ) {}
 
   @Post()
@@ -57,8 +59,26 @@ export class ProjectsController {
   async list(
     @Req() req: { user: AuthenticatedUser },
     @Query('status') status?: 'active' | 'archived',
+    @Query('role') roleQuery?: string,
   ) {
-    return this.projects.listForUser(req.user.userId, status);
+    // Активная роль фильтрует видимость: customer видит только свои
+    // (ownerId === me), foreman/master/representative — только membership
+    // соответствующей роли. Так каждая роль ведёт себя как изолированный
+    // «аккаунт» (UX-требование).
+    let activeRole = this.parseRole(roleQuery);
+    if (!activeRole) {
+      const me = await this.prismaForRoleLookup.user.findUnique({
+        where: { id: req.user.userId },
+        select: { activeRole: true },
+      });
+      activeRole = me?.activeRole;
+    }
+    return this.projects.listForUser(req.user.userId, status, activeRole);
+  }
+
+  private parseRole(raw?: string) {
+    const allowed = ['customer', 'representative', 'contractor', 'master', 'admin'];
+    return raw && allowed.includes(raw) ? (raw as any) : undefined;
   }
 
   @Get(':projectId')

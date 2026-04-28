@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/access/access_guard.dart';
 import '../../../shared/widgets/status_pill.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../data/projects_repository.dart';
@@ -44,18 +45,22 @@ final activeProjectsProvider =
 class ActiveProjectsController extends AsyncNotifier<List<Project>> {
   @override
   Future<List<Project>> build() async {
+    // Подписка на activeRole — при переключении ролей список перестраивается
+    // автоматически (каждая роль = отдельный «аккаунт» по UX-требованию).
+    final role = ref.watch(activeRoleProvider);
     return ref
         .read(projectsRepositoryProvider)
-        .list(status: ProjectStatus.active);
+        .list(status: ProjectStatus.active, role: role?.name);
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
+      final role = ref.read(activeRoleProvider);
       state = AsyncData(
         await ref
             .read(projectsRepositoryProvider)
-            .list(status: ProjectStatus.active),
+            .list(status: ProjectStatus.active, role: role?.name),
       );
     } on ProjectsException catch (e, st) {
       state = AsyncError(e, st);
@@ -97,18 +102,20 @@ final archivedProjectsProvider =
 class ArchivedProjectsController extends AsyncNotifier<List<Project>> {
   @override
   Future<List<Project>> build() async {
+    final role = ref.watch(activeRoleProvider);
     return ref
         .read(projectsRepositoryProvider)
-        .list(status: ProjectStatus.archived);
+        .list(status: ProjectStatus.archived, role: role?.name);
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
+      final role = ref.read(activeRoleProvider);
       state = AsyncData(
         await ref
             .read(projectsRepositoryProvider)
-            .list(status: ProjectStatus.archived),
+            .list(status: ProjectStatus.archived, role: role?.name),
       );
     } on ProjectsException catch (e, st) {
       state = AsyncError(e, st);

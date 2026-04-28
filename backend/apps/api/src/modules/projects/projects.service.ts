@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ProjectStatus } from '@prisma/client';
+import { Prisma, ProjectStatus, SystemRole } from '@prisma/client';
 import {
   Clock,
   ConflictError,
@@ -72,12 +72,41 @@ export class ProjectsService {
     return this.serialize(project);
   }
 
-  async listForUser(userId: string, status?: ProjectStatus) {
+  /**
+   * Каждая активная роль — изолированная «учётная запись» (см. UX-требование):
+   * - customer → только проекты, где userId === ownerId.
+   * - representative → проекты с membership(role='representative').
+   * - contractor (бригадир) → проекты с membership(role='foreman').
+   * - master → проекты с membership(role='master').
+   * - admin → все (без фильтра).
+   * Если activeRole не передан — fallback на legacy-поведение (owner ИЛИ любой membership).
+   */
+  async listForUser(userId: string, status?: ProjectStatus, activeRole?: SystemRole) {
+    const where: Prisma.ProjectWhereInput = { status };
+
+    switch (activeRole) {
+      case 'customer':
+        where.ownerId = userId;
+        break;
+      case 'representative':
+        where.memberships = { some: { userId, role: 'representative' } };
+        break;
+      case 'contractor':
+        where.memberships = { some: { userId, role: 'foreman' } };
+        break;
+      case 'master':
+        where.memberships = { some: { userId, role: 'master' } };
+        break;
+      case 'admin':
+        break;
+      default:
+        // Legacy / неизвестная роль — owner ИЛИ любой membership.
+        where.OR = [{ ownerId: userId }, { memberships: { some: { userId } } }];
+        break;
+    }
+
     const projects = await this.prisma.project.findMany({
-      where: {
-        status: status,
-        OR: [{ ownerId: userId }, { memberships: { some: { userId } } }],
-      },
+      where,
       orderBy: { updatedAt: 'desc' },
     });
     return projects.map((p) => this.serialize(p));

@@ -39,20 +39,28 @@ class _AppBottomSheetBody extends StatelessWidget {
           ),
         ),
         padding: AppSpacing.bottomSheet,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: AppSpacing.x16),
-              decoration: BoxDecoration(
-                color: AppColors.n200,
-                borderRadius: BorderRadius.circular(2),
+        // ConstrainedBox + Column[Flexible] позволяет content'у sheet'а
+        // ужиматься без RenderFlex overflow когда содержимое больше экрана
+        // (например, длинный invite-form со списком прав).
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.92,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.x16),
+                decoration: BoxDecoration(
+                  color: AppColors.n200,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            child,
-          ],
+              Flexible(child: child),
+            ],
+          ),
         ),
       ),
     );

@@ -21,11 +21,17 @@ class ProjectsRepository {
 
   final Dio _dio;
 
-  Future<List<Project>> list({ProjectStatus? status}) => _call(() async {
+  /// [role] — фильтр по активной роли (customer/representative/contractor/master/admin).
+  /// Каждая роль ведёт себя как изолированный «аккаунт»: customer видит только
+  /// свои (где он owner), foreman/master/representative — только проекты со
+  /// своим membership этой роли. Если null — backend читает activeRole из БД.
+  Future<List<Project>> list({ProjectStatus? status, String? role}) =>
+      _call(() async {
         final r = await _dio.get<List<dynamic>>(
           '/api/projects',
           queryParameters: {
             if (status != null) 'status': status.name,
+            if (role != null) 'role': role,
           },
         );
         return r.data!
