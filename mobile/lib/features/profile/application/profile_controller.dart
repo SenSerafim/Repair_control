@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/access/system_role.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/domain/auth_failure.dart';
+import '../../projects/application/projects_list_controller.dart';
 import '../data/profile_repository.dart';
 import '../domain/user_profile.dart';
 
@@ -72,6 +73,12 @@ class ProfileController extends AsyncNotifier<UserProfile> {
           ),
         );
       }
+      // Каждая роль — изолированный «аккаунт»: проекты/архив свои.
+      // После переключения — инвалидируем верхнеуровневые провайдеры
+      // данных, чтобы экраны перечитали с бэка под новую активную роль.
+      ref
+        ..invalidate(activeProjectsProvider)
+        ..invalidate(archivedProjectsProvider);
       return null;
     } on ProfileException catch (e) {
       return e.failure;

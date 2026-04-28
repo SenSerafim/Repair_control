@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/theme/text_styles.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/tools_controller.dart';
 import '../domain/tool.dart';
 
+/// s-profile-tools — список «Мои инструменты» со stat-bar и swipe-to-delete.
 class MyToolsScreen extends ConsumerWidget {
   const MyToolsScreen({super.key});
 
@@ -17,11 +20,12 @@ class MyToolsScreen extends ConsumerWidget {
     return AppScaffold(
       showBack: true,
       title: 'Мои инструменты',
-      padding: EdgeInsets.zero,
+      backgroundColor: AppColors.n50,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
       actions: [
         IconButton(
-          icon: const Icon(Icons.add_circle_outline_rounded),
-          onPressed: () => _showAdd(context, ref),
+          icon: Icon(PhosphorIconsBold.plus, color: AppColors.brand),
+          onPressed: () => context.push(AppRoutes.profileToolAdd),
         ),
       ],
       body: async.when(
@@ -31,28 +35,42 @@ class MyToolsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(myToolsProvider),
         ),
         data: (tools) {
-          if (tools.isEmpty) {
-            return AppEmptyState(
-              title: 'Инструментов ещё нет',
-              subtitle:
-                  'Добавьте свой инструмент — потом его можно выдать мастеру '
-                  'на объекте.',
-              icon: Icons.construction_outlined,
-              actionLabel: 'Добавить',
-              onAction: () => _showAdd(context, ref),
-            );
-          }
+          final total = tools.length;
+          final issued =
+              tools.where((t) => t.issuedQty > 0).length;
+          final inStock = tools.where((t) => t.availableQty > 0).length;
+
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(myToolsProvider),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.x16),
-              itemCount: tools.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppSpacing.x10),
-              itemBuilder: (_, i) => _ToolCard(
-                tool: tools[i],
-                onEdit: () => _showEdit(context, ref, tools[i]),
-              ),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+              children: [
+                _StatBar(total: total, issued: issued, inStock: inStock),
+                const SizedBox(height: AppSpacing.x12),
+                _Hint(),
+                const SizedBox(height: AppSpacing.x16),
+                if (tools.isEmpty)
+                  AppEmptyState(
+                    title: 'Инструментов ещё нет',
+                    subtitle: 'Добавьте свой инструмент, чтобы выдавать '
+                        'его мастерам на объекте.',
+                    icon: PhosphorIconsFill.wrench,
+                    actionLabel: 'Добавить',
+                    onAction: () => context.push(AppRoutes.profileToolAdd),
+                  )
+                else
+                  for (final tool in tools) ...[
+                    _ToolCard(
+                      tool: tool,
+                      onTap: () => context.push(
+                        AppRoutes.profileToolDetailWith(tool.id),
+                      ),
+                      onDelete: () => _confirmDelete(context, ref, tool),
+                    ),
+                    const SizedBox(height: AppSpacing.x10),
+                  ],
+                const SizedBox(height: AppSpacing.x24),
+              ],
             ),
           );
         },
@@ -60,289 +78,313 @@ class MyToolsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAdd(BuildContext context, WidgetRef ref) async {
-    final name = TextEditingController();
-    final qty = TextEditingController(text: '1');
-    final unit = TextEditingController(text: 'шт');
-    await showAppBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AppBottomSheetHeader(
-              title: 'Новый инструмент',
-              subtitle: 'Добавится в ваш личный список.',
-            ),
-            TextField(
-              controller: name,
-              decoration: _dec('Название'),
-            ),
-            const SizedBox(height: AppSpacing.x10),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: qty,
-                    keyboardType: TextInputType.number,
-                    decoration: _dec('Количество'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.x8),
-                Expanded(
-                  child: TextField(
-                    controller: unit,
-                    decoration: _dec('Ед.'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x16),
-            Builder(
-              builder: (ctx) => AppButton(
-                label: 'Добавить',
-                onPressed: () async {
-                  final total = int.tryParse(qty.text);
-                  if (name.text.trim().isEmpty) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Введите название инструмента',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  if (total == null || total <= 0) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Укажите количество (целое число > 0)',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  final failure =
-                      await ref.read(myToolsProvider.notifier).create(
-                            name: name.text.trim(),
-                            totalQty: total,
-                            unit: unit.text.trim().isEmpty
-                                ? null
-                                : unit.text.trim(),
-                          );
-                  if (!ctx.mounted) return;
-                  Navigator.of(ctx).pop();
-                  if (!context.mounted) return;
-                  if (failure != null) {
-                    AppToast.show(
-                      context,
-                      message: failure.userMessage,
-                      kind: AppToastKind.error,
-                    );
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    name.dispose();
-    qty.dispose();
-    unit.dispose();
-  }
-
-  Future<void> _showEdit(
+  Future<void> _confirmDelete(
     BuildContext context,
     WidgetRef ref,
     ToolItem tool,
   ) async {
-    final name = TextEditingController(text: tool.name);
-    final qty = TextEditingController(text: tool.totalQty.toString());
-    final unit = TextEditingController(text: tool.unit ?? '');
-    await showAppBottomSheet<void>(
+    if (tool.issuedQty > 0) {
+      AppToast.show(
+        context,
+        message: 'Нельзя удалить — инструмент выдан',
+        kind: AppToastKind.error,
+      );
+      return;
+    }
+    final ok = await showAppBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
+      child: Builder(
+        builder: (ctx) => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppBottomSheetHeader(
-              title: 'Изменить инструмент',
-              subtitle: 'Сейчас выдано: ${tool.issuedQty} шт. Уменьшить '
-                  'totalQty ниже этого числа нельзя.',
+              title: 'Удалить «${tool.name}»?',
+              subtitle: 'Действие нельзя отменить.',
             ),
-            TextField(
-              controller: name,
-              decoration: _dec('Название'),
+            AppButton(
+              label: 'Удалить',
+              variant: AppButtonVariant.destructive,
+              onPressed: () => Navigator.of(ctx).pop(true),
             ),
-            const SizedBox(height: AppSpacing.x10),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: qty,
-                    keyboardType: TextInputType.number,
-                    decoration: _dec('Количество'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.x8),
-                Expanded(
-                  child: TextField(
-                    controller: unit,
-                    decoration: _dec('Ед.'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x16),
-            Builder(
-              builder: (ctx) => AppButton(
-                label: 'Сохранить',
-                onPressed: () async {
-                  final total = int.tryParse(qty.text);
-                  if (name.text.trim().isEmpty) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Название не должно быть пустым',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  if (total == null || total < tool.issuedQty) {
-                    AppToast.show(
-                      ctx,
-                      message: total == null
-                          ? 'Укажите количество (целое число)'
-                          : 'Нельзя меньше выданных (${tool.issuedQty})',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  final failure =
-                      await ref.read(myToolsProvider.notifier).saveUpdate(
-                            id: tool.id,
-                            name: name.text.trim(),
-                            totalQty: total,
-                            unit: unit.text.trim().isEmpty
-                                ? null
-                                : unit.text.trim(),
-                          );
-                  if (!ctx.mounted) return;
-                  Navigator.of(ctx).pop();
-                  if (!context.mounted) return;
-                  if (failure != null) {
-                    AppToast.show(
-                      context,
-                      message: failure.userMessage,
-                      kind: AppToastKind.error,
-                    );
-                  }
-                },
-              ),
+            const SizedBox(height: AppSpacing.x8),
+            AppButton(
+              label: 'Отмена',
+              variant: AppButtonVariant.secondary,
+              onPressed: () => Navigator.of(ctx).pop(false),
             ),
           ],
         ),
       ),
     );
-    name.dispose();
-    qty.dispose();
-    unit.dispose();
+    if (ok ?? false) {
+      final failure = await ref.read(myToolsProvider.notifier).remove(tool.id);
+      if (!context.mounted) return;
+      if (failure != null) {
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
+      } else {
+        AppToast.show(context, message: 'Удалено');
+      }
+    }
+  }
+}
+
+class _StatBar extends StatelessWidget {
+  const _StatBar({
+    required this.total,
+    required this.issued,
+    required this.inStock,
+  });
+
+  final int total;
+  final int issued;
+  final int inStock;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _Stat(
+            value: '$total',
+            label: 'ВСЕГО',
+            bg: AppColors.n0,
+            color: AppColors.n800,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Stat(
+            value: '$issued',
+            label: 'ВЫДАНО',
+            bg: AppColors.yellowBg,
+            color: AppColors.yellowText,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Stat(
+            value: '$inStock',
+            label: 'НА СКЛАДЕ',
+            bg: AppColors.greenLight,
+            color: AppColors.greenDark,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.value,
+    required this.label,
+    required this.bg,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final Color bg;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        boxShadow: AppShadows.sh1,
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: color.withValues(alpha: 0.75),
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.brandLight,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.brand),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Список переносится между проектами. Свайп влево — удалить.',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.n700,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _ToolCard extends StatelessWidget {
-  const _ToolCard({required this.tool, required this.onEdit});
+  const _ToolCard({
+    required this.tool,
+    required this.onTap,
+    required this.onDelete,
+  });
+
   final ToolItem tool;
-  final VoidCallback onEdit;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onEdit,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x14),
+    final issued = tool.issuedQty > 0;
+    final iconBg = issued ? AppColors.yellowBg : AppColors.greenLight;
+    final iconColor = issued ? AppColors.yellowText : AppColors.greenDark;
+
+    return Dismissible(
+      key: ValueKey('tool-${tool.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppSpacing.x16),
         decoration: BoxDecoration(
-          color: AppColors.n0,
+          color: AppColors.redDot,
           borderRadius: AppRadius.card,
-          border: Border.all(color: AppColors.n200, width: 1.5),
-          boxShadow: AppShadows.sh1,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.brandLight,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-              ),
-              child: const Icon(
-                Icons.construction_outlined,
-                color: AppColors.brand,
-              ),
+        child: Icon(PhosphorIconsFill.trash, color: AppColors.n0),
+      ),
+      confirmDismiss: (_) async {
+        onDelete();
+        return false;
+      },
+      child: Material(
+        color: AppColors.n0,
+        borderRadius: AppRadius.card,
+        child: InkWell(
+          borderRadius: AppRadius.card,
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.x14),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.n200),
+              borderRadius: AppRadius.card,
+              boxShadow: AppShadows.sh1,
             ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(tool.name, style: AppTextStyles.subtitle),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Доступно ${tool.availableQty} из ${tool.totalQty} ${tool.unit ?? ''}'
-                        .trim(),
-                    style: AppTextStyles.caption,
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
-                ],
-              ),
-            ),
-            if (tool.isAllIssued)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.yellowBg,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  child: Icon(
+                    PhosphorIconsFill.wrench,
+                    color: iconColor,
+                    size: 20,
+                  ),
                 ),
-                child: Text(
-                  'Весь выдан',
-                  style: AppTextStyles.tiny
-                      .copyWith(color: AppColors.yellowText),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tool.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.n800,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Кол-во: ${tool.totalQty}${tool.unit != null ? ' ${tool.unit}' : ''} · '
+                        '${issued ? 'Выдан' : 'На складе'}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.n400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.edit_outlined,
-              color: AppColors.n400,
-              size: 18,
+                _Pill(
+                  text: issued ? 'Выдан' : 'На складе',
+                  bg: iconBg,
+                  color: iconColor,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-InputDecoration _dec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
+class _Pill extends StatelessWidget {
+  const _Pill({required this.text, required this.bg, required this.color});
+
+  final String text;
+  final Color bg;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: 0.4,
+        ),
       ),
     );
+  }
+}

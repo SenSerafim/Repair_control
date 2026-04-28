@@ -43,12 +43,16 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
   Future<AuthFailure?> addMember({
     required String userId,
     required MembershipRole role,
+    Map<String, bool>? permissions,
+    List<String>? stageIds,
   }) async {
     try {
       final m = await ref.read(teamRepositoryProvider).addMember(
             projectId: arg,
             userId: userId,
             role: role,
+            permissions: permissions,
+            stageIds: stageIds,
           );
       final current = state.value;
       if (current != null) {

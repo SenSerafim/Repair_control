@@ -140,6 +140,18 @@ class ProfileRepository {
         );
       });
 
+  /// Soft-delete текущего аккаунта (Cluster A: «Удалить аккаунт»).
+  /// После 204 клиент должен сделать logout и очистить локальный кеш.
+  Future<void> deleteAccount() => _call(() async {
+        await _dio.delete<void>('/api/me');
+      });
+
+  /// Получить одну статью FAQ.
+  Future<FaqItem> getFaqItem(String id) => _call(() async {
+        final r = await _dio.get<Map<String, dynamic>>('/api/faq/$id');
+        return FaqItem.parse(r.data!);
+      });
+
   /// Presigned upload ответ: { key, url, method, headers, expiresIn }.
   /// Используется для загрузки аватара и вложений.
   Future<PresignedUpload> presignUpload({

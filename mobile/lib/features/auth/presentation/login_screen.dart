@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/routing/app_routes.dart';
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/auth_controller.dart';
 import '../domain/auth_failure.dart';
 import 'phone_formatter.dart';
 
-/// s-login / s-login-error / s-login-loading / s-network-error — все 5
-/// состояний собраны в одном экране и управляются через local state.
+/// s-login + s-login-error + s-login-loading.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,11 +21,11 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phone = TextEditingController();
   final _password = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
 
   bool _loading = false;
   AuthFailure? _failure;
   bool _obscure = true;
+  int _remainingAttempts = 3;
 
   @override
   void dispose() {
@@ -35,22 +34,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  String? _validatePhone(String? v) {
-    if (v == null || v.isEmpty) return 'Введите телефон';
-    if (!isValidPhoneE164(v)) return 'Введите корректный номер';
-    return null;
-  }
-
-  String? _validatePassword(String? v) {
-    if (v == null || v.isEmpty) return 'Введите пароль';
-    return null;
-  }
-
   Future<void> _submit() async {
-    setState(() => _failure = null);
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    setState(() => _loading = true);
+    if (_phone.text.trim().isEmpty || _password.text.isEmpty) {
+      setState(() => _failure = AuthFailure.validation);
+      return;
+    }
+    if (!isValidPhoneE164(_phone.text)) {
+      setState(() => _failure = AuthFailure.validation);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _failure = null;
+    });
     final failure = await ref.read(authControllerProvider.notifier).login(
           phone: phoneToE164(_phone.text),
           password: _password.text,
@@ -59,183 +55,207 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _loading = false;
       _failure = failure;
+      if (failure == AuthFailure.invalidCredentials) {
+        _remainingAttempts = (_remainingAttempts - 1).clamp(0, 3);
+      } else if (failure == null) {
+        _remainingAttempts = 3;
+      }
     });
-
-    if (failure == null && context.mounted) {
-      AppToast.show(context, message: 'Добро пожаловать!',
-          kind: AppToastKind.success);
+    if (failure == null && mounted) {
+      AppToast.show(
+        context,
+        message: 'Добро пожаловать!',
+        kind: AppToastKind.success,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final phoneError = _failure == AuthFailure.invalidCredentials
-        ? 'Неверный телефон или пароль'
+    final hasError = _failure == AuthFailure.invalidCredentials;
+    final passwordError = hasError
+        ? 'Неверный пароль. Осталось $_remainingAttempts ${_pluralize(_remainingAttempts)}.'
         : null;
 
     return AppScaffold(
       showBack: true,
       title: 'Вход',
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x20),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: AppSpacing.x16),
-            if (_failure != null) ...[
-              _FailureBanner(failure: _failure!),
-              const SizedBox(height: AppSpacing.x16),
-            ],
-            _LabeledField(
-              label: 'Телефон',
-              child: TextFormField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                inputFormatters: [PhoneInputFormatter()],
-                validator: _validatePhone,
-                decoration: _inputDecoration(
-                  hint: '+7 000 000 00 00',
-                  errorText: phoneError,
+      body: _loading
+          ? const _LoadingSkeleton()
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: AppSpacing.x16),
+                const Text(
+                  'С возвращением',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.n800,
+                    letterSpacing: -0.4,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            _LabeledField(
-              label: 'Пароль',
-              child: TextFormField(
-                controller: _password,
-                obscureText: _obscure,
-                textInputAction: TextInputAction.done,
-                validator: _validatePassword,
-                decoration: _inputDecoration(
-                  hint: 'Ваш пароль',
-                  suffix: IconButton(
+                const SizedBox(height: AppSpacing.x4),
+                const Text(
+                  'Введите номер телефона и пароль',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.n400,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x24),
+                AppInput(
+                  controller: _phone,
+                  label: 'Номер телефона',
+                  placeholder: '+7 (000) 000-00-00',
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [PhoneInputFormatter()],
+                  prefixIcon: const _CountryPrefix(),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+                AppInput(
+                  controller: _password,
+                  label: 'Пароль',
+                  placeholder: '••••••••',
+                  obscureText: _obscure,
+                  errorText: passwordError,
+                  suffixIcon: IconButton(
                     icon: Icon(
                       _obscure
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: AppColors.n400,
+                          ? PhosphorIconsRegular.eye
+                          : PhosphorIconsRegular.eyeSlash,
+                      size: 20,
+                      color: hasError ? AppColors.redDot : AppColors.n400,
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                 ),
-                onFieldSubmitted: (_) => _submit(),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => context.push(AppRoutes.recovery),
-                child: const Text('Забыли пароль?'),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x8),
-            AppButton(
-              label: 'Войти',
-              onPressed: _submit,
-              isLoading: _loading,
-            ),
-            const SizedBox(height: AppSpacing.x24),
-            Center(
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  const Text(
-                    'Нет аккаунта? ',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                  TextButton(
-                    onPressed: () => context.go(AppRoutes.register),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                const SizedBox(height: AppSpacing.x12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => context.push(AppRoutes.recovery),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        'Забыли пароль?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.brand,
+                        ),
+                      ),
                     ),
-                    child: const Text('Зарегистрироваться'),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: AppSpacing.x16),
+                AppButton(
+                  label: hasError ? 'Повторить' : 'Войти',
+                  onPressed: _submit,
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.x24),
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () => context.go(AppRoutes.register),
+                      child: const Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Нет аккаунта? ',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.n500,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'Зарегистрироваться',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.brand,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration({
-    required String hint,
-    String? errorText,
-    Widget? suffix,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      errorText: errorText,
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      suffixIcon: suffix,
-      border: _border(AppColors.n200),
-      enabledBorder: _border(AppColors.n200),
-      focusedBorder: _border(AppColors.brand),
-      errorBorder: _border(AppColors.redDot),
-      focusedErrorBorder: _border(AppColors.redDot),
-    );
-  }
-
-  OutlineInputBorder _border(Color c) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: BorderSide(color: c, width: 1.5),
-      );
-}
-
-class _LabeledField extends StatelessWidget {
-  const _LabeledField({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.caption),
-        const SizedBox(height: AppSpacing.x6),
-        child,
-      ],
     );
   }
 }
 
-class _FailureBanner extends StatelessWidget {
-  const _FailureBanner({required this.failure});
+String _pluralize(int n) {
+  final mod10 = n % 10;
+  final mod100 = n % 100;
+  if (mod10 == 1 && mod100 != 11) return 'попытка';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'попытки';
+  return 'попыток';
+}
 
-  final AuthFailure failure;
+class _CountryPrefix extends StatelessWidget {
+  const _CountryPrefix();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: AppColors.redBg,
-        borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.2)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, right: 4),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: AppColors.redDot, size: 20),
-          const SizedBox(width: AppSpacing.x10),
-          Expanded(
+          const Text('🇷🇺', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 6),
+          const Text(
+            '+7',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.n700,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(width: 1, height: 22, color: AppColors.n200),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingSkeleton extends StatelessWidget {
+  const _LoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: AppSpacing.x16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSkeletonRow(width: 180, height: 22),
+          SizedBox(height: AppSpacing.x12),
+          AppSkeletonRow(width: 220, height: 14),
+          SizedBox(height: AppSpacing.x32),
+          AppSkeletonRow(height: 52),
+          SizedBox(height: AppSpacing.x12),
+          AppSkeletonRow(height: 52),
+          SizedBox(height: AppSpacing.x32),
+          AppSkeletonRow(height: 54),
+          SizedBox(height: AppSpacing.x16),
+          Center(
             child: Text(
-              failure.userMessage,
-              style: AppTextStyles.body.copyWith(color: AppColors.redText),
+              'Загрузка данных...',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.n400,
+              ),
             ),
           ),
         ],

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/domain/membership.dart';
 import '../application/team_controller.dart';
 import '../domain/invitation.dart';
-import 'add_member_sheet.dart';
 import 'generate_invite_code_sheet.dart';
 import 'rep_rights_sheet.dart';
 
@@ -43,8 +44,10 @@ class TeamScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined),
-            onPressed: () =>
-                showAddMemberSheet(context, ref, projectId: projectId),
+            tooltip: 'Добавить участника',
+            onPressed: () => context.push(
+              AppRoutes.projectAddMemberWith(projectId),
+            ),
           ),
         ],
       ],

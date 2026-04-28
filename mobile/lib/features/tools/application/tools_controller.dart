@@ -66,7 +66,23 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
       return e.failure;
     }
   }
+
+  Future<AuthFailure?> remove(String id) async {
+    try {
+      await _repo.deleteTool(id);
+      final cur = state.value ?? const <ToolItem>[];
+      state = AsyncData(cur.where((t) => t.id != id).toList());
+      return null;
+    } on ToolsException catch (e) {
+      return e.failure;
+    }
+  }
 }
+
+/// Один инструмент по id (для tool detail / редактирования).
+final toolDetailProvider = FutureProvider.family<ToolItem, String>((ref, id) {
+  return ref.read(toolsRepositoryProvider).getTool(id);
+});
 
 final toolIssuancesProvider = AsyncNotifierProvider.family<
     ToolIssuancesController, List<ToolIssuance>, String>(

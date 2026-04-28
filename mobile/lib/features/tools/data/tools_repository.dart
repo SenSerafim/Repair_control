@@ -69,6 +69,10 @@ class ToolsRepository {
         return ToolItem.parse(r.data!);
       });
 
+  Future<void> deleteTool(String id) => _call(() async {
+        await _dio.delete<void>('/api/tools/$id');
+      });
+
   // ───── Project issuances ─────
 
   Future<List<ToolIssuance>> listIssuances(String projectId) =>

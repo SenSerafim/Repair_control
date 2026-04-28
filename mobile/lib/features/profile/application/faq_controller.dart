@@ -24,3 +24,8 @@ class FaqController extends AsyncNotifier<List<FaqSection>> {
     }
   }
 }
+
+/// Загрузка одной статьи FAQ по id (Cluster A: «Статья FAQ»).
+final faqItemProvider = FutureProvider.family<FaqItem, String>((ref, id) {
+  return ref.read(profileRepositoryProvider).getFaqItem(id);
+});

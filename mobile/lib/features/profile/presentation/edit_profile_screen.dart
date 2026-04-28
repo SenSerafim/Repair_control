@@ -4,15 +4,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/profile_controller.dart';
 import '../data/profile_repository.dart';
 
-/// s-edit-profile — редактирование firstName/lastName/email.
-/// Аватар — в отдельном sheet (PhotoPickerSheet) — ссылается из этой формы.
+/// s-edit-profile — редактирование ФИО/email + аватар через PhotoPickerSheet.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -24,7 +23,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _firstName;
   late final TextEditingController _lastName;
   late final TextEditingController _email;
-  final _formKey = GlobalKey<FormState>();
   bool _saving = false;
   String? _error;
 
@@ -46,7 +44,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_firstName.text.trim().isEmpty || _lastName.text.trim().isEmpty) {
+      setState(() => _error = 'Заполните имя и фамилию');
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -64,7 +65,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } else {
       AppToast.show(
         context,
-        message: 'Профиль обновлён',
+        message: 'Профиль сохранён',
         kind: AppToastKind.success,
       );
       await Navigator.of(context).maybePop();
@@ -148,95 +149,115 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profile = ref.watch(profileControllerProvider).valueOrNull;
+
     return AppScaffold(
       showBack: true,
-      title: 'Личные данные',
+      title: 'Данные профиля',
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-      body: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          children: [
-            const SizedBox(height: AppSpacing.x16),
-            Center(
-              child: AppButton(
-                label: 'Сменить фото',
-                variant: AppButtonVariant.secondary,
-                onPressed: _pickPhoto,
-                fullWidth: false,
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x20),
+        children: [
+          Center(
+            child: GestureDetector(
+              onTap: _pickPhoto,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: AppShadows.sh2,
+                    ),
+                    child: profile == null
+                        ? const SizedBox.shrink()
+                        : AppAvatar(
+                            seed: profile.id,
+                            name: '${profile.firstName} ${profile.lastName}',
+                            imageUrl: profile.avatarUrl,
+                            size: 88,
+                            palette: AvatarPalette.blue,
+                          ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.brand,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.n0, width: 2),
+                        boxShadow: AppShadows.shBlue,
+                      ),
+                      child: Icon(
+                        PhosphorIconsFill.camera,
+                        size: 14,
+                        color: AppColors.n0,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.x20),
-            if (_error != null) ...[
-              AppInlineError(message: _error!),
-              const SizedBox(height: AppSpacing.x12),
-            ],
-            const Text('Имя', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            TextFormField(
-              controller: _firstName,
-              textCapitalization: TextCapitalization.words,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Введите имя' : null,
-              decoration: _dec('Ваше имя'),
+          ),
+          const SizedBox(height: AppSpacing.x10),
+          Center(
+            child: GestureDetector(
+              onTap: _pickPhoto,
+              child: const Text(
+                'Изменить фото',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.brand,
+                ),
+              ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.x24),
+          if (_error != null) ...[
+            AppInlineError(message: _error!),
             const SizedBox(height: AppSpacing.x12),
-            const Text('Фамилия', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            TextFormField(
-              controller: _lastName,
-              textCapitalization: TextCapitalization.words,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Введите фамилию'
-                  : null,
-              decoration: _dec('Ваша фамилия'),
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            const Text('E-mail (опционально)', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            TextFormField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if (v == null || v.isEmpty) return null;
-                if (!RegExp(r'^.+@.+\..+$').hasMatch(v.trim())) {
-                  return 'Введите корректный email';
-                }
-                return null;
-              },
-              decoration: _dec('name@example.com'),
-            ),
-            const SizedBox(height: AppSpacing.x24),
-            AppButton(
-              label: 'Сохранить',
-              isLoading: _saving,
-              onPressed: _save,
-            ),
-            const SizedBox(height: AppSpacing.x24),
           ],
-        ),
+          AppInput(
+            controller: _firstName,
+            label: 'Имя',
+            placeholder: 'Имя',
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          AppInput(
+            controller: _lastName,
+            label: 'Фамилия',
+            placeholder: 'Фамилия',
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          AppInput(
+            controller: _email,
+            label: 'Email',
+            placeholder: 'name@example.com',
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          AppInput(
+            controller: TextEditingController(text: profile?.phone ?? ''),
+            label: 'Номер телефона',
+            placeholder: '+7 (000) 000-00-00',
+            enabled: false,
+            helperText: 'Телефон нельзя изменить — это ваш логин',
+          ),
+          const SizedBox(height: AppSpacing.x32),
+          AppButton(
+            label: 'Сохранить',
+            isLoading: _saving,
+            onPressed: _save,
+          ),
+          const SizedBox(height: AppSpacing.x24),
+        ],
       ),
     );
   }
-
-  InputDecoration _dec(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-        filled: true,
-        fillColor: AppColors.n0,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        border: _border(AppColors.n200),
-        enabledBorder: _border(AppColors.n200),
-        focusedBorder: _border(AppColors.brand),
-        errorBorder: _border(AppColors.redDot),
-        focusedErrorBorder: _border(AppColors.redDot),
-      );
-
-  OutlineInputBorder _border(Color c) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: BorderSide(color: c, width: 1.5),
-      );
 }
