@@ -58,22 +58,34 @@ class Membership with _$Membership {
   }) = _Membership;
 
   static Membership parse(Map<String, dynamic> json) {
+    // Бекенд отдаёт createdAt, мобильное поле исторически называется addedAt;
+    // принимаем оба варианта + fallback на now() при отсутствии (избегаем
+    // ParallelWaitError: type 'Null' is not a subtype of type 'String').
     final m = Membership(
-      id: json['id'] as String,
-      projectId: json['projectId'] as String,
-      userId: json['userId'] as String,
+      id: (json['id'] as String?) ?? '',
+      projectId: (json['projectId'] as String?) ?? '',
+      userId: (json['userId'] as String?) ?? '',
       role: MembershipRole.fromString(json['role'] as String?),
-      addedAt: DateTime.parse(json['addedAt'] as String),
+      addedAt: _parseMembershipDate(json['addedAt'] ?? json['createdAt']),
       user: json['user'] is Map<String, dynamic>
           ? ProjectMemberUser.parse(json['user'] as Map<String, dynamic>)
           : null,
     );
-    final rights = _parseRights(json['representativeRights']);
+    final rights = _parseRights(
+      json['representativeRights'] ?? json['permissions'],
+    );
     if (rights.isNotEmpty) {
       MembershipRights._cache[m.id] = rights;
     }
     return m;
   }
+}
+
+DateTime _parseMembershipDate(Object? raw) {
+  if (raw is String && raw.isNotEmpty) {
+    return DateTime.tryParse(raw) ?? DateTime.now();
+  }
+  return DateTime.now();
 }
 
 List<String> _parseRights(Object? raw) {
