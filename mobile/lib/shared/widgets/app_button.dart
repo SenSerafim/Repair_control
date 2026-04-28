@@ -3,7 +3,19 @@ import 'package:flutter/material.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/theme/tokens.dart';
 
-enum AppButtonVariant { primary, secondary, ghost, destructive, success }
+enum AppButtonVariant {
+  primary,
+  secondary,
+  ghost,
+  destructive,
+  success,
+  /// Белая на тёмном фоне (Welcome): brand-цвет текста.
+  white,
+  /// Прозрачная с белой обводкой (Welcome secondary).
+  outlineWhite,
+  /// Ghost-кнопка с красной обводкой (Tool Detail «Удалить инструмент»).
+  ghostDanger,
+}
 
 enum AppButtonSize { lg, sm }
 
@@ -153,6 +165,23 @@ class _AppButtonState extends State<AppButton> {
           background: AppColors.greenDark,
           textColor: AppColors.n0,
           shadow: AppShadows.shGreen,
+        );
+      case AppButtonVariant.white:
+        return const _ButtonSpec(
+          background: AppColors.n0,
+          textColor: AppColors.brand,
+        );
+      case AppButtonVariant.outlineWhite:
+        return _ButtonSpec(
+          background: Colors.transparent,
+          textColor: AppColors.n0,
+          border: Border.all(color: AppColors.n0, width: 1.5),
+        );
+      case AppButtonVariant.ghostDanger:
+        return _ButtonSpec(
+          background: AppColors.n0,
+          textColor: AppColors.redText,
+          border: Border.all(color: AppColors.redDot, width: 1.5),
         );
     }
   }

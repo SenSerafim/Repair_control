@@ -36,10 +36,36 @@ class AppRoutes {
   static const chatDetail = '/chats/:chatId';
   static String chatDetailWith(String chatId) => '/chats/$chatId';
 
+  // Cluster A — A2 (добавление участников). Маршруты живут под /projects/:projectId/team/.
+  static const projectTeam = '/projects/:projectId/team';
+  static String projectTeamWith(String projectId) =>
+      '/projects/$projectId/team';
+  static const projectAddMember = '/projects/:projectId/team/add';
+  static String projectAddMemberWith(String projectId) =>
+      '/projects/$projectId/team/add';
+  static const projectMemberFound = '/projects/:projectId/team/found';
+  static String projectMemberFoundWith(String projectId) =>
+      '/projects/$projectId/team/found';
+  static const projectMemberNotFound = '/projects/:projectId/team/not-found';
+  static String projectMemberNotFoundWith(String projectId) =>
+      '/projects/$projectId/team/not-found';
+  static const projectAssignStage = '/projects/:projectId/team/stage';
+  static String projectAssignStageWith(String projectId) =>
+      '/projects/$projectId/team/stage';
+  static const projectAddRepresentative =
+      '/projects/:projectId/team/representative/add';
+  static String projectAddRepresentativeWith(String projectId) =>
+      '/projects/$projectId/team/representative/add';
+  static const projectRepRights = '/projects/:projectId/team/representative/rights';
+  static String projectRepRightsWith(String projectId) =>
+      '/projects/$projectId/team/representative/rights';
+
   // Profile.
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
+  static const profileRoleSwitcher = '/profile/switch-role';
   static const profileRoles = '/profile/roles';
+  static const profileRolesSwitched = '/profile/roles/switched';
   static const profileRepRights = '/profile/rep-rights';
   static const profileLanguage = '/profile/language';
   static const profileHelp = '/profile/help';
@@ -47,6 +73,13 @@ class AppRoutes {
   static String profileFaqDetailWith(String itemId) => '/profile/help/$itemId';
   static const profileFeedback = '/profile/feedback';
   static const profileNotifSettings = '/profile/notifications';
+
+  // Tools (in Profile).
+  static const profileTools = '/profile/tools';
+  static const profileToolAdd = '/profile/tools/add';
+  static const profileToolDetail = '/profile/tools/:toolId';
+  static String profileToolDetailWith(String toolId) =>
+      '/profile/tools/$toolId';
 
   // Approvals (root + per-project).
   static const approvals = '/approvals';

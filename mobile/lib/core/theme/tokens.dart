@@ -286,3 +286,89 @@ class AppDurations {
   static const Duration normal = Duration(milliseconds: 250);
   static const Duration slow = Duration(milliseconds: 400);
 }
+
+/// Градиенты дизайна Cluster A (Welcome / Profile-hero / success-CTA / role-cards).
+class AppGradients {
+  const AppGradients._();
+
+  /// Фон Welcome-экрана. 155° dark blue → brand.
+  static const LinearGradient heroDark = LinearGradient(
+    begin: Alignment(-0.6, -1),
+    end: Alignment(0.6, 1),
+    colors: [
+      Color(0xFF0F172A),
+      Color(0xFF1E3A5F),
+      Color(0xFF1D4ED8),
+    ],
+    stops: [0, 0.5, 1],
+  );
+
+  /// Hero-блок Профиля. 155° чуть светлее, чтобы аватар-инициалы читались.
+  static const LinearGradient heroProfile = LinearGradient(
+    begin: Alignment(-0.6, -1),
+    end: Alignment(0.6, 1),
+    colors: [
+      Color(0xFF0F172A),
+      Color(0xFF1A2D5A),
+      Color(0xFF2A3F7E),
+    ],
+    stops: [0, 0.5, 1],
+  );
+
+  /// Success-CTA / role-switched success (135°).
+  static const LinearGradient successHero = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
+  );
+
+  /// Бренд-кнопка (135°).
+  static const LinearGradient brandButton = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.brand, AppColors.brandDark],
+  );
+
+  /// 5 палитр для AppAvatar — соответствуют CSS g1-blue/g2-green/g3-purple/g4-yellow/g5-grey.
+  static const LinearGradient avatarBlue = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF4F6EF7), Color(0xFF3A56D4)],
+  );
+
+  static const LinearGradient avatarGreen = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
+  );
+
+  static const LinearGradient avatarPurple = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+  );
+
+  static const LinearGradient avatarYellow = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFBBF24), Color(0xFFD97706)],
+  );
+
+  static const LinearGradient avatarGrey = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF94A3B8), Color(0xFF64748B)],
+  );
+
+  /// Маппинг seed → palette (для детерминированного выбора по userId / name).
+  static LinearGradient avatarFor(int seed) {
+    const palettes = [
+      avatarBlue,
+      avatarGreen,
+      avatarPurple,
+      avatarYellow,
+      avatarGrey,
+    ];
+    return palettes[seed.abs() % palettes.length];
+  }
+}

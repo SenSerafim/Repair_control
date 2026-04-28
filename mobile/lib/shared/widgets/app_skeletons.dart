@@ -103,6 +103,34 @@ class _SkeletonCard extends StatelessWidget {
   }
 }
 
+/// Универсальная плашка-плейсхолдер для inline-skeleton (Login loading,
+/// Profile loading и т.п.). Серый прямоугольник с радиусом — `Skeletonizer`
+/// сверху превращает в shimmer.
+class AppSkeletonRow extends StatelessWidget {
+  const AppSkeletonRow({
+    this.width = double.infinity,
+    this.height = 16,
+    this.radius = 8,
+    super.key,
+  });
+
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.n100,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
 class _SkeletonLine extends StatelessWidget {
   const _SkeletonLine({required this.width, required this.height});
   final double width;

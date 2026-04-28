@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/approvals/presentation/approval_detail_screen.dart';
 import '../../features/approvals/presentation/approvals_screen.dart';
 import '../../features/approvals/presentation/plan_approval_screen.dart';
+import '../access/system_role.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/legal_acceptance_modal.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -35,12 +36,15 @@ import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/notifications/application/notifications_controller.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
+import '../../features/profile/presentation/faq_detail_screen.dart';
 import '../../features/profile/presentation/feedback_screen.dart';
 import '../../features/profile/presentation/help_screen.dart';
 import '../../features/profile/presentation/language_screen.dart';
 import '../../features/profile/presentation/notification_settings_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/rep_rights_screen.dart';
+import '../../features/profile/presentation/role_switched_screen.dart';
+import '../../features/profile/presentation/role_switcher_screen.dart';
 import '../../features/profile/presentation/roles_screen.dart';
 import '../../features/projects/presentation/archive_screen.dart';
 import '../../features/projects/presentation/console_screen.dart';
@@ -54,9 +58,18 @@ import '../../features/stages/presentation/create_stage_screen.dart';
 import '../../features/stages/presentation/stage_detail_screen.dart';
 import '../../features/stages/presentation/stages_screen.dart';
 import '../../features/steps/presentation/step_detail_screen.dart';
+import '../../features/projects/domain/membership.dart';
+import '../../features/team/presentation/add_member_screen.dart';
+import '../../features/team/presentation/add_representative_screen.dart';
+import '../../features/team/presentation/assign_stage_screen.dart';
 import '../../features/team/presentation/contractors_screen.dart';
+import '../../features/team/presentation/member_found_screen.dart';
+import '../../features/team/presentation/member_not_found_screen.dart';
+import '../../features/team/presentation/project_rep_rights_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
+import '../../features/tools/presentation/add_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
+import '../../features/tools/presentation/tool_detail_screen.dart';
 import '../../features/tools/presentation/tool_issuances_screen.dart';
 import '../../shared/widgets/widgets.dart';
 import 'app_routes.dart';
@@ -173,6 +186,60 @@ final routerProvider = Provider<GoRouter>((ref) {
                         projectId: state.pathParameters['projectId']!,
                       ),
                     ),
+                    routes: [
+                      GoRoute(
+                        path: 'add',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => AddMemberScreen(
+                            projectId: state.pathParameters['projectId']!,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'found',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => MemberFoundScreen(
+                            projectId: state.pathParameters['projectId']!,
+                            args: state.extra! as MemberFoundArgs,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'not-found',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => MemberNotFoundScreen(
+                            projectId: state.pathParameters['projectId']!,
+                            phone: (state.extra ?? '') as String,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'stage',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => AssignStageScreen(
+                            projectId: state.pathParameters['projectId']!,
+                            args: state.extra! as MemberFoundArgs,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'representative/add',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => AddRepresentativeScreen(
+                            projectId: state.pathParameters['projectId']!,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'representative/rights',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => ProjectRepRightsScreen(
+                            projectId: state.pathParameters['projectId']!,
+                            user: state.extra! as ProjectMemberUser,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'stages',
@@ -410,6 +477,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'tools',
                 pageBuilder:
                     slideLeftPage((_, __) => const MyToolsScreen()),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    pageBuilder:
+                        slideUpPage((_, __) => const AddToolScreen()),
+                  ),
+                  GoRoute(
+                    path: ':toolId',
+                    pageBuilder: slideLeftPage(
+                      (_, state) => ToolDetailScreen(
+                        toolId: state.pathParameters['toolId']!,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'edit',
@@ -418,9 +500,27 @@ final routerProvider = Provider<GoRouter>((ref) {
                     slideLeftPage((_, __) => const EditProfileScreen()),
               ),
               GoRoute(
+                path: 'switch-role',
+                pageBuilder:
+                    slideLeftPage((_, __) => const RoleSwitcherScreen()),
+              ),
+              GoRoute(
                 path: 'roles',
                 pageBuilder:
                     slideLeftPage((_, __) => const RolesScreen()),
+                routes: [
+                  GoRoute(
+                    path: 'switched',
+                    pageBuilder: fadePage(
+                      (_, state) => RoleSwitchedScreen(
+                        role: SystemRole.fromString(
+                              state.uri.queryParameters['role'],
+                            ) ??
+                            SystemRole.customer,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'rep-rights',
@@ -441,6 +541,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'help',
                 pageBuilder: slideLeftPage((_, __) => const HelpScreen()),
+                routes: [
+                  GoRoute(
+                    path: ':itemId',
+                    pageBuilder: slideLeftPage(
+                      (_, state) => FaqDetailScreen(
+                        itemId: state.pathParameters['itemId']!,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'feedback',
