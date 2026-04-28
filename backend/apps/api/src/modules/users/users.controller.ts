@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -57,5 +59,11 @@ export class UsersController {
   @Post('devices')
   async addDevice(@Req() req: { user: AuthenticatedUser }, @Body() dto: RegisterDeviceDto) {
     return this.users.registerDevice(req.user.userId, dto);
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteMe(@Req() req: { user: AuthenticatedUser }): Promise<void> {
+    await this.users.deleteAccount(req.user.userId);
   }
 }

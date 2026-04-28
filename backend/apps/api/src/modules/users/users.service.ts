@@ -118,4 +118,41 @@ export class UsersService {
     });
     return { registered: true };
   }
+
+  /// Soft-delete аккаунта: анонимизация ФИО/email, томбстоун телефона,
+  /// блокировка входа, отзыв сессий и удаление push-токенов.
+  /// Memberships оставляем — они нужны для аудита проектов.
+  async deleteAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError(ErrorCodes.ROLE_NOT_FOUND, 'user not found');
+    if (user.deletedAt) {
+      // идемпотентно
+      return { deleted: true };
+    }
+
+    // tombstone phone/email чтобы освободить unique-индекс для нового аккаунта.
+    const tombstonePhone = `deleted:${user.id}`;
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: now,
+          bannedAt: now,
+          banReason: 'self-deleted',
+          firstName: 'Удалённый',
+          lastName: 'пользователь',
+          phone: tombstonePhone,
+          email: null,
+          avatarUrl: null,
+        },
+      }),
+      this.prisma.session.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: now },
+      }),
+      this.prisma.deviceToken.deleteMany({ where: { userId } }),
+    ]);
+    return { deleted: true };
+  }
 }

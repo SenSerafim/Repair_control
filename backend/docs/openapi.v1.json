@@ -227,6 +227,24 @@
             "bearer": []
           }
         ]
+      },
+      "delete": {
+        "operationId": "UsersController_deleteMe",
+        "summary": "Soft-delete текущего аккаунта (Cluster A: «Удалить аккаунт»)",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Account deleted"
+          }
+        },
+        "tags": [
+          "me"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/me/roles": {
@@ -4184,6 +4202,36 @@
             "bearer": []
           }
         ]
+      },
+      "delete": {
+        "operationId": "ToolsController_remove",
+        "summary": "Удалить инструмент (запрещено если есть незакрытые выдачи)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tool deleted"
+          },
+          "409": {
+            "description": "Has active issuances"
+          }
+        },
+        "tags": [
+          "tools"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/projects/{projectId}/tool-issuances": {
@@ -5197,6 +5245,38 @@
         ]
       }
     },
+    "/api/faq/{id}": {
+      "get": {
+        "operationId": "AdminController_publicFaqItem",
+        "summary": "Одна статья FAQ (Cluster A: «Статья FAQ»)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "404": {
+            "description": "Item not found"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/admin/settings": {
       "get": {
         "operationId": "AdminController_listSettings",
@@ -6108,8 +6188,8 @@
   },
   "info": {
     "title": "Repair Control API",
-    "description": "OpenAPI v1.0 frozen contract. Источник истины для Flutter retrofit-клиентов.",
-    "version": "1.0.0",
+    "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта (Cluster A): DELETE /api/me, DELETE /api/tools/{id}, GET /api/faq/{id}.",
+    "version": "1.1.0",
     "contact": {}
   },
   "tags": [],

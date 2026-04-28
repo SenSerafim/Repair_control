@@ -101,6 +101,25 @@ export class ToolsService {
     return t;
   }
 
+  async deleteToolItem(id: string, actorUserId: string): Promise<void> {
+    const tool = await this.prisma.toolItem.findUnique({ where: { id } });
+    if (!tool) throw new NotFoundError(ErrorCodes.TOOL_NOT_FOUND, 'tool not found');
+    if (tool.ownerId !== actorUserId) {
+      throw new ForbiddenError(ErrorCodes.TOOL_ACCESS_DENIED, 'only owner can delete');
+    }
+    // Запрещаем удаление, пока есть незакрытые выдачи (всё, что не returned).
+    const openIssuances = await this.prisma.toolIssuance.count({
+      where: { toolItemId: id, status: { not: 'returned' } },
+    });
+    if (openIssuances > 0) {
+      throw new ConflictError(
+        ErrorCodes.TOOL_INSUFFICIENT_QTY,
+        'cannot delete tool with active issuances; return them first',
+      );
+    }
+    await this.prisma.toolItem.delete({ where: { id } });
+  }
+
   // ---------- ToolIssuance ----------
 
   async issue(input: IssueToolInput): Promise<ToolIssuance> {

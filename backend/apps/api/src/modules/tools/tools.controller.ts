@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -51,6 +53,12 @@ export class ToolsController {
   @Get('tools/:id')
   async get(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
     return this.tools.getTool(id, req.user.userId);
+  }
+
+  @Delete('tools/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string): Promise<void> {
+    await this.tools.deleteToolItem(id, req.user.userId);
   }
 
   // ---- /projects/:projectId/tool-issuances ----

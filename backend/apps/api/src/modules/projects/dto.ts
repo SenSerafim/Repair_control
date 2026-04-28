@@ -26,6 +26,12 @@ export class CreateProjectDto {
   @Length(1, 500)
   address?: string;
 
+  @ApiProperty({ required: false, description: 'Описание / комментарий проекта (≤2000 символов)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  description?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsDateString()
@@ -61,6 +67,12 @@ export class UpdateProjectDto {
   @IsString()
   @Length(1, 500)
   address?: string;
+
+  @ApiProperty({ required: false, description: 'Описание / комментарий проекта (≤2000 символов)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  description?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

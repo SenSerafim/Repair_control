@@ -135,6 +135,12 @@ export class AdminController {
     return this.svc.listFaqSections();
   }
 
+  @Get('faq/:id')
+  @UseGuards(AuthGuard('jwt'))
+  publicFaqItem(@Param('id') id: string) {
+    return this.svc.getFaqItem(id);
+  }
+
   // ---------- App Settings ----------
 
   @Get('admin/settings')

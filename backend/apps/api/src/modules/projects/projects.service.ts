@@ -14,6 +14,7 @@ export interface CreateProjectInput {
   ownerId: string;
   title: string;
   address?: string;
+  description?: string;
   plannedStart?: string;
   plannedEnd?: string;
   workBudget?: number;
@@ -23,6 +24,7 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput {
   title?: string;
   address?: string;
+  description?: string;
   plannedStart?: string;
   plannedEnd?: string;
   workBudget?: number;
@@ -44,6 +46,7 @@ export class ProjectsService {
         ownerId: input.ownerId,
         title: input.title,
         address: input.address,
+        description: input.description,
         plannedStart: input.plannedStart ? new Date(input.plannedStart) : undefined,
         plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : undefined,
         workBudget: BigInt(input.workBudget ?? 0),
@@ -124,6 +127,7 @@ export class ProjectsService {
       data: {
         title: input.title,
         address: input.address,
+        description: input.description,
         plannedStart: input.plannedStart ? new Date(input.plannedStart) : undefined,
         plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : undefined,
         workBudget: input.workBudget !== undefined ? BigInt(input.workBudget) : undefined,

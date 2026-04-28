@@ -19,6 +19,15 @@ export class AdminService {
     });
   }
 
+  async getFaqItem(id: string) {
+    const item = await this.prisma.faqItem.findUnique({
+      where: { id },
+      include: { section: { select: { id: true, title: true } } },
+    });
+    if (!item) throw new NotFoundError(ErrorCodes.FAQ_ITEM_NOT_FOUND, 'faq item not found');
+    return item;
+  }
+
   async createFaqSection(actorUserId: string, title: string, orderIndex: number) {
     const s = await this.prisma.faqSection.create({ data: { title, orderIndex } });
     await this.feed.emit({
