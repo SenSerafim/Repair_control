@@ -116,6 +116,7 @@ export class SelfPurchasesController {
       decision: 'approved',
       comment: dto.comment,
       actorUserId: req.user.userId,
+      forwardOnApprove: dto.forwardOnApprove,
     });
   }
 

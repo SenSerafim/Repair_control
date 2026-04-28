@@ -26,6 +26,14 @@ export interface DecideSelfPurchaseInput {
   decision: 'approved' | 'rejected';
   comment?: string;
   actorUserId: string;
+  /**
+   * 3-tier forwarding (master→foreman→customer). При approve бригадиром
+   * самозакупа от мастера, если флаг === true, в той же транзакции создаётся
+   * вторая запись `byRole=foreman`, `addresseeId=ownerId`, `forwardedFromId=id`.
+   * Бюджет получает сумму только когда заказчик одобрит forward-копию.
+   * Игнорируется, если оригинал не master или decision=rejected.
+   */
+  forwardOnApprove?: boolean;
 }
 
 /**
@@ -156,6 +164,31 @@ export class SelfPurchasesService {
     }
 
     const now = this.clock.now();
+    // 3-tier forwarding активируется только когда foreman approve master-самозакуп
+    // и явно запросил forward (`forwardOnApprove: true`). Бюджет в этой ветке
+    // НЕ получает сумму на approve бригадиром — только после approve заказчиком
+    // у forward-копии.
+    const willForward =
+      input.decision === 'approved' && input.forwardOnApprove === true && sp.byRole === 'master';
+
+    let project: { id: string; ownerId: string } | null = null;
+    if (willForward) {
+      project = await this.prisma.project.findUnique({
+        where: { id: sp.projectId },
+        select: { id: true, ownerId: true },
+      });
+      if (!project) {
+        throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+      }
+      if (project.ownerId === input.actorUserId) {
+        // Бригадир-актёр не может одновременно быть owner-ом проекта.
+        throw new InvalidInputError(
+          ErrorCodes.SELFPURCHASE_INVALID_ACTOR,
+          'forward target equals actor',
+        );
+      }
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.selfPurchase.update({
         where: { id },
@@ -166,14 +199,38 @@ export class SelfPurchasesService {
           decisionComment: input.comment,
         },
       });
-      await this.feed.emit({
-        tx,
-        kind: input.decision === 'approved' ? 'selfpurchase_approved' : 'selfpurchase_rejected',
-        projectId: sp.projectId,
-        actorId: input.actorUserId,
-        payload: { selfPurchaseId: id },
-      });
-      if (input.decision === 'approved') {
+      if (willForward && project) {
+        await tx.selfPurchase.create({
+          data: {
+            projectId: sp.projectId,
+            stageId: sp.stageId,
+            byUserId: input.actorUserId,
+            byRole: 'foreman',
+            addresseeId: project.ownerId,
+            amount: sp.amount,
+            comment: sp.comment,
+            photoKeys: sp.photoKeys,
+            status: 'pending',
+            forwardedFromId: sp.id,
+          },
+        });
+        await this.feed.emit({
+          tx,
+          kind: 'selfpurchase_forwarded',
+          projectId: sp.projectId,
+          actorId: input.actorUserId,
+          payload: { selfPurchaseId: id, forwardedToOwnerId: project.ownerId },
+        });
+      } else {
+        await this.feed.emit({
+          tx,
+          kind: input.decision === 'approved' ? 'selfpurchase_approved' : 'selfpurchase_rejected',
+          projectId: sp.projectId,
+          actorId: input.actorUserId,
+          payload: { selfPurchaseId: id },
+        });
+      }
+      if (input.decision === 'approved' && !willForward) {
         // Самозакуп уходит в budget.materials.spent — нет отдельной таблицы spend,
         // BudgetCalculator будет суммировать approved selfpurchases.
         await this.feed.emit({

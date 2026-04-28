@@ -129,8 +129,11 @@ export class BudgetCalculator {
       },
       include: { items: { where: { isBought: true } } },
     });
+    // 3-tier forwarding: в бюджет попадают только foreman-самозакупы, одобренные
+    // заказчиком (или одноступенчатые foreman→customer). Master-копия с
+    // forwardedBy ≠ null НЕ учитывается — её сумма уже представлена в forward.
     const selfPurchases = await this.prisma.selfPurchase.findMany({
-      where: { projectId, status: 'approved' },
+      where: { projectId, status: 'approved', byRole: 'foreman' },
     });
 
     const workSpent = payments.reduce(
@@ -224,7 +227,7 @@ export class BudgetCalculator {
       include: { items: { where: { isBought: true } } },
     });
     const stageSelfPurchases = await this.prisma.selfPurchase.findMany({
-      where: { stageId, status: 'approved' },
+      where: { stageId, status: 'approved', byRole: 'foreman' },
     });
     const workSpent = payments.reduce(
       (acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)),
@@ -263,7 +266,11 @@ export class BudgetCalculator {
    * и закупки материалов. Доступно только owner / representative.canSeeBudget.
    * Для master/foreman/outsider — пустой объект.
    */
-  async getMoneyFlow(projectId: string, viewer: BudgetViewerContext): Promise<MoneyFlowDTO> {
+  async getMoneyFlow(
+    projectId: string,
+    viewer: BudgetViewerContext,
+    range?: { from?: Date; to?: Date },
+  ): Promise<MoneyFlowDTO> {
     const empty: MoneyFlowDTO = {
       advances: [],
       distributions: [],
@@ -280,27 +287,51 @@ export class BudgetCalculator {
     const allowed = viewer.isOwner || viewer.canSeeBudget === true;
     if (!allowed) return empty;
 
+    const dateFilter =
+      range && (range.from || range.to)
+        ? {
+            ...(range.from ? { gte: range.from } : {}),
+            ...(range.to ? { lte: range.to } : {}),
+          }
+        : undefined;
+
     const advances = await this.prisma.payment.findMany({
-      where: { projectId, kind: 'advance' },
+      where: {
+        projectId,
+        kind: 'advance',
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
       orderBy: { createdAt: 'desc' },
     });
     const distributions = await this.prisma.payment.findMany({
-      where: { projectId, kind: 'distribution' },
+      where: {
+        projectId,
+        kind: 'distribution',
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
       orderBy: { createdAt: 'desc' },
     });
     const approvedSp = await this.prisma.selfPurchase.findMany({
-      where: { projectId, status: 'approved', byRole: 'foreman' },
+      where: {
+        projectId,
+        status: 'approved',
+        byRole: 'foreman',
+        ...(dateFilter ? { decidedAt: dateFilter } : {}),
+      },
       orderBy: { decidedAt: 'desc' },
     });
     const materialReqs = await this.prisma.materialRequest.findMany({
       where: {
         projectId,
         status: { in: ['bought', 'partially_bought', 'delivered', 'resolved'] },
-        finalizedAt: { not: null },
+        finalizedAt: dateFilter ? { ...dateFilter, not: null } : { not: null },
       },
       include: { items: { where: { isBought: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    // NB: dateFilter влияет только на агрегаты (totals/lists). Пагинация и
+    // долгосрочные тренды по проектам с тысячами движений требуют отдельного
+    // PaymentReport-эндпоинта (S+).
 
     // Подгружаем имена юзеров одной выборкой по уникальным ID.
     const userIds = new Set<string>();

@@ -19,7 +19,7 @@ import { Idempotent } from '../idempotency/idempotent.decorator';
 import { PaymentsService } from './payments.service';
 import { BudgetCalculator } from './budget-calculator';
 import { CreateAdvanceDto, DisputePaymentDto, DistributeDto, ResolvePaymentDto } from './dto';
-import { PrismaService } from '@app/common';
+import { ErrorCodes, InvalidInputError, PrismaService } from '@app/common';
 
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -216,7 +216,12 @@ export class PaymentsController {
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
-  async moneyFlow(@Req() req: { user: AuthenticatedUser }, @Param('projectId') projectId: string) {
+  async moneyFlow(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: { ownerId: true },
@@ -226,13 +231,37 @@ export class PaymentsController {
       select: { role: true, permissions: true, stageIds: true },
     });
     const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
-    return this.budget.getMoneyFlow(projectId, {
-      userId: req.user.userId,
-      isOwner: project?.ownerId === req.user.userId,
-      membershipRole: membership?.role,
-      assignedStageIds: membership?.stageIds ?? [],
-      canSeeBudget: perms.canSeeBudget === true,
-    });
+    const range = this.parseDateRange(from, to);
+    return this.budget.getMoneyFlow(
+      projectId,
+      {
+        userId: req.user.userId,
+        isOwner: project?.ownerId === req.user.userId,
+        membershipRole: membership?.role,
+        assignedStageIds: membership?.stageIds ?? [],
+        canSeeBudget: perms.canSeeBudget === true,
+      },
+      range,
+    );
+  }
+
+  private parseDateRange(from?: string, to?: string): { from?: Date; to?: Date } | undefined {
+    if (!from && !to) return undefined;
+    const f = from ? new Date(from) : undefined;
+    const t = to ? new Date(to) : undefined;
+    if (f && Number.isNaN(f.getTime())) {
+      throw new InvalidInputError(
+        ErrorCodes.INVALID_INPUT,
+        'invalid `from` date — expect ISO 8601',
+      );
+    }
+    if (t && Number.isNaN(t.getTime())) {
+      throw new InvalidInputError(ErrorCodes.INVALID_INPUT, 'invalid `to` date — expect ISO 8601');
+    }
+    if (f && t && f.getTime() > t.getTime()) {
+      throw new InvalidInputError(ErrorCodes.INVALID_INPUT, '`from` must be ≤ `to`');
+    }
+    return { from: f, to: t };
   }
 
   @Get('stages/:stageId/budget')

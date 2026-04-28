@@ -27,6 +27,10 @@ const mkPrisma = () => {
           if (where.stageId && p.stageId !== where.stageId) return false;
           if (where.status?.in && !where.status.in.includes(p.status)) return false;
           if (where.kind && p.kind !== where.kind) return false;
+          if (where.createdAt) {
+            if (where.createdAt.gte && p.createdAt < where.createdAt.gte) return false;
+            if (where.createdAt.lte && p.createdAt > where.createdAt.lte) return false;
+          }
           return true;
         }),
       ),
@@ -55,9 +59,19 @@ const mkPrisma = () => {
           if (where.projectId && sp.projectId !== where.projectId) return false;
           if (where.stageId && sp.stageId !== where.stageId) return false;
           if (where.status && sp.status !== where.status) return false;
+          if (where.byRole && sp.byRole !== where.byRole) return false;
+          if (where.decidedAt) {
+            if (where.decidedAt.gte && (!sp.decidedAt || sp.decidedAt < where.decidedAt.gte))
+              return false;
+            if (where.decidedAt.lte && (!sp.decidedAt || sp.decidedAt > where.decidedAt.lte))
+              return false;
+          }
           return true;
         }),
       ),
+    },
+    user: {
+      findMany: jest.fn(() => []),
     },
   };
   return { prisma: prisma as unknown as PrismaService, state };
@@ -214,13 +228,90 @@ describe('BudgetCalculator', () => {
     state.payments = [];
     state.materialRequests = [];
     state.selfPurchases = [
-      { id: 'sp1', projectId: 'p1', stageId: 's1', status: 'approved', amount: BigInt(8_000_00) },
-      { id: 'sp2', projectId: 'p1', stageId: 's1', status: 'rejected', amount: BigInt(10_000_00) },
+      // foreman→customer approved → попадает в budget.
+      {
+        id: 'sp1',
+        projectId: 'p1',
+        stageId: 's1',
+        status: 'approved',
+        byRole: 'foreman',
+        amount: BigInt(8_000_00),
+      },
+      // foreman rejected → исключён.
+      {
+        id: 'sp2',
+        projectId: 'p1',
+        stageId: 's1',
+        status: 'rejected',
+        byRole: 'foreman',
+        amount: BigInt(10_000_00),
+      },
+      // master→foreman approved (без forwarding) → НЕ должен учитываться,
+      // т.к. ТЗ §4.3 требует одобрения заказчиком.
+      {
+        id: 'sp3',
+        projectId: 'p1',
+        stageId: 's1',
+        status: 'approved',
+        byRole: 'master',
+        amount: BigInt(15_000_00),
+      },
     ];
     const calc = new BudgetCalculator(prisma);
     const b = await calc.getProjectBudget('p1', { userId: 'cust1', isOwner: true });
     expect(b.materials.spent).toBe(8_000_00);
     expect(b.stages[0].materials.spent).toBe(8_000_00);
+  });
+
+  it('getMoneyFlow: date-range фильтрует advances по createdAt', async () => {
+    const { prisma, state } = mkPrisma();
+    state.project = { id: 'p1', ownerId: 'cust1' };
+    state.stages = [];
+    state.materialRequests = [];
+    state.selfPurchases = [];
+    state.payments = [
+      {
+        id: 'pay-jan',
+        projectId: 'p1',
+        kind: 'advance',
+        status: 'confirmed',
+        amount: BigInt(50_000_00),
+        resolvedAmount: null,
+        toUserId: 'foreman1',
+        confirmedAt: new Date('2025-01-15'),
+        createdAt: new Date('2025-01-15'),
+      },
+      {
+        id: 'pay-mar',
+        projectId: 'p1',
+        kind: 'advance',
+        status: 'confirmed',
+        amount: BigInt(80_000_00),
+        resolvedAmount: null,
+        toUserId: 'foreman1',
+        confirmedAt: new Date('2025-03-10'),
+        createdAt: new Date('2025-03-10'),
+      },
+    ];
+    const calc = new BudgetCalculator(prisma);
+    const all = await calc.getMoneyFlow('p1', { userId: 'cust1', isOwner: true });
+    expect(all.advances.map((a) => a.id).sort()).toEqual(['pay-jan', 'pay-mar']);
+    expect(all.totals.advances).toBe(130_000_00);
+
+    const onlyJan = await calc.getMoneyFlow(
+      'p1',
+      { userId: 'cust1', isOwner: true },
+      { from: new Date('2025-01-01'), to: new Date('2025-01-31') },
+    );
+    expect(onlyJan.advances.map((a) => a.id)).toEqual(['pay-jan']);
+    expect(onlyJan.totals.advances).toBe(50_000_00);
+
+    const fromOnly = await calc.getMoneyFlow(
+      'p1',
+      { userId: 'cust1', isOwner: true },
+      { from: new Date('2025-02-01') },
+    );
+    expect(fromOnly.advances.map((a) => a.id)).toEqual(['pay-mar']);
   });
 
   it('resolvedAmount используется вместо amount для resolved', async () => {

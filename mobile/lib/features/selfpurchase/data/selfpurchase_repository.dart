@@ -58,12 +58,20 @@ class SelfPurchaseRepository {
         return SelfPurchase.parse(r.data!);
       });
 
-  Future<SelfPurchase> approve({required String id, String? comment}) =>
+  /// approve с поддержкой 3-tier forwarding (master→foreman→customer).
+  /// Если [forwardOnApprove] === true и это master-самозакуп, бекенд
+  /// автоматически создаёт foreman→customer forward в той же транзакции.
+  Future<SelfPurchase> approve({
+    required String id,
+    String? comment,
+    bool forwardOnApprove = false,
+  }) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/selfpurchases/$id/approve',
           data: {
             if (comment != null && comment.isNotEmpty) 'comment': comment,
+            if (forwardOnApprove) 'forwardOnApprove': true,
           },
         );
         return SelfPurchase.parse(r.data!);

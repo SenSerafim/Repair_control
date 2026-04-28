@@ -54,18 +54,44 @@ class SelfpurchasesController
     }
   }
 
-  Future<AuthFailure?> approve({required String id, String? comment}) =>
-      _run(() => _repo.approve(id: id, comment: comment));
+  /// approve с авто-forward при подтверждении бригадиром master-самозакупа.
+  /// UI вызывает с [forwardOnApprove]=true когда viewer=foreman и
+  /// byRole=master — бекенд создаст 2-ю запись foreman→customer.
+  Future<AuthFailure?> approve({
+    required String id,
+    String? comment,
+    bool forwardOnApprove = false,
+  }) =>
+      _run(
+        () => _repo.approve(
+          id: id,
+          comment: comment,
+          forwardOnApprove: forwardOnApprove,
+        ),
+        // Forward не попадает в budget на approve бригадиром — там лишь
+        // создаётся pending для заказчика. Поэтому invalidate бюджета
+        // только когда status=approved у foreman→customer записи.
+        forwardedFromMaster: forwardOnApprove,
+      );
 
   Future<AuthFailure?> reject({required String id, String? comment}) =>
       _run(() => _repo.reject(id: id, comment: comment));
 
-  Future<AuthFailure?> _run(Future<SelfPurchase> Function() fn) async {
+  Future<AuthFailure?> _run(
+    Future<SelfPurchase> Function() fn, {
+    bool forwardedFromMaster = false,
+  }) async {
     try {
       final r = await fn();
       _upsert(r);
-      // Одобренный selfpurchase попадает в бюджет.
-      if (r.status == SelfPurchaseStatus.approved) {
+      // После forward оригинал master→foreman остался в списке как approved,
+      // плюс должен подтянуться новый foreman→customer pending. Перезапросим
+      // список целиком, чтобы UI показал обе записи.
+      if (forwardedFromMaster) {
+        ref.invalidateSelf();
+      }
+      // Одобренный foreman→customer самозакуп попадает в бюджет.
+      if (r.status == SelfPurchaseStatus.approved && !forwardedFromMaster) {
         ref.invalidate(projectBudgetProvider(arg));
       }
       return null;

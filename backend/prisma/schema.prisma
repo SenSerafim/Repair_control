@@ -216,6 +216,7 @@ enum FeedEventKind {
   selfpurchase_created
   selfpurchase_approved
   selfpurchase_rejected
+  selfpurchase_forwarded
   tool_issued
   tool_issuance_confirmed
   tool_return_requested
@@ -918,6 +919,13 @@ model SelfPurchase {
   decidedAt       DateTime?
   decidedById     String?
   decisionComment String?
+  // 3-tier forwarding: master→foreman→customer. После approve бригадиром
+  // создаётся вторая запись (byRole=foreman, addresseeId=ownerId), у которой
+  // forwardedFromId указывает на master-оригинал. Связь нужна для UI «спор
+  // изначально открыл мастер X», для отчётов и для feed-аналитики.
+  forwardedFromId String?
+  forwardedFrom   SelfPurchase?  @relation("SelfPurchaseForward", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwardedBy     SelfPurchase[] @relation("SelfPurchaseForward")
   idempotencyKey  String?            @unique
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
@@ -927,6 +935,7 @@ model SelfPurchase {
 
   @@index([projectId, status])
   @@index([addresseeId, status])
+  @@index([forwardedFromId])
 }
 
 // ---------- Tools ----------

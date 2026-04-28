@@ -74,6 +74,9 @@ class SelfPurchase with _$SelfPurchase {
     DateTime? decidedAt,
     String? decidedById,
     String? decisionComment,
+    /// 3-tier forwarding: id master-самозакупа, на основе которого создан этот
+    /// foreman→customer forward. null для оригинальных одноступенчатых записей.
+    String? forwardedFromId,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _SelfPurchase;
@@ -94,6 +97,7 @@ class SelfPurchase with _$SelfPurchase {
         decidedAt: _d(json['decidedAt']),
         decidedById: json['decidedById'] as String?,
         decisionComment: json['decisionComment'] as String?,
+        forwardedFromId: json['forwardedFromId'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );

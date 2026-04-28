@@ -113,6 +113,11 @@ const requesterFromPayload: RecipientResolver = async (ev) => {
   return typeof r === 'string' ? [r] : [];
 };
 
+const forwardedToOwnerFromPayload: RecipientResolver = async (ev) => {
+  const ownerId = (ev.payload as any)?.forwardedToOwnerId;
+  return typeof ownerId === 'string' ? [ownerId] : [];
+};
+
 const paymentParties: RecipientResolver = async (ev, prisma) => {
   const paymentId = (ev.payload as any)?.paymentId;
   if (!paymentId) return [];
@@ -155,6 +160,10 @@ const MAPPINGS: Partial<Record<FeedEventKind, RoutingRule>> = {
   material_delivered: { kind: 'material_delivered', recipients: projectMembers },
   material_disputed: { kind: 'material_disputed', recipients: projectOwnerAndReps },
   selfpurchase_created: { kind: 'selfpurchase_created', recipients: addresseeFromPayload },
+  selfpurchase_forwarded: {
+    kind: 'selfpurchase_created',
+    recipients: forwardedToOwnerFromPayload,
+  },
   tool_issued: { kind: 'tool_issued', recipients: addresseeFromPayload },
   chat_message_sent: { kind: 'chat_message_new', recipients: chatParticipantsExceptAuthor },
   step_completed: { kind: 'step_completed', recipients: projectOwnerAndReps },

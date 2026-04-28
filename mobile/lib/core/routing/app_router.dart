@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/approvals/presentation/approval_detail_screen.dart';
+import '../../features/approvals/presentation/approval_result_screen.dart';
 import '../../features/approvals/presentation/approvals_screen.dart';
 import '../../features/approvals/presentation/plan_approval_screen.dart';
 import '../access/system_role.dart';
@@ -26,6 +27,7 @@ import '../../features/finance/presentation/create_advance_screen.dart';
 import '../../features/finance/presentation/payment_detail_screen.dart';
 import '../../features/finance/presentation/payments_list_screen.dart';
 import '../../features/materials/presentation/create_material_screen.dart';
+import '../../features/materials/presentation/edit_purchased_item_screen.dart';
 import '../../features/materials/presentation/material_detail_screen.dart';
 import '../../features/materials/presentation/materials_list_screen.dart';
 import '../../features/methodology/presentation/article_screen.dart';
@@ -53,10 +55,17 @@ import '../../features/projects/presentation/edit_project_screen.dart';
 import '../../features/projects/presentation/join_by_code_screen.dart';
 import '../../features/projects/presentation/projects_screen.dart';
 import '../../features/projects/presentation/search_screen.dart';
+import '../../features/selfpurchase/presentation/create_selfpurchase_screen.dart';
+import '../../features/selfpurchase/presentation/reject_selfpurchase_screen.dart';
+import '../../features/selfpurchase/presentation/selfpurchase_detail_screen.dart';
 import '../../features/selfpurchase/presentation/selfpurchases_screen.dart';
 import '../../features/stages/presentation/create_stage_screen.dart';
+import '../../features/stages/presentation/stage_created_screen.dart';
 import '../../features/stages/presentation/stage_detail_screen.dart';
 import '../../features/stages/presentation/stages_screen.dart';
+import '../../features/stages/presentation/template_preview_screen.dart';
+import '../../features/stages/presentation/templates_screen.dart';
+import '../../features/steps/presentation/question_reply_screen.dart';
 import '../../features/steps/presentation/step_detail_screen.dart';
 import '../../features/projects/domain/membership.dart';
 import '../../features/team/presentation/add_member_screen.dart';
@@ -68,6 +77,7 @@ import '../../features/team/presentation/member_not_found_screen.dart';
 import '../../features/team/presentation/project_rep_rights_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
 import '../../features/tools/presentation/add_tool_screen.dart';
+import '../../features/tools/presentation/issue_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
 import '../../features/tools/presentation/tool_detail_screen.dart';
 import '../../features/tools/presentation/tool_issuances_screen.dart';
@@ -259,6 +269,38 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                       GoRoute(
+                        path: 'created',
+                        pageBuilder: slideUpPage(
+                          (_, state) => StageCreatedScreen(
+                            projectId:
+                                state.pathParameters['projectId']!,
+                            stageId: state.uri.queryParameters['stageId'],
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'templates',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => TemplatesScreen(
+                            projectId:
+                                state.pathParameters['projectId']!,
+                          ),
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: ':templateId/preview',
+                            pageBuilder: slideLeftPage(
+                              (_, state) => TemplatePreviewScreen(
+                                projectId:
+                                    state.pathParameters['projectId']!,
+                                templateId:
+                                    state.pathParameters['templateId']!,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      GoRoute(
                         path: ':stageId',
                         pageBuilder: slideLeftPage(
                           (_, state) => StageDetailScreen(
@@ -280,6 +322,23 @@ final routerProvider = Provider<GoRouter>((ref) {
                                     state.pathParameters['stepId']!,
                               ),
                             ),
+                            routes: [
+                              GoRoute(
+                                path: 'questions/:questionId/reply',
+                                pageBuilder: slideLeftPage(
+                                  (_, state) => QuestionReplyScreen(
+                                    projectId:
+                                        state.pathParameters['projectId']!,
+                                    stageId:
+                                        state.pathParameters['stageId']!,
+                                    stepId:
+                                        state.pathParameters['stepId']!,
+                                    questionId: state
+                                        .pathParameters['questionId']!,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -311,6 +370,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                                 state.pathParameters['approvalId']!,
                           ),
                         ),
+                        routes: [
+                          GoRoute(
+                            path: 'result',
+                            pageBuilder: slideLeftPage(
+                              (_, state) => ApprovalResultScreen(
+                                projectId:
+                                    state.pathParameters['projectId']!,
+                                approvalId:
+                                    state.pathParameters['approvalId']!,
+                                status: state.uri.queryParameters['status'] ??
+                                    'approved',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -395,6 +469,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                                 state.pathParameters['requestId']!,
                           ),
                         ),
+                        routes: [
+                          GoRoute(
+                            path: 'items/:itemId/edit',
+                            pageBuilder: slideUpPage(
+                              (_, state) => EditPurchasedItemScreen(
+                                projectId:
+                                    state.pathParameters['projectId']!,
+                                requestId:
+                                    state.pathParameters['requestId']!,
+                                itemId:
+                                    state.pathParameters['itemId']!,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -405,6 +494,39 @@ final routerProvider = Provider<GoRouter>((ref) {
                         projectId: state.pathParameters['projectId']!,
                       ),
                     ),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: slideUpPage(
+                          (_, state) => CreateSelfPurchaseScreen(
+                            projectId:
+                                state.pathParameters['projectId']!,
+                          ),
+                        ),
+                      ),
+                      GoRoute(
+                        path: ':id',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => SelfPurchaseDetailScreen(
+                            projectId:
+                                state.pathParameters['projectId']!,
+                            id: state.pathParameters['id']!,
+                          ),
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: 'reject',
+                            pageBuilder: slideUpPage(
+                              (_, state) => RejectSelfPurchaseScreen(
+                                projectId:
+                                    state.pathParameters['projectId']!,
+                                id: state.pathParameters['id']!,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'tools',
@@ -413,6 +535,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                         projectId: state.pathParameters['projectId']!,
                       ),
                     ),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        pageBuilder: slideUpPage(
+                          (_, state) => IssueToolScreen(
+                            projectId:
+                                state.pathParameters['projectId']!,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'chats',

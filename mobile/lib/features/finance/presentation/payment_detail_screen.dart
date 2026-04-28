@@ -13,10 +13,13 @@ import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/payments_controller.dart';
 import '../domain/payment.dart';
+import '_widgets/payment_amount_hero.dart';
+import '_widgets/payment_info_card.dart';
 import 'payment_sheets.dart';
 
-/// e-pay-pending / e-pay-confirmed / e-pay-dispute / e-pay-disputed /
-/// s-budget-payment-* — унифицированный экран детали.
+/// e-pay-pending / e-pay-confirmed / e-pay-disputed — унифицированный экран
+/// детали выплаты. Layout: status-pill в header, centered amount-hero, dl-rows
+/// info-card, опциональная dispute-banner, distribution-section, action-bar.
 class PaymentDetailScreen extends ConsumerWidget {
   const PaymentDetailScreen({required this.paymentId, super.key});
 
@@ -26,7 +29,6 @@ class PaymentDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(paymentDetailProvider(paymentId));
     final me = ref.watch(authControllerProvider).userId;
-
     return AppScaffold(
       showBack: true,
       title: 'Выплата',
@@ -44,7 +46,12 @@ class PaymentDetailScreen extends ConsumerWidget {
                 onRefresh: () async =>
                     ref.invalidate(paymentDetailProvider(paymentId)),
                 child: ListView(
-                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.x16,
+                    AppSpacing.x10,
+                    AppSpacing.x16,
+                    AppSpacing.x20,
+                  ),
                   children: [
                     Hero(
                       tag: 'payment-${p.id}',
@@ -57,13 +64,26 @@ class PaymentDetailScreen extends ConsumerWidget {
                       },
                       child: const SizedBox(height: 1),
                     ),
-                    _AmountHeader(payment: p),
+                    // Top status-pill (в дизайне — справа в header).
+                    Center(
+                      child: StatusPill(
+                        label: p.status.displayName,
+                        semaphore: p.status.semaphore,
+                      ),
+                    ),
+                    PaymentAmountHero(payment: p),
+                    if (p.status == PaymentStatus.disputed &&
+                        p.disputes.isNotEmpty)
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(bottom: AppSpacing.x12),
+                        child: _DisputeBanner(dispute: p.disputes.first),
+                      ),
+                    PaymentInfoCard(rows: _infoRows(p)),
                     if (p.parentPaymentId != null) ...[
                       const SizedBox(height: AppSpacing.x12),
                       _ParentLink(parentId: p.parentPaymentId!),
                     ],
-                    const SizedBox(height: AppSpacing.x12),
-                    _InfoCard(payment: p),
                     if (p.comment != null && p.comment!.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x12),
                       _CommentCard(comment: p.comment!),
@@ -77,16 +97,6 @@ class PaymentDetailScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x6),
                       ],
                     ],
-                    if (p.disputes.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.x16),
-                      const Text('Споры', style: AppTextStyles.h2),
-                      const SizedBox(height: AppSpacing.x8),
-                      for (final d in p.disputes) ...[
-                        _DisputeRow(dispute: d),
-                        const SizedBox(height: AppSpacing.x6),
-                      ],
-                    ],
-                    const SizedBox(height: AppSpacing.x20),
                   ],
                 ),
               ),
@@ -97,124 +107,89 @@ class PaymentDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  List<PaymentInfoRow> _infoRows(Payment p) {
+    final fmt = DateFormat('d MMMM y · HH:mm', 'ru');
+    return [
+      PaymentInfoRow('Получатель', _shorten(p.toUserId)),
+      PaymentInfoRow('Этап', p.stageId == null ? 'Без этапа' : _shorten(p.stageId!)),
+      PaymentInfoRow('Тип', p.kind.displayName),
+      PaymentInfoRow(
+        'Дата отправки',
+        fmt.format(p.createdAt),
+      ),
+      if (p.confirmedAt != null)
+        PaymentInfoRow(
+          'Подтверждена',
+          '${fmt.format(p.confirmedAt!)} (неизменяемая)',
+          valueColor: AppColors.greenDark,
+        ),
+      PaymentInfoRow(
+        'Статус',
+        p.status.displayName,
+        valueColor: p.status.semaphore.text,
+      ),
+      if (p.children.isNotEmpty)
+        PaymentInfoRow(
+          'Остаток к распределению',
+          Money.format(p.remainingToDistribute),
+        ),
+    ];
+  }
+
+  String _shorten(String id) =>
+      id.length <= 12 ? id : '${id.substring(0, 12)}…';
 }
 
-class _AmountHeader extends StatelessWidget {
-  const _AmountHeader({required this.payment});
+class _DisputeBanner extends StatelessWidget {
+  const _DisputeBanner({required this.dispute});
 
-  final Payment payment;
+  final PaymentDispute dispute;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
+      padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            payment.status.semaphore.dot.withValues(alpha: 0.88),
-            AppColors.brandDark,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.r24),
-        boxShadow: AppShadows.shBlue,
+        color: AppColors.redBg,
+        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
+        borderRadius: AppRadius.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          StatusPill(
-            label: payment.status.displayName,
-            semaphore: payment.status.semaphore,
-          ),
-          const SizedBox(height: AppSpacing.x10),
           Text(
-            Money.format(payment.effectiveAmount),
-            style: AppTextStyles.screenTitle
-                .copyWith(color: AppColors.n0, fontSize: 32),
+            'Причина',
+            style: AppTextStyles.subtitle.copyWith(
+              color: AppColors.redText,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
-            payment.kind.displayName,
-            style: AppTextStyles.caption
-                .copyWith(color: AppColors.brandLight),
+            dispute.reason,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.redText,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          if (payment.resolvedAmount != null &&
-              payment.resolvedAmount != payment.amount) ...[
-            const SizedBox(height: AppSpacing.x6),
-            Text(
-              'Изначально было ${Money.format(payment.amount)}',
-              style: AppTextStyles.caption
-                  .copyWith(color: AppColors.brandLight),
+          const SizedBox(height: 6),
+          Text(
+            'Открыл: ${_shorten(dispute.openedById)} · '
+            '${DateFormat('dd.MM.yyyy').format(dispute.createdAt)}',
+            style: AppTextStyles.tiny.copyWith(
+              color: AppColors.redText.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.payment});
-
-  final Payment payment;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        children: [
-          _row('От', _shorten(payment.fromUserId)),
-          const Divider(height: AppSpacing.x20, color: AppColors.n100),
-          _row('Кому', _shorten(payment.toUserId)),
-          const Divider(height: AppSpacing.x20, color: AppColors.n100),
-          _row(
-            'Создано',
-            DateFormat('d MMMM y · HH:mm', 'ru').format(payment.createdAt),
           ),
-          if (payment.confirmedAt != null) ...[
-            const Divider(height: AppSpacing.x20, color: AppColors.n100),
-            _row(
-              'Подтверждено',
-              DateFormat('d MMMM y · HH:mm', 'ru')
-                  .format(payment.confirmedAt!),
-            ),
-          ],
-          if (payment.children.isNotEmpty) ...[
-            const Divider(height: AppSpacing.x20, color: AppColors.n100),
-            _row(
-              'Остаток к распределению',
-              Money.format(payment.remainingToDistribute),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  static Widget _row(String label, String value) => Row(
-        children: [
-          Expanded(child: Text(label, style: AppTextStyles.caption)),
-          Flexible(
-            child: Text(
-              value,
-              style: AppTextStyles.subtitle,
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      );
-
-  static String _shorten(String userId) {
-    if (userId.length <= 8) return userId;
-    return '${userId.substring(0, 8)}…';
-  }
+  String _shorten(String id) =>
+      id.length <= 12 ? id : '${id.substring(0, 12)}…';
 }
 
 class _CommentCard extends StatelessWidget {
@@ -297,13 +272,13 @@ class _ChildRow extends StatelessWidget {
   }
 }
 
-class _ParentLink extends ConsumerWidget {
+class _ParentLink extends StatelessWidget {
   const _ParentLink({required this.parentId});
 
   final String parentId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.push(AppRoutes.paymentDetailWith(parentId)),
       behavior: HitTestBehavior.opaque,
@@ -327,10 +302,7 @@ class _ParentLink extends ConsumerWidget {
                 style: AppTextStyles.subtitle,
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.brand,
-            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.brand),
           ],
         ),
       ),
@@ -376,37 +348,6 @@ class _DistributionHeader extends StatelessWidget {
   }
 }
 
-class _DisputeRow extends StatelessWidget {
-  const _DisputeRow({required this.dispute});
-
-  final dynamic dispute; // PaymentDispute — через dynamic чтобы не тянуть import
-
-  @override
-  Widget build(BuildContext context) {
-    // ignore_for_file: avoid_dynamic_calls
-    final reason = dispute.reason as String;
-    final status = dispute.status as String;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: AppColors.redBg,
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            status == 'resolved' ? 'Спор разрешён' : 'Открытый спор',
-            style: AppTextStyles.subtitle.copyWith(color: AppColors.redText),
-          ),
-          const SizedBox(height: 4),
-          Text(reason, style: AppTextStyles.body),
-        ],
-      ),
-    );
-  }
-}
-
 class _Actions extends ConsumerWidget {
   const _Actions({required this.payment, required this.meId});
 
@@ -419,25 +360,25 @@ class _Actions extends ConsumerWidget {
     final hasConfirm = ref.watch(canInProjectProvider(
       (
         action: DomainAction.financePaymentConfirm,
-        projectId: payment.projectId
+        projectId: payment.projectId,
       ),
     ));
     final hasCreate = ref.watch(canInProjectProvider(
       (
         action: DomainAction.financePaymentCreate,
-        projectId: payment.projectId
+        projectId: payment.projectId,
       ),
     ));
     final hasDispute = ref.watch(canInProjectProvider(
       (
         action: DomainAction.financePaymentDispute,
-        projectId: payment.projectId
+        projectId: payment.projectId,
       ),
     ));
     final hasResolve = ref.watch(canInProjectProvider(
       (
         action: DomainAction.financePaymentResolve,
-        projectId: payment.projectId
+        projectId: payment.projectId,
       ),
     ));
 
@@ -533,16 +474,12 @@ class _Actions extends ConsumerWidget {
             label: 'Отменить',
             variant: AppButtonVariant.ghost,
             onPressed: () => ref
-                .read(
-                  paymentsControllerProvider(payment.projectId).notifier,
-                )
+                .read(paymentsControllerProvider(payment.projectId).notifier)
                 .cancel(payment.id),
           ),
         );
     }
-
     if (buttons.isEmpty) return const SizedBox.shrink();
-
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.x16,

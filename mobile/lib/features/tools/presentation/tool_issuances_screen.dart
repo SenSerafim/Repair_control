@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
@@ -9,34 +9,66 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
 import '../data/tools_repository.dart';
 import '../domain/tool.dart';
+import '_widgets/tool_filter_bar.dart';
+import '_widgets/tool_row.dart';
+import '_widgets/tool_search_bar.dart';
+import '_widgets/tool_status_tabs.dart';
+import '_widgets/tool_surrender_sheet.dart';
 
-class ToolIssuancesScreen extends ConsumerWidget {
+/// In-memory set юзеров, кому только что выдали инструмент. Сбрасывается
+/// при перезагрузке экрана. Используется для green-dot indicator.
+final _recentlyAddedHoldersProvider =
+    StateProvider.autoDispose<Set<String>>((ref) => <String>{});
+
+/// e-instruments: search + filter-chips per person + status-tabs + alphabetical
+/// list. IconButton «+» в header → IssueToolScreen.
+class ToolIssuancesScreen extends ConsumerStatefulWidget {
   const ToolIssuancesScreen({required this.projectId, super.key});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(toolIssuancesProvider(projectId));
+  ConsumerState<ToolIssuancesScreen> createState() =>
+      _ToolIssuancesScreenState();
+}
+
+class _ToolIssuancesScreenState extends ConsumerState<ToolIssuancesScreen> {
+  final _searchCtrl = TextEditingController();
+  String _search = '';
+  String? _personFilter;
+  ToolStatusTab _tab = ToolStatusTab.all;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final canIssue = ref.watch(canProvider(DomainAction.toolsIssue));
+    final issuancesAsync =
+        ref.watch(toolIssuancesProvider(widget.projectId));
+    final teamAsync = ref.watch(teamControllerProvider(widget.projectId));
+    final me = ref.watch(authControllerProvider).userId;
+    final recentlyAdded = ref.watch(_recentlyAddedHoldersProvider);
 
     return AppScaffold(
       showBack: true,
-      title: 'Инструмент на объекте',
+      title: 'Инструмент',
       padding: EdgeInsets.zero,
       actions: [
         if (canIssue)
           IconButton(
             icon: const Icon(Icons.add_circle_outline_rounded),
-            onPressed: () => _showIssue(context, ref),
+            onPressed: () => _openIssueScreen(context),
           ),
       ],
-      body: async.when(
+      body: issuancesAsync.when(
         loading: () => const AppLoadingState(),
         error: (e, _) {
           if (e is ToolsException &&
@@ -49,326 +81,230 @@ class ToolIssuancesScreen extends ConsumerWidget {
           }
           return AppErrorState(
             title: 'Не удалось загрузить',
-            onRetry: () => ref.invalidate(toolIssuancesProvider(projectId)),
+            onRetry: () =>
+                ref.invalidate(toolIssuancesProvider(widget.projectId)),
           );
         },
-        data: (items) {
-          if (items.isEmpty) {
-            return AppEmptyState(
-              title: 'Выдач ещё не было',
-              subtitle: canIssue
-                  ? 'Выдайте инструмент мастеру — он подтвердит получение.'
-                  : 'Бригадир пока не выдал ни одного инструмента.',
-              icon: Icons.construction_outlined,
-              actionLabel: canIssue ? 'Выдать' : null,
-              onAction: canIssue ? () => _showIssue(context, ref) : null,
-            );
+        data: (issuances) {
+          final visible = _filtered(issuances);
+          final allCount = issuances.length;
+          final issuedCount = issuances
+              .where((i) => i.status != ToolIssuanceStatus.returned)
+              .length;
+          final warehouseCount = allCount - issuedCount;
+
+          // Список пользователей для фильтр-бара (уникальные toUserId).
+          final userIds = <String, String>{};
+          final members = teamAsync.value?.members ?? const [];
+          for (final iss in issuances) {
+            final m = members
+                .where((mb) => mb.userId == iss.toUserId)
+                .firstOrNull;
+            var label = 'Мастер';
+            final user = m?.user;
+            if (user != null) {
+              label = '${user.firstName} ${user.lastName}'.trim();
+            }
+            userIds[iss.toUserId] = label.isEmpty ? 'Мастер' : label;
           }
-          final me = ref.read(authControllerProvider).userId;
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            itemCount: items.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.x10),
-            itemBuilder: (_, i) => _IssuanceCard(
-              issuance: items[i],
-              meId: me,
-              onAction: () => _handleAction(context, ref, items[i], me),
-            ),
-          );
-        },
-      ),
-    );
-  }
+          final persons = <({String? id, String label})>[
+            (id: null, label: 'Все'),
+            for (final entry in userIds.entries)
+              (id: entry.key, label: entry.value),
+          ];
 
-  Future<void> _showIssue(BuildContext context, WidgetRef ref) async {
-    final tools = ref.read(myToolsProvider).value ?? const <ToolItem>[];
-    if (tools.isEmpty) {
-      await ref.read(myToolsProvider.future);
-      if (!context.mounted) return;
-    }
-    final teamAsync = ref.read(teamControllerProvider(projectId));
-    final masters = teamAsync.value?.members
-            .where((m) => m.role == MembershipRole.master)
-            .toList() ??
-        <Membership>[];
-    String? toolId;
-    String? toUserId;
-    final qty = TextEditingController(text: '1');
-
-    await showAppBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      child: StatefulBuilder(
-        builder: (ctx, setState) => SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          return Column(
             children: [
-              const AppBottomSheetHeader(
-                title: 'Выдать инструмент',
-                subtitle:
-                    'Выдача появится у мастера для подтверждения получения.',
-              ),
-              const Text('Инструмент', style: AppTextStyles.caption),
-              const SizedBox(height: AppSpacing.x6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final t
-                      in (ref.read(myToolsProvider).value ?? const <ToolItem>[]))
-                    ChoiceChip(
-                      label: Text(
-                        '${t.name} (${t.availableQty})',
-                      ),
-                      selected: toolId == t.id,
-                      onSelected: t.availableQty > 0
-                          ? (_) => setState(() => toolId = t.id)
-                          : null,
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.x12),
-              const Text('Кому', style: AppTextStyles.caption),
-              const SizedBox(height: AppSpacing.x6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final m in masters)
-                    ChoiceChip(
-                      label: Text(m.user == null
-                          ? 'Мастер'
-                          : '${m.user!.firstName} ${m.user!.lastName}'
-                              .trim()),
-                      selected: toUserId == m.userId,
-                      onSelected: (_) =>
-                          setState(() => toUserId = m.userId),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.x12),
-              TextField(
-                controller: qty,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Кол-во',
-                  filled: true,
-                  fillColor: AppColors.n0,
+              // Mastersurrender-кнопка (если у viewer есть подтверждённые
+              // выдачи): chip-style возле header.
+              if (_hasMastersSurrender(issuances, me))
+                _SurrenderHint(
+                  onTap: () => showToolSurrenderSheet(
+                    context,
+                    ref,
+                    projectId: widget.projectId,
+                    issuances: issuances
+                        .where((i) =>
+                            i.status == ToolIssuanceStatus.confirmed &&
+                            i.toUserId == me)
+                        .toList(),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x16,
+                  AppSpacing.x10,
+                  AppSpacing.x16,
+                  0,
+                ),
+                child: ToolSearchBar(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _search = v),
                 ),
               ),
-              const SizedBox(height: AppSpacing.x16),
-              AppButton(
-                label: 'Выдать',
-                onPressed: () async {
-                  final q = int.tryParse(qty.text);
-                  if (toolId == null) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Выберите инструмент',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  if (toUserId == null) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Выберите получателя',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  if (q == null || q <= 0) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Укажите количество (целое число > 0)',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  final failure = await ref
-                      .read(toolIssuancesProvider(projectId).notifier)
-                      .issue(
-                        toolItemId: toolId!,
-                        toUserId: toUserId!,
-                        qty: q,
-                      );
-                  if (!ctx.mounted) return;
-                  Navigator.of(ctx).pop();
-                  if (!context.mounted) return;
-                  if (failure != null) {
-                    AppToast.show(
-                      context,
-                      message: failure.userMessage,
-                      kind: AppToastKind.error,
-                    );
-                  }
-                },
+              const SizedBox(height: AppSpacing.x10),
+              ToolFilterBar(
+                persons: persons,
+                selected: _personFilter,
+                onChanged: (id) => setState(() => _personFilter = id),
+                recentlyAddedIds: recentlyAdded,
+              ),
+              ToolStatusTabs(
+                selected: _tab,
+                onChanged: (t) => setState(() => _tab = t),
+                allCount: allCount,
+                issuedCount: issuedCount,
+                warehouseCount: warehouseCount,
+              ),
+              Expanded(
+                child: visible.isEmpty
+                    ? const AppEmptyState(
+                        title: 'Ничего не найдено',
+                        icon: Icons.search_off_rounded,
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async => ref.invalidate(
+                          toolIssuancesProvider(widget.projectId),
+                        ),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.all(AppSpacing.x16),
+                          itemCount: visible.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.x8),
+                          itemBuilder: (_, i) {
+                            final iss = visible[i];
+                            final recipient = userIds[iss.toUserId] ?? 'Мастер';
+                            return ToolRow.fromIssuance(
+                              issuance: iss,
+                              recipientName: recipient,
+                              onTap: () => _handleAction(iss, me),
+                            );
+                          },
+                        ),
+                      ),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
-    qty.dispose();
   }
 
-  Future<void> _handleAction(
-    BuildContext context,
-    WidgetRef ref,
-    ToolIssuance iss,
-    String? meId,
-  ) async {
-    // Получатель подтверждает выдачу.
-    if (iss.status == ToolIssuanceStatus.issued && iss.toUserId == meId) {
-      await ref
-          .read(toolIssuancesProvider(projectId).notifier)
-          .confirm(iss.id);
-      return;
+  List<ToolIssuance> _filtered(List<ToolIssuance> all) {
+    var list = all;
+    if (_personFilter != null) {
+      list = list.where((i) => i.toUserId == _personFilter).toList();
     }
-    // Получатель возвращает.
-    if (iss.status == ToolIssuanceStatus.confirmed &&
-        iss.toUserId == meId) {
-      final qty = TextEditingController(text: '${iss.qty}');
-      await showAppBottomSheet<void>(
-        context: context,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AppBottomSheetHeader(
-              title: 'Вернуть инструмент',
-              subtitle: 'Укажите количество, которое возвращаете.',
-            ),
-            TextField(
-              controller: qty,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Кол-во',
-                filled: true,
-                fillColor: AppColors.n0,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x16),
-            Builder(
-              builder: (ctx) => AppButton(
-                label: 'Вернуть',
-                onPressed: () async {
-                  final q = int.tryParse(qty.text);
-                  if (q == null || q < 0 || q > iss.qty) {
-                    AppToast.show(
-                      ctx,
-                      message: 'Укажите кол-во от 0 до ${iss.qty}',
-                      kind: AppToastKind.error,
-                    );
-                    return;
-                  }
-                  await ref
-                      .read(toolIssuancesProvider(projectId).notifier)
-                      .requestReturn(id: iss.id, returnedQty: q);
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                },
-              ),
-            ),
-          ],
-        ),
+    if (_tab == ToolStatusTab.issued) {
+      list = list
+          .where((i) => i.status != ToolIssuanceStatus.returned)
+          .toList();
+    } else if (_tab == ToolStatusTab.warehouse) {
+      list = list
+          .where((i) => i.status == ToolIssuanceStatus.returned)
+          .toList();
+    }
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      list = list
+          .where((i) =>
+              (i.tool?.name ?? '').toLowerCase().contains(q))
+          .toList();
+    }
+    return [...list]
+      ..sort((a, b) =>
+          (a.tool?.name ?? '').compareTo(b.tool?.name ?? ''));
+  }
+
+  bool _hasMastersSurrender(List<ToolIssuance> issuances, String? meId) {
+    if (meId == null) return false;
+    return issuances.any(
+      (i) =>
+          i.status == ToolIssuanceStatus.confirmed && i.toUserId == meId,
+    );
+  }
+
+  Future<void> _openIssueScreen(BuildContext context) async {
+    final newRecipient = await context
+        .push<String?>('/projects/${widget.projectId}/tools/new');
+    if (!mounted) return;
+    if (newRecipient is String) {
+      ref
+          .read(_recentlyAddedHoldersProvider.notifier)
+          .update((s) => {...s, newRecipient});
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: 'Инструмент выдан · ожидает подтверждения',
+        kind: AppToastKind.success,
       );
-      qty.dispose();
+    }
+  }
+
+  Future<void> _handleAction(ToolIssuance iss, String? meId) async {
+    final ctrl = ref.read(toolIssuancesProvider(widget.projectId).notifier);
+    if (iss.status == ToolIssuanceStatus.issued && iss.toUserId == meId) {
+      await ctrl.confirm(iss.id);
       return;
     }
-    // Owner подтверждает возврат.
+    if (iss.status == ToolIssuanceStatus.confirmed && iss.toUserId == meId) {
+      // Сдача через surrender-sheet (мульти).
+      return;
+    }
     if (iss.status == ToolIssuanceStatus.returnRequested &&
         iss.issuedById == meId) {
-      await ref
-          .read(toolIssuancesProvider(projectId).notifier)
-          .returnConfirm(iss.id);
+      await ctrl.returnConfirm(iss.id);
     }
   }
 }
 
-class _IssuanceCard extends StatelessWidget {
-  const _IssuanceCard({
-    required this.issuance,
-    required this.meId,
-    required this.onAction,
-  });
+class _SurrenderHint extends StatelessWidget {
+  const _SurrenderHint({required this.onTap});
 
-  final ToolIssuance issuance;
-  final String? meId;
-  final VoidCallback onAction;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final toolName = issuance.tool?.name ?? 'Инструмент';
-    final showAction =
-        (issuance.status == ToolIssuanceStatus.issued &&
-                issuance.toUserId == meId) ||
-            (issuance.status == ToolIssuanceStatus.confirmed &&
-                issuance.toUserId == meId) ||
-            (issuance.status == ToolIssuanceStatus.returnRequested &&
-                issuance.issuedById == meId);
-    return GestureDetector(
-      onTap: showAction ? onAction : null,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x14),
-        decoration: BoxDecoration(
-          color: AppColors.n0,
-          borderRadius: AppRadius.card,
-          border: Border.all(color: AppColors.n200, width: 1.5),
-          boxShadow: AppShadows.sh1,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: issuance.status.semaphore.bg,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x16,
+        AppSpacing.x10,
+        AppSpacing.x16,
+        0,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          decoration: BoxDecoration(
+            color: AppColors.brandLight,
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.assignment_return_outlined,
+                size: 18,
+                color: AppColors.brand,
               ),
-              child: Icon(
-                Icons.construction_outlined,
-                color: issuance.status.semaphore.text,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$toolName × ${issuance.qty}',
-                    style: AppTextStyles.subtitle,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Сдать инструмент бригадиру',
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.brandDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      StatusPill(
-                        label: issuance.status.displayName,
-                        semaphore: issuance.status.semaphore,
-                      ),
-                      const SizedBox(width: AppSpacing.x6),
-                      Text(
-                        DateFormat('d MMM', 'ru').format(issuance.createdAt),
-                        style: AppTextStyles.caption,
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-            if (showAction)
               const Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.n300,
+                color: AppColors.brand,
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

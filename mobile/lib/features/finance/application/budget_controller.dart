@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/payments_repository.dart';
@@ -42,5 +43,45 @@ class MoneyFlowController extends FamilyAsyncNotifier<MoneyFlow, String> {
   @override
   Future<MoneyFlow> build(String projectId) {
     return ref.read(paymentsRepositoryProvider).moneyFlow(projectId);
+  }
+}
+
+/// Параметр для фильтрации money-flow по периоду — равенство по
+/// `(projectId, fromIso, toIso)` гарантирует Riverpod-кеш на одинаковый запрос.
+@immutable
+class MoneyFlowQuery {
+  const MoneyFlowQuery({required this.projectId, this.from, this.to});
+
+  final String projectId;
+  final DateTime? from;
+  final DateTime? to;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MoneyFlowQuery &&
+      other.projectId == projectId &&
+      other.from?.toIso8601String() == from?.toIso8601String() &&
+      other.to?.toIso8601String() == to?.toIso8601String();
+
+  @override
+  int get hashCode => Object.hash(projectId, from, to);
+}
+
+/// Эта версия принимает date-range — используется в табе «Материалы»
+/// бюджета (e-budget-materials) для фильтрации по периоду.
+final moneyFlowFilteredProvider = AsyncNotifierProvider.family<
+    MoneyFlowFilteredController, MoneyFlow, MoneyFlowQuery>(
+  MoneyFlowFilteredController.new,
+);
+
+class MoneyFlowFilteredController
+    extends FamilyAsyncNotifier<MoneyFlow, MoneyFlowQuery> {
+  @override
+  Future<MoneyFlow> build(MoneyFlowQuery query) {
+    return ref.read(paymentsRepositoryProvider).moneyFlow(
+          query.projectId,
+          from: query.from,
+          to: query.to,
+        );
   }
 }

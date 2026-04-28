@@ -26,9 +26,19 @@ class PaymentsRepository {
       });
 
   /// P1.5: «Движение средств» — для customer / representative.canSeeBudget.
-  Future<MoneyFlow> moneyFlow(String projectId) => _call(() async {
+  /// Опциональный date-range (ISO 8601) для табы «Материалы» в e-budget.
+  Future<MoneyFlow> moneyFlow(
+    String projectId, {
+    DateTime? from,
+    DateTime? to,
+  }) =>
+      _call(() async {
         final r = await _dio.get<Map<String, dynamic>>(
           '/api/projects/$projectId/money-flow',
+          queryParameters: {
+            if (from != null) 'from': from.toIso8601String(),
+            if (to != null) 'to': to.toIso8601String(),
+          },
         );
         return MoneyFlow.parse(r.data!);
       });

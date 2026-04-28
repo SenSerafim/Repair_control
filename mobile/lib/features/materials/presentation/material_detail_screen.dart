@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
@@ -7,9 +9,13 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../projects/presentation/money_input.dart';
 import '../application/materials_controller.dart';
 import '../domain/material_request.dart';
+import '_widgets/checklist_item_card.dart';
+import '_widgets/material_lifecycle_timeline.dart';
+import '_widgets/material_meta_card.dart';
+import '_widgets/purchase_progress_chip.dart';
+import '_widgets/resolve_option_card.dart';
 
 class MaterialDetailScreen extends ConsumerWidget {
   const MaterialDetailScreen({
@@ -62,17 +68,42 @@ class MaterialDetailScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     children: [
                       _Header(request: request),
+                      const SizedBox(height: AppSpacing.x16),
+                      // Lifecycle (5 шагов: создана → отправлена → куплено →
+                      // доставлено → подтверждено).
+                      const _SectionLabel(label: 'Жизненный цикл'),
+                      const SizedBox(height: AppSpacing.x10),
+                      MaterialLifecycleTimeline(
+                        steps: _lifecycleSteps(request),
+                      ),
+                      const SizedBox(height: AppSpacing.x16),
+                      const _SectionLabel(label: 'Позиции'),
+                      const SizedBox(height: AppSpacing.x10),
+                      for (final item in request.items) ...[
+                        ChecklistItemCard(
+                          item: item,
+                          state: _itemState(request, item),
+                          onEdit: _canEdit(request, item)
+                              ? () => context.push(
+                                    '/projects/$projectId/materials/$requestId/items/${item.id}/edit',
+                                  )
+                              : null,
+                        ),
+                        const SizedBox(height: AppSpacing.x8),
+                      ],
+                      const SizedBox(height: AppSpacing.x6),
+                      PurchaseProgressChip(
+                        bought: request.boughtItemsCount,
+                        total: request.items.length,
+                      ),
                       if (request.comment?.isNotEmpty ?? false) ...[
-                        const SizedBox(height: AppSpacing.x12),
+                        const SizedBox(height: AppSpacing.x16),
                         _CommentCard(comment: request.comment!),
                       ],
                       const SizedBox(height: AppSpacing.x16),
-                      const Text('Позиции', style: AppTextStyles.h2),
-                      const SizedBox(height: AppSpacing.x8),
-                      for (final item in request.items) ...[
-                        _ItemRow(request: request, item: item),
-                        const SizedBox(height: AppSpacing.x6),
-                      ],
+                      const _SectionLabel(label: 'Детали'),
+                      const SizedBox(height: AppSpacing.x10),
+                      MaterialMetaCard(rows: _metaRows(request)),
                       const SizedBox(height: AppSpacing.x20),
                     ],
                   ),
@@ -85,10 +116,107 @@ class MaterialDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  ChecklistItemState _itemState(MaterialRequest req, MaterialItem item) {
+    if (item.isBought) return ChecklistItemState.bought;
+    if (req.status == MaterialRequestStatus.partiallyBought) {
+      return ChecklistItemState.pending;
+    }
+    return ChecklistItemState.pending;
+  }
+
+  bool _canEdit(MaterialRequest req, MaterialItem item) {
+    if (item.isBought) return true;
+    return req.status == MaterialRequestStatus.open ||
+        req.status == MaterialRequestStatus.partiallyBought;
+  }
+
+  List<LifecycleStep> _lifecycleSteps(MaterialRequest r) {
+    final created = LifecycleStep(
+      title: 'Заявка создана',
+      state: LifecycleStepState.done,
+      dateLabel: _fmtDate(r.createdAt),
+      immutable: true,
+    );
+    final sent = LifecycleStep(
+      title: 'Отправлена получателю',
+      state: r.status == MaterialRequestStatus.draft
+          ? LifecycleStepState.pending
+          : LifecycleStepState.done,
+      dateLabel: r.status == MaterialRequestStatus.draft
+          ? '—'
+          : _fmtDate(r.updatedAt),
+    );
+    final bought = LifecycleStep(
+      title: r.status == MaterialRequestStatus.partiallyBought
+          ? 'Куплено: ${r.boughtItemsCount} из ${r.items.length}'
+          : 'Куплено',
+      state: switch (r.status) {
+        MaterialRequestStatus.bought ||
+        MaterialRequestStatus.delivered ||
+        MaterialRequestStatus.resolved =>
+          LifecycleStepState.done,
+        MaterialRequestStatus.partiallyBought => LifecycleStepState.active,
+        _ => LifecycleStepState.pending,
+      },
+      dateLabel: r.finalizedAt == null ? '—' : _fmtDate(r.finalizedAt!),
+      immutable: r.status == MaterialRequestStatus.bought ||
+          r.status == MaterialRequestStatus.delivered,
+    );
+    final delivered = LifecycleStep(
+      title: 'Доставлено',
+      state: r.status == MaterialRequestStatus.delivered
+          ? LifecycleStepState.done
+          : LifecycleStepState.pending,
+      dateLabel: r.deliveredAt == null ? '—' : _fmtDate(r.deliveredAt!),
+      immutable: r.status == MaterialRequestStatus.delivered,
+    );
+    final confirmed = LifecycleStep(
+      title: 'Подтверждено получателем',
+      state: r.status == MaterialRequestStatus.delivered
+          ? LifecycleStepState.done
+          : LifecycleStepState.pending,
+      dateLabel: r.deliveredAt == null ? '—' : _fmtDate(r.deliveredAt!),
+    );
+    return [created, sent, bought, delivered, confirmed];
+  }
+
+  List<MaterialMetaRow> _metaRows(MaterialRequest r) {
+    return [
+      MaterialMetaRow(
+        'Получатель покупает',
+        r.recipient.displayName,
+      ),
+      MaterialMetaRow(
+        'Этап',
+        r.stageId == null ? 'Без этапа' : 'Привязан',
+      ),
+      MaterialMetaRow(
+        'Создал',
+        _shorten(r.createdById),
+      ),
+      MaterialMetaRow(
+        'Создано',
+        _fmtDate(r.createdAt),
+      ),
+      if (r.finalizedAt != null)
+        MaterialMetaRow(
+          'Финализировано',
+          '${_fmtDate(r.finalizedAt!)} (неизменяемая)',
+          valueColor: AppColors.greenDark,
+        ),
+    ];
+  }
+
+  String _fmtDate(DateTime d) => DateFormat('d MMM y · HH:mm', 'ru').format(d);
+
+  String _shorten(String id) =>
+      id.length <= 12 ? id : '${id.substring(0, 12)}…';
 }
 
 class _Header extends StatelessWidget {
   const _Header({required this.request});
+
   final MaterialRequest request;
 
   @override
@@ -99,11 +227,16 @@ class _Header extends StatelessWidget {
         color: AppColors.n0,
         borderRadius: AppRadius.card,
         boxShadow: AppShadows.sh1,
+        border: Border.all(color: AppColors.n200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(request.title, style: AppTextStyles.h1, maxLines: 3),
+          Text(
+            request.title,
+            style: AppTextStyles.h1.copyWith(fontSize: 20),
+            maxLines: 3,
+          ),
           const SizedBox(height: AppSpacing.x8),
           Row(
             children: [
@@ -112,21 +245,39 @@ class _Header extends StatelessWidget {
                 semaphore: request.status.semaphore,
               ),
               const SizedBox(width: AppSpacing.x8),
-              Text(
-                request.recipient.displayName,
-                style: AppTextStyles.caption,
+              Expanded(
+                child: Text(
+                  '${request.items.length} позиций · '
+                  '${Money.format(request.totalBoughtPrice)}',
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.n400,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-          if (request.totalBoughtPrice > 0) ...[
-            const SizedBox(height: AppSpacing.x8),
-            Text(
-              'Куплено на ${Money.format(request.totalBoughtPrice)}',
-              style: AppTextStyles.subtitle
-                  .copyWith(color: AppColors.greenDark),
-            ),
-          ],
         ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: AppTextStyles.tiny.copyWith(
+        color: AppColors.n400,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.5,
       ),
     );
   }
@@ -134,6 +285,7 @@ class _Header extends StatelessWidget {
 
 class _CommentCard extends StatelessWidget {
   const _CommentCard({required this.comment});
+
   final String comment;
 
   @override
@@ -149,139 +301,6 @@ class _CommentCard extends StatelessWidget {
   }
 }
 
-class _ItemRow extends ConsumerWidget {
-  const _ItemRow({required this.request, required this.item});
-
-  final MaterialRequest request;
-  final MaterialItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasManage =
-        ref.watch(canProvider(DomainAction.materialsManage));
-    final canMarkBought = hasManage &&
-        !item.isBought &&
-        (request.status == MaterialRequestStatus.open ||
-            request.status == MaterialRequestStatus.partiallyBought);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        border: Border.all(
-          color: item.isBought ? AppColors.greenDot : AppColors.n200,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: item.isBought ? AppColors.greenDot : AppColors.n100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              item.isBought ? Icons.check_rounded : Icons.shopping_cart_outlined,
-              size: 14,
-              color: item.isBought ? AppColors.n0 : AppColors.n500,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.x10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, style: AppTextStyles.subtitle),
-                Text(
-                  '${_fmtQty(item.qty)} ${item.unit ?? ''}'
-                          '${item.pricePerUnit != null ? ' · ${Money.format(item.pricePerUnit!)}/шт' : ''}'
-                      .trim(),
-                  style: AppTextStyles.caption,
-                ),
-                if (item.isBought && item.totalPrice != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'Итого ${Money.format(item.totalPrice!)}',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.greenDark),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (canMarkBought)
-            TextButton(
-              onPressed: () => _showMarkBoughtSheet(context, ref),
-              child: const Text('Купил'),
-            ),
-        ],
-      ),
-    );
-  }
-
-  static String _fmtQty(double qty) {
-    if (qty == qty.truncateToDouble()) return qty.toInt().toString();
-    return qty.toStringAsFixed(2);
-  }
-
-  Future<void> _showMarkBoughtSheet(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final controller = TextEditingController();
-    if (item.pricePerUnit != null) {
-      MoneyInput.setFromKopecks(controller, item.pricePerUnit!);
-    }
-    await showAppBottomSheet<void>(
-      context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppBottomSheetHeader(
-            title: 'Позиция куплена',
-            subtitle: 'Укажите фактическую цену за единицу.',
-          ),
-          MoneyInput(controller: controller, label: 'Цена за единицу'),
-          const SizedBox(height: AppSpacing.x16),
-          Builder(
-            builder: (sheetCtx) => AppButton(
-              label: 'Отметить купленным',
-              variant: AppButtonVariant.success,
-              onPressed: () async {
-                final price = MoneyInput.readKopecks(controller);
-                if (price == null || price <= 0) return;
-                final failure = await ref
-                    .read(
-                      materialsControllerProvider(request.projectId)
-                          .notifier,
-                    )
-                    .markBought(
-                      requestId: request.id,
-                      itemId: item.id,
-                      pricePerUnit: price,
-                    );
-                if (!sheetCtx.mounted) return;
-                Navigator.of(sheetCtx).pop();
-                if (failure != null && context.mounted) {
-                  AppToast.show(
-                    context,
-                    message: failure.userMessage,
-                    kind: AppToastKind.error,
-                  );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-  }
-}
-
 class _Actions extends ConsumerWidget {
   const _Actions({required this.projectId, required this.request});
 
@@ -291,8 +310,7 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buttons = <Widget>[];
-    final ctrl =
-        ref.read(materialsControllerProvider(projectId).notifier);
+    final ctrl = ref.read(materialsControllerProvider(projectId).notifier);
     final canManage =
         ref.watch(canProvider(DomainAction.materialsManage));
     final canFinalize =
@@ -392,8 +410,9 @@ class _Actions extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.x12),
             decoration: BoxDecoration(
               color: AppColors.redBg,
-              border:
-                  Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: AppColors.redDot.withValues(alpha: 0.3),
+              ),
               borderRadius: BorderRadius.circular(AppRadius.r12),
             ),
             child: Row(
@@ -444,9 +463,7 @@ class _Actions extends ConsumerWidget {
                 final reason = controller.text.trim();
                 if (reason.isEmpty) return;
                 await ref
-                    .read(
-                      materialsControllerProvider(projectId).notifier,
-                    )
+                    .read(materialsControllerProvider(projectId).notifier)
                     .dispute(id: request.id, reason: reason);
                 if (ctx.mounted) Navigator.of(ctx).pop();
               },
@@ -525,9 +542,8 @@ class _ResolveSheetState extends State<_ResolveSheet> {
   Future<void> _submit() async {
     if (_busy) return;
     final text = _comment.text.trim();
-    final resolution = text.isEmpty
-        ? _selected.title
-        : '${_selected.title}. $text';
+    final resolution =
+        text.isEmpty ? _selected.title : '${_selected.title}. $text';
     setState(() => _busy = true);
     try {
       await widget.onSubmit(resolution);
@@ -548,8 +564,10 @@ class _ResolveSheetState extends State<_ResolveSheet> {
           subtitle: 'Как решён спор?',
         ),
         for (final o in _options) ...[
-          _ResolveTile(
-            option: o,
+          ResolveOptionCard(
+            icon: o.icon,
+            title: o.title,
+            subtitle: o.subtitle,
             selected: o == _selected,
             onTap: () => setState(() => _selected = o),
           ),
@@ -608,69 +626,6 @@ class _ResolveSheetState extends State<_ResolveSheet> {
           onPressed: _busy ? null : _submit,
         ),
       ],
-    );
-  }
-}
-
-class _ResolveTile extends StatelessWidget {
-  const _ResolveTile({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _ResolveOption option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.r12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.all(AppSpacing.x12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.brandLight : AppColors.n0,
-          border: Border.all(
-            color: selected ? AppColors.brand : AppColors.n200,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              option.icon,
-              size: 20,
-              color: selected ? AppColors.brand : AppColors.n500,
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    option.title,
-                    style: AppTextStyles.subtitle.copyWith(
-                      color: selected ? AppColors.brand : AppColors.n700,
-                    ),
-                  ),
-                  Text(
-                    option.subtitle,
-                    style: AppTextStyles.tiny.copyWith(
-                      color: selected
-                          ? AppColors.brand.withValues(alpha: 0.7)
-                          : AppColors.n400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

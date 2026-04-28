@@ -31,6 +31,16 @@ class Money {
     return '$integerFormatted,$frac$suffix';
   }
 
+  /// Компактное форматирование для тесных layouts (mini-card бюджета):
+  /// «193 000 ₽» → "193 000", «1 250 000 ₽» → "1 250 000". Без валюты,
+  /// без дробей. Возвращает только целое в рублях с разделителями.
+  static String formatCompact(int kopecks, {String locale = 'ru_RU'}) {
+    final rubles = kopecks ~/ 100;
+    return NumberFormat.decimalPattern(locale)
+        .format(rubles)
+        .replaceAll(_nbsp, ' ');
+  }
+
   /// Парсит пользовательский ввод в копейки. Поддерживает:
   /// "1 250 000", "1 250 000 ₽", "1250000,50", "1 250,50".
   /// Возвращает null для пустой строки или мусора.

@@ -93,6 +93,17 @@ class AppRoutes {
   static String projectPlanApprovalWith(String projectId) =>
       '/projects/$projectId/plan-approval';
 
+  /// Полноэкранный результат согласования (`d-approved` / `d-rejected`).
+  /// Открывается через `context.replace` после approve/reject в sheet.
+  static const approvalResult =
+      '/projects/:projectId/approvals/:approvalId/result';
+  static String approvalResultWith(
+    String projectId,
+    String approvalId,
+    String status,
+  ) =>
+      '/projects/$projectId/approvals/$approvalId/result?status=$status';
+
   /// Список экспортов проекта (открывается из FeedScreen, DocumentsScreen,
   /// push-уведомлений `kind=export_*`).
   static const projectExports = '/projects/:projectId/exports';
@@ -114,6 +125,71 @@ class AppRoutes {
     required String stepId,
   }) =>
       '/projects/$projectId/stages/$stageId/steps/$stepId';
+
+  /// Полноэкранный ответ на вопрос — `d-question-reply`. Открывается из
+  /// карточки вопроса в StepDetailScreen.
+  static const questionReply =
+      '/projects/:projectId/stages/:stageId/steps/:stepId/questions/:questionId/reply';
+  static String questionReplyWith({
+    required String projectId,
+    required String stageId,
+    required String stepId,
+    required String questionId,
+  }) =>
+      '/projects/$projectId/stages/$stageId/steps/$stepId/questions/$questionId/reply';
+
+  // Templates flow (Кластер C).
+  static const stagesTemplates = '/projects/:projectId/stages/templates';
+  static String stagesTemplatesWith(String projectId) =>
+      '/projects/$projectId/stages/templates';
+  static const stagesTemplatePreview =
+      '/projects/:projectId/stages/templates/:templateId/preview';
+  static String stagesTemplatePreviewWith({
+    required String projectId,
+    required String templateId,
+  }) =>
+      '/projects/$projectId/stages/templates/$templateId/preview';
+  static const stageCreated = '/projects/:projectId/stages/created';
+  static String stageCreatedWith({
+    required String projectId,
+    required String stageId,
+  }) =>
+      '/projects/$projectId/stages/created?stageId=$stageId';
+
+  // Cluster E — финансы/материалы/самозакупы/инструмент.
+  static const materialEditPos =
+      '/projects/:projectId/materials/:requestId/items/:itemId/edit';
+  static String materialEditPosWith({
+    required String projectId,
+    required String requestId,
+    required String itemId,
+  }) =>
+      '/projects/$projectId/materials/$requestId/items/$itemId/edit';
+
+  static const selfpurchaseCreate =
+      '/projects/:projectId/selfpurchases/new';
+  static String selfpurchaseCreateWith(String projectId) =>
+      '/projects/$projectId/selfpurchases/new';
+
+  static const selfpurchaseDetail =
+      '/projects/:projectId/selfpurchases/:id';
+  static String selfpurchaseDetailWith({
+    required String projectId,
+    required String id,
+  }) =>
+      '/projects/$projectId/selfpurchases/$id';
+
+  static const selfpurchaseReject =
+      '/projects/:projectId/selfpurchases/:id/reject';
+  static String selfpurchaseRejectWith({
+    required String projectId,
+    required String id,
+  }) =>
+      '/projects/$projectId/selfpurchases/$id/reject';
+
+  static const toolIssue = '/projects/:projectId/tools/new';
+  static String toolIssueWith(String projectId) =>
+      '/projects/$projectId/tools/new';
 
   // Payments / Documents / Notifications / Methodology — root-level
   // экраны, вызываемые из FCM-deep-link и из projectDetail-меню.

@@ -52,6 +52,7 @@ const mkPrisma = () => {
           decidedAt: null,
           decidedById: null,
           decisionComment: null,
+          forwardedFromId: data.forwardedFromId ?? null,
           idempotencyKey: data.idempotencyKey ?? null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -238,6 +239,90 @@ describe('SelfPurchasesService.decide', () => {
     await expect(
       svc.decide(sp.id, { decision: 'approved', actorUserId: 'stranger' }),
     ).rejects.toThrow(ForbiddenError);
+  });
+
+  it('approved master→foreman с forwardOnApprove=true: создаёт forward foreman→customer, budget_updated НЕ эмитится', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
+    st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
+    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
+    const feed = mkFeed();
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const original = await svc.create({
+      projectId: 'p1',
+      stageId: 's1',
+      amount: 8500_00,
+      actorUserId: 'master1',
+    });
+    const decided = await svc.decide(original.id, {
+      decision: 'approved',
+      actorUserId: 'foreman1',
+      forwardOnApprove: true,
+    });
+    expect(decided.status).toBe('approved');
+    // В Map должно быть 2 записи: оригинал master→foreman + forward foreman→customer.
+    const list = [...st.selfPurchases.values()];
+    expect(list).toHaveLength(2);
+    const fwd = list.find((sp) => sp.forwardedFromId === original.id);
+    expect(fwd).toBeDefined();
+    expect(fwd?.byRole).toBe('foreman');
+    expect(fwd?.addresseeId).toBe('customer1');
+    expect(fwd?.byUserId).toBe('foreman1');
+    expect(fwd?.status).toBe('pending');
+    // mock хранит amount как BigInt — приводим перед сравнением (serialize делает то же).
+    expect(Number(fwd?.amount ?? 0)).toBe(original.amount);
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    // Forward-режим эмитит ОДНО событие forwarded, НЕ approved/budget_updated.
+    expect(kinds).toContain('selfpurchase_forwarded');
+    expect(kinds).not.toContain('budget_updated');
+    expect(kinds).not.toContain('selfpurchase_approved');
+  });
+
+  it('approved master→foreman без forwardOnApprove: budget_updated эмитится (legacy)', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
+    st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
+    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
+    const feed = mkFeed();
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const original = await svc.create({
+      projectId: 'p1',
+      stageId: 's1',
+      amount: 100,
+      actorUserId: 'master1',
+    });
+    await svc.decide(original.id, {
+      decision: 'approved',
+      actorUserId: 'foreman1',
+    });
+    const list = [...st.selfPurchases.values()];
+    expect(list).toHaveLength(1);
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    expect(kinds).toContain('selfpurchase_approved');
+    expect(kinds).toContain('budget_updated');
+  });
+
+  it('forwardOnApprove игнорируется для foreman-самозакупа (только master)', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
+    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
+    const feed = mkFeed();
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const sp = await svc.create({
+      projectId: 'p1',
+      amount: 100,
+      actorUserId: 'foreman1',
+    });
+    await svc.decide(sp.id, {
+      decision: 'approved',
+      actorUserId: 'customer1',
+      forwardOnApprove: true,
+    });
+    const list = [...st.selfPurchases.values()];
+    expect(list).toHaveLength(1); // forward не создан
+    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
+    expect(kinds).toContain('selfpurchase_approved');
+    expect(kinds).toContain('budget_updated');
   });
 
   it('повторный decide → Conflict', async () => {

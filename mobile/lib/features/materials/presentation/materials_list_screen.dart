@@ -6,9 +6,11 @@ import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/materials_controller.dart';
-import 'materials_widgets.dart';
+import '../domain/material_request.dart';
+import '_widgets/material_card.dart';
 
 class MaterialsListScreen extends ConsumerWidget {
   const MaterialsListScreen({required this.projectId, super.key});
@@ -53,22 +55,35 @@ class MaterialsListScreen extends ConsumerWidget {
                   : null,
             );
           }
-          // ТЗ §5.1 + Gaps §5.1: материалы со `stageId=null` — общие
-          // проекта, отдельная секция в списке (бригадир может видеть «по
-          // всему проекту», customer — для проектных закупок).
+          // shared (stageId=null) + perStage.
           final shared = items.where((r) => r.stageId == null).toList();
           final perStage = items.where((r) => r.stageId != null).toList();
+          // Hero-summary: общая сумма куплено + кол-во заявок и доставок.
+          final totalSpent = items.fold<int>(
+            0,
+            (acc, r) => acc + r.totalBoughtPrice,
+          );
+          final delivered = items
+              .where((r) => r.status == MaterialRequestStatus.delivered)
+              .length;
+
           return RefreshIndicator(
             onRefresh: () async =>
                 ref.invalidate(materialsControllerProvider(projectId)),
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
+                _SummaryChip(
+                  totalSpent: totalSpent,
+                  count: items.length,
+                  delivered: delivered,
+                ),
+                const SizedBox(height: AppSpacing.x12),
                 if (shared.isNotEmpty) ...[
                   const _SectionHeader(label: 'Общие материалы проекта'),
                   const SizedBox(height: AppSpacing.x8),
                   for (final r in shared) ...[
-                    MaterialRequestCard(
+                    MaterialCard(
                       request: r,
                       onTap: () => context.push(
                         '/projects/$projectId/materials/${r.id}',
@@ -82,7 +97,7 @@ class MaterialsListScreen extends ConsumerWidget {
                   const _SectionHeader(label: 'По этапам'),
                   const SizedBox(height: AppSpacing.x8),
                   for (final r in perStage) ...[
-                    MaterialRequestCard(
+                    MaterialCard(
                       request: r,
                       onTap: () => context.push(
                         '/projects/$projectId/materials/${r.id}',
@@ -95,6 +110,70 @@ class MaterialsListScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip({
+    required this.totalSpent,
+    required this.count,
+    required this.delivered,
+  });
+
+  final int totalSpent;
+  final int count;
+  final int delivered;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x14,
+        vertical: AppSpacing.x12,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.greenLight,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ИТОГО МАТЕРИАЛОВ',
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.greenDark,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    fontSize: 10,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$count заявок · $delivered доставлено',
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.n500,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            Money.format(totalSpent),
+            style: AppTextStyles.h2.copyWith(
+              color: AppColors.greenDark,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
       ),
     );
   }
