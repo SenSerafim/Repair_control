@@ -73,6 +73,8 @@ class SocketService {
     if (token == null || token.isEmpty) return;
 
     final url = '${_env.wsUrl}/chats';
+    // Сначала создаём socket, потом цепляем callbacks отдельным statement —
+    // в cascade обращаться к самой переменной нельзя (referenced_before_declaration).
     final socket = io.io(
       url,
       io.OptionBuilder()
@@ -83,7 +85,8 @@ class SocketService {
           .setReconnectionDelay(1000)
           .setReconnectionDelayMax(30000)
           .build(),
-    )
+    );
+    socket
       ..onConnect((_) {
         _logger.d('WS /chats connected');
         _connectedController.add(true);
