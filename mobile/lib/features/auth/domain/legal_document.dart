@@ -3,18 +3,21 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'legal_document.freezed.dart';
 part 'legal_document.g.dart';
 
-/// Соответствует backend enum `LegalKind`.
+/// Соответствует backend enum `LegalKind` (Prisma): privacy / tos / data_processing_consent.
+/// Раньше mobile использовал 'privacy_policy' и 'terms_of_service' — это был
+/// pre-existing баг: `_parseKind('privacy')` возвращал null, и пользователь
+/// видел только один из трёх обязательных документов на регистрации.
 enum LegalKind {
-  @JsonValue('privacy_policy')
+  @JsonValue('privacy')
   privacyPolicy,
-  @JsonValue('terms_of_service')
+  @JsonValue('tos')
   termsOfService,
   @JsonValue('data_processing_consent')
   dataProcessingConsent;
 
   String get apiValue => switch (this) {
-        LegalKind.privacyPolicy => 'privacy_policy',
-        LegalKind.termsOfService => 'terms_of_service',
+        LegalKind.privacyPolicy => 'privacy',
+        LegalKind.termsOfService => 'tos',
         LegalKind.dataProcessingConsent => 'data_processing_consent',
       };
 

@@ -126,8 +126,8 @@ class AppRoleCard extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _icon(44),
-        const SizedBox(height: AppSpacing.x10),
+        _icon(40),
+        const SizedBox(height: AppSpacing.x8),
         Text(
           title,
           style: const TextStyle(
@@ -137,20 +137,24 @@ class AppRoleCard extends StatelessWidget {
             letterSpacing: -0.1,
           ),
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         if (subtitle != null) ...[
-          const SizedBox(height: AppSpacing.x4),
-          Text(
-            subtitle!,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.n400,
-              height: 1.3,
+          const SizedBox(height: AppSpacing.x2),
+          Flexible(
+            child: Text(
+              subtitle!,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.n400,
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ],
