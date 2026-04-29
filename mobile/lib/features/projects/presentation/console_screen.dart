@@ -699,9 +699,9 @@ class _StagesCarousel extends StatelessWidget {
                 : 'Срок не задан',
             progress: s.progressCache / 100,
             assigneeAlert: s.foremanIds.isEmpty,
-            onTap: () => Navigator.of(context).pushNamed(
-              '/projects/$projectId/stages/${s.id}',
-            ),
+            // go_router использует context.push, а не Navigator.pushNamed
+            // (у Navigator нет onGenerateRoute → assertion на тапе по этапу).
+            onTap: () => context.push('/projects/$projectId/stages/${s.id}'),
           );
         },
       ),

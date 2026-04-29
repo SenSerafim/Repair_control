@@ -79,7 +79,12 @@ class AppAvatar extends StatelessWidget {
         ),
         shape: BoxShape.circle,
       ),
-      foregroundDecoration: imageUrl != null
+      // Backend в `/api/me` возвращает relative S3-key (e.g. "avatar/abc.png").
+      // Без http(s)://-префикса NetworkImage парсит как `file:///avatar/...`
+      // и кидает ArgumentError каждый кадр (бесконечный цикл рендера).
+      // Пока backend не отдаёт presigned URL — рисуем initials, если URL
+      // не absolute. Когда будет готов S3-resolver — здесь префикс apiBaseUrl.
+      foregroundDecoration: _isAbsoluteUrl(imageUrl)
           ? BoxDecoration(
               shape: BoxShape.circle,
               image: DecorationImage(
@@ -88,7 +93,7 @@ class AppAvatar extends StatelessWidget {
               ),
             )
           : null,
-      child: imageUrl != null
+      child: _isAbsoluteUrl(imageUrl)
           ? const SizedBox.shrink()
           : Text(
               _initials(),
@@ -114,5 +119,10 @@ class AppAvatar extends StatelessWidget {
     final fallback = raw.replaceAll(RegExp('[^A-Za-zА-Яа-я0-9]'), '');
     if (fallback.isEmpty) return '?';
     return fallback.substring(0, 1).toUpperCase();
+  }
+
+  static bool _isAbsoluteUrl(String? url) {
+    if (url == null || url.isEmpty) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
   }
 }

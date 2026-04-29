@@ -559,7 +559,17 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         color: AppColors.n0,
         border: Border(top: BorderSide(color: AppColors.n200)),
       ),
-      child: Row(children: children),
+      // AppButton по дефолту fullWidth=true → width:∞ внутри Row без констрейнта
+      // даёт «BoxConstraints forces an infinite width». Оборачиваем каждую
+      // кнопку в Expanded, чтобы Row делил доступную ширину.
+      child: Row(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.x8),
+            Expanded(child: children[i]),
+          ],
+        ],
+      ),
     );
   }
 
