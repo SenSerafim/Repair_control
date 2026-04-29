@@ -151,11 +151,16 @@ class AuthRepository {
   Future<LegalDocument> legalGet(LegalKind kind) async {
     return _call(
       () async {
-        // Endpoint mounted под /legal/{kind} (без /api prefix —
-        // см. setGlobalPrefix exclude в backend main.ts).
+        // Endpoint mounted под /legal/{kind} (без /api prefix — см.
+        // setGlobalPrefix exclude в backend main.ts). Accept:application/json
+        // обязателен — иначе LegalPublicController отдаёт HTML, и Dio
+        // падает на JSON-парсинге (юзер видит «Не удалось загрузить документ»).
         final r = await _dio.get<Map<String, dynamic>>(
           '/legal/${kind.apiValue}',
-          options: Options(extra: {'noAuth': true}),
+          options: Options(
+            extra: {'noAuth': true},
+            headers: {'Accept': 'application/json'},
+          ),
         );
         return LegalDocument.fromJson(r.data!);
       },
