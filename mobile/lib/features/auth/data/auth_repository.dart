@@ -151,8 +151,10 @@ class AuthRepository {
   Future<LegalDocument> legalGet(LegalKind kind) async {
     return _call(
       () async {
+        // Endpoint mounted под /legal/{kind} (без /api prefix —
+        // см. setGlobalPrefix exclude в backend main.ts).
         final r = await _dio.get<Map<String, dynamic>>(
-          '/api/legal/${kind.apiValue}',
+          '/legal/${kind.apiValue}',
           options: Options(extra: {'noAuth': true}),
         );
         return LegalDocument.fromJson(r.data!);
