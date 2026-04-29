@@ -26,8 +26,10 @@ export class LegalPublicationsController {
 
   // ---- Authenticated public-list (mobile app) ----
 
-  /** Список активных публикаций для mobile bottom-sheet. */
-  @Get('legal/publications/list')
+  /** Список активных публикаций для mobile bottom-sheet.
+   * Путь использует дефис вместо слэша, чтобы не попасть под `legal/(.*)`
+   * exclude в `setGlobalPrefix` (main.ts) и получить нормальный `/api` prefix. */
+  @Get('legal-publications/list')
   list() {
     return this.svc.listActive();
   }

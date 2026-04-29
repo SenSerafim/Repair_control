@@ -10,7 +10,9 @@ class LegalPublicationsRepository {
   final Dio _dio;
 
   Future<List<LegalPublication>> listActive() async {
-    final r = await _dio.get<List<dynamic>>('/api/legal/publications/list');
+    // Endpoint специально с дефисом: legal/<...> исключён из /api prefix
+    // (legal-public stream без авторизации), а listing нужен с авторизацией.
+    final r = await _dio.get<List<dynamic>>('/api/legal-publications/list');
     return r.data!
         .map((e) => LegalPublication.parse(e as Map<String, dynamic>))
         .toList();
