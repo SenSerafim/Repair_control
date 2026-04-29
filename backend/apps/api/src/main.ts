@@ -20,8 +20,13 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(cookieParser());
+  // exclude: только publicPDF-stream (legal/public/<slug>) + системные endpoints.
+  // Раньше было exclude: 'legal/(.*)' — это исключало ВСЕ legal/* из /api prefix,
+  // включая LegalPublicController.@Get('legal/:kind') (markdown-acceptance).
+  // Mobile (auth_repository.dart) и OpenAPI клиент бьют '/api/legal/:kind' —
+  // получали 404, пользователь застревал на legal-acceptance модале.
   app.setGlobalPrefix('api', {
-    exclude: ['healthz', 'legal/(.*)', 'legal', 'metrics'],
+    exclude: ['healthz', 'legal/public/(.*)', 'legal/public', 'metrics'],
   });
   app.useGlobalPipes(
     new ValidationPipe({
