@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/access/access_guard.dart';
+import '../../../../core/access/system_role.dart';
+
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/widgets.dart';
@@ -37,6 +40,11 @@ class StageChecklistTab extends ConsumerWidget {
     final async = ref.watch(stepsControllerProvider(key));
     final locked = display == StageDisplayStatus.pending &&
         stage.foremanIds.isEmpty;
+    // Master имеет step.manage только для своих шагов (rbac.matrix.ts:42).
+    // Создание новых шагов — прерогатива бригадира/customer-owner. Скрываем
+    // кнопку «Добавить шаг» если активная роль — master, чтобы не получать
+    // 403 после тапа.
+    final canAddStep = ref.watch(activeRoleProvider) != SystemRole.master;
 
     return async.when(
       loading: () => const AppLoadingState(),
@@ -52,12 +60,13 @@ class StageChecklistTab extends ConsumerWidget {
               children: [
                 AppEmptyState(
                   title: 'Шагов пока нет',
-                  subtitle:
-                      'Добавьте основной шаг — именно они определяют '
-                      'прогресс этапа.',
+                  subtitle: canAddStep
+                      ? 'Добавьте основной шаг — именно они определяют '
+                          'прогресс этапа.'
+                      : 'Шаги добавит бригадир этого этапа.',
                   icon: Icons.checklist_rounded,
-                  actionLabel: 'Добавить шаг',
-                  onAction: onAddStep,
+                  actionLabel: canAddStep ? 'Добавить шаг' : null,
+                  onAction: canAddStep ? onAddStep : null,
                 ),
               ],
             ),
@@ -96,38 +105,41 @@ class StageChecklistTab extends ConsumerWidget {
                 onTap: () => onStepTap(steps[i]),
                 onToggleDone: () => onToggleStep(steps[i]),
               ),
-            const SizedBox(height: AppSpacing.x8),
-            AppDashedBorder(
-              borderRadius: AppRadius.r16,
-              color: AppColors.brand,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.r16),
-                onTap: locked ? null : onAddStep,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.x14,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_rounded,
-                        color: locked ? AppColors.n300 : AppColors.brand,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Добавить шаг',
-                        style: AppTextStyles.subtitle.copyWith(
-                          fontSize: 13,
+            if (canAddStep) ...[
+              const SizedBox(height: AppSpacing.x8),
+              AppDashedBorder(
+                borderRadius: AppRadius.r16,
+                color: AppColors.brand,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.r16),
+                  onTap: locked ? null : onAddStep,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x14,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_rounded,
                           color: locked ? AppColors.n300 : AppColors.brand,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          'Добавить шаг',
+                          style: AppTextStyles.subtitle.copyWith(
+                            fontSize: 13,
+                            color:
+                                locked ? AppColors.n300 : AppColors.brand,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         );
       },

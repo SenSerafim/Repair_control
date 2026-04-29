@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -54,6 +56,12 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
       _Step.pickType => _TypePicker(
           onPersonal: () => setState(() => _step = _Step.personal),
           onGroup: () => setState(() => _step = _Step.group),
+          // Group-чат может создать только owner / rep.canInviteMembers /
+          // foreman (rbac.matrix.ts:210). Master нажмёт и получит 403 —
+          // прячем опцию заранее.
+          canCreateGroup: ref.watch(
+            canProvider(DomainAction.chatCreateGroup),
+          ),
         ),
       _Step.personal => _PersonalPicker(
           projectId: widget.projectId,
@@ -131,10 +139,15 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
 enum _Step { pickType, personal, group }
 
 class _TypePicker extends StatelessWidget {
-  const _TypePicker({required this.onPersonal, required this.onGroup});
+  const _TypePicker({
+    required this.onPersonal,
+    required this.onGroup,
+    required this.canCreateGroup,
+  });
 
   final VoidCallback onPersonal;
   final VoidCallback onGroup;
+  final bool canCreateGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -164,15 +177,17 @@ class _TypePicker extends StatelessWidget {
             ),
           ),
         ),
-        AppOptionRow(
-          icon: Icons.groups_outlined,
-          iconBg: AppColors.brandLight,
-          iconFg: AppColors.brand,
-          title: 'Групповой чат',
-          subtitle: 'Несколько участников',
-          onTap: onGroup,
-        ),
-        const SizedBox(height: 10),
+        if (canCreateGroup) ...[
+          AppOptionRow(
+            icon: Icons.groups_outlined,
+            iconBg: AppColors.brandLight,
+            iconFg: AppColors.brand,
+            title: 'Групповой чат',
+            subtitle: 'Несколько участников',
+            onTap: onGroup,
+          ),
+          const SizedBox(height: 10),
+        ],
         AppOptionRow(
           icon: Icons.person_outline,
           iconBg: AppColors.greenLight,
