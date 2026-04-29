@@ -53,6 +53,8 @@ export interface BroadcastFilter {
   roles?: string[];
   userIds?: string[];
   projectIds?: string[];
+  platform?: 'ios' | 'android';
+  bannedOnly?: boolean;
 }
 
 export const api = {
@@ -231,4 +233,139 @@ export const api = {
   userSessions: (id: string) => request<any[]>(`/api/admin/users/${id}/sessions`),
   userDevices: (id: string) => request<any[]>(`/api/admin/users/${id}/devices`),
   userProjects: (id: string) => request<any[]>(`/api/admin/users/${id}/projects`),
+
+  // ────────── Files (presigned upload) ──────────
+  presignUpload: (data: {
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    scope: string;
+  }) =>
+    request<{ key: string; uploadUrl: string; expiresAt: string }>('/api/files/presign-upload', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // ────────── Legal Publications (PDF) ──────────
+  listLegalPublications: (kind?: string) =>
+    request<any[]>(`/api/admin/legal-publications${kind ? `?kind=${kind}` : ''}`),
+  getLegalPublication: (id: string) => request<any>(`/api/admin/legal-publications/${id}`),
+  createLegalPublication: (data: {
+    kind: string;
+    slug: string;
+    title: string;
+    fileKey: string;
+    mimeType: string;
+    sizeBytes: number;
+  }) =>
+    request<any>('/api/admin/legal-publications', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateLegalPublication: (
+    id: string,
+    data: { title?: string; fileKey?: string; mimeType?: string; sizeBytes?: number },
+  ) =>
+    request<any>(`/api/admin/legal-publications/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  publishLegalPublication: (id: string) =>
+    request<any>(`/api/admin/legal-publications/${id}/publish`, { method: 'POST' }),
+  deactivateLegalPublication: (id: string) =>
+    request<any>(`/api/admin/legal-publications/${id}`, { method: 'DELETE' }),
+
+  // ────────── Knowledge Base ──────────
+  listKnowledgeCategories: () => request<any[]>('/api/admin/knowledge/categories'),
+  createKnowledgeCategory: (data: {
+    title: string;
+    description?: string;
+    iconKey?: string;
+    scope: 'global' | 'project_module';
+    moduleSlug?: string;
+    orderIndex?: number;
+  }) =>
+    request<any>('/api/admin/knowledge/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateKnowledgeCategory: (
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      iconKey?: string;
+      scope?: 'global' | 'project_module';
+      moduleSlug?: string | null;
+      orderIndex?: number;
+      isPublished?: boolean;
+    },
+  ) =>
+    request<any>(`/api/admin/knowledge/categories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteKnowledgeCategory: (id: string) =>
+    request<{ id: string }>(`/api/admin/knowledge/categories/${id}`, {
+      method: 'DELETE',
+    }),
+  // Public read: список статей категории (admin токен подходит)
+  getKnowledgeCategory: (id: string) => request<any>(`/api/knowledge/categories/${id}`),
+  getKnowledgeArticle: (id: string) => request<any>(`/api/knowledge/articles/${id}`),
+  createKnowledgeArticle: (data: {
+    categoryId: string;
+    title: string;
+    body: string;
+    orderIndex?: number;
+    isPublished?: boolean;
+  }) =>
+    request<any>('/api/admin/knowledge/articles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateKnowledgeArticle: (
+    id: string,
+    data: {
+      title?: string;
+      body?: string;
+      orderIndex?: number;
+      isPublished?: boolean;
+      categoryId?: string;
+    },
+  ) =>
+    request<any>(`/api/admin/knowledge/articles/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteKnowledgeArticle: (id: string) =>
+    request<{ id: string }>(`/api/admin/knowledge/articles/${id}`, {
+      method: 'DELETE',
+    }),
+  confirmKnowledgeAsset: (
+    articleId: string,
+    data: {
+      kind: 'image' | 'video' | 'file';
+      fileKey: string;
+      mimeType: string;
+      sizeBytes: number;
+      durationSec?: number;
+      width?: number;
+      height?: number;
+      caption?: string;
+      orderIndex?: number;
+    },
+  ) =>
+    request<any>(`/api/admin/knowledge/articles/${articleId}/assets`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  setKnowledgeAssetThumbnail: (articleId: string, assetId: string, fileKey: string) =>
+    request<any>(`/api/admin/knowledge/articles/${articleId}/assets/${assetId}/thumbnail`, {
+      method: 'POST',
+      body: JSON.stringify({ fileKey }),
+    }),
+  deleteKnowledgeAsset: (articleId: string, assetId: string) =>
+    request<{ id: string }>(`/api/admin/knowledge/articles/${articleId}/assets/${assetId}`, {
+      method: 'DELETE',
+    }),
 };

@@ -7,6 +7,7 @@ import '../../../core/config/app_theme_mode.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../legal_publications/presentation/legal_publications_sheet.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../application/profile_controller.dart';
 import 'delete_account_sheet.dart';
@@ -167,6 +168,21 @@ class ProfileScreen extends ConsumerWidget {
                           value: 'Telegram',
                           onTap: () =>
                               context.push(AppRoutes.profileFeedback),
+                        ),
+                        AppMenuRow(
+                          icon: PhosphorIconsFill.filePdf,
+                          iconBg: AppColors.brandLight,
+                          iconColor: AppColors.brand,
+                          label: 'Юридические документы',
+                          onTap: () =>
+                              LegalPublicationsSheet.show(context),
+                        ),
+                        AppMenuRow(
+                          icon: PhosphorIconsFill.bookOpen,
+                          iconBg: AppColors.brandLight,
+                          iconColor: AppColors.brand,
+                          label: 'База знаний',
+                          onTap: () => context.push(AppRoutes.knowledge),
                         ),
                       ],
                     ),

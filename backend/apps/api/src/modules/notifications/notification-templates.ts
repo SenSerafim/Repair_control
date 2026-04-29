@@ -132,6 +132,14 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTempla
   membership_added: t('membership_added', 'normal', 'Добавлен в проект', (p) =>
     String(p.projectTitle ?? ''),
   ),
+  admin_announcement: {
+    kind: 'admin_announcement',
+    priority: 'normal',
+    render: (payload) => ({
+      title: String(payload.title ?? 'Объявление'),
+      body: String(payload.body ?? ''),
+    }),
+  },
 };
 
 /** Критичные типы — пользователь не может отключить. */

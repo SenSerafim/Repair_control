@@ -91,7 +91,15 @@ export class AdminService {
 
   async getPublicSettings() {
     // Подмножество безопасных для всех ключей
-    const keys = ['support_telegram_url', 'policy_version', 'tos_version'];
+    const keys = [
+      'support_telegram_url',
+      'support_max_url',
+      'support_vk_url',
+      'support_email',
+      'support_phone',
+      'policy_version',
+      'tos_version',
+    ];
     const rows = await this.prisma.appSetting.findMany({ where: { key: { in: keys } } });
     const out: Record<string, string> = {};
     for (const k of keys) out[k] = rows.find((r) => r.key === k)?.value ?? this.defaultSetting(k);

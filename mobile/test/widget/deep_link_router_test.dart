@@ -3,6 +3,21 @@ import 'package:repair_control/core/push/deep_link_router.dart';
 
 void main() {
   group('DeepLinkRouter.routeFor — push deep-links (ТЗ §15.2)', () {
+    test('admin_announcement без deepLink → /notifications', () {
+      final route = DeepLinkRouter.routeFor({
+        'kind': 'admin_announcement',
+      });
+      expect(route, '/notifications');
+    });
+
+    test('admin_announcement с явным deepLink — следуем по нему', () {
+      final route = DeepLinkRouter.routeFor({
+        'kind': 'admin_announcement',
+        'deepLink': '/projects/abc',
+      });
+      expect(route, '/projects/abc');
+    });
+
     test('approval_* (любой scope) → /projects/:id/approvals/:approvalId', () {
       final route = DeepLinkRouter.routeFor({
         'kind': 'approval_requested',

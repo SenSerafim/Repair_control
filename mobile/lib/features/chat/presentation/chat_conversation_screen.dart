@@ -19,6 +19,7 @@ import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
 import '../domain/chat.dart';
 import '../domain/message.dart';
+import 'chat_attachment_preview_screen.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
   const ChatConversationScreen({required this.chatId, super.key});
@@ -41,8 +42,6 @@ class _ChatConversationScreenState
   void initState() {
     super.initState();
     _input.addListener(_onInputChanged);
-    // Регистрируем чат как «открытый» — FcmService при foreground push'е
-    // подавит local-notification если chatId совпадает.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(currentChatIdProvider.notifier).state = widget.chatId;
@@ -57,12 +56,10 @@ class _ChatConversationScreenState
       ..dispose();
     _typingDebounce?.cancel();
     if (_isTyping) {
-      // Финальный «typing=false» при выходе из чата.
       ref
           .read(socketServiceProvider)
           .typing(widget.chatId, typing: false);
     }
-    // Сбрасываем «открытый чат» если ещё мы.
     final container = ProviderScope.containerOf(context, listen: false);
     if (container.read(currentChatIdProvider) == widget.chatId) {
       container.read(currentChatIdProvider.notifier).state = null;
@@ -76,8 +73,6 @@ class _ChatConversationScreenState
       _isTyping = true;
       ref.read(socketServiceProvider).typing(widget.chatId, typing: true);
     }
-    // Отправляем typing=false если 3 сек тишины (бэк сам отзовёт через 5 сек,
-    // мы же — раньше, чтобы UI у других обновился быстрее).
     _typingDebounce?.cancel();
     _typingDebounce = Timer(const Duration(seconds: 3), () {
       if (_isTyping) {
@@ -89,8 +84,8 @@ class _ChatConversationScreenState
     });
   }
 
-  Future<void> _send({List<String>? attachmentKeys}) async {
-    final text = _input.text.trim();
+  Future<void> _send({String? overrideText, List<String>? attachmentKeys}) async {
+    final text = (overrideText ?? _input.text).trim();
     if (text.isEmpty && (attachmentKeys == null || attachmentKeys.isEmpty)) {
       return;
     }
@@ -102,8 +97,7 @@ class _ChatConversationScreenState
     if (!mounted) return;
     setState(() => _sending = false);
     if (failure == null) {
-      _input.clear();
-      // После успешной отправки — typing=false (если был активен).
+      if (overrideText == null) _input.clear();
       _typingDebounce?.cancel();
       if (_isTyping) {
         _isTyping = false;
@@ -128,31 +122,53 @@ class _ChatConversationScreenState
       ),
     );
     if (picked == null || !mounted) return;
-    await _uploadAndSend(picked);
+    if (picked == _AttachChoice.photo) {
+      await _photoFlow();
+    } else {
+      await _documentFlow();
+    }
   }
 
-  Future<void> _uploadAndSend(_AttachChoice choice) async {
+  Future<void> _photoFlow() async {
+    final picker = ImagePicker();
+    final x = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1920,
+    );
+    if (x == null || !mounted) return;
+    final result = await Navigator.of(context).push<ChatAttachmentResult>(
+      MaterialPageRoute(
+        builder: (_) => ChatAttachmentPreviewScreen(file: File(x.path)),
+      ),
+    );
+    if (result == null || !mounted) return;
+    await _uploadAndSend(
+      file: File(x.path),
+      filename: x.name,
+      caption: result.caption,
+    );
+  }
+
+  Future<void> _documentFlow() async {
+    final picker = ImagePicker();
+    final x = await picker.pickMedia(imageQuality: 80, maxWidth: 1920);
+    if (x == null || !mounted) return;
+    await _uploadAndSend(file: File(x.path), filename: x.name);
+  }
+
+  Future<void> _uploadAndSend({
+    required File file,
+    required String filename,
+    String? caption,
+  }) async {
     setState(() => _sending = true);
     try {
-      final picker = ImagePicker();
-      final x = choice == _AttachChoice.photo
-          ? await picker.pickImage(
-              source: ImageSource.gallery,
-              imageQuality: 80,
-              maxWidth: 1920,
-            )
-          : null;
-      if (x == null) {
-        if (mounted) setState(() => _sending = false);
-        return;
-      }
-      final file = File(x.path);
       final size = await file.length();
-      final name = x.name;
-      final mime = _mimeFromName(name);
+      final mime = _mimeFromName(filename);
       final repo = ref.read(profileRepositoryProvider);
       final presigned = await repo.presignUpload(
-        originalName: name,
+        originalName: filename,
         mimeType: mime,
         sizeBytes: size,
         scope: 'chat_attachment',
@@ -166,7 +182,10 @@ class _ChatConversationScreenState
           headers: {...presigned.headers, 'Content-Type': mime},
         ),
       );
-      await _send(attachmentKeys: [presigned.key]);
+      await _send(
+        overrideText: caption,
+        attachmentKeys: [presigned.key],
+      );
     } catch (e) {
       if (mounted) {
         AppToast.show(
@@ -220,21 +239,52 @@ class _ChatConversationScreenState
                 }
                 final canWrite =
                     ref.watch(canProvider(DomainAction.chatWrite));
+                final isGroupChat = chatAsync.asData != null &&
+                    _isGroupChatTitle(chatAsync.asData!.value);
                 return ListView.builder(
                   reverse: true,
-                  padding: const EdgeInsets.all(AppSpacing.x12),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   itemCount: msgs.length,
-                  itemBuilder: (_, i) => _Bubble(
-                    message: msgs[i],
-                    isMine: msgs[i].authorId == me,
-                    onEdit: canWrite ? () => _promptEdit(msgs[i]) : null,
-                    onDelete: canWrite
-                        ? () => ref
-                            .read(messagesProvider(widget.chatId).notifier)
-                            .delete(msgs[i].id)
-                        : null,
-                    onForward: () => _openForwardSheet(msgs[i]),
-                  ),
+                  itemBuilder: (_, i) {
+                    final msg = msgs[i];
+                    final prev = i + 1 < msgs.length ? msgs[i + 1] : null;
+                    final showDateSeparator = prev == null ||
+                        !_sameDay(prev.createdAt, msg.createdAt);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (showDateSeparator)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Center(
+                              child: Text(
+                                _formatDateSeparator(msg.createdAt),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.n400,
+                                ),
+                              ),
+                            ),
+                          ),
+                        _Bubble(
+                          message: msg,
+                          isMine: msg.authorId == me,
+                          showSenderLabel: isGroupChat && msg.authorId != me,
+                          showForwardAction:
+                              isGroupChat && !msg.isDeleted,
+                          onEdit: canWrite ? () => _promptEdit(msg) : null,
+                          onDelete: canWrite
+                              ? () => ref
+                                  .read(messagesProvider(widget.chatId)
+                                      .notifier)
+                                  .delete(msg.id)
+                              : null,
+                          onForward: () => _openForwardSheet(msg),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
@@ -250,6 +300,29 @@ class _ChatConversationScreenState
         ],
       ),
     );
+  }
+
+  bool _isGroupChatTitle(String title) {
+    // Heuristic: project/stage chats typically have non-personal titles.
+    // Точная инфа в Chat.type, но через заголовок достаточно для отображения
+    // sender-label и forward-action.
+    return title.toLowerCase().contains('чат') ||
+        title.toLowerCase().contains('проект') ||
+        title.toLowerCase().contains('этап');
+  }
+
+  bool _sameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatDateSeparator(DateTime t) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tDate = DateTime(t.year, t.month, t.day);
+    final diff = today.difference(tDate).inDays;
+    if (diff == 0) return 'Сегодня';
+    if (diff == 1) return 'Вчера';
+    return DateFormat('d MMMM y', 'ru').format(t);
   }
 
   Future<void> _promptEdit(Message m) async {
@@ -269,7 +342,7 @@ class _ChatConversationScreenState
             minLines: 2,
             decoration: const InputDecoration(
               filled: true,
-              fillColor: AppColors.n0,
+              fillColor: AppColors.n50,
             ),
           ),
           const SizedBox(height: AppSpacing.x16),
@@ -329,7 +402,6 @@ class _ChatConversationScreenState
   }
 }
 
-/// Lightweight-провайдер для заголовка чата в AppBar.
 final _chatTitleProvider =
     FutureProvider.family.autoDispose<String, String>((ref, chatId) async {
   try {
@@ -352,84 +424,46 @@ class _AttachSheet extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const AppBottomSheetHeader(
-          title: 'Прикрепить',
-          subtitle: 'Выберите тип вложения',
+        const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Прикрепить',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+            ),
+          ),
         ),
-        Row(
-          children: [
-            Expanded(
-              child: _AttachTile(
-                label: 'Фото',
-                icon: Icons.image_outlined,
-                bg: AppColors.brandLight,
-                iconColor: AppColors.brand,
-                onTap: () => onPick(_AttachChoice.photo),
-              ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Выберите тип вложения',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n400,
             ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: _AttachTile(
-                label: 'Документ',
-                icon: Icons.description_outlined,
-                bg: AppColors.greenLight,
-                iconColor: AppColors.greenDot,
-                onTap: () => onPick(_AttachChoice.document),
-              ),
-            ),
-          ],
+          ),
+        ),
+        AppOptionRow(
+          icon: Icons.image_outlined,
+          iconBg: AppColors.brandLight,
+          iconFg: AppColors.brand,
+          title: 'Фото',
+          subtitle: 'Из галереи или камеры',
+          onTap: () => onPick(_AttachChoice.photo),
+        ),
+        const SizedBox(height: 10),
+        AppOptionRow(
+          icon: Icons.description_outlined,
+          iconBg: AppColors.greenLight,
+          iconFg: AppColors.greenDark,
+          title: 'Документ',
+          subtitle: 'PDF, DOCX, изображение',
+          onTap: () => onPick(_AttachChoice.document),
         ),
       ],
-    );
-  }
-}
-
-class _AttachTile extends StatelessWidget {
-  const _AttachTile({
-    required this.label,
-    required this.icon,
-    required this.bg,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color bg;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.r16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x12,
-          vertical: AppSpacing.x16,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.n50,
-          border: Border.all(color: AppColors.n200),
-          borderRadius: BorderRadius.circular(AppRadius.r16),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(height: AppSpacing.x8),
-            Text(label, style: AppTextStyles.subtitle),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -451,9 +485,27 @@ class _ForwardSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AppBottomSheetHeader(
-          title: 'Переслать сообщение',
-          subtitle: 'Выберите чат для пересылки',
+        const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Переслать сообщение',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Выберите чат для пересылки',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n400,
+            ),
+          ),
         ),
         Container(
           padding: const EdgeInsets.all(AppSpacing.x12),
@@ -465,14 +517,23 @@ class _ForwardSheet extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Сообщение',
-                style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.n400,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 preview,
-                style: AppTextStyles.body,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.n700,
+                  height: 1.4,
+                ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -492,52 +553,14 @@ class _ForwardSheet extends StatelessWidget {
         else
           ...chats.map(
             (c) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.x6),
-              child: InkWell(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AppOptionRow(
+                icon: _iconFor(c.type),
+                iconBg: _bgFor(c.type),
+                iconFg: _fgFor(c.type),
+                title: c.title ?? c.type.displayName,
+                subtitle: '${c.type.displayName} · ${c.participants.length} участников',
                 onTap: () => onPick(c.id),
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.x12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.n200, width: 1.5),
-                    borderRadius: BorderRadius.circular(AppRadius.r12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: AppColors.brandLight,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          _iconFor(c.type),
-                          size: 18,
-                          color: AppColors.brand,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.x12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              c.title ?? c.type.displayName,
-                              style: AppTextStyles.subtitle,
-                            ),
-                            Text(
-                              c.type.displayName,
-                              style: AppTextStyles.tiny
-                                  .copyWith(color: AppColors.n500),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -551,12 +574,28 @@ class _ForwardSheet extends StatelessWidget {
         ChatType.personal => Icons.person_outline,
         ChatType.group => Icons.group_outlined,
       };
+
+  Color _bgFor(ChatType t) => switch (t) {
+        ChatType.project => AppColors.brandLight,
+        ChatType.stage => AppColors.yellowBg,
+        ChatType.personal => AppColors.greenLight,
+        ChatType.group => AppColors.purpleBg,
+      };
+
+  Color _fgFor(ChatType t) => switch (t) {
+        ChatType.project => AppColors.brand,
+        ChatType.stage => AppColors.yellowText,
+        ChatType.personal => AppColors.greenDark,
+        ChatType.group => AppColors.purple,
+      };
 }
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
     required this.message,
     required this.isMine,
+    required this.showSenderLabel,
+    required this.showForwardAction,
     required this.onEdit,
     required this.onDelete,
     required this.onForward,
@@ -564,129 +603,92 @@ class _Bubble extends StatelessWidget {
 
   final Message message;
   final bool isMine;
+  final bool showSenderLabel;
+  final bool showForwardAction;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback onForward;
 
-  /// 15-мин окно редактирования (ТЗ §10.2): после истечения сервер вернёт
-  /// CHAT_MESSAGE_EDIT_WINDOW_EXPIRED. На клиенте дублируем UX-гейтом.
   bool get _editWindowOpen =>
       message.canEdit(byUserId: message.authorId, now: DateTime.now());
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isMine ? AppColors.brand : AppColors.n100;
-    final txtColor = isMine ? AppColors.n0 : AppColors.n800;
     final body = message.isDeleted
         ? 'Сообщение удалено'
-        : (message.text ?? (message.hasAttachments ? 'Вложение' : ''));
-    final bubble = GestureDetector(
-      onLongPress: message.isDeleted ? null : () => _showActions(context),
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
-        ),
-        margin: const EdgeInsets.only(bottom: AppSpacing.x6),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x12,
-          vertical: AppSpacing.x8,
-        ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          // Дизайн `Кластер F`: outgoing — острый угол снизу-справа,
-          // incoming — острый угол снизу-слева (классический «хвостик»).
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(AppRadius.r16),
-            topRight: const Radius.circular(AppRadius.r16),
-            bottomLeft: Radius.circular(isMine ? AppRadius.r16 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : AppRadius.r16),
+        : (message.text ??
+            (message.hasAttachments ? 'Вложение' : ''));
+    final time = DateFormat('HH:mm', 'ru').format(message.createdAt);
+    final senderColor = _seedColor(message.authorId);
+
+    final bubbleAndAvatar = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (!isMine) ...[
+          AppAvatar(
+            seed: message.authorId,
+            size: 32,
+          ),
+          const SizedBox(width: 6),
+        ],
+        Flexible(
+          child: AppMessageBubble(
+            text: body.isEmpty ? '—' : body,
+            isMine: isMine,
+            italic: message.isDeleted,
+            dimmed: message.isDeleted,
+            senderLabel:
+                showSenderLabel ? _displaySenderName(message.authorId) : null,
+            senderColor: senderColor,
+            time: time,
+            editedMark: message.isEdited && !message.isDeleted,
+            forwardedLabel: message.isForwarded ? 'Переслано' : null,
+            onLongPress:
+                message.isDeleted ? null : () => _showActions(context),
           ),
         ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (message.isForwarded)
-                Text(
-                  'Переслано',
-                  style: AppTextStyles.tiny.copyWith(
-                    color: txtColor.withValues(alpha: 0.7),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              if (message.hasAttachments && !message.isDeleted)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.attach_file_rounded,
-                        size: 14,
-                        color: txtColor.withValues(alpha: 0.9),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${message.attachmentKeys.length} вложение(й)',
-                        style: AppTextStyles.tiny.copyWith(color: txtColor),
-                      ),
-                    ],
-                  ),
-                ),
-              if (body.isNotEmpty)
-                Text(
-                  body,
-                  style: AppTextStyles.body.copyWith(
-                    color: txtColor,
-                    fontStyle: message.isDeleted
-                        ? FontStyle.italic
-                        : FontStyle.normal,
-                  ),
-                ),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    DateFormat('HH:mm', 'ru').format(message.createdAt),
-                    style: AppTextStyles.tiny.copyWith(
-                      color: txtColor.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  if (message.isEdited) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      'изм.',
-                      style: AppTextStyles.tiny.copyWith(
-                        color: txtColor.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-      ),
+      ],
     );
-    // Incoming сообщения: avatar отправителя (32×32) слева — по дизайну
-    // `Кластер F` chat-conversation. Outgoing: bubble прижат вправо без
-    // аватара (свои сообщения не нуждаются в идентификации).
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment:
+            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          if (!isMine) ...[
-            AppAvatar(
-              seed: message.authorId,
-              size: 32,
+          Align(
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+            child: bubbleAndAvatar,
+          ),
+          if (showForwardAction)
+            Padding(
+              padding: EdgeInsets.only(left: isMine ? 0 : 38),
+              child: AppMessageActions(
+                onForward: onForward,
+                alignToRight: isMine,
+              ),
             ),
-            const SizedBox(width: AppSpacing.x6),
-          ],
-          Flexible(child: bubble),
         ],
       ),
     );
+  }
+
+  /// Стабильный цвет имени отправителя из brand/green/purple/orange/red.
+  Color _seedColor(String userId) {
+    const palette = [
+      AppColors.brand,
+      AppColors.greenDark,
+      AppColors.purple,
+      Color(0xFFD97706),
+      AppColors.redDot,
+    ];
+    return palette[userId.hashCode.abs() % palette.length];
+  }
+
+  String _displaySenderName(String userId) {
+    if (userId.length <= 6) return userId;
+    return '${userId.substring(0, 6)}…';
   }
 
   void _showActions(BuildContext context) {
@@ -695,9 +697,19 @@ class _Bubble extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const AppBottomSheetHeader(title: 'Действия'),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Действия',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n900,
+              ),
+            ),
+          ),
           ListTile(
-            leading: const Icon(Icons.reply_all_rounded),
+            leading: const Icon(Icons.reply_all_rounded, color: AppColors.brand),
             title: const Text('Переслать'),
             onTap: () {
               Navigator.of(context).pop();
@@ -710,7 +722,7 @@ class _Bubble extends StatelessWidget {
                 enabled: _editWindowOpen,
                 leading: Icon(
                   Icons.edit_outlined,
-                  color: _editWindowOpen ? null : AppColors.n400,
+                  color: _editWindowOpen ? AppColors.brand : AppColors.n400,
                 ),
                 title: Text(
                   _editWindowOpen
@@ -729,8 +741,10 @@ class _Bubble extends StatelessWidget {
               ),
             if (onDelete != null)
               ListTile(
-                leading:
-                    const Icon(Icons.delete_outline, color: AppColors.redDot),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.redDot,
+                ),
                 title: const Text(
                   'Удалить',
                   style: TextStyle(color: AppColors.redDot),
@@ -765,17 +779,13 @@ class _ComposeBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.x12,
-          AppSpacing.x8,
-          AppSpacing.x12,
-          AppSpacing.x12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         decoration: const BoxDecoration(
           color: AppColors.n0,
           border: Border(top: BorderSide(color: AppColors.n200)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             InkResponse(
               onTap: sending ? null : onAttach,
@@ -795,34 +805,44 @@ class _ComposeBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.x8),
+            const SizedBox(width: 8),
             Expanded(
-              child: TextField(
-                controller: controller,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: 'Сообщение…',
-                  hintStyle:
-                      AppTextStyles.body.copyWith(color: AppColors.n400),
-                  filled: true,
-                  fillColor: AppColors.n100,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 40),
+                decoration: BoxDecoration(
+                  color: AppColors.n50,
+                  border: Border.all(color: AppColors.n200, width: 1.5),
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                child: TextField(
+                  controller: controller,
+                  minLines: 1,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.newline,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.n900,
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    borderSide: BorderSide.none,
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    hintText: 'Сообщение…',
+                    hintStyle: AppTextStyles.body.copyWith(
+                      color: AppColors.n400,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.x8),
-            AppAnimatedSendButton(
-              onTap: sending ? null : onSend,
+            const SizedBox(width: 8),
+            _SendButton(
               sending: sending,
+              onTap: sending ? null : onSend,
             ),
           ],
         ),
@@ -831,9 +851,44 @@ class _ComposeBar extends StatelessWidget {
   }
 }
 
-/// Узкая полоска «X печатает…» над `_ComposeBar`. Слушает
-/// `typingUsersProvider(chatId)` — он наполняется в MessagesController
-/// из WS-события `presence:typing` и сбрасывается через 5s бездействия.
+class _SendButton extends StatelessWidget {
+  const _SendButton({required this.sending, required this.onTap});
+
+  final bool sending;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: AppGradients.brandButton,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: AppShadows.shBlue,
+        ),
+        alignment: Alignment.center,
+        child: sending
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.n0),
+                ),
+              )
+            : const Icon(
+                Icons.send_rounded,
+                color: AppColors.n0,
+                size: 18,
+              ),
+      ),
+    );
+  }
+}
+
 class _TypingBar extends ConsumerWidget {
   const _TypingBar({required this.chatId, required this.meId});
 
@@ -849,10 +904,7 @@ class _TypingBar extends ConsumerWidget {
         ? 'Печатает…'
         : '${others.length} участника печатают…';
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x16,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       color: AppColors.n50,
       child: Row(
         children: [
@@ -861,12 +913,14 @@ class _TypingBar extends ConsumerWidget {
             height: 12,
             child: CircularProgressIndicator(strokeWidth: 1.5),
           ),
-          const SizedBox(width: AppSpacing.x8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.n500,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.n400,
                 fontStyle: FontStyle.italic,
               ),
             ),

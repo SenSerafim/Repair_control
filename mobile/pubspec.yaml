@@ -80,6 +80,11 @@ dependencies:
   phosphor_flutter: ^2.1.0
   url_launcher: ^6.3.1
 
+  # S18: Knowledge Base
+  flutter_markdown: ^0.7.4
+  video_player: ^2.9.2
+  chewie: ^1.10.0
+
   # Monitoring
   sentry_flutter: ^8.14.0
   logger: ^2.5.0

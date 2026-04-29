@@ -206,6 +206,8 @@ class AppRoutes {
 
   static const notifications = '/notifications';
 
+  static const supportContacts = '/support';
+
   static const methodology = '/methodology';
   static const methodologySearch = '/methodology/search';
   static const methodologySection = '/methodology/sections/:sectionId';
@@ -214,4 +216,15 @@ class AppRoutes {
       '/methodology/sections/$sectionId';
   static String methodologyArticleWith(String articleId) =>
       '/methodology/articles/$articleId';
+
+  static const knowledge = '/knowledge';
+  static const knowledgeSearch = '/knowledge/search';
+  static const knowledgeCategory = '/knowledge/categories/:categoryId';
+  static const knowledgeArticle = '/knowledge/articles/:articleId';
+  static String knowledgeCategoryWith(String categoryId) =>
+      '/knowledge/categories/$categoryId';
+  static String knowledgeArticleWith(String articleId) =>
+      '/knowledge/articles/$articleId';
+  static String knowledgeWithModule(String moduleSlug) =>
+      '/knowledge?moduleSlug=$moduleSlug';
 }

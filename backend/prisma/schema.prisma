@@ -291,6 +291,7 @@ enum NotificationKind {
   // --- NORMAL / system ---
   project_archived
   membership_added
+  admin_announcement
 }
 
 enum NotificationPriority {
@@ -1224,6 +1225,110 @@ model LegalAcceptance {
 
   @@unique([userId, documentId])
   @@index([userId])
+}
+
+// ---------- S18: Legal PDF publications (отдельно от LegalDocument с markdown) ----------
+// LegalDocument — обязательная markdown-форма для acceptance после логина.
+// LegalPublication — опциональные PDF-копии для просмотра/шаринга по публичному
+// URL `/legal/public/<slug>`. Один kind может иметь несколько версий, активная
+// одна (isActive=true). Slug — стабильный человеко-читаемый идентификатор.
+enum LegalPublicationKind {
+  privacy_policy
+  tos
+  data_processing_consent
+  other
+}
+
+model LegalPublication {
+  id            String                @id @default(cuid())
+  kind          LegalPublicationKind
+  slug          String                @unique
+  title         String
+  fileKey       String
+  mimeType      String
+  sizeBytes     Int
+  etag          String                // sha256(file) для If-None-Match на public stream
+  version       Int
+  isActive      Boolean               @default(false)
+  publishedAt   DateTime?
+  publishedById String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([kind, isActive])
+  @@index([kind, version])
+}
+
+// ---------- S18.4: Knowledge Base (категории + статьи + видео/фото/файлы) ----------
+// Аналог methodology, но для пользовательских обучающих материалов. Привязка
+// к проекту/модулю — через `scope='project_module' + moduleSlug`. FTS-индекс
+// searchVector создаётся raw-SQL миграцией (Prisma не управляет GENERATED-колонкой).
+enum KnowledgeCategoryScope {
+  global
+  project_module
+}
+
+enum KnowledgeAssetKind {
+  image
+  video
+  file
+}
+
+model KnowledgeCategory {
+  id          String                  @id @default(cuid())
+  title       String
+  description String?
+  iconKey     String?                  // имя phosphor-иконки для UI
+  scope       KnowledgeCategoryScope   @default(global)
+  moduleSlug  String?                  // 'stages'|'approvals'|'finance'|... если scope=project_module
+  orderIndex  Int                      @default(0)
+  isPublished Boolean                  @default(true)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  articles KnowledgeArticle[]
+
+  @@index([scope, orderIndex])
+  @@index([moduleSlug])
+}
+
+model KnowledgeArticle {
+  id          String   @id @default(cuid())
+  categoryId  String
+  title       String
+  body        String   @db.Text
+  etag        String                   // sha256(title+body+sorted asset fileKeys)
+  version     Int      @default(1)
+  isPublished Boolean  @default(true)
+  orderIndex  Int      @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category KnowledgeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  assets   KnowledgeAsset[]
+
+  @@index([categoryId, orderIndex])
+}
+
+model KnowledgeAsset {
+  id          String              @id @default(cuid())
+  articleId   String
+  kind        KnowledgeAssetKind
+  fileKey     String
+  mimeType    String
+  sizeBytes   Int
+  durationSec Int?
+  width       Int?
+  height      Int?
+  thumbKey    String?               // для video — manual upload, ffmpeg отложен
+  caption     String?
+  orderIndex  Int                   @default(0)
+  createdAt   DateTime              @default(now())
+
+  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, orderIndex])
 }
 
 enum BroadcastStatus {

@@ -23,6 +23,17 @@ class DeepLinkRouter {
     // Backend posts both `jobId` (legacy) и `exportId` (новое).
     final exportId = s(data['exportId'] ?? data['jobId']);
     final projectId = s(data['projectId']);
+    final deepLink = s(data['deepLink']);
+
+    // Admin broadcast: deep-link приходит явно, либо открываем ленту уведомлений.
+    // Валидируем deepLink — принимаем только относительные пути от корня (`/...`),
+    // защита от javascript:/file://schemes и абсолютных URL на сторонние хосты.
+    if (kind == 'admin_announcement') {
+      if (deepLink != null && deepLink.startsWith('/')) {
+        return deepLink;
+      }
+      return '/notifications';
+    }
 
     // Global-level routes without project context.
     if (paymentId != null) return '/payments/$paymentId';
@@ -76,6 +87,7 @@ class DeepLinkRouter {
       return NotificationRoute.stage;
     }
     if (kind.startsWith('export_')) return NotificationRoute.export;
+    if (kind == 'admin_announcement') return NotificationRoute.announcement;
     return NotificationRoute.other;
   }
 }
@@ -88,5 +100,6 @@ enum NotificationRoute {
   stage,
   document,
   export,
+  announcement,
   other,
 }

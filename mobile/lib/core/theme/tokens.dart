@@ -329,6 +329,20 @@ class AppGradients {
     colors: [AppColors.brand, AppColors.brandDark],
   );
 
+  /// Plan-info-card в `d-plan-approval`: тёмный navy → brand.
+  static const LinearGradient planInfo = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF1E3A5F), AppColors.brand],
+  );
+
+  /// Question-карточка в `d-question-reply`: purple-light → purple-mid.
+  static const LinearGradient questionPurple = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.purpleBg, Color(0xFFDDD6FE)],
+  );
+
   /// 5 палитр для AppAvatar — соответствуют CSS g1-blue/g2-green/g3-purple/g4-yellow/g5-grey.
   static const LinearGradient avatarBlue = LinearGradient(
     begin: Alignment.topLeft,
@@ -360,6 +374,14 @@ class AppGradients {
     colors: [Color(0xFF94A3B8), Color(0xFF64748B)],
   );
 
+  /// Оранжевая палитра — 6-я для аватаров (используется в Cluster F:
+  /// Сидоров В. в `f-chats`, deadlines/payment-warning notifications).
+  static const LinearGradient avatarOrange = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+  );
+
   /// Маппинг seed → palette (для детерминированного выбора по userId / name).
   static LinearGradient avatarFor(int seed) {
     const palettes = [
@@ -367,8 +389,17 @@ class AppGradients {
       avatarGreen,
       avatarPurple,
       avatarYellow,
+      avatarOrange,
       avatarGrey,
     ];
     return palettes[seed.abs() % palettes.length];
   }
+
+  /// Outgoing message bubble (135°) — `f-chat-conversation` / `f-chat-project`.
+  /// Чуть ярче `brandButton` для контраста с brand-text-buttons и input-кнопок.
+  static const LinearGradient bubbleOut = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF5B7EF8), Color(0xFF3A56D4)],
+  );
 }

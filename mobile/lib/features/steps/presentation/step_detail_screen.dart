@@ -16,10 +16,15 @@ import '../domain/question.dart';
 import '../domain/step.dart';
 import '../domain/step_photo.dart';
 import '../domain/substep.dart';
+import '../../approvals/data/approvals_repository.dart';
+import '../../stages/application/stages_controller.dart';
 import 'add_photo_sheet.dart';
 import 'add_substep_sheet.dart';
 import 'ask_question_sheet.dart';
+import 'extra_work_sheet.dart';
 import 'step_widgets.dart';
+import '_widgets/step_breadcrumb.dart';
+import '_widgets/step_mini_menu.dart';
 
 /// c-step-detail / s-step-active / s-step-done:
 /// хедер + чек-лист substeps + секция photos + секция questions.
@@ -44,11 +49,35 @@ class StepDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(stepDetailProvider(_key));
+    final stagesAsync = ref.watch(stagesControllerProvider(projectId));
+    final stepsAsync = ref.watch(stepsControllerProvider(
+      StepsKey(projectId: projectId, stageId: stageId),
+    ));
+    final stage = stagesAsync.maybeWhen(
+      data: (list) {
+        for (final s in list) {
+          if (s.id == stageId) return s;
+        }
+        return null;
+      },
+      orElse: () => null,
+    );
+    final allSteps = stepsAsync.maybeWhen(
+      data: (s) => s,
+      orElse: () => const [],
+    );
 
     return AppScaffold(
       showBack: true,
       title: 'Шаг',
       padding: EdgeInsets.zero,
+      actions: [
+        IconButton(
+          tooltip: 'Действия',
+          icon: const Icon(Icons.more_vert_rounded),
+          onPressed: () => _openMiniMenu(context, ref),
+        ),
+      ],
       body: async.when(
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
@@ -56,14 +85,23 @@ class StepDetailScreen extends ConsumerWidget {
           onRetry: () =>
               ref.read(stepDetailProvider(_key).notifier).refresh(),
         ),
-        data: (data) => RefreshIndicator(
-          onRefresh: () =>
-              ref.read(stepDetailProvider(_key).notifier).refresh(),
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            children: [
-              _Header(step: data.step),
-              const SizedBox(height: AppSpacing.x20),
+        data: (data) {
+          final stepIdx = allSteps.indexWhere((s) => s.id == stepId);
+          final stepNumber = stepIdx >= 0 ? stepIdx + 1 : 1;
+          return RefreshIndicator(
+            onRefresh: () =>
+                ref.read(stepDetailProvider(_key).notifier).refresh(),
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.x16),
+              children: [
+                StepBreadcrumb(
+                  stepNumber: stepNumber,
+                  totalSteps: allSteps.isEmpty ? 1 : allSteps.length,
+                  stageTitle: stage?.title ?? '',
+                ),
+                const SizedBox(height: AppSpacing.x12),
+                _Header(step: data.step),
+                const SizedBox(height: AppSpacing.x20),
               _SubstepsSection(
                 detailKey: _key,
                 substeps: data.substeps,
@@ -81,9 +119,53 @@ class StepDetailScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x16),
             ],
           ),
+        );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openMiniMenu(BuildContext context, WidgetRef ref) async {
+    await showAppBottomSheet<void>(
+      context: context,
+      child: StepMiniMenu(
+        onAddSubstep: () => showAddSubstepSheet(
+          context,
+          ref,
+          key: _key,
+        ),
+        onAddPhoto: () => showAddPhotoSheet(
+          context,
+          ref,
+          key: _key,
+        ),
+        onAskQuestion: () => showAskQuestionSheet(
+          context,
+          ref,
+          detailKey: _key,
+        ),
+        onSendForApproval: () => _sendForApproval(context, ref),
+        onExtraWork: () => showExtraWorkSheet(
+          context,
+          ref,
+          projectId: projectId,
+          stageId: stageId,
         ),
       ),
     );
+  }
+
+  Future<void> _sendForApproval(BuildContext context, WidgetRef ref) async {
+    // Полный workflow «Отправить на согласование» зависит от данных
+    // о project owner / addresseeId; делегируем в существующий
+    // approval_sheets flow если он отсутствует, показываем подсказку.
+    if (context.mounted) {
+      AppToast.show(
+        context,
+        message: 'Используйте действия проекта → Согласования → Создать',
+        kind: AppToastKind.info,
+      );
+    }
   }
 }
 

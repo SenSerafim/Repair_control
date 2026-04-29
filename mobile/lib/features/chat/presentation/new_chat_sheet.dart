@@ -142,91 +142,46 @@ class _TypePicker extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AppBottomSheetHeader(
-          title: 'Новый чат',
-          subtitle: 'Какой чат хотите создать?',
+        const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Новый чат',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+            ),
+          ),
         ),
-        _TypeTile(
-          icon: Icons.person_outline,
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Выберите тип чата',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n400,
+            ),
+          ),
+        ),
+        AppOptionRow(
+          icon: Icons.groups_outlined,
           iconBg: AppColors.brandLight,
-          iconColor: AppColors.brand,
+          iconFg: AppColors.brand,
+          title: 'Групповой чат',
+          subtitle: 'Несколько участников',
+          onTap: onGroup,
+        ),
+        const SizedBox(height: 10),
+        AppOptionRow(
+          icon: Icons.person_outline,
+          iconBg: AppColors.greenLight,
+          iconFg: AppColors.greenDark,
           title: 'Личный чат',
           subtitle: 'С одним участником проекта',
           onTap: onPersonal,
         ),
-        const SizedBox(height: AppSpacing.x8),
-        _TypeTile(
-          icon: Icons.groups_outlined,
-          iconBg: AppColors.greenLight,
-          iconColor: AppColors.greenDark,
-          title: 'Группа',
-          subtitle: 'Несколько участников + название',
-          onTap: onGroup,
-        ),
       ],
-    );
-  }
-}
-
-class _TypeTile extends StatelessWidget {
-  const _TypeTile({
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.r16),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x14),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.n200),
-          borderRadius: BorderRadius.circular(AppRadius.r16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              alignment: Alignment.center,
-              child: Icon(icon, size: 20, color: iconColor),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.subtitle),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style:
-                        AppTextStyles.caption.copyWith(color: AppColors.n400),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
-          ],
-        ),
-      ),
     );
   }
 }

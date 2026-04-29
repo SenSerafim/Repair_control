@@ -6188,8 +6188,8 @@
   },
   "info": {
     "title": "Repair Control API",
-    "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта (Cluster A): DELETE /api/me, DELETE /api/tools/{id}, GET /api/faq/{id}.",
-    "version": "1.1.0",
+    "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта Cluster A; v1.2 (S18) — Knowledge Base, Legal PDF publications, контакты поддержки, broadcast по платформе.",
+    "version": "1.2.0",
     "contact": {}
   },
   "tags": [],

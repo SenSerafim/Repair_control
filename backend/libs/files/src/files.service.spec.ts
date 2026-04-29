@@ -88,6 +88,79 @@ describe('FilesService.validate', () => {
   });
 });
 
+describe('FilesService.validate с per-scope policy', () => {
+  const buildWithPolicies = () => {
+    const config: MinioConfig = {
+      endPoint: 'localhost',
+      port: 9000,
+      useSSL: false,
+      accessKey: 'a',
+      secretKey: 'b',
+      bucket: 'test',
+      presignTtlSeconds: 300,
+      region: 'us-east-1',
+      pathStyle: true,
+    };
+    const minio = {} as any;
+    return new FilesService(minio, config, ['image/jpeg'], 10, [
+      {
+        prefix: 'knowledge/',
+        allowedMimes: ['image/jpeg', 'image/png', 'video/mp4'],
+        maxSizeMb: 200,
+      },
+      { prefix: 'legal/', allowedMimes: ['application/pdf'], maxSizeMb: 25 },
+    ]);
+  };
+
+  it('knowledge/* пропускает video/mp4 до 200 MB', () => {
+    const service = buildWithPolicies();
+    expect(() =>
+      service.validate({
+        originalName: 'lesson.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 150 * 1024 * 1024,
+        scope: 'knowledge/articles/abc',
+      }),
+    ).not.toThrow();
+  });
+
+  it('knowledge/* отклоняет video > 200 MB', () => {
+    const service = buildWithPolicies();
+    expect(() =>
+      service.validate({
+        originalName: 'big.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 250 * 1024 * 1024,
+        scope: 'knowledge/articles/abc',
+      }),
+    ).toThrow(InvalidInputError);
+  });
+
+  it('legal/* отклоняет всё кроме PDF', () => {
+    const service = buildWithPolicies();
+    expect(() =>
+      service.validate({
+        originalName: 'doc.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        sizeBytes: 1024,
+        scope: 'legal/privacy',
+      }),
+    ).toThrow(InvalidInputError);
+  });
+
+  it('default scope не получает knowledge-привилегий (video отвергается)', () => {
+    const service = buildWithPolicies();
+    expect(() =>
+      service.validate({
+        originalName: 'x.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 1024,
+        scope: 'avatars',
+      }),
+    ).toThrow(InvalidInputError);
+  });
+});
+
 describe('FilesService.buildKey', () => {
   it('содержит scope и расширение, отражающее mime', () => {
     const { service } = buildService();

@@ -38,6 +38,8 @@ import { AdminUsersModule } from './modules/admin-users/admin-users.module';
 import { AdminProjectsModule } from './modules/admin-projects/admin-projects.module';
 import { AdminOverviewModule } from './modules/admin-overview/admin-overview.module';
 import { LegalModule } from './modules/legal/legal.module';
+import { LegalPublicationsModule } from './modules/legal-publications/legal-publications.module';
+import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 
 @Module({
@@ -88,6 +90,8 @@ import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
     AdminProjectsModule,
     AdminOverviewModule,
     LegalModule,
+    LegalPublicationsModule,
+    KnowledgeModule,
     BroadcastsModule,
   ],
 })

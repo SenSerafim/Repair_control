@@ -300,6 +300,14 @@ export class StagesService {
     if (!reason) {
       throw new InvalidInputError(ErrorCodes.STAGE_PAUSE_REQUIRES_REASON, 'reason is required');
     }
+    // ТЗ §4.2 + дизайн c-pause-other: при reason='other' комментарий обязателен,
+    // т.к. иначе заказчик не увидит причину паузы.
+    if (reason === 'other' && !comment?.trim()) {
+      throw new InvalidInputError(
+        ErrorCodes.STAGE_PAUSE_COMMENT_REQUIRED,
+        'comment is required when reason=other',
+      );
+    }
     return this.transition(stageId, actorUserId, 'pause', async (stage, tx) => {
       await tx.pause.create({
         data: {

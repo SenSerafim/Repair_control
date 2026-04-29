@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
@@ -48,7 +50,12 @@ class ApprovalDetailScreen extends ConsumerWidget {
                   onRefresh: () async =>
                       ref.invalidate(approvalDetailProvider(approvalId)),
                   child: ListView(
-                    padding: const EdgeInsets.all(AppSpacing.x16),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.x16,
+                      AppSpacing.x12,
+                      AppSpacing.x16,
+                      AppSpacing.x24,
+                    ),
                     children: [
                       Hero(
                         tag: 'approval-${approval.id}',
@@ -67,25 +74,19 @@ class ApprovalDetailScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x12),
                         _RequiresReassignBanner(approval: approval),
                       ],
-                      const SizedBox(height: AppSpacing.x16),
+                      const SizedBox(height: AppSpacing.x20),
                       _ScopeBody(approval: approval),
                       if (approval.decisionComment?.isNotEmpty ??
                           false) ...[
                         const SizedBox(height: AppSpacing.x16),
                         _DecisionBlock(approval: approval),
                       ],
-                      const SizedBox(height: AppSpacing.x16),
                       if (approval.attempts.isNotEmpty) ...[
-                        const Text(
-                          'История',
-                          style: AppTextStyles.h2,
-                        ),
-                        const SizedBox(height: AppSpacing.x8),
-                        ApprovalAttemptsList(
-                          attempts: approval.attempts,
-                        ),
+                        const SizedBox(height: AppSpacing.x20),
+                        const Text('История', style: AppTextStyles.h2),
+                        const SizedBox(height: AppSpacing.x10),
+                        ApprovalAttemptsList(attempts: approval.attempts),
                       ],
-                      const SizedBox(height: AppSpacing.x24),
                     ],
                   ),
                 ),
@@ -106,83 +107,86 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: approval.status.semaphore.bg,
-                  borderRadius: BorderRadius.circular(AppRadius.r12),
-                ),
-                child: Icon(
-                  approval.scope.icon,
-                  color: approval.status.semaphore.text,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      approval.scope.displayName,
-                      style: AppTextStyles.h2,
-                    ),
-                    Text(
-                      approval.scope.shortHint,
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ),
-              if (approval.attemptNumber > 1)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.n100,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Text(
-                    '#${approval.attemptNumber}',
-                    style: AppTextStyles.caption,
-                  ),
-                ),
-            ],
+    final tone = _toneFor(approval.scope);
+    final df = DateFormat('d MMMM y', 'ru');
+    final categoryRaw = approval.payload['category'];
+    final category =
+        categoryRaw is String && categoryRaw.trim().isNotEmpty
+            ? categoryRaw
+            : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ScopeBadge(label: approval.scope.displayName, tone: tone),
+            if (category != null)
+              ScopeBadge(label: category, tone: ScopeBadgeTone.category),
+            AttemptBadge(attemptNumber: approval.attemptNumber),
+            Text(
+              df.format(approval.createdAt),
+              style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.x10),
+        Text(
+          _titleFor(approval),
+          style: AppTextStyles.h1.copyWith(
+            fontSize: 20,
+            color: AppColors.n900,
           ),
-          const SizedBox(height: AppSpacing.x12),
-          Row(
-            children: [
-              StatusPill(
-                label: approval.status.displayName,
-                semaphore: approval.status.semaphore,
-              ),
-              const SizedBox(width: AppSpacing.x8),
-              Text(
-                DateFormat('d MMM HH:mm', 'ru').format(approval.createdAt),
-                style: AppTextStyles.caption,
-              ),
-            ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _subtitleFor(approval),
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.n500,
+            height: 1.6,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
+
+String _titleFor(Approval a) {
+  final raw = a.payload['title'];
+  if (raw is String && raw.trim().isNotEmpty) return raw;
+  return switch (a.scope) {
+    ApprovalScope.plan => 'Согласование плана работ',
+    ApprovalScope.step => a.scope.displayName,
+    ApprovalScope.extraWork => 'Дополнительная работа',
+    ApprovalScope.deadlineChange => 'Перенос дедлайна',
+    ApprovalScope.stageAccept => 'Приёмка этапа',
+  };
+}
+
+String _subtitleFor(Approval a) {
+  return switch (a.scope) {
+    ApprovalScope.plan => 'Бригадир предложил план — проверьте этапы и сроки.',
+    ApprovalScope.step =>
+      'Подрядчик отправил шаг на согласование. Проверьте фото и комментарий.',
+    ApprovalScope.extraWork =>
+      'Бригадир запрашивает работу сверх плана. Подтвердите включение в бюджет.',
+    ApprovalScope.deadlineChange =>
+      'Бригадир просит сдвинуть дату завершения этапа.',
+    ApprovalScope.stageAccept =>
+      'Бригадир сдаёт этап на приёмку. Сверьте результат с задачей.',
+  };
+}
+
+ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
+      ApprovalScope.step => ScopeBadgeTone.step,
+      ApprovalScope.extraWork => ScopeBadgeTone.extraWork,
+      ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
+      ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
+      ApprovalScope.plan => ScopeBadgeTone.plan,
+    };
 
 class _DecisionBlock extends StatelessWidget {
   const _DecisionBlock({required this.approval});
@@ -192,23 +196,26 @@ class _DecisionBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isApproved = approval.status == ApprovalStatus.approved;
-    final color = isApproved ? AppColors.greenDark : AppColors.redDot;
+    final bg = isApproved ? AppColors.greenLight : AppColors.redBg;
+    final fg = isApproved ? AppColors.greenDark : AppColors.redText;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: bg,
         borderRadius: AppRadius.card,
-        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             isApproved ? 'Комментарий одобрившего' : 'Причина отказа',
-            style: AppTextStyles.subtitle.copyWith(color: color),
+            style: AppTextStyles.subtitle.copyWith(color: fg),
           ),
           const SizedBox(height: 6),
-          Text(approval.decisionComment!, style: AppTextStyles.body),
+          Text(
+            approval.decisionComment!,
+            style: AppTextStyles.body.copyWith(height: 1.6),
+          ),
         ],
       ),
     );
@@ -238,6 +245,223 @@ class _ScopeBody extends StatelessWidget {
   }
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Подобщие виджеты body
+// ──────────────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontFamily: 'Manrope',
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: AppColors.n400,
+        letterSpacing: 0.5,
+        height: 1.2,
+      ),
+    );
+  }
+}
+
+class _CommentBox extends StatelessWidget {
+  const _CommentBox({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: AppColors.n50,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: 'Manrope',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.n700,
+          height: 1.6,
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailPhotoGrid extends StatelessWidget {
+  const _DetailPhotoGrid({
+    required this.attachments,
+    required this.columns,
+  });
+
+  final List<ApprovalAttachment> attachments;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    if (attachments.isEmpty) {
+      return Container(
+        height: 120,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.n50,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+          border: Border.all(color: AppColors.n200),
+        ),
+        child: Text(
+          'Фото не приложено',
+          style: AppTextStyles.caption.copyWith(color: AppColors.n400),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: attachments.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemBuilder: (_, i) {
+        final url = attachments[i].thumbUrl ?? attachments[i].url;
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.n100,
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: url == null
+              ? const Center(
+                  child: Icon(
+                    Icons.image_outlined,
+                    color: AppColors.n400,
+                  ),
+                )
+              : CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.n400,
+                  ),
+                ),
+        );
+      },
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Step
+// ──────────────────────────────────────────────────────────────────────
+
+class _StepBody extends StatelessWidget {
+  const _StepBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final comment = approval.payload['comment'] as String?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionLabel('Фото'),
+        const SizedBox(height: AppSpacing.x8),
+        _DetailPhotoGrid(attachments: approval.attachments, columns: 3),
+        if (comment != null && comment.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Комментарий'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: comment),
+        ],
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Extra Work
+// ──────────────────────────────────────────────────────────────────────
+
+class _ExtraBody extends StatelessWidget {
+  const _ExtraBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final price = approval.extraPrice;
+    final description = approval.extraDescription;
+    final qty = approval.payload['quantity'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            color: AppColors.purpleBg,
+            borderRadius: AppRadius.card,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Стоимость',
+                style: AppTextStyles.tiny.copyWith(color: AppColors.purple),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                price == null ? '—' : Money.format(price),
+                style: AppTextStyles.h1.copyWith(
+                  fontSize: 26,
+                  color: AppColors.purple,
+                ),
+              ),
+              if (qty != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Количество: $qty',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.purple,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (description != null && description.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Описание'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: description),
+        ],
+        if (approval.attachments.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Фото'),
+          const SizedBox(height: AppSpacing.x8),
+          _DetailPhotoGrid(attachments: approval.attachments, columns: 2),
+        ],
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Plan
+// ──────────────────────────────────────────────────────────────────────
+
 class _PlanBody extends StatelessWidget {
   const _PlanBody({required this.approval});
 
@@ -246,35 +470,112 @@ class _PlanBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stages = approval.planStages;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('План этапов', style: AppTextStyles.h2),
-          const SizedBox(height: AppSpacing.x8),
-          if (stages.isEmpty)
-            const Text(
-              'В payload нет списка этапов — согласуется план в целом.',
-              style: AppTextStyles.caption,
-            )
-          else
-            for (var i = 0; i < stages.length; i++) ...[
-              _PlanStageRow(
-                index: i + 1,
-                data: stages[i],
+    final totalDays = _totalDays(stages);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            gradient: AppGradients.planInfo,
+            borderRadius: AppRadius.card,
+            boxShadow: AppShadows.shBlue,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.description_outlined,
+                color: AppColors.n0,
+                size: 22,
               ),
-              if (i < stages.length - 1)
-                const Divider(height: AppSpacing.x16, color: AppColors.n100),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Бригадир предложил план',
+                      style: AppTextStyles.subtitle.copyWith(
+                        color: AppColors.n0,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      stages.isEmpty
+                          ? 'Согласуется план в целом'
+                          : '${stages.length} ${_plural(stages.length, 'этап', 'этапа', 'этапов')}'
+                              '${totalDays != null ? ' · $totalDays дней' : ''}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.n0.withValues(alpha: 0.85),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+          ),
+        ),
+        if (stages.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Предложенные этапы'),
+          const SizedBox(height: AppSpacing.x8),
+          for (var i = 0; i < stages.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.x8),
+            _PlanStageRow(index: i + 1, data: stages[i]),
+          ],
+          const SizedBox(height: AppSpacing.x16),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x14),
+            decoration: BoxDecoration(
+              color: AppColors.brandLight,
+              borderRadius: AppRadius.card,
+            ),
+            child: Row(
+              children: [
+                Text(
+                  'Итого',
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.brand,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${stages.length} ${_plural(stages.length, "этап", "этапа", "этапов")}'
+                  '${totalDays != null ? " · $totalDays дней" : ""}',
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.brand,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
+      ],
     );
+  }
+
+  int? _totalDays(List<Map<String, dynamic>> stages) {
+    var total = 0;
+    var any = false;
+    for (final s in stages) {
+      final start = s['plannedStart'];
+      final end = s['plannedEnd'];
+      if (start is String && end is String) {
+        final ds = DateTime.tryParse(start);
+        final de = DateTime.tryParse(end);
+        if (ds != null && de != null) {
+          total += de.difference(ds).inDays;
+          any = true;
+        }
+      }
+    }
+    return any ? total : null;
   }
 }
 
@@ -289,101 +590,82 @@ class _PlanStageRow extends StatelessWidget {
     final title = data['title']?.toString() ?? 'Этап $index';
     final start = data['plannedStart']?.toString();
     final end = data['plannedEnd']?.toString();
+    final df = DateFormat('d MMM', 'ru');
     final dateLine = [
-      if (start != null) DateFormat('d MMM', 'ru').format(DateTime.parse(start)),
-      if (end != null) DateFormat('d MMM', 'ru').format(DateTime.parse(end)),
+      if (start != null) df.format(DateTime.parse(start)),
+      if (end != null) df.format(DateTime.parse(end)),
     ].join(' — ');
-    return Row(
-      children: [
-        Container(
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.brandLight,
-            borderRadius: BorderRadius.circular(AppRadius.r8),
-          ),
-          child: Text(
-            '$index',
-            style: AppTextStyles.micro.copyWith(color: AppColors.brand),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.x10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.subtitle),
-              if (dateLine.isNotEmpty)
-                Text(dateLine, style: AppTextStyles.caption),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
+    final stepCount = data['stepCount'];
 
-class _StepBody extends StatelessWidget {
-  const _StepBody({required this.approval});
-
-  final Approval approval;
-
-  @override
-  Widget build(BuildContext context) {
-    return _InfoCard(
-      title: 'Отметка шага',
-      hint: approval.stepId == null
-          ? 'Шаг не привязан'
-          : 'ID: ${approval.stepId}',
-    );
-  }
-}
-
-class _ExtraBody extends StatelessWidget {
-  const _ExtraBody({required this.approval});
-
-  final Approval approval;
-
-  @override
-  Widget build(BuildContext context) {
-    final price = approval.extraPrice;
-    final description = approval.extraDescription;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
+      padding: const EdgeInsets.all(AppSpacing.x12),
       decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
+        color: AppColors.n100,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Text('Доп.работа', style: AppTextStyles.h2),
-          const SizedBox(height: AppSpacing.x10),
-          Row(
-            children: [
-              const Icon(
-                Icons.payments_outlined,
-                color: AppColors.purple,
-                size: 20,
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.n0,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$index',
+              style: AppTextStyles.tiny.copyWith(
+                color: AppColors.n700,
+                fontSize: 12,
               ),
-              const SizedBox(width: AppSpacing.x8),
-              Text(
-                price == null ? '—' : Money.format(price),
-                style: AppTextStyles.h1.copyWith(color: AppColors.purple),
-              ),
-            ],
+            ),
           ),
-          if (description != null && description.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.x12),
-            Text(description, style: AppTextStyles.body),
-          ],
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.subtitle.copyWith(
+                    fontSize: 13,
+                    color: AppColors.n800,
+                  ),
+                ),
+                if (dateLine.isNotEmpty || stepCount != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      if (stepCount != null) '$stepCount шагов',
+                      if (dateLine.isNotEmpty) dateLine,
+                    ].join(' · '),
+                    style: AppTextStyles.tiny.copyWith(
+                      fontSize: 11,
+                      color: AppColors.n500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
+String _plural(int n, String one, String few, String many) {
+  final mod10 = n % 10;
+  final mod100 = n % 100;
+  if (mod10 == 1 && mod100 != 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Deadline change
+// ──────────────────────────────────────────────────────────────────────
 
 class _DeadlineBody extends StatelessWidget {
   const _DeadlineBody({required this.approval});
@@ -393,14 +675,140 @@ class _DeadlineBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final newEnd = approval.newEnd;
-    return _InfoCard(
-      title: 'Перенос дедлайна',
-      hint: newEnd == null
-          ? 'Новая дата не указана'
-          : 'Новая дата: ${DateFormat('d MMMM y', 'ru').format(newEnd)}',
+    final oldEndRaw = approval.payload['oldEnd'];
+    final oldEnd =
+        oldEndRaw is String ? DateTime.tryParse(oldEndRaw) : null;
+    final reason = approval.payload['reason'] as String?;
+    final df = DateFormat('d MMMM', 'ru');
+    final delta = (oldEnd != null && newEnd != null)
+        ? newEnd.difference(oldEnd).inDays
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _DateChip(
+                label: 'Текущий',
+                value: oldEnd == null ? '—' : df.format(oldEnd),
+                tone: _DateTone.danger,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.n400,
+              ),
+            ),
+            Expanded(
+              child: _DateChip(
+                label: 'Новый',
+                value: newEnd == null ? '—' : df.format(newEnd),
+                tone: _DateTone.success,
+              ),
+            ),
+          ],
+        ),
+        if (delta != null) ...[
+          const SizedBox(height: AppSpacing.x12),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x12,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.yellowBg,
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.schedule_rounded,
+                  color: AppColors.yellowText,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${delta >= 0 ? '+' : ''}$delta '
+                  '${_plural(delta.abs(), "день", "дня", "дней")}',
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.yellowText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (reason != null && reason.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Причина'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: reason),
+        ],
+      ],
     );
   }
 }
+
+enum _DateTone { danger, success }
+
+class _DateChip extends StatelessWidget {
+  const _DateChip({
+    required this.label,
+    required this.value,
+    required this.tone,
+  });
+
+  final String label;
+  final String value;
+  final _DateTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg =
+        tone == _DateTone.danger ? AppColors.redBg : AppColors.greenLight;
+    final fg =
+        tone == _DateTone.danger ? AppColors.redText : AppColors.greenDark;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.tiny.copyWith(
+              color: fg,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTextStyles.subtitle.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Stage accept
+// ──────────────────────────────────────────────────────────────────────
 
 class _StageAcceptBody extends StatelessWidget {
   const _StageAcceptBody({required this.approval});
@@ -409,42 +817,76 @@ class _StageAcceptBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final photos = approval.acceptPhotoCount ?? 0;
-    return _InfoCard(
-      title: 'Приёмка этапа',
-      hint: photos > 0
-          ? 'Этап готов · $photos фото к приёмке'
-          : 'Этап готов · без фото',
-    );
-  }
-}
+    final comment = approval.payload['comment'] as String?;
+    final prevReject = _previousRejection(approval);
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.title, required this.hint});
-
-  final String title;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x16),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.h2),
-          const SizedBox(height: 6),
-          Text(hint, style: AppTextStyles.body),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (prevReject != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x14),
+            decoration: BoxDecoration(
+              color: AppColors.redBg,
+              borderRadius: AppRadius.card,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: AppColors.redDot,
+                  size: 18,
+                ),
+                const SizedBox(width: AppSpacing.x10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Прошлое отклонение',
+                        style: AppTextStyles.subtitle
+                            .copyWith(color: AppColors.redText),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        prevReject,
+                        style: AppTextStyles.body.copyWith(height: 1.6),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x16),
         ],
-      ),
+        const _SectionLabel('Фото к приёмке'),
+        const SizedBox(height: AppSpacing.x8),
+        _DetailPhotoGrid(attachments: approval.attachments, columns: 2),
+        if (comment != null && comment.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Комментарий бригадира'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: comment),
+        ],
+      ],
     );
   }
+
+  String? _previousRejection(Approval a) {
+    if (a.attemptNumber <= 1) return null;
+    final rejected = a.attempts
+        .where((x) => x.action == 'rejected' && (x.comment ?? '').isNotEmpty)
+        .toList()
+      ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+    return rejected.isEmpty ? null : rejected.first.comment;
+  }
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// Bottom actions
+// ──────────────────────────────────────────────────────────────────────
 
 class _BottomActions extends ConsumerWidget {
   const _BottomActions({required this.approval});
@@ -453,7 +895,6 @@ class _BottomActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final actions = <Widget>[];
     final canDecide = ref.watch(canInProjectProvider(
       (action: DomainAction.approvalDecide, projectId: approval.projectId),
     ));
@@ -464,71 +905,57 @@ class _BottomActions extends ConsumerWidget {
     switch (approval.status) {
       case ApprovalStatus.pending:
         if (canDecide) {
-          actions
-            ..add(
+          return AppActionBar(
+            flexes: approval.scope == ApprovalScope.plan ? const [1, 2] : null,
+            children: [
               AppButton(
-                label: 'Одобрить',
-                variant: AppButtonVariant.success,
-                onPressed: () =>
-                    showApproveSheet(context, ref, approval: approval),
-              ),
-            )
-            ..add(const SizedBox(height: AppSpacing.x8))
-            ..add(
-              AppButton(
-                label: 'Отклонить',
+                label: approval.scope == ApprovalScope.plan
+                    ? 'Отклонить план'
+                    : 'Отклонить',
                 variant: AppButtonVariant.destructive,
                 onPressed: () =>
                     showRejectSheet(context, ref, approval: approval),
               ),
-            )
-            ..add(const SizedBox(height: AppSpacing.x8));
-        }
-        if (canRequest) {
-          actions.add(
-            AppButton(
-              label: 'Отменить заявку',
-              variant: AppButtonVariant.ghost,
-              onPressed: () => _cancel(context, ref),
-            ),
+              AppButton(
+                label: approval.scope == ApprovalScope.plan
+                    ? 'Принять план'
+                    : 'Одобрить',
+                variant: AppButtonVariant.success,
+                onPressed: () =>
+                    showApproveSheet(context, ref, approval: approval),
+              ),
+            ],
           );
         }
+        if (canRequest) {
+          return AppActionBar(
+            children: [
+              AppButton(
+                label: 'Отменить заявку',
+                variant: AppButtonVariant.ghost,
+                onPressed: () => _cancel(context, ref),
+              ),
+            ],
+          );
+        }
+        return const SizedBox.shrink();
       case ApprovalStatus.rejected:
         if (canRequest) {
-          actions.add(
-            AppButton(
-              label: 'Отправить повторно',
-              onPressed: () =>
-                  showResubmitSheet(context, ref, approval: approval),
-            ),
+          return AppActionBar(
+            children: [
+              AppButton(
+                label: 'Отправить повторно',
+                onPressed: () =>
+                    showResubmitSheet(context, ref, approval: approval),
+              ),
+            ],
           );
         }
+        return const SizedBox.shrink();
       case ApprovalStatus.approved:
       case ApprovalStatus.cancelled:
         return const SizedBox.shrink();
     }
-    if (actions.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x16,
-        AppSpacing.x12,
-        AppSpacing.x16,
-        AppSpacing.x16,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.n0,
-        border: Border(top: BorderSide(color: AppColors.n200)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: actions,
-        ),
-      ),
-    );
   }
 
   Future<void> _cancel(BuildContext context, WidgetRef ref) async {
@@ -558,7 +985,6 @@ class _RequiresReassignBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.redBg,
         borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,8 +1014,9 @@ class _RequiresReassignBanner extends StatelessWidget {
                 AppButton(
                   label: 'Открыть команду',
                   variant: AppButtonVariant.destructive,
+                  size: AppButtonSize.sm,
                   onPressed: () => context.push(
-                    '/projects/${approval.projectId}/team',
+                    AppRoutes.projectTeamWith(approval.projectId),
                   ),
                 ),
               ],

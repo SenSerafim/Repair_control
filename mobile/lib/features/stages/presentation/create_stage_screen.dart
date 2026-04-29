@@ -10,10 +10,14 @@ import '../../../shared/widgets/widgets.dart';
 import '../../projects/domain/membership.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../team/application/team_controller.dart';
+import '../../../core/routing/app_routes.dart';
 import '../application/stages_controller.dart';
-import 'templates_gallery.dart';
 
-/// c-stage-create — 2-табный экран: «Новый» / «Из шаблона».
+/// c-stage-create — единая форма создания этапа.
+///
+/// Разделение «С нуля / Из шаблона» убрано: это теперь одна форма + ghost
+/// CTA «Или выбрать из шаблонов» внизу, которая ведёт на отдельный
+/// TemplatesScreen (по дизайну c-stage-create).
 class CreateStageScreen extends ConsumerStatefulWidget {
   const CreateStageScreen({required this.projectId, super.key});
 
@@ -24,63 +28,14 @@ class CreateStageScreen extends ConsumerStatefulWidget {
       _CreateStageScreenState();
 }
 
-class _CreateStageScreenState extends ConsumerState<CreateStageScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
+class _CreateStageScreenState extends ConsumerState<CreateStageScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       showBack: true,
       title: 'Новый этап',
       padding: EdgeInsets.zero,
-      body: Column(
-        children: [
-          ColoredBox(
-            color: AppColors.n0,
-            child: TabBar(
-              controller: _tabs,
-              labelStyle: AppTextStyles.caption
-                  .copyWith(fontWeight: FontWeight.w800),
-              labelColor: AppColors.brand,
-              unselectedLabelColor: AppColors.n400,
-              indicatorColor: AppColors.brand,
-              indicatorSize: TabBarIndicatorSize.label,
-              tabs: const [
-                Tab(text: 'С нуля'),
-                Tab(text: 'Из шаблона'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabs,
-              children: [
-                _BlankForm(projectId: widget.projectId),
-                TemplatesGallery(
-                  onPick: (t) async {
-                    final applied = await showTemplatePreview(
-                      context,
-                      ref,
-                      template: t,
-                      projectId: widget.projectId,
-                    );
-                    if (applied && context.mounted) {
-                      context.pop();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: _BlankForm(projectId: widget.projectId),
     );
   }
 }
@@ -167,12 +122,16 @@ class _BlankFormState extends ConsumerState<_BlankForm> {
     if (failure != null) {
       setState(() => _error = failure.userMessage);
     } else {
-      AppToast.show(
-        context,
-        message: 'Этап создан',
-        kind: AppToastKind.success,
+      // После создания идём на success-экран «Этап создан!» с 2 CTA.
+      // stageId узнать прямо в момент создания не можем (контроллер
+      // только возвращает failure), поэтому передаём null и success-экран
+      // вернёт пользователя в список.
+      context.go(
+        AppRoutes.stageCreatedWith(
+          projectId: widget.projectId,
+          stageId: '',
+        ).replaceFirst('?stageId=', '?stageId='),
       );
-      context.pop();
     }
   }
 
@@ -292,10 +251,25 @@ class _BlankFormState extends ConsumerState<_BlankForm> {
             ),
             child: SafeArea(
               top: false,
-              child: AppButton(
-                label: 'Создать этап',
-                isLoading: _submitting,
-                onPressed: _submit,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppButton(
+                    label: 'Создать этап',
+                    isLoading: _submitting,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: AppSpacing.x8),
+                  AppButton(
+                    label: 'Или выбрать из шаблонов',
+                    variant: AppButtonVariant.ghost,
+                    onPressed: _submitting
+                        ? null
+                        : () => context.push(
+                              AppRoutes.stagesTemplatesWith(widget.projectId),
+                            ),
+                  ),
+                ],
               ),
             ),
           ),

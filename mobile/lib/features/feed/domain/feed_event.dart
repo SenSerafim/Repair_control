@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../shared/widgets/app_feed_dot.dart';
+
 part 'feed_event.freezed.dart';
 
 /// Категории событий ленты — группировка для фильтров.
@@ -107,6 +109,60 @@ class FeedEvent with _$FeedEvent {
 
 extension FeedEventX on FeedEvent {
   FeedCategory get category => FeedCategory.fromKind(kind);
+
+  /// Тон цветной точки для feed-row (`Кластер F` — `f-feed`).
+  AppFeedDotTone get dotTone {
+    if (kind == 'approval_rejected' ||
+        kind == 'stage_rejected_by_customer' ||
+        kind == 'payment_disputed' ||
+        kind == 'material_disputed' ||
+        kind.endsWith('_failed')) {
+      return AppFeedDotTone.danger;
+    }
+    if (kind == 'approval_approved' ||
+        kind == 'plan_approved' ||
+        kind == 'stage_accepted' ||
+        kind == 'step_completed' ||
+        kind == 'stage_completed' ||
+        kind == 'payment_confirmed' ||
+        kind == 'material_delivered' ||
+        kind == 'export_ready' ||
+        kind.endsWith('_resolved')) {
+      return AppFeedDotTone.success;
+    }
+    if (kind == 'stage_paused' ||
+        kind == 'deadline_changed' ||
+        kind == 'stage_overdue' ||
+        kind == 'stage_deadline_exceeds_project') {
+      return AppFeedDotTone.warning;
+    }
+    if (kind == 'selfpurchase_created' ||
+        kind.startsWith('material_') &&
+            (kind == 'material_partially_bought' ||
+                kind == 'material_marked_bought')) {
+      return AppFeedDotTone.info;
+    }
+    return AppFeedDotTone.start;
+  }
+
+  /// Неизменяемое событие — будет показан lock-badge в `f-feed`.
+  /// Базовый принцип: события «факт состоялся» (одобрено, оплачено, закуплено,
+  /// принято) больше не могут быть откатаны без отдельного reverse-события.
+  bool get isImmutable {
+    const immutable = {
+      'approval_approved',
+      'plan_approved',
+      'stage_accepted',
+      'stage_completed',
+      'step_completed',
+      'payment_confirmed',
+      'material_delivered',
+      'material_partially_bought',
+      'deadline_changed',
+      'export_ready',
+    };
+    return immutable.contains(kind);
+  }
 
   /// Человекочитаемый заголовок события.
   String get summary {

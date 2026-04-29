@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { BroadcastCampaign, BroadcastStatus, Prisma, SystemRole } from '@prisma/client';
+import {
+  BroadcastCampaign,
+  BroadcastStatus,
+  DevicePlatform,
+  Prisma,
+  SystemRole,
+} from '@prisma/client';
 import { Clock, ErrorCodes, InvalidInputError, NotFoundError, PrismaService } from '@app/common';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface BroadcastFilter {
   roles?: SystemRole[];
   projectIds?: string[];
   userIds?: string[];
   bannedOnly?: boolean;
+  /** Сужение по платформе зарегистрированных device tokens (filtering after user resolution). */
+  platform?: DevicePlatform;
 }
 
 @Injectable()
@@ -16,6 +25,7 @@ export class BroadcastsService {
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
     private readonly audit: AdminAuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async previewTargets(
@@ -54,33 +64,27 @@ export class BroadcastsService {
       },
     });
 
-    // Эмит через NotificationsService — делегируем наверх через event-emitter,
-    // чтобы не тянуть циркулярную зависимость. На получающей стороне подписчик дёрнет FCM/Noop.
-    // Для MVP — просто пишем NotificationLog напрямую (в staging это Noop).
-    for (const userId of userIds) {
-      await this.prisma.notificationLog.create({
-        data: {
-          userId,
-          kind: 'membership_added', // reuse существующего enum; это broadcast — payload уточняет
-          priority: 'normal',
-          title: input.title,
-          body: input.body,
-          deepLink: input.deepLink,
-          payload: { broadcastId: campaign.id, source: 'admin_broadcast' } as Prisma.InputJsonValue,
-          sentAt: now,
-          // deliveredAt/failedAt — ставит PushProcessor когда реально отправит.
-          // В staging без FCM — помечаем delivered сразу.
-          deliveredAt: now,
-        },
-      });
-    }
+    // Делегируем NotificationsService — он ставит jobs в BullMQ-очередь push,
+    // а PushProcessor пишет NotificationLog с deliveredAt/failedAt по факту отправки.
+    // template.render для 'admin_announcement' берёт title/body из payload.
+    await this.notifications.dispatch({
+      userIds,
+      kind: 'admin_announcement',
+      deepLink: input.deepLink,
+      payload: {
+        title: input.title,
+        body: input.body,
+        broadcastId: campaign.id,
+        source: 'admin_broadcast',
+      },
+    });
 
     const updated = await this.prisma.broadcastCampaign.update({
       where: { id: campaign.id },
       data: {
         status: BroadcastStatus.sent,
         sentAt: this.clock.now(),
-        deliveredCount: userIds.length,
+        // deliveredCount ставит фон-job по факту реальной доставки. Здесь — queued.
       },
     });
 
@@ -92,6 +96,7 @@ export class BroadcastsService {
       metadata: {
         targetCount: userIds.length,
         filterKeys: Object.keys(input.filter),
+        platform: input.filter.platform ?? null,
       },
     });
     return updated;
@@ -112,32 +117,50 @@ export class BroadcastsService {
   }
 
   private async resolveTargets(filter: BroadcastFilter): Promise<string[]> {
+    let userIds: string[];
+
     // Если явно указаны userIds — они priority over other filters (целевая рассылка).
     if (Array.isArray(filter.userIds) && filter.userIds.length > 0) {
       const found = await this.prisma.user.findMany({
         where: { id: { in: filter.userIds }, bannedAt: null },
         select: { id: true },
       });
-      return found.map((u) => u.id);
+      userIds = found.map((u) => u.id);
+    } else {
+      const where: Prisma.UserWhereInput = {
+        bannedAt: filter.bannedOnly ? { not: null } : null,
+      };
+      if (Array.isArray(filter.roles) && filter.roles.length > 0) {
+        where.roles = { some: { role: { in: filter.roles } } };
+      }
+      if (Array.isArray(filter.projectIds) && filter.projectIds.length > 0) {
+        where.OR = [
+          { ownedProjects: { some: { id: { in: filter.projectIds } } } },
+          { memberships: { some: { projectId: { in: filter.projectIds } } } },
+        ];
+      }
+      const users = await this.prisma.user.findMany({
+        where,
+        select: { id: true },
+        take: 5000,
+      });
+      userIds = users.map((u) => u.id);
     }
 
-    const where: Prisma.UserWhereInput = {
-      bannedAt: filter.bannedOnly ? { not: null } : null,
-    };
-    if (Array.isArray(filter.roles) && filter.roles.length > 0) {
-      where.roles = { some: { role: { in: filter.roles } } };
+    if (userIds.length === 0) return userIds;
+
+    // Пост-фильтр по платформе: оставляем только тех, у кого хоть один
+    // зарегистрированный device token указанной платформы.
+    if (filter.platform) {
+      const tokenized = await this.prisma.deviceToken.findMany({
+        where: { userId: { in: userIds }, platform: filter.platform },
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+      const allowed = new Set(tokenized.map((t) => t.userId));
+      userIds = userIds.filter((id) => allowed.has(id));
     }
-    if (Array.isArray(filter.projectIds) && filter.projectIds.length > 0) {
-      where.OR = [
-        { ownedProjects: { some: { id: { in: filter.projectIds } } } },
-        { memberships: { some: { projectId: { in: filter.projectIds } } } },
-      ];
-    }
-    const users = await this.prisma.user.findMany({
-      where,
-      select: { id: true },
-      take: 5000,
-    });
-    return users.map((u) => u.id);
+
+    return userIds;
   }
 }

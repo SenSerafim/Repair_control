@@ -6,6 +6,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/methodology_controller.dart';
+import 'methodology_screen.dart';
 
 /// d-method-section — статьи одного раздела.
 class MethodologySectionScreen extends ConsumerWidget {
@@ -29,6 +30,7 @@ class MethodologySectionScreen extends ConsumerWidget {
               ref.invalidate(methodologySectionProvider(sectionId)),
         ),
         data: (section) {
+          final tone = MethodologySectionTone.fromTitle(section.title);
           if (section.articles.isEmpty) {
             return AppEmptyState(
               title: section.title,
@@ -36,32 +38,58 @@ class MethodologySectionScreen extends ConsumerWidget {
               icon: Icons.article_outlined,
             );
           }
-          return Column(
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.x16,
+              AppSpacing.x16,
+              AppSpacing.x16,
+              AppSpacing.x24,
+            ),
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(section.title, style: AppTextStyles.h1),
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: tone.bg,
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                    ),
+                    child: Icon(tone.icon, color: tone.fg, size: 22),
+                  ),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          section.title,
+                          style: AppTextStyles.h1.copyWith(fontSize: 22),
+                        ),
+                        Text(
+                          '${section.articles.length} '
+                          '${_articlesWord(section.articles.length)}',
+                          style: AppTextStyles.tiny
+                              .copyWith(color: AppColors.n500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: section.articles.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.x8),
-                  itemBuilder: (_, i) {
-                    final a = section.articles[i];
-                    return _ArticleRow(
-                      title: a.title,
-                      version: a.version,
-                      onTap: () =>
-                          context.push('/methodology/articles/${a.id}'),
-                    );
-                  },
+              const SizedBox(height: AppSpacing.x16),
+              for (var i = 0; i < section.articles.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.x10),
+                _ArticleRow(
+                  title: section.articles[i].title,
+                  version: section.articles[i].version,
+                  tone: tone,
+                  onTap: () => context.push(
+                    '/methodology/articles/${section.articles[i].id}',
+                  ),
                 ),
-              ),
+              ],
             ],
           );
         },
@@ -70,15 +98,27 @@ class MethodologySectionScreen extends ConsumerWidget {
   }
 }
 
+String _articlesWord(int n) {
+  final mod10 = n % 10;
+  final mod100 = n % 100;
+  if (mod10 == 1 && mod100 != 11) return 'статья';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return 'статьи';
+  }
+  return 'статей';
+}
+
 class _ArticleRow extends StatelessWidget {
   const _ArticleRow({
     required this.title,
     required this.version,
+    required this.tone,
     required this.onTap,
   });
 
   final String title;
   final int version;
+  final MethodologySectionTone tone;
   final VoidCallback onTap;
 
   @override
@@ -87,25 +127,49 @@ class _ArticleRow extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x12),
+        padding: const EdgeInsets.all(AppSpacing.x14),
         decoration: BoxDecoration(
           color: AppColors.n0,
           borderRadius: AppRadius.card,
-          border: Border.all(color: AppColors.n200, width: 1.5),
+          border: Border.all(color: AppColors.n200),
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.article_outlined,
-              color: AppColors.brand,
-              size: 20,
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: tone.bg,
+                borderRadius: BorderRadius.circular(AppRadius.r8),
+              ),
+              child: Icon(
+                Icons.article_outlined,
+                color: tone.fg,
+                size: 18,
+              ),
             ),
-            const SizedBox(width: AppSpacing.x10),
+            const SizedBox(width: AppSpacing.x12),
             Expanded(
-              child: Text(title, style: AppTextStyles.subtitle),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.subtitle.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.n900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Версия $version',
+                    style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+                  ),
+                ],
+              ),
             ),
-            Text('v$version', style: AppTextStyles.tiny),
-            const SizedBox(width: AppSpacing.x6),
             const Icon(
               Icons.chevron_right_rounded,
               color: AppColors.n300,

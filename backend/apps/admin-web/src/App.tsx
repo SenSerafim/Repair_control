@@ -5,11 +5,14 @@ import { Dashboard } from './pages/Dashboard';
 import { UsersPage } from './pages/UsersPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { LegalPage } from './pages/LegalPage';
+import { LegalPublicationsPage } from './pages/LegalPublicationsPage';
+import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { BroadcastPage } from './pages/BroadcastPage';
 import { AuditPage } from './pages/AuditPage';
 import { FeedbackList } from './pages/FeedbackList';
 import { FaqEditor } from './pages/FaqEditor';
 import { SettingsPage } from './pages/Settings';
+import { SupportContactsPage } from './pages/SupportContactsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
 import { MaterialsPage } from './pages/MaterialsPage';
@@ -31,9 +34,12 @@ type Tab =
   | 'feedback'
   | 'faq'
   | 'legal'
+  | 'legal-publications'
+  | 'knowledge'
   | 'broadcast'
   | 'notifications'
   | 'audit'
+  | 'support-contacts'
   | 'settings';
 
 interface TabGroup {
@@ -71,13 +77,18 @@ const GROUPS: TabGroup[] = [
     items: [
       { key: 'feedback', label: 'Feedback', icon: '✉' },
       { key: 'faq', label: 'FAQ', icon: '?' },
-      { key: 'legal', label: 'Legal', icon: '§' },
+      { key: 'legal', label: 'Legal (markdown)', icon: '§' },
+      { key: 'legal-publications', label: 'Юр.документы PDF', icon: '⤓' },
+      { key: 'knowledge', label: 'База знаний', icon: '☷' },
       { key: 'broadcast', label: 'Broadcasts', icon: '⟸' },
     ],
   },
   {
     label: 'Система',
-    items: [{ key: 'settings', label: 'Settings', icon: '⚙' }],
+    items: [
+      { key: 'support-contacts', label: 'Контакты поддержки', icon: '☎' },
+      { key: 'settings', label: 'Settings', icon: '⚙' },
+    ],
   },
 ];
 
@@ -130,12 +141,18 @@ export function App() {
         return <FaqEditor />;
       case 'legal':
         return <LegalPage />;
+      case 'legal-publications':
+        return <LegalPublicationsPage />;
+      case 'knowledge':
+        return <KnowledgeBasePage />;
       case 'broadcast':
         return <BroadcastPage />;
       case 'notifications':
         return <NotificationLogsPage />;
       case 'audit':
         return <AuditPage />;
+      case 'support-contacts':
+        return <SupportContactsPage />;
       case 'settings':
         return <SettingsPage />;
     }

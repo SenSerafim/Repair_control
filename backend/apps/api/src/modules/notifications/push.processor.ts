@@ -82,5 +82,23 @@ export class PushProcessor extends WorkerHost {
         failureReason: outcome === 'failed' ? (failureReason ?? null) : null,
       },
     });
+
+    // Если push принадлежит broadcast-кампании — инкрементируем deliveredCount
+    // на BroadcastCampaign, чтобы admin видел корректные метрики (не всегда 0).
+    // Считаем только успешные доставки — failed не учитывается в метрике.
+    const broadcastId = d.payload?.broadcastId;
+    if (outcome === 'delivered' && typeof broadcastId === 'string') {
+      await this.prisma.broadcastCampaign
+        .update({
+          where: { id: broadcastId },
+          data: { deliveredCount: { increment: 1 } },
+        })
+        .catch((e) => {
+          // Кампания могла быть удалена — не блокируем основной flow.
+          this.logger.warn(
+            `failed to bump deliveredCount for broadcast ${broadcastId}: ${(e as Error).message}`,
+          );
+        });
+    }
   }
 }

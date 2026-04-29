@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Рабочая ветка — `dev_v1`. `main` принимает только зелёные спринты.
 
-### Flutter roadmap (S6–S17, ~24 рабочих дня)
+### Flutter roadmap (S6–S18, ~36 рабочих дней)
 
 | Sprint | Дни | Scope |
 |---|---|---|
@@ -31,6 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | S15 | 29–30 | Materials (8-status FSM, items checklist с MarkBought/Finalize/Confirm-delivery/Dispute/Resolve), Selfpurchase (3-status + approve/reject), Tools (my tools CRUD + ToolIssuance FSM issued→confirmed→return_requested→returned). Console плитки «Материалы/Самозакуп/Инструмент». Профиль — «Мои инструменты». **ЗАКРЫТ.** |
 | S16 | 31–32 | Chat domain + WS `/chats` SocketService (11 events, JWT auth, reconnect 1s→30s), ChatsRepository (14 методов), MessagesController.family с real-time подписками + 15-min edit window, ProjectChatsScreen + ChatConversationScreen (reverse list + long-press edit/delete), Documents (7 categories, filter chips), Feed (cursor + FeedCategory mapping 9 категорий с приоритетом approval над stage_), ExportSheet (PDF/ZIP). **ЗАКРЫТ.** |
 | S17 | 33–34 | FCM push (soft-fail init + token register + foreground local notifications), DeepLinkRouter (6 payload-видов → go_router пути), NotificationsScreen + NotificationsController (in-memory, unread badge), ConnectivityBanner (offline-пилюля глобально), OfflineQueue (JSON-persist, drain on online, 5 retry), NotificationSettings lock-icon + tooltip для critical, AppHouseProgress — pulse-анимация + glow at 100%, глобальный `/notifications` route, mobile-ci GitHub Actions workflow (analyze → test → build APK), `mobile/README_RELEASE.md` (чек-лист TestFlight/Play Internal). 176 тестов, analyze clean. **ЗАКРЫТ.** |
+| S18 | 35–46 | Контакты поддержки (admin AppSetting whitelist + mobile `support_contacts/` feature, замена hardcoded в `help_screen.dart`); Юридические PDF (новая модель `LegalPublication` + публичный stream `/legal/public/:slug` с ETag/304 + admin upload UI + mobile bottom sheet через `url_launcher` external browser); База знаний (`KnowledgeCategory`/`Article`/`Asset` + GIN-FTS + manual video thumbnail + admin двухпанельный UI с upload progress + mobile feature `knowledge_base/` с `flutter_markdown` + `chewie/video_player` + ETag-кеш статей + 3 точки входа: profile, help, console NavGrid `?moduleSlug=`); Broadcast hardening (rewrite на `notifications.dispatch({ kind: 'admin_announcement' })` вместо костыля `membership_added`, фильтр по `DeviceToken.platform`, multi-projectIds, deep_link_router case); Per-scope FilesService policy (`FILE_SCOPE_POLICIES_JSON`: knowledge/=200MB+video, legal/=PDF only). RBAC: `admin.legal_publications.manage`, `admin.knowledge.manage`, `knowledge.read`. OpenAPI bump 1.1.0 → 1.2.0. **ЗАКРЫТ.** |
 
 ## Как ведётся работа (обязательная дисциплина)
 

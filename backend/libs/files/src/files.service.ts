@@ -20,20 +20,51 @@ export interface PresignedUploadResponse {
   expiresAt: Date;
 }
 
+/**
+ * Per-scope политика — позволяет одним scope (knowledge/) разрешить video и 200 MB,
+ * а остальным оставить дефолтные жёсткие лимиты. Префикс scope сравнивается прямо
+ * (startsWith), prefix с самым длинным совпадением выигрывает.
+ */
+export interface ScopePolicy {
+  prefix: string; // e.g. "knowledge/", "legal/"
+  allowedMimes: string[];
+  maxSizeMb: number;
+}
+
 @Injectable()
 export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
-  private readonly allowedMimes: Set<string>;
-  private readonly maxSizeBytes: number;
+  private readonly defaultAllowedMimes: Set<string>;
+  private readonly defaultMaxSizeBytes: number;
+  private readonly scopePolicies: Array<{
+    prefix: string;
+    allowedMimes: Set<string>;
+    maxSizeBytes: number;
+  }>;
 
   constructor(
     @Inject(MINIO_CLIENT) private readonly minio: MinioClient,
     @Inject(MINIO_CONFIG) private readonly config: MinioConfig,
     allowedMimes: string[],
     maxSizeMb: number,
+    scopePolicies: ScopePolicy[] = [],
   ) {
-    this.allowedMimes = new Set(allowedMimes);
-    this.maxSizeBytes = maxSizeMb * 1024 * 1024;
+    this.defaultAllowedMimes = new Set(allowedMimes);
+    this.defaultMaxSizeBytes = maxSizeMb * 1024 * 1024;
+    // длинные префиксы первыми, чтобы "knowledge/articles/" побил "knowledge/"
+    this.scopePolicies = [...scopePolicies]
+      .sort((a, b) => b.prefix.length - a.prefix.length)
+      .map((p) => ({
+        prefix: p.prefix,
+        allowedMimes: new Set(p.allowedMimes),
+        maxSizeBytes: p.maxSizeMb * 1024 * 1024,
+      }));
+  }
+
+  private policyForScope(scope: string): { allowedMimes: Set<string>; maxSizeBytes: number } {
+    const match = this.scopePolicies.find((p) => scope.startsWith(p.prefix));
+    if (match) return { allowedMimes: match.allowedMimes, maxSizeBytes: match.maxSizeBytes };
+    return { allowedMimes: this.defaultAllowedMimes, maxSizeBytes: this.defaultMaxSizeBytes };
   }
 
   async onModuleInit(): Promise<void> {
@@ -52,14 +83,15 @@ export class FilesService implements OnModuleInit {
   }
 
   validate(req: PresignedUploadRequest): void {
-    if (!this.allowedMimes.has(req.mimeType)) {
-      throw new InvalidInputError('files.mime_not_allowed', `mime not allowed: ${req.mimeType}`);
-    }
-    if (req.sizeBytes <= 0 || req.sizeBytes > this.maxSizeBytes) {
-      throw new InvalidInputError('files.size_out_of_range', `size out of range: ${req.sizeBytes}`);
-    }
     if (!req.scope || req.scope.length === 0 || req.scope.length > 200) {
       throw new InvalidInputError('files.invalid_scope', 'scope is required');
+    }
+    const policy = this.policyForScope(req.scope);
+    if (!policy.allowedMimes.has(req.mimeType)) {
+      throw new InvalidInputError('files.mime_not_allowed', `mime not allowed: ${req.mimeType}`);
+    }
+    if (req.sizeBytes <= 0 || req.sizeBytes > policy.maxSizeBytes) {
+      throw new InvalidInputError('files.size_out_of_range', `size out of range: ${req.sizeBytes}`);
     }
   }
 
@@ -119,6 +151,11 @@ export class FilesService implements OnModuleInit {
     });
   }
 
+  /** Возвращает Readable stream объекта — для proxy-стрима в HTTP-response без буферизации. */
+  async streamObject(key: string): Promise<NodeJS.ReadableStream> {
+    return this.minio.getObject(this.config.bucket, key);
+  }
+
   async putObject(key: string, buffer: Buffer, mimeType: string): Promise<void> {
     await this.minio.putObject(this.config.bucket, key, buffer, buffer.length, {
       'Content-Type': mimeType,
@@ -146,6 +183,10 @@ const extensionFromMime = (mime: string): string => {
       return '.xlsx';
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
       return '.docx';
+    case 'video/mp4':
+      return '.mp4';
+    case 'video/quicktime':
+      return '.mov';
     default:
       return '';
   }

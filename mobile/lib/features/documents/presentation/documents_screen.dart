@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../exports/presentation/export_sheet.dart';
@@ -17,7 +16,6 @@ import '../domain/document.dart';
 final _filterProvider =
     StateProvider.autoDispose<DocumentCategory?>((_) => null);
 
-/// Активный фильтр по этапу (`null` = все этапы).
 final _stageFilterProvider = StateProvider.autoDispose<String?>((_) => null);
 
 final _listProvider = FutureProvider.autoDispose
@@ -35,7 +33,7 @@ final _listProvider = FutureProvider.autoDispose
   );
 });
 
-/// f-docs / f-docs-empty / f-docs-filter.
+/// `f-docs` / `f-docs-empty` / `f-docs-filter` (`Кластер F`).
 class DocumentsScreen extends ConsumerWidget {
   const DocumentsScreen({required this.projectId, super.key});
 
@@ -61,18 +59,18 @@ class DocumentsScreen extends ConsumerWidget {
               showExportSheet(context, ref, projectId: projectId),
         ),
         if (canWrite)
-          IconButton(
-            tooltip: 'Загрузить',
-            onPressed: () async {
-              final uploaded = await context.push<bool>(
-                '/projects/$projectId/documents/upload',
-              );
-              if (uploaded ?? false) {
-                ref.invalidate(_listProvider(projectId));
-              }
-            },
-            icon:
-                const Icon(Icons.upload_file_rounded, color: AppColors.brand),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _UploadIconButton(
+              onTap: () async {
+                final uploaded = await context.push<bool>(
+                  '/projects/$projectId/documents/upload',
+                );
+                if (uploaded ?? false) {
+                  ref.invalidate(_listProvider(projectId));
+                }
+              },
+            ),
           ),
       ],
       body: Column(
@@ -95,24 +93,30 @@ class DocumentsScreen extends ConsumerWidget {
               data: (docs) {
                 if (docs.isEmpty) {
                   return AppEmptyState(
-                    title: filter == null
-                        ? 'Документов пока нет'
-                        : 'В этой категории пусто',
-                    subtitle: filter == null
-                        ? 'Загрузите договор, акт, смету — всё хранится в '
-                            'рамках проекта.'
-                        : null,
+                    title: 'Нет документов',
+                    subtitle: 'Загрузите документы проекта: планы, сметы, '
+                        'чертежи',
                     icon: Icons.insert_drive_file_outlined,
+                    actionLabel: canWrite ? 'Загрузить документ' : null,
+                    onAction: canWrite
+                        ? () async {
+                            final uploaded = await context.push<bool>(
+                              '/projects/$projectId/documents/upload',
+                            );
+                            if (uploaded ?? false) {
+                              ref.invalidate(_listProvider(projectId));
+                            }
+                          }
+                        : null,
                   );
                 }
                 return RefreshIndicator(
                   onRefresh: () async =>
                       ref.invalidate(_listProvider(projectId)),
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.x16),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
                     itemCount: docs.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.x8),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (_, i) => _DocRow(
                       doc: docs[i],
                       onTap: () => context
@@ -129,6 +133,34 @@ class DocumentsScreen extends ConsumerWidget {
   }
 }
 
+class _UploadIconButton extends StatelessWidget {
+  const _UploadIconButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 22,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.brandLight,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.upload_file_rounded,
+          size: 18,
+          color: AppColors.brand,
+        ),
+      ),
+    );
+  }
+}
+
 class _CategoryFilter extends StatelessWidget {
   const _CategoryFilter({required this.selected, required this.onChanged});
 
@@ -137,49 +169,23 @@ class _CategoryFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-        children: [
-          _chip('Все', active: selected == null, onTap: () => onChanged(null)),
-          for (final c in DocumentCategory.values) ...[
-            const SizedBox(width: AppSpacing.x8),
-            _chip(
-              c.displayName,
-              active: selected == c,
-              onTap: () => onChanged(c),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(String label, {required bool active, required VoidCallback onTap}) {
-    return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x12,
-            vertical: AppSpacing.x6,
-          ),
-          decoration: BoxDecoration(
-            color: active ? AppColors.brand : AppColors.n100,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: active ? AppColors.n0 : AppColors.n700,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ),
+    final chips = <AppFilterPillSpec>[
+      const AppFilterPillSpec(id: '__all__', label: 'Все'),
+      for (final c in DocumentCategory.values)
+        AppFilterPillSpec(id: c.name, label: c.displayName),
+    ];
+    return AppFilterPillBar(
+      chips: chips,
+      activeId: selected?.name ?? '__all__',
+      onSelect: (id) {
+        if (id == '__all__') {
+          onChanged(null);
+        } else {
+          onChanged(
+            DocumentCategory.values.firstWhere((c) => c.name == id),
+          );
+        }
+      },
     );
   }
 }
@@ -191,67 +197,76 @@ class _DocRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      color: AppColors.n0,
       borderRadius: BorderRadius.circular(AppRadius.r16),
-      child: Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.n200, width: 1.5),
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.r12),
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: doc.isImage && (doc.thumbUrl ?? doc.url) != null
-                  ? Image.network(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.r16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.n0,
+            borderRadius: AppRadius.card,
+            border: Border.all(color: AppColors.n200),
+            boxShadow: AppShadows.sh1,
+          ),
+          child: Row(
+            children: [
+              if (doc.isImage && (doc.thumbUrl ?? doc.url) != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Image.network(
                       doc.thumbUrl ?? doc.url!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: AppColors.brandLight,
-                        alignment: Alignment.center,
-                        child: Icon(doc.category.icon, color: AppColors.brand),
-                      ),
-                    )
-                  : Container(
-                      color: AppColors.brandLight,
-                      alignment: Alignment.center,
-                      child: Icon(doc.category.icon, color: AppColors.brand),
+                      errorBuilder: (_, __, ___) =>
+                          AppDocTypeIcon(mimeType: doc.mimeType),
                     ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.x12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  doc.title,
-                  style: AppTextStyles.subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  ),
+                )
+              else
+                AppDocTypeIcon(mimeType: doc.mimeType),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doc.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.n800,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${doc.category.displayName} · ${_sizeLabel(doc.sizeBytes)} · '
+                      '${DateFormat('d MMM', 'ru').format(doc.createdAt)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.n400,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${doc.category.displayName} · ${_sizeLabel(doc.sizeBytes)} · '
-                  '${DateFormat('d MMM', 'ru').format(doc.createdAt)}',
-                  style: AppTextStyles.caption,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.n300,
+              ),
+            ],
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.n400,
-          ),
-        ],
+        ),
       ),
-    ),
     );
   }
 
@@ -272,69 +287,31 @@ class _StageFilter extends ConsumerWidget {
     final stagesAsync = ref.watch(stagesControllerProvider(projectId));
     final selected = ref.watch(_stageFilterProvider);
     return stagesAsync.when(
-      loading: () => const SizedBox(height: 36),
-      error: (_, __) => const SizedBox(height: 36),
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
       data: (stages) {
-        if (stages.isEmpty) return const SizedBox(height: 0);
-        return SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-            children: [
-              _stageChip(
-                'Все этапы',
-                active: selected == null,
-                onTap: () =>
-                    ref.read(_stageFilterProvider.notifier).state = null,
-              ),
-              for (final s in stages) ...[
-                const SizedBox(width: AppSpacing.x6),
-                _stageChip(
-                  s.title,
-                  active: selected == s.id,
-                  onTap: () =>
-                      ref.read(_stageFilterProvider.notifier).state = s.id,
-                ),
-              ],
-            ],
+        if (stages.isEmpty) return const SizedBox.shrink();
+        final chips = <AppFilterPillSpec>[
+          const AppFilterPillSpec(id: '__all__', label: 'Все этапы'),
+          for (final s in stages)
+            AppFilterPillSpec(id: s.id, label: s.title),
+        ];
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.n0,
+            border: Border(bottom: BorderSide(color: AppColors.n100)),
+          ),
+          child: AppFilterPillBar(
+            chips: chips,
+            activeId: selected ?? '__all__',
+            onSelect: (id) {
+              ref.read(_stageFilterProvider.notifier).state =
+                  id == '__all__' ? null : id;
+            },
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           ),
         );
       },
-    );
-  }
-
-  Widget _stageChip(
-    String label, {
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x12,
-            vertical: AppSpacing.x6,
-          ),
-          decoration: BoxDecoration(
-            color: active ? AppColors.brand : AppColors.n0,
-            border: Border.all(
-              color: active ? AppColors.brand : AppColors.n200,
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: active ? AppColors.n0 : AppColors.n700,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

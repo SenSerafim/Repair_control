@@ -1,7 +1,37 @@
-import { DynamicModule, Global, Module } from '@nestjs/common';
+import { DynamicModule, Global, Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FilesService } from './files.service';
+import { FilesService, ScopePolicy } from './files.service';
 import { MINIO_CLIENT, MINIO_CONFIG, MinioProvider, MinioConfig } from './minio.client';
+
+const DEFAULT_SCOPE_POLICIES: ScopePolicy[] = [
+  {
+    prefix: 'knowledge/',
+    allowedMimes: ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime', 'application/pdf'],
+    maxSizeMb: 200,
+  },
+  {
+    prefix: 'legal/',
+    allowedMimes: ['application/pdf'],
+    maxSizeMb: 25,
+  },
+];
+
+function parseScopePolicies(raw: string | undefined): ScopePolicy[] {
+  if (!raw || raw.trim().length === 0) return DEFAULT_SCOPE_POLICIES;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, { max?: number; mimes?: string[] }>;
+    return Object.entries(parsed).map(([prefix, val]) => ({
+      prefix,
+      allowedMimes: Array.isArray(val.mimes) ? val.mimes : [],
+      maxSizeMb: typeof val.max === 'number' ? val.max : 25,
+    }));
+  } catch (e) {
+    new Logger('FilesModule').warn(
+      `FILE_SCOPE_POLICIES_JSON parse failed, falling back to defaults: ${(e as Error).message}`,
+    );
+    return DEFAULT_SCOPE_POLICIES;
+  }
+}
 
 @Global()
 @Module({})
@@ -43,6 +73,7 @@ export class FilesModule {
                 .map((m) => m.trim())
                 .filter(Boolean),
               cfg.get<number>('FILE_MAX_SIZE_MB', 25),
+              parseScopePolicies(cfg.get<string>('FILE_SCOPE_POLICIES_JSON')),
             ),
           inject: [MINIO_CLIENT, MINIO_CONFIG, ConfigService],
         },

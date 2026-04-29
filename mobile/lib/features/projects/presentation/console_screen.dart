@@ -48,14 +48,63 @@ class ConsoleScreen extends ConsumerWidget {
   }
 }
 
-class _Body extends ConsumerWidget {
+class _Body extends ConsumerStatefulWidget {
   const _Body({required this.projectId, required this.project});
 
   final String projectId;
   final Project project;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends ConsumerState<_Body> {
+  /// Счётчик закрытых этапов — увеличивается на каждое появление нового
+  /// `done`-этапа в стрим-апдейте `stagesControllerProvider`. Передаётся
+  /// в `AppHouseProgress.bouncePulse`, который при изменении запускает
+  /// 700ms bounce-анимацию.
+  int _bouncePulse = 0;
+
+  @override
+  void dispose() {
+    HouseCelebrationOverlay.dismiss();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final projectId = widget.projectId;
+    final project = widget.project;
+
+    // 1. Слушаем перевод этапов в done — bouncePulse++ запустит лёгкий
+    //    bounce дома без полного WOW.
+    ref.listen<AsyncValue<List<Stage>>>(
+      stagesControllerProvider(projectId),
+      (prev, next) {
+        final oldDone = (prev?.value ?? const <Stage>[])
+            .where((s) => s.status == StageStatus.done)
+            .length;
+        final newDone = (next.value ?? const <Stage>[])
+            .where((s) => s.status == StageStatus.done)
+            .length;
+        if (prev != null && newDone > oldDone) {
+          setState(() => _bouncePulse++);
+        }
+      },
+    );
+
+    // 2. Слушаем переход progressCache <100 → 100 — запускает WOW-overlay.
+    ref.listen<AsyncValue<Project>>(
+      projectControllerProvider(projectId),
+      (prev, next) {
+        final oldP = prev?.value?.progressCache ?? 0;
+        final newP = next.value?.progressCache ?? 0;
+        if (oldP < 100 && newP >= 100) {
+          HouseCelebrationOverlay.show(context);
+        }
+      },
+    );
+
     final stagesAsync = ref.watch(stagesControllerProvider(projectId));
     final stages = stagesAsync.value ?? const <Stage>[];
     final canSeeBudget = ref.watch(
@@ -105,6 +154,7 @@ class _Body extends ConsumerWidget {
                   stages: stages,
                   activeStage: activeStage,
                   doneCount: doneStages.length,
+                  bouncePulse: _bouncePulse,
                 ),
                 if (_bannerFor(p, stages) != null) ...[
                   const SizedBox(height: AppSpacing.x14),
@@ -424,12 +474,14 @@ class _HouseSection extends StatelessWidget {
     required this.stages,
     required this.activeStage,
     required this.doneCount,
+    required this.bouncePulse,
   });
 
   final Project project;
   final List<Stage> stages;
   final Stage? activeStage;
   final int doneCount;
+  final int bouncePulse;
 
   @override
   Widget build(BuildContext context) {
@@ -451,7 +503,8 @@ class _HouseSection extends StatelessWidget {
           AppHouseProgress(
             percent: percent,
             semaphore: project.semaphore,
-            size: 160,
+            size: 220,
+            bouncePulse: bouncePulse,
             subtitle: total > 0
                 ? 'Этап $stageNo из $total · $statusLabel'
                 : 'План пока не построен',
@@ -854,6 +907,12 @@ class _NavSections extends ConsumerWidget {
         iconColor: AppColors.purple,
         label: 'Экспорты',
         onTap: () => context.push('/projects/$projectId/exports'),
+      ),
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.bookOpen,
+        iconColor: AppColors.brand,
+        label: 'Справка',
+        onTap: () => context.push(AppRoutes.knowledgeWithModule('console')),
       ),
     ];
 

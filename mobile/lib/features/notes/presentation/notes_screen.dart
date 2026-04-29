@@ -7,8 +7,9 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/notes_controller.dart';
 import '../domain/note.dart';
+import 'note_detail_screen.dart';
 
-/// s-notes — список заметок по проекту. Фильтр по scope.
+/// `f-notes` / `f-notes-shared` / `f-notes-empty` (`Кластер F`).
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({required this.projectId, super.key});
 
@@ -31,36 +32,16 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       padding: EdgeInsets.zero,
       actions: [
         IconButton(
-          icon: const Icon(Icons.add_rounded),
+          icon: const Icon(Icons.add_rounded, color: AppColors.brand),
+          tooltip: 'Создать заметку',
           onPressed: () => _showCreateSheet(context),
         ),
       ],
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: SizedBox(
-              height: 32,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _FilterChip(
-                    label: 'Все',
-                    selected: _filter == null,
-                    onTap: () => setState(() => _filter = null),
-                  ),
-                  const SizedBox(width: AppSpacing.x6),
-                  for (final s in NoteScope.values) ...[
-                    _FilterChip(
-                      label: s.displayName,
-                      selected: _filter == s,
-                      onTap: () => setState(() => _filter = s),
-                    ),
-                    const SizedBox(width: AppSpacing.x6),
-                  ],
-                ],
-              ),
-            ),
+          _FilterBar(
+            selected: _filter,
+            onChanged: (v) => setState(() => _filter = v),
           ),
           Expanded(
             child: async.when(
@@ -78,11 +59,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 if (filtered.isEmpty) {
                   return AppEmptyState(
                     title:
-                        _filter == null ? 'Заметок нет' : 'Ничего не найдено',
-                    subtitle:
-                        'Заметки помогут не забыть важное — тап «+» вверху.',
+                        _filter == null ? 'Нет заметок' : 'Ничего не найдено',
+                    subtitle: _filter == null
+                        ? 'Создайте заметку — личную для себя или общую для '
+                            'всей команды'
+                        : null,
                     icon: Icons.sticky_note_2_outlined,
-                    actionLabel: 'Добавить',
+                    actionLabel: 'Создать заметку',
                     onAction: () => _showCreateSheet(context),
                   );
                 }
@@ -91,16 +74,19 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     notesControllerProvider(widget.projectId),
                   ),
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.x16),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.x10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) => _NoteTile(
                       note: filtered[i],
-                      onDelete: () => ref
-                          .read(notesControllerProvider(widget.projectId)
-                              .notifier)
-                          .delete(filtered[i].id),
+                      onTap: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => NoteDetailScreen(
+                            projectId: widget.projectId,
+                            noteId: filtered[i].id,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -120,95 +106,161 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.selected, required this.onChanged});
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final NoteScope? selected;
+  final ValueChanged<NoteScope?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x12,
-          vertical: AppSpacing.x6,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.brand : AppColors.n100,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: selected ? AppColors.n0 : AppColors.n700,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+    final chips = <AppFilterPillSpec>[
+      const AppFilterPillSpec(id: '__all__', label: 'Все'),
+      for (final s in NoteScope.values)
+        AppFilterPillSpec(id: s.name, label: s.displayName),
+    ];
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.n0,
+        border: Border(bottom: BorderSide(color: AppColors.n100)),
+      ),
+      child: AppFilterPillBar(
+        chips: chips,
+        activeId: selected?.name ?? '__all__',
+        onSelect: (id) {
+          if (id == '__all__') {
+            onChanged(null);
+          } else {
+            onChanged(NoteScope.values.firstWhere((s) => s.name == id));
+          }
+        },
       ),
     );
   }
 }
 
 class _NoteTile extends StatelessWidget {
-  const _NoteTile({required this.note, required this.onDelete});
+  const _NoteTile({required this.note, required this.onTap});
 
   final Note note;
-  final VoidCallback onDelete;
+  final VoidCallback onTap;
+
+  String get _title {
+    final lines = note.text.split('\n');
+    final firstLine = lines.first.trim();
+    if (firstLine.length > 60) return '${firstLine.substring(0, 57)}…';
+    return firstLine.isEmpty ? 'Заметка' : firstLine;
+  }
+
+  String get _body {
+    final lines = note.text.split('\n');
+    if (lines.length > 1) return lines.sublist(1).join(' ').trim();
+    if (note.text.length > 60) return note.text;
+    return '';
+  }
+
+  AppRoleBadgeTone get _badgeTone {
+    switch (note.scope) {
+      case NoteScope.personal:
+        return AppRoleBadgeTone.customer;
+      case NoteScope.forMe:
+        return AppRoleBadgeTone.foreman;
+      case NoteScope.stage:
+        return AppRoleBadgeTone.representative;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final df = DateFormat('d MMM, HH:mm', 'ru');
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final df = DateFormat('d MMM', 'ru');
+    return Material(
+      color: AppColors.n0,
+      borderRadius: BorderRadius.circular(AppRadius.r16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.r16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.n0,
+            border: Border.all(color: AppColors.n200),
+            borderRadius: BorderRadius.circular(AppRadius.r16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.x8,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.brandLight,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  note.scope.displayName,
-                  style: AppTextStyles.tiny.copyWith(color: AppColors.brand),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.n900,
+                        height: 1.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AppRoleBadge(
+                    label: note.scope.displayName,
+                    tone: _badgeTone,
+                    variant: AppRoleBadgeVariant.compact,
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(df.format(note.createdAt), style: AppTextStyles.tiny),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18),
-                color: AppColors.n400,
-                onPressed: onDelete,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                  minWidth: 32,
-                  minHeight: 32,
+              if (_body.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _body,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.n500,
+                    height: 1.5,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  AppAvatar(seed: note.authorId, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    df.format(note.createdAt),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.n400,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (note.scope != NoteScope.personal) ...[
+                    const Icon(
+                      Icons.visibility_outlined,
+                      size: 12,
+                      color: AppColors.n400,
+                    ),
+                    const SizedBox(width: 3),
+                    const Text(
+                      'Команда',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.n400,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.x8),
-          Text(note.text, style: AppTextStyles.body),
-        ],
+        ),
       ),
     );
   }
@@ -262,23 +314,42 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AppBottomSheetHeader(title: 'Новая заметка'),
-        if (_error != null) ...[
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.x12),
-            decoration: BoxDecoration(
-              color: AppColors.redBg,
-              borderRadius: AppRadius.card,
-            ),
-            child: Text(
-              _error!,
-              style: AppTextStyles.body.copyWith(color: AppColors.redText),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Новая заметка',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
             ),
           ),
-          const SizedBox(height: AppSpacing.x12),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Видимость и текст заметки',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n400,
+            ),
+          ),
+        ),
+        if (_error != null) ...[
+          AppInlineError(message: _error!),
+          const SizedBox(height: 12),
         ],
-        const Text('Кому', style: AppTextStyles.caption),
-        const SizedBox(height: AppSpacing.x6),
+        const Text(
+          'ВИДИМОСТЬ',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: AppColors.n500,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -287,50 +358,72 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
               GestureDetector(
                 onTap: () => setState(() => _scope = s),
                 behavior: HitTestBehavior.opaque,
-                child: Container(
+                child: AnimatedContainer(
+                  duration: AppDurations.fast,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.x12,
-                    vertical: AppSpacing.x6,
+                    horizontal: 12,
+                    vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: _scope == s
-                        ? AppColors.brand
-                        : AppColors.n100,
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.pill),
+                    color: _scope == s ? AppColors.brandLight : AppColors.n0,
+                    border: Border.all(
+                      color: _scope == s ? AppColors.brand : AppColors.n200,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
                     s.displayName,
-                    style: AppTextStyles.caption.copyWith(
-                      color:
-                          _scope == s ? AppColors.n0 : AppColors.n700,
+                    style: TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
+                      color: _scope == s ? AppColors.brand : AppColors.n600,
                     ),
                   ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.x12),
+        const SizedBox(height: 16),
+        const Text(
+          'ТЕКСТ ЗАМЕТКИ',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: AppColors.n500,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
         TextField(
           controller: _text,
-          minLines: 3,
-          maxLines: 6,
+          minLines: 4,
+          maxLines: 8,
           maxLength: 5000,
           decoration: InputDecoration(
             hintText: 'Что нужно запомнить?',
             hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
             filled: true,
-            fillColor: AppColors.n0,
-            contentPadding: const EdgeInsets.all(12),
+            fillColor: AppColors.n50,
+            contentPadding: const EdgeInsets.all(14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
               borderSide:
                   const BorderSide(color: AppColors.n200, width: 1.5),
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              borderSide:
+                  const BorderSide(color: AppColors.n200, width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              borderSide:
+                  const BorderSide(color: AppColors.brand, width: 1.5),
+            ),
           ),
         ),
-        const SizedBox(height: AppSpacing.x16),
+        const SizedBox(height: 16),
         AppButton(
           label: 'Сохранить',
           isLoading: _submitting,

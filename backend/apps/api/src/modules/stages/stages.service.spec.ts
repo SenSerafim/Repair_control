@@ -246,6 +246,27 @@ describe('StagesService lifecycle + deadline recalculation', () => {
     expect(pauses[0]).toMatchObject({ reason: 'materials', comment: 'ждём плитку' });
   });
 
+  it('pause(reason="other") без comment → InvalidInputError (дизайн c-pause-other)', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active' });
+    const clock = new FixedClock(NOW);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+      mkChats(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
+    await svc.start(s.id, 'u');
+    await expect(svc.pause(s.id, 'u', 'other')).rejects.toThrow(InvalidInputError);
+    await expect(svc.pause(s.id, 'u', 'other', '   ')).rejects.toThrow(InvalidInputError);
+    // С непустым comment — проходит
+    await svc.pause(s.id, 'u', 'other', 'нашли скрытый дефект');
+  });
+
   it('resume пересчитывает дедлайн: originalEnd + накопленные паузы (ТЗ §4.2)', async () => {
     const { prisma, projects, stages } = mkPrisma();
     projects.set('p1', { id: 'p1', status: 'active' });

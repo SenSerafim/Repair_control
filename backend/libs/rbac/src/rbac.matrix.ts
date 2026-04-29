@@ -285,6 +285,8 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
     case 'admin.projects.force_archive':
     case 'admin.legal.read_admin':
     case 'admin.legal.manage':
+    case 'admin.legal_publications.manage':
+    case 'admin.knowledge.manage':
     case 'admin.broadcast.send':
     case 'admin.broadcast.list':
     case 'admin.audit.read':
@@ -295,6 +297,11 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
 
     case 'legal.accept': {
       // Любой аутентифицированный пользователь может принять версии политики.
+      return true;
+    }
+
+    case 'knowledge.read': {
+      // База знаний доступна всем аутентифицированным (контент общий).
       return true;
     }
 

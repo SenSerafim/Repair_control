@@ -14,7 +14,7 @@ void main() {
     testWidgets('AppMessageBubble — $me default', (tester) async {
       await tester.pumpWidget(
         goldenScaffold(
-          size: const Size(280, 80),
+          size: const Size(280, 120),
           child: Align(
             alignment:
                 isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -34,7 +34,7 @@ void main() {
     testWidgets('AppMessageBubble — $me italic', (tester) async {
       await tester.pumpWidget(
         goldenScaffold(
-          size: const Size(280, 80),
+          size: const Size(280, 120),
           child: Align(
             alignment:
                 isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -56,7 +56,7 @@ void main() {
     testWidgets('AppMessageBubble — $me long', (tester) async {
       await tester.pumpWidget(
         goldenScaffold(
-          size: const Size(320, 120),
+          size: const Size(320, 260),
           child: Align(
             alignment:
                 isMine ? Alignment.centerRight : Alignment.centerLeft,

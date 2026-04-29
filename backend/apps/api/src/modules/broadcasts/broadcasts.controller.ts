@@ -11,7 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BroadcastStatus, SystemRole } from '@prisma/client';
+import { BroadcastStatus, DevicePlatform, SystemRole } from '@prisma/client';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { BroadcastsService } from './broadcasts.service';
 
@@ -38,6 +38,11 @@ class BroadcastFilterDto {
   @IsOptional()
   @IsBoolean()
   bannedOnly?: boolean;
+
+  @ApiPropertyOptional({ enum: DevicePlatform })
+  @IsOptional()
+  @IsEnum(DevicePlatform)
+  platform?: DevicePlatform;
 }
 
 class PreviewDto {

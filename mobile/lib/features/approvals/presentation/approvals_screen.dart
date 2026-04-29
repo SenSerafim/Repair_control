@@ -22,7 +22,7 @@ class ApprovalsScreen extends ConsumerStatefulWidget {
 class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 2, vsync: this);
-  ApprovalScope? _scope;
+  String _scopeId = 'all';
 
   @override
   void dispose() {
@@ -38,137 +38,144 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
       showBack: true,
       title: 'Согласования',
       padding: EdgeInsets.zero,
-      body: Column(
-        children: [
-          ColoredBox(
-            color: AppColors.n0,
-            child: TabBar(
-              controller: _tabs,
-              labelStyle:
-                  AppTextStyles.caption.copyWith(fontWeight: FontWeight.w800),
-              labelColor: AppColors.brand,
-              unselectedLabelColor: AppColors.n400,
-              indicatorColor: AppColors.brand,
-              indicatorSize: TabBarIndicatorSize.label,
-              tabs: const [
-                Tab(text: 'Активные'),
-                Tab(text: 'История'),
-              ],
-            ),
-          ),
-          _ScopeChips(
-            selected: _scope,
-            onSelected: (s) => setState(() => _scope = s),
-          ),
-          Expanded(
-            child: async.when(
-              loading: () =>
-                  const AppLoadingState(skeleton: AppListSkeleton()),
-              error: (e, _) => AppErrorState(
-                title: 'Не удалось загрузить',
-                onRetry: () => ref
-                    .invalidate(approvalsControllerProvider(widget.projectId)),
+      body: async.when(
+        loading: () => const AppLoadingState(skeleton: AppListSkeleton()),
+        error: (e, _) => AppErrorState(
+          title: 'Не удалось загрузить',
+          onRetry: () =>
+              ref.invalidate(approvalsControllerProvider(widget.projectId)),
+        ),
+        data: (buckets) {
+          final pendingCount = _filter(buckets.pending).length;
+          return Column(
+            children: [
+              _Tabs(controller: _tabs, pendingCount: pendingCount),
+              _ScopeFilter(
+                activeId: _scopeId,
+                onSelect: (id) => setState(() => _scopeId = id),
               ),
-              data: (buckets) => TabBarView(
-                controller: _tabs,
-                children: [
-                  _ListBody(
-                    projectId: widget.projectId,
-                    items: _filter(buckets.pending),
-                    emptyTitle: 'Нет активных согласований',
-                    emptyHint:
-                        'Здесь появятся заявки, которые ждут вашего решения.',
-                  ),
-                  _ListBody(
-                    projectId: widget.projectId,
-                    items: _filter(buckets.history),
-                    emptyTitle: 'История пуста',
-                    emptyHint:
-                        'Решённые и отклонённые согласования сохранятся здесь.',
-                  ),
-                ],
+              Expanded(
+                child: TabBarView(
+                  controller: _tabs,
+                  children: [
+                    _ListBody(
+                      projectId: widget.projectId,
+                      items: _filter(buckets.pending),
+                      emptyTitle: 'Нет согласований',
+                      emptyHint: 'Согласования появятся когда подрядчик '
+                          'отправит шаг или этап на проверку.',
+                    ),
+                    _ListBody(
+                      projectId: widget.projectId,
+                      items: _filter(buckets.history),
+                      emptyTitle: 'История пуста',
+                      emptyHint: 'Решённые и отклонённые согласования '
+                          'сохранятся здесь.',
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
   List<Approval> _filter(List<Approval> src) {
-    if (_scope == null) return src;
-    return src.where((a) => a.scope == _scope).toList();
+    if (_scopeId == 'all') return src;
+    return src.where((a) => a.scope.apiValue == _scopeId).toList();
   }
 }
 
-class _ScopeChips extends StatelessWidget {
-  const _ScopeChips({required this.selected, required this.onSelected});
+class _Tabs extends StatelessWidget {
+  const _Tabs({required this.controller, required this.pendingCount});
 
-  final ApprovalScope? selected;
-  final ValueChanged<ApprovalScope?> onSelected;
+  final TabController controller;
+  final int pendingCount;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-        children: [
-          _Chip(
-            label: 'Все',
-            active: selected == null,
-            onTap: () => onSelected(null),
-          ),
-          for (final s in ApprovalScope.values) ...[
-            const SizedBox(width: AppSpacing.x8),
-            _Chip(
-              label: s.displayName,
-              active: selected == s,
-              onTap: () => onSelected(s),
+    return ColoredBox(
+      color: AppColors.n0,
+      child: TabBar(
+        controller: controller,
+        labelStyle:
+            AppTextStyles.caption.copyWith(fontWeight: FontWeight.w800),
+        labelColor: AppColors.brand,
+        unselectedLabelColor: AppColors.n400,
+        indicatorColor: AppColors.brand,
+        indicatorSize: TabBarIndicatorSize.label,
+        indicatorWeight: 2.5,
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Активные'),
+                if (pendingCount > 0) ...[
+                  const SizedBox(width: 6),
+                  _CountBadge(count: pendingCount),
+                ],
+              ],
             ),
-          ],
+          ),
+          const Tab(text: 'История'),
         ],
       ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
 
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: AppDurations.fast,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x12,
-            vertical: AppSpacing.x6,
-          ),
-          decoration: BoxDecoration(
-            color: active ? AppColors.brand : AppColors.n100,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: active ? AppColors.n0 : AppColors.n700,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.redBg,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        '$count',
+        style: const TextStyle(
+          fontFamily: 'Manrope',
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: AppColors.redText,
+          height: 1.2,
         ),
+      ),
+    );
+  }
+}
+
+class _ScopeFilter extends StatelessWidget {
+  const _ScopeFilter({required this.activeId, required this.onSelect});
+
+  final String activeId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <AppFilterChipSpec>[
+      const AppFilterChipSpec(id: 'all', label: 'Все'),
+      for (final s in ApprovalScope.values)
+        AppFilterChipSpec(id: s.apiValue, label: s.displayName),
+    ];
+    return ColoredBox(
+      color: AppColors.n0,
+      child: AppFilterChips(
+        chips: chips,
+        activeId: activeId,
+        onSelect: onSelect,
       ),
     );
   }
@@ -197,7 +204,12 @@ class _ListBody extends StatelessWidget {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.x16),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x16,
+        AppSpacing.x10,
+        AppSpacing.x16,
+        AppSpacing.x20,
+      ),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
       itemBuilder: (_, i) => ApprovalCard(

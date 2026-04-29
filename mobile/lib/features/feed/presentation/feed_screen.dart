@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../exports/presentation/export_sheet.dart';
 import '../application/feed_controller.dart';
 import '../domain/feed_event.dart';
 
-/// f-feed / f-feed-empty / f-feed-filtered.
+/// `f-feed` / `f-feed-empty` / `f-feed-filtered` из дизайна `Кластер F`.
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({required this.projectId, super.key});
 
@@ -37,8 +36,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _onScroll() {
-    // Триггерим loadMore когда осталось <300px до конца — даём UX-запас,
-    // чтобы спиннер появлялся раньше чем пользователь упрётся в дно.
     if (_scroll.position.pixels >=
         _scroll.position.maxScrollExtent - 300) {
       ref.read(feedControllerProvider(widget.projectId).notifier).loadMore();
@@ -52,7 +49,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
     return AppScaffold(
       showBack: true,
-      title: 'Лента',
+      title: 'Лента событий',
       padding: EdgeInsets.zero,
       actions: [
         IconButton(
@@ -64,14 +61,40 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       ],
       body: Column(
         children: [
-          _CategoryFilter(
-            selected: state.filter,
-            onChanged: ctrl.setFilter,
-          ),
-          Expanded(
-            child: _body(state, ctrl),
-          ),
+          _buildFilterBar(state.filter, ctrl.setFilter),
+          Expanded(child: _body(state, ctrl)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(
+    FeedCategory? selected,
+    ValueChanged<FeedCategory?> onChanged,
+  ) {
+    final chips = <AppFilterPillSpec>[
+      const AppFilterPillSpec(id: '__all__', label: 'Все'),
+      for (final c in FeedCategory.values)
+        AppFilterPillSpec(id: c.name, label: c.displayName),
+    ];
+    final active = selected?.name ?? '__all__';
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.n0,
+        border: Border(bottom: BorderSide(color: AppColors.n100)),
+      ),
+      child: AppFilterPillBar(
+        chips: chips,
+        activeId: active,
+        onSelect: (id) {
+          if (id == '__all__') {
+            onChanged(null);
+          } else {
+            onChanged(
+              FeedCategory.values.firstWhere((c) => c.name == id),
+            );
+          }
+        },
       ),
     );
   }
@@ -89,9 +112,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     final filtered = state.visible;
     if (filtered.isEmpty) {
       return AppEmptyState(
-        title: state.filter == null
-            ? 'Лента пуста'
-            : 'Нет событий в этой категории',
+        title: state.filter == null ? 'Нет событий' : 'Нет событий в категории',
+        subtitle: state.filter == null
+            ? 'Лента наполняется автоматически при работе с проектом. '
+                'Все действия фиксируются здесь'
+            : 'Попробуйте сменить фильтр',
         icon: Icons.stream_outlined,
       );
     }
@@ -99,9 +124,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       onRefresh: ctrl.refresh,
       child: ListView.separated(
         controller: _scroll,
-        padding: const EdgeInsets.all(AppSpacing.x16),
+        padding: EdgeInsets.zero,
         itemCount: filtered.length + (state.isLoadingMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x8),
+        separatorBuilder: (_, __) => const Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.n100,
+        ),
         itemBuilder: (_, i) {
           if (i == filtered.length) {
             return const Padding(
@@ -122,102 +151,59 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 }
 
-class _CategoryFilter extends StatelessWidget {
-  const _CategoryFilter({required this.selected, required this.onChanged});
-
-  final FeedCategory? selected;
-  final ValueChanged<FeedCategory?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-        children: [
-          _chip('Все', null),
-          for (final c in FeedCategory.values) ...[
-            const SizedBox(width: AppSpacing.x8),
-            _chip(c.displayName, c),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(String label, FeedCategory? c) {
-    final active = c == selected;
-    return Builder(
-      builder: (context) => Center(
-        child: GestureDetector(
-          onTap: () => onChanged(c),
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.x12,
-              vertical: AppSpacing.x6,
-            ),
-            decoration: BoxDecoration(
-              color: active ? AppColors.brand : AppColors.n100,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-            child: Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: active ? AppColors.n0 : AppColors.n700,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _FeedRow extends StatelessWidget {
   const _FeedRow({required this.event});
+
   final FeedEvent event;
 
   @override
   Widget build(BuildContext context) {
+    final stageTitle = event.payload['stageTitle'] as String?;
+    final reason = event.payload['reason'] as String?;
+    final timeStr =
+        DateFormat('dd.MM.yyyy, HH:mm', 'ru').format(event.createdAt);
+    final subtitleParts = <String>[
+      timeStr,
+      if (stageTitle != null && stageTitle.isNotEmpty) stageTitle,
+    ];
+    if (reason != null && reason.isNotEmpty) {
+      subtitleParts.add('Причина: $reason');
+    }
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.n200, width: 1.5),
-      ),
+      color: AppColors.n0,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.brandLight,
-              borderRadius: BorderRadius.circular(AppRadius.r8),
-            ),
-            child: Icon(
-              event.category.icon,
-              color: AppColors.brand,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.x10),
+          AppFeedDot(tone: event.dotTone),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(event.summary, style: AppTextStyles.subtitle),
+                Text(
+                  event.summary,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.n800,
+                    height: 1.5,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
-                  '${event.category.displayName} · '
-                  '${DateFormat('d MMM y · HH:mm', 'ru').format(event.createdAt)}',
-                  style: AppTextStyles.caption,
+                  subtitleParts.join(' — '),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.n400,
+                    height: 1.4,
+                  ),
                 ),
+                if (event.isImmutable) ...[
+                  const SizedBox(height: 4),
+                  const AppImmutableBadge(),
+                ],
               ],
             ),
           ),

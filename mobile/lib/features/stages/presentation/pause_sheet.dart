@@ -7,37 +7,161 @@ import '../../../shared/widgets/widgets.dart';
 import '../application/stages_controller.dart';
 import '../domain/pause_reason.dart';
 
-/// c-pause-sheet / c-pause-other — выбор причины паузы.
-/// Для `other` комментарий обязателен.
+/// Двухшаговый Pause-flow по дизайну c-pause-sheet → c-pause-confirm-*.
+///
+/// 1. PausePickerSheet: 4 цветные опции причин.
+/// 2. PauseConfirmSheet: цветной confirm (yellow/purple/red/textarea для other).
+///
+/// Хост-экран вызывает [showPauseSheet] и получает `true`, если этап
+/// действительно поставлен на паузу.
 Future<bool> showPauseSheet(
   BuildContext context,
   WidgetRef ref, {
   required String projectId,
   required String stageId,
+  required String stageTitle,
+}) async {
+  final reason = await _showPausePickerSheet(context);
+  if (reason == null) return false;
+  if (!context.mounted) return false;
+
+  final result = await _showPauseConfirmSheet(
+    context,
+    ref,
+    projectId: projectId,
+    stageId: stageId,
+    stageTitle: stageTitle,
+    reason: reason,
+  );
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Шаг 1: picker — 4 цветные опции
+// ─────────────────────────────────────────────────────────────────────
+Future<PauseReason?> _showPausePickerSheet(BuildContext context) async {
+  return showAppBottomSheet<PauseReason>(
+    context: context,
+    child: const _PickerBody(),
+  );
+}
+
+class _PickerBody extends StatelessWidget {
+  const _PickerBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AppBottomSheetHeader(
+          title: 'Приостановить этап',
+          subtitle:
+              'Выберите причину паузы. Дедлайн будет сдвинут автоматически.',
+        ),
+        for (var i = 0; i < PauseReason.values.length; i++) ...[
+          if (i > 0)
+            const Divider(height: 1, thickness: 1, color: AppColors.n100),
+          _ReasonRow(
+            reason: PauseReason.values[i],
+            onTap: () =>
+                Navigator.of(context).pop(PauseReason.values[i]),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReasonRow extends StatelessWidget {
+  const _ReasonRow({required this.reason, required this.onTap});
+
+  final PauseReason reason;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = _palette(reason);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: spec.bg,
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+              ),
+              child: Icon(reason.icon, size: 20, color: spec.fg),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Text(
+                reason.displayName,
+                style: AppTextStyles.subtitle.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.n800,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.n300,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Шаг 2: confirm — цветная sheet'а в зависимости от причины
+// ─────────────────────────────────────────────────────────────────────
+Future<bool> _showPauseConfirmSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  required String projectId,
+  required String stageId,
+  required String stageTitle,
+  required PauseReason reason,
 }) async {
   final result = await showAppBottomSheet<bool>(
     context: context,
-    child: _PauseBody(projectId: projectId, stageId: stageId),
+    child: _ConfirmBody(
+      projectId: projectId,
+      stageId: stageId,
+      stageTitle: stageTitle,
+      reason: reason,
+    ),
   );
   return result ?? false;
 }
 
-class _PauseBody extends ConsumerStatefulWidget {
-  const _PauseBody({required this.projectId, required this.stageId});
+class _ConfirmBody extends ConsumerStatefulWidget {
+  const _ConfirmBody({
+    required this.projectId,
+    required this.stageId,
+    required this.stageTitle,
+    required this.reason,
+  });
 
   final String projectId;
   final String stageId;
+  final String stageTitle;
+  final PauseReason reason;
 
   @override
-  ConsumerState<_PauseBody> createState() => _PauseBodyState();
+  ConsumerState<_ConfirmBody> createState() => _ConfirmBodyState();
 }
 
-class _PauseBodyState extends ConsumerState<_PauseBody> {
-  /// ТЗ §2.4: для причины `other` комментарий обязателен и должен быть
-  /// содержательным (не «...» в две буквы), иначе бэк потом не разберётся.
+class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
   static const _otherCommentMinChars = 10;
-
-  PauseReason? _reason;
   final _comment = TextEditingController();
   bool _submitting = false;
   String? _error;
@@ -48,10 +172,8 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
     super.dispose();
   }
 
-  bool get _commentRequired => _reason == PauseReason.other;
-
+  bool get _commentRequired => widget.reason == PauseReason.other;
   bool get _canSubmit {
-    if (_reason == null) return false;
     if (!_commentRequired) return true;
     return _comment.text.trim().length >= _otherCommentMinChars;
   }
@@ -66,7 +188,7 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
         .read(stagesControllerProvider(widget.projectId).notifier)
         .pause(
           stageId: widget.stageId,
-          reason: _reason!,
+          reason: widget.reason,
           comment:
               _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
@@ -86,53 +208,69 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
 
   @override
   Widget build(BuildContext context) {
+    final spec = _palette(widget.reason);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AppBottomSheetHeader(
-          title: 'Поставить на паузу',
-          subtitle: 'Пауза не засчитывается в срок этапа — '
-              'дедлайн автоматически сдвинется на её длительность.',
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: spec.bg,
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+              ),
+              alignment: Alignment.center,
+              child: Icon(widget.reason.icon, size: 22, color: spec.fg),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.reason.displayName,
+                    style: AppTextStyles.h1.copyWith(fontSize: 18),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Этап «${widget.stageTitle}» будет приостановлен.',
+                    style: AppTextStyles.caption,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        if (_error != null) ...[
-          AppInlineError(message: _error!),
-          const SizedBox(height: AppSpacing.x12),
-        ],
-        for (final r in PauseReason.values) ...[
-          _ReasonTile(
-            reason: r,
-            selected: _reason == r,
-            onTap: () => setState(() => _reason = r),
-          ),
-          const SizedBox(height: AppSpacing.x8),
-        ],
+        const SizedBox(height: AppSpacing.x16),
         if (_commentRequired) ...[
-          const SizedBox(height: AppSpacing.x8),
-          const Text(
-            'Комментарий (обязательно, минимум 10 символов)',
-            style: AppTextStyles.caption,
-          ),
-          const SizedBox(height: AppSpacing.x6),
           TextField(
             controller: _comment,
             minLines: 3,
             maxLines: 6,
+            autofocus: true,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'В чём причина паузы?',
+              hintText: 'В чём причина паузы? (минимум 10 символов)',
               hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
               filled: true,
-              fillColor: AppColors.n0,
+              fillColor: AppColors.n50,
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
                 borderSide:
                     const BorderSide(color: AppColors.n200, width: 1.5),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+                borderSide: BorderSide(color: spec.fg, width: 1.5),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.x6),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
@@ -143,91 +281,71 @@ class _PauseBodyState extends ConsumerState<_PauseBody> {
                 return 'осталось $remaining';
               }(),
               style: AppTextStyles.caption.copyWith(
-                color: _comment.text.trim().length >= _otherCommentMinChars
-                    ? AppColors.greenDark
-                    : AppColors.n400,
+                color:
+                    _comment.text.trim().length >= _otherCommentMinChars
+                        ? AppColors.greenDark
+                        : AppColors.n400,
               ),
             ),
           ),
+        ] else
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x14),
+            decoration: BoxDecoration(
+              color: spec.bg,
+              borderRadius: AppRadius.card,
+            ),
+            child: Text(
+              widget.reason == PauseReason.forceMajeure
+                  ? '⚠ Форс-мажор фиксируется в ленте событий как неизменяемая запись. Заказчик может принять причину или оспорить.'
+                  : 'Дедлайн этапа сдвинется автоматически на время паузы. Заказчик получит уведомление с указанной причиной.',
+              style: AppTextStyles.caption.copyWith(
+                color: spec.fg,
+                height: 1.5,
+              ),
+            ),
+          ),
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.x12),
+          AppInlineError(message: _error!),
         ],
         const SizedBox(height: AppSpacing.x16),
         AppButton(
-          label: 'Поставить на паузу',
+          label: widget.reason == PauseReason.forceMajeure
+              ? 'Приостановить (форс-мажор)'
+              : 'Приостановить этап',
           variant: AppButtonVariant.destructive,
           isLoading: _submitting,
           onPressed: _canSubmit ? _submit : null,
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        AppButton(
+          label: 'Назад',
+          variant: AppButtonVariant.ghost,
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
         ),
       ],
     );
   }
 }
 
-class _ReasonTile extends StatelessWidget {
-  const _ReasonTile({
-    required this.reason,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final PauseReason reason;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: AppDurations.fast,
-        padding: const EdgeInsets.all(AppSpacing.x12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.brandLight : AppColors.n0,
-          borderRadius: AppRadius.card,
-          border: Border.all(
-            color: selected ? AppColors.brand : AppColors.n200,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.brand
-                    : AppColors.brandLight,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-              ),
-              child: Icon(
-                reason.icon,
-                size: 20,
-                color: selected ? AppColors.n0 : AppColors.brand,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(reason.displayName, style: AppTextStyles.subtitle),
-                  Text(reason.hint, style: AppTextStyles.caption),
-                ],
-              ),
-            ),
-            AnimatedOpacity(
-              duration: AppDurations.fast,
-              opacity: selected ? 1 : 0,
-              child: const Icon(
-                Icons.check_circle,
-                color: AppColors.brand,
-              ),
-            ),
-          ],
-        ),
+({Color bg, Color fg}) _palette(PauseReason r) {
+  return switch (r) {
+    PauseReason.materials => (
+        bg: AppColors.yellowBg,
+        fg: AppColors.yellowText,
       ),
-    );
-  }
+    PauseReason.approval => (
+        bg: AppColors.purpleBg,
+        fg: AppColors.purple,
+      ),
+    PauseReason.forceMajeure => (
+        bg: AppColors.redBg,
+        fg: AppColors.redText,
+      ),
+    PauseReason.other => (
+        bg: AppColors.n100,
+        fg: AppColors.n600,
+      ),
+  };
 }

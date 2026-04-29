@@ -7,15 +7,20 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../support_contacts/application/support_contacts_controller.dart';
+import '../../support_contacts/domain/support_contacts.dart';
 import '../application/faq_controller.dart';
 
-/// s-help — экран «Помощь и FAQ»: contact-row Telegram + Phone, потом FAQ.
+/// s-help — экран «Помощь и FAQ»: contact-row + FAQ.
+/// Контакты подгружаются из админки через supportContactsProvider —
+/// раньше были захардкожены, теперь админ управляет ими в /admin/settings.
 class HelpScreen extends ConsumerWidget {
   const HelpScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(faqProvider);
+    final contactsAsync = ref.watch(supportContactsProvider);
 
     return AppScaffold(
       showBack: true,
@@ -42,26 +47,20 @@ class HelpScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
+            ...contactsAsync.maybeWhen(
+              data: _buildContactRows,
+              orElse: () => const <Widget>[],
+            ),
+            const SizedBox(height: AppSpacing.x12),
             AppMenuGroup(
               children: [
                 AppMenuRow(
-                  icon: PhosphorIconsFill.paperPlaneTilt,
+                  icon: PhosphorIconsFill.bookOpen,
                   iconBg: AppColors.brandLight,
                   iconColor: AppColors.brand,
-                  label: 'Написать в Telegram',
-                  value: '@kontrolremont',
-                  valueColor: AppColors.brand,
-                  onTap: () =>
-                      _launch(Uri.parse('https://t.me/kontrolremont')),
-                ),
-                AppMenuRow(
-                  icon: PhosphorIconsFill.phone,
-                  iconBg: AppColors.greenLight,
-                  iconColor: AppColors.greenDark,
-                  label: 'Позвонить',
-                  value: '+7 (999) 000-00-00',
-                  valueColor: AppColors.greenDark,
-                  onTap: () => _launch(Uri.parse('tel:+79990000000')),
+                  label: 'База знаний',
+                  value: 'Обучающие материалы',
+                  onTap: () => context.push(AppRoutes.knowledge),
                 ),
               ],
             ),
@@ -116,6 +115,69 @@ class HelpScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Контакт-строки. Скрывает пустые поля; если все пусты — возвращает
+  /// пустой список (секция контактов не рисуется).
+  List<Widget> _buildContactRows(SupportContacts contacts) {
+    if (contacts.isEmpty) return const <Widget>[];
+    final rows = <Widget>[
+      if (contacts.maxUrl != null)
+        AppMenuRow(
+          icon: PhosphorIconsFill.chatTeardropDots,
+          iconBg: AppColors.brandLight,
+          iconColor: AppColors.brand,
+          label: 'Написать в MAX',
+          value: _shortUrl(contacts.maxUrl!),
+          valueColor: AppColors.brand,
+          onTap: () => _launch(Uri.parse(contacts.maxUrl!)),
+        ),
+      if (contacts.vkUrl != null)
+        AppMenuRow(
+          icon: PhosphorIconsFill.chats,
+          iconBg: AppColors.brandLight,
+          iconColor: AppColors.brand,
+          label: 'Написать во VK',
+          value: _shortUrl(contacts.vkUrl!),
+          valueColor: AppColors.brand,
+          onTap: () => _launch(Uri.parse(contacts.vkUrl!)),
+        ),
+      if (contacts.telegramUrl != null)
+        AppMenuRow(
+          icon: PhosphorIconsFill.paperPlaneTilt,
+          iconBg: AppColors.brandLight,
+          iconColor: AppColors.brand,
+          label: 'Написать в Telegram',
+          value: _shortUrl(contacts.telegramUrl!),
+          valueColor: AppColors.brand,
+          onTap: () => _launch(Uri.parse(contacts.telegramUrl!)),
+        ),
+      if (contacts.email case final email?)
+        AppMenuRow(
+          icon: PhosphorIconsFill.envelopeSimple,
+          iconBg: AppColors.brandLight,
+          iconColor: AppColors.brand,
+          label: 'Написать на почту',
+          value: email,
+          valueColor: AppColors.brand,
+          onTap: () => _launch(Uri(scheme: 'mailto', path: email)),
+        ),
+      if (contacts.phone case final phone?)
+        AppMenuRow(
+          icon: PhosphorIconsFill.phone,
+          iconBg: AppColors.greenLight,
+          iconColor: AppColors.greenDark,
+          label: 'Позвонить',
+          value: phone,
+          valueColor: AppColors.greenDark,
+          onTap: () => _launch(Uri(scheme: 'tel', path: phone)),
+        ),
+    ];
+    return [AppMenuGroup(children: rows)];
+  }
+
+  static String _shortUrl(String raw) {
+    return raw.replaceFirst(RegExp('^https?://'), '');
   }
 
   Future<void> _launch(Uri uri) async {

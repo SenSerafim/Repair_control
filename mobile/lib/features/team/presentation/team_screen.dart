@@ -161,10 +161,12 @@ class _MemberRow extends ConsumerWidget {
       (action: DomainAction.projectInviteMember, projectId: projectId),
     ));
 
+    final roleTone = _toneFor(member.role);
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.n0,
+        border: Border.all(color: AppColors.n200),
         borderRadius: AppRadius.card,
         boxShadow: AppShadows.sh1,
       ),
@@ -183,12 +185,24 @@ class _MemberRow extends ConsumerWidget {
               children: [
                 Text(
                   name.isEmpty ? '—' : name,
-                  style: AppTextStyles.subtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.n900,
+                    height: 1.3,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (user?.phone != null)
-                  Text(user!.phone, style: AppTextStyles.caption),
+                const SizedBox(height: 2),
+                Text(
+                  member.role.displayName,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _roleColor(roleTone),
+                  ),
+                ),
               ],
             ),
           ),
@@ -246,6 +260,34 @@ class _MemberRow extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+AppRoleBadgeTone _toneFor(MembershipRole role) {
+  switch (role) {
+    case MembershipRole.customer:
+      return AppRoleBadgeTone.customer;
+    case MembershipRole.foreman:
+      return AppRoleBadgeTone.foreman;
+    case MembershipRole.master:
+      return AppRoleBadgeTone.worker;
+    case MembershipRole.representative:
+      return AppRoleBadgeTone.representative;
+  }
+}
+
+Color _roleColor(AppRoleBadgeTone tone) {
+  switch (tone) {
+    case AppRoleBadgeTone.customer:
+      return AppColors.brand;
+    case AppRoleBadgeTone.foreman:
+      return AppColors.greenDark;
+    case AppRoleBadgeTone.worker:
+      return AppColors.purple;
+    case AppRoleBadgeTone.representative:
+      return AppColors.yellowText;
+    case AppRoleBadgeTone.neutral:
+      return AppColors.n500;
   }
 }
 

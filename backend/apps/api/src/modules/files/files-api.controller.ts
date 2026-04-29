@@ -4,12 +4,17 @@ import { IsIn, IsInt, IsString, Length, Max, Min } from 'class-validator';
 import { FilesService } from '@app/files';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+// Top-level whitelist для DTO. Реальные ограничения mime/size — per-scope через
+// FilesService.policyForScope (см. libs/files/src/files.service.ts). Здесь только
+// синтаксический guard от заведомо невалидных типов и обрезка экстремальных размеров.
 const ALLOWED = [
   'image/jpeg',
   'image/png',
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'video/mp4',
+  'video/quicktime',
 ];
 
 class PresignDto {
@@ -22,7 +27,7 @@ class PresignDto {
 
   @IsInt()
   @Min(1)
-  @Max(25 * 1024 * 1024)
+  @Max(200 * 1024 * 1024)
   sizeBytes!: number;
 
   @IsString()

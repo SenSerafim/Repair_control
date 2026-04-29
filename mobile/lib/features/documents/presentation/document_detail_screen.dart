@@ -59,6 +59,7 @@ class _DetailView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final canDelete = ref.watch(canProvider(DomainAction.documentDelete));
     return ListView(
+      padding: EdgeInsets.zero,
       children: [
         GestureDetector(
           onTap: () => context.push(AppRoutes.documentViewWith(doc.id)),
@@ -67,33 +68,27 @@ class _DetailView extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x16),
         _MetaCard(doc: doc),
         const SizedBox(height: AppSpacing.x16),
-        AppButton(
-          label: 'Открыть',
-          icon: Icons.visibility_outlined,
-          onPressed: () =>
-              context.push(AppRoutes.documentViewWith(doc.id)),
+        _OutlinedDocAction(
+          label: 'Скачать',
+          icon: Icons.download_rounded,
+          iconColor: AppColors.brand,
+          onTap: () => _download(context, ref),
         ),
-        const SizedBox(height: AppSpacing.x8),
-        AppButton(
-          label: 'Открыть в системе',
-          variant: AppButtonVariant.secondary,
-          icon: Icons.open_in_new_rounded,
-          onPressed: () => _download(context, ref),
-        ),
-        const SizedBox(height: AppSpacing.x8),
-        AppButton(
+        const SizedBox(height: 8),
+        _OutlinedDocAction(
           label: 'Поделиться',
-          variant: AppButtonVariant.secondary,
           icon: Icons.share_outlined,
-          onPressed: () => _share(context, ref),
+          iconColor: AppColors.n500,
+          onTap: () => _share(context, ref),
         ),
         if (canDelete) ...[
-          const SizedBox(height: AppSpacing.x8),
-          AppButton(
+          const SizedBox(height: 8),
+          _OutlinedDocAction(
             label: 'Удалить',
-            variant: AppButtonVariant.destructive,
             icon: Icons.delete_outline_rounded,
-            onPressed: () => _confirmDelete(context, ref),
+            iconColor: AppColors.redDot,
+            destructive: true,
+            onTap: () => _confirmDelete(context, ref),
           ),
         ],
       ],
@@ -308,7 +303,7 @@ class _Preview extends StatelessWidget {
   Widget build(BuildContext context) {
     final previewUrl = doc.thumbUrl ?? doc.url;
     return Container(
-      height: 220,
+      height: 200,
       decoration: BoxDecoration(
         color: AppColors.n100,
         borderRadius: BorderRadius.circular(AppRadius.r16),
@@ -346,17 +341,73 @@ class _PlaceholderIcon extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(doc.category.icon, size: 40, color: AppColors.n400),
-        const SizedBox(height: AppSpacing.x8),
-        Text(
-          doc.isPdf
-              ? 'PDF — нажмите, чтобы открыть'
-              : doc.isImage
-                  ? 'Изображение'
-                  : 'Документ',
-          style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+        AppDocTypeIcon(mimeType: doc.mimeType, size: 56),
+        const SizedBox(height: 10),
+        const Text(
+          'Нажмите для просмотра',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.n400,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _OutlinedDocAction extends StatelessWidget {
+  const _OutlinedDocAction({
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = destructive ? AppColors.redDot : AppColors.n700;
+    final bg = destructive ? AppColors.redBg : AppColors.n0;
+    final border = destructive
+        ? const Color(0xFFFECACA)
+        : AppColors.n200;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(AppRadius.r12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            border: Border.all(color: border, width: 1.5),
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: iconColor),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -441,105 +492,62 @@ class _ShareSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppBottomSheetHeader(
-          title: 'Поделиться',
-          subtitle: '$docTitle · $docSize',
+        const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Поделиться',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+            ),
+          ),
         ),
-        _ShareTile(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            '$docTitle · $docSize',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n400,
+            ),
+          ),
+        ),
+        AppOptionRow(
           icon: Icons.send_rounded,
           iconBg: AppColors.brand,
-          iconColor: AppColors.n0,
+          iconFg: AppColors.n0,
           title: 'Отправить через…',
-          subtitle: 'WhatsApp, Telegram, почта — выбор системы',
+          subtitle: 'WhatsApp, Telegram, почта',
           onTap: onSystemShare,
         ),
-        const SizedBox(height: AppSpacing.x6),
+        const SizedBox(height: 10),
         for (final c in chats) ...[
-          _ShareTile(
-            icon: Icons.forum_outlined,
+          AppOptionRow(
+            icon: c.type == ChatType.project
+                ? Icons.home_outlined
+                : c.type == ChatType.stage
+                    ? Icons.layers_outlined
+                    : Icons.person_outline,
             iconBg: AppColors.brandLight,
-            iconColor: AppColors.brand,
+            iconFg: AppColors.brand,
             title: c.title ?? c.type.displayName,
-            subtitle: c.type.displayName,
+            subtitle: '${c.type.displayName} · ${c.participants.length} '
+                'участников',
             onTap: () => onPickChat(c.id),
           ),
-          const SizedBox(height: AppSpacing.x6),
+          const SizedBox(height: 10),
         ],
-        _ShareTile(
+        AppOptionRow(
           icon: Icons.link_rounded,
           iconBg: AppColors.n100,
-          iconColor: AppColors.n700,
+          iconFg: AppColors.n600,
           title: 'Скопировать ссылку',
           subtitle: 'Ссылка на файл в буфер обмена',
           onTap: onCopyLink,
         ),
       ],
-    );
-  }
-}
-
-class _ShareTile extends StatelessWidget {
-  const _ShareTile({
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.r16),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x14),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.n200),
-          borderRadius: BorderRadius.circular(AppRadius.r16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-              ),
-              child: Icon(icon, color: iconColor, size: 20),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.subtitle),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style:
-                        AppTextStyles.caption.copyWith(color: AppColors.n400),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.n300,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

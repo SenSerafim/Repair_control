@@ -34,6 +34,11 @@ import '../../features/methodology/presentation/article_screen.dart';
 import '../../features/methodology/presentation/methodology_screen.dart';
 import '../../features/methodology/presentation/methodology_search_screen.dart';
 import '../../features/methodology/presentation/methodology_section_screen.dart';
+import '../../features/knowledge_base/presentation/knowledge_article_screen.dart';
+import '../../features/knowledge_base/presentation/knowledge_category_screen.dart';
+import '../../features/knowledge_base/presentation/knowledge_screen.dart';
+import '../../features/knowledge_base/presentation/knowledge_search_screen.dart';
+import '../../features/support_contacts/presentation/support_contacts_screen.dart';
 import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/notifications/application/notifications_controller.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
@@ -733,6 +738,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: '/support',
+        pageBuilder: slideLeftPage((_, __) => const SupportContactsScreen()),
+      ),
+      GoRoute(
         path: '/methodology',
         pageBuilder: slideLeftPage((_, __) => const MethodologyScreen()),
         routes: [
@@ -753,6 +762,37 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'articles/:articleId',
             pageBuilder: slideLeftPage(
               (_, state) => ArticleScreen(
+                articleId: state.pathParameters['articleId']!,
+              ),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/knowledge',
+        pageBuilder: slideLeftPage(
+          (_, state) => KnowledgeScreen(
+            moduleSlug: state.uri.queryParameters['moduleSlug'],
+          ),
+        ),
+        routes: [
+          GoRoute(
+            path: 'search',
+            pageBuilder:
+                fadePage((_, __) => const KnowledgeSearchScreen()),
+          ),
+          GoRoute(
+            path: 'categories/:categoryId',
+            pageBuilder: slideLeftPage(
+              (_, state) => KnowledgeCategoryScreen(
+                categoryId: state.pathParameters['categoryId']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            path: 'articles/:articleId',
+            pageBuilder: slideLeftPage(
+              (_, state) => KnowledgeArticleScreen(
                 articleId: state.pathParameters['articleId']!,
               ),
             ),

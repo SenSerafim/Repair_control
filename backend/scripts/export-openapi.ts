@@ -24,8 +24,11 @@ async function main(): Promise<void> {
 
   const swagger = new DocumentBuilder()
     .setTitle('Repair Control API')
-    .setDescription('OpenAPI v1.0 frozen contract. Источник истины для Flutter retrofit-клиентов.')
-    .setVersion('1.0.0')
+    .setDescription(
+      'OpenAPI v1.x контракт. Источник истины для Flutter retrofit-клиентов. ' +
+        'S18 (1.2.0): Knowledge Base, Legal PDFs, broadcast платформа, поддержка-контакты.',
+    )
+    .setVersion('1.2.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swagger);
