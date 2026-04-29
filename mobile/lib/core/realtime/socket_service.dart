@@ -52,6 +52,12 @@ class SocketService {
   final _eventsController =
       StreamController<(String event, dynamic payload)>.broadcast();
 
+  /// Чаты, на которые мы подписаны в текущей сессии. При reconnect socket.io
+  /// автоматически переподключится, но НЕ восстановит rooms:join — события
+  /// чата приходят к серверу, но клиент не в комнате → не получит. Этот set
+  /// используется в onConnect handler, чтобы заново отправить rooms:join.
+  final Set<String> _joinedChats = <String>{};
+
   Stream<bool> get connectedStream => _connectedController.stream;
   Stream<(String, dynamic)> get eventsStream => _eventsController.stream;
 
@@ -81,6 +87,12 @@ class SocketService {
       ..onConnect((_) {
         _logger.d('WS /chats connected');
         _connectedController.add(true);
+        // Re-join во все чаты, на которые подписаны до disconnect.
+        // Без этого после reconnect клиент не получает события чата.
+        if (_joinedChats.isNotEmpty) {
+          socket.emit('rooms:join', {'chatIds': _joinedChats.toList()});
+          _logger.d('WS /chats re-join: ${_joinedChats.length} chat(s)');
+        }
       })
       ..onDisconnect((_) {
         _logger.d('WS /chats disconnected');
@@ -119,6 +131,8 @@ class SocketService {
   Future<bool> joinChats(List<String> chatIds) async {
     final socket = _socket;
     if (socket == null || chatIds.isEmpty) return false;
+    // Запоминаем chatIds — onConnect handler re-join'ит их после reconnect.
+    _joinedChats.addAll(chatIds);
     final completer = Completer<bool>();
     socket.emitWithAck(
       'rooms:join',
@@ -140,6 +154,7 @@ class SocketService {
 
   Future<void> leaveChats(List<String> chatIds) async {
     final socket = _socket;
+    _joinedChats.removeAll(chatIds);
     if (socket == null || chatIds.isEmpty) return;
     socket.emit('rooms:leave', {'chatIds': chatIds});
   }
@@ -154,6 +169,7 @@ class SocketService {
   Future<void> disconnect() async {
     _socket?.dispose();
     _socket = null;
+    _joinedChats.clear();
     _connectedController.add(false);
   }
 

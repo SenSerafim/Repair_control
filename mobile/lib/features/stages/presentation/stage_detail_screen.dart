@@ -474,16 +474,24 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           if (children.isNotEmpty) {
             children.add(const SizedBox(width: AppSpacing.x10));
           }
+          // ТЗ §2.4: «На приёмку» доступно только когда все шаги завершены
+          // (progressCache=100). Backend дублирует проверку — но кнопка
+          // disabled даёт мгновенный фидбек без запроса.
+          final canSendToReview = widget.stage.progressCache >= 100;
           children.add(
             Expanded(
               flex: 2,
               child: AppButton(
-                label: 'На проверку',
+                label: canSendToReview
+                    ? 'На проверку'
+                    : 'Завершите все шаги',
                 isLoading: _busy,
-                onPressed: () => _wrap(
-                  () => _controller.sendToReview(widget.stage.id),
-                  'Этап отправлен на приёмку',
-                ),
+                onPressed: canSendToReview
+                    ? () => _wrap(
+                          () => _controller.sendToReview(widget.stage.id),
+                          'Этап отправлен на приёмку',
+                        )
+                    : null,
               ),
             ),
           );

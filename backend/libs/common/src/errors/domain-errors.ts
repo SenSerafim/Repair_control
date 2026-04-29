@@ -66,6 +66,7 @@ export const ErrorCodes = {
   STAGE_PAUSE_REQUIRES_REASON: 'stages.pause_requires_reason',
   STAGE_PAUSE_COMMENT_REQUIRED: 'stages.pause_comment_required',
   STAGE_NOT_PAUSED: 'stages.not_paused',
+  STAGE_STEPS_INCOMPLETE: 'stages.steps_incomplete',
   TEMPLATE_NOT_FOUND: 'templates.not_found',
   FORBIDDEN: 'common.forbidden',
   STEP_NOT_FOUND: 'steps.not_found',

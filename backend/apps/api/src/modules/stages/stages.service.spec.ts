@@ -72,6 +72,11 @@ const mkPrisma = () => {
       findUnique: jest.fn(({ where }: any) => projects.get(where.id) ?? null),
       update: jest.fn(),
     },
+    step: {
+      // По умолчанию все шаги завершены — sendToReview не блокируется.
+      // Тесты которым нужна обратная ситуация переопределяют моком.
+      count: jest.fn().mockResolvedValue(0),
+    },
     pause: {
       create: jest.fn(({ data }: any) => {
         const p = { id: `ps${++pauseSeq}`, startedAt: new Date(NOW), endedAt: null, ...data };
@@ -595,5 +600,28 @@ describe('StagesService.sendToReview — создаёт Approval scope=stage_acc
         requestedById: 'f1',
       }),
     );
+  });
+
+  it('блокирует sendToReview если есть незавершённые шаги (ТЗ §2.4)', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    // Симулируем 3 незавершённых шага.
+    (prisma as any).step.count = jest.fn().mockResolvedValue(3);
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    await svc.start(s.id, 'f1');
+    await expect(svc.sendToReview(s.id, 'f1')).rejects.toThrow(/steps_incomplete|not completed/);
+    // Approval НЕ должен создаться, статус остаётся active.
+    expect(approvals.request).not.toHaveBeenCalled();
   });
 });

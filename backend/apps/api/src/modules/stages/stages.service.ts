@@ -379,6 +379,18 @@ export class StagesService {
 
   async sendToReview(stageId: string, actorUserId: string) {
     return this.transition(stageId, actorUserId, 'send_to_review', async (stage, tx) => {
+      // ТЗ §2.4 / §4.4: запретить отправку этапа на приёмку, пока есть
+      // незавершённые шаги. Без этого бригадир может «сдать» этап с 0%
+      // прогресса, и заказчик получит pending-approval на пустую работу.
+      const incomplete = await tx.step.count({
+        where: { stageId: stage.id, status: { not: 'done' } },
+      });
+      if (incomplete > 0) {
+        throw new InvalidInputError(
+          ErrorCodes.STAGE_STEPS_INCOMPLETE,
+          `Cannot send to review: ${incomplete} step(s) not completed`,
+        );
+      }
       await tx.stage.update({
         where: { id: stage.id },
         data: { status: 'review', sentToReviewAt: this.clock.now() },
