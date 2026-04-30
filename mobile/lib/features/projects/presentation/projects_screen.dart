@@ -37,6 +37,8 @@ class ProjectsScreen extends ConsumerWidget {
             unreadNotifications: unread,
             activeIndex: 0,
             onArchiveTap: () => context.push(AppRoutes.projectsArchive),
+            onJoinByCodeTap: () =>
+                context.push(AppRoutes.projectsJoinByCode),
           ),
           Expanded(
             child: async.when(
@@ -50,6 +52,8 @@ class ProjectsScreen extends ConsumerWidget {
                 if (items.isEmpty) {
                   return _EmptyState(
                     onCreate: () => context.push(AppRoutes.projectsCreate),
+                    onJoinByCode: () =>
+                        context.push(AppRoutes.projectsJoinByCode),
                   );
                 }
                 return RefreshIndicator(
@@ -96,11 +100,13 @@ class _Header extends ConsumerWidget {
     required this.unreadNotifications,
     required this.activeIndex,
     required this.onArchiveTap,
+    required this.onJoinByCodeTap,
   });
 
   final int unreadNotifications;
   final int activeIndex;
   final VoidCallback onArchiveTap;
+  final VoidCallback onJoinByCodeTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -128,6 +134,12 @@ class _Header extends ConsumerWidget {
                       letterSpacing: -0.6,
                     ),
                   ),
+                ),
+                // Доступно всем ролям — присоединиться к проекту по 6-значному
+                // коду от заказчика/бригадира/представителя.
+                _IconBtn(
+                  icon: PhosphorIconsRegular.qrCode,
+                  onTap: onJoinByCodeTap,
                 ),
                 _IconBtn(
                   icon: PhosphorIconsRegular.question,
@@ -274,9 +286,10 @@ class _CardTile extends ConsumerWidget {
 }
 
 class _EmptyState extends ConsumerWidget {
-  const _EmptyState({required this.onCreate});
+  const _EmptyState({required this.onCreate, required this.onJoinByCode});
 
   final VoidCallback onCreate;
+  final VoidCallback onJoinByCode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -288,12 +301,12 @@ class _EmptyState extends ConsumerWidget {
     final (title, subtitle, icon) = switch (activeRole) {
       SystemRole.representative => (
           'Вас ещё не добавили',
-          'Когда заказчик добавит вас в проект — он появится здесь автоматически',
+          'Введите 6-значный код от заказчика, или дождитесь, пока вас добавят в проект',
           PhosphorIconsRegular.usersThree,
         ),
       SystemRole.contractor || SystemRole.master => (
           'Нет назначений',
-          'Когда заказчик или бригадир добавит вас на проект — он появится здесь',
+          'Введите 6-значный код от заказчика или бригадира — проект появится здесь сразу',
           PhosphorIconsRegular.wrench,
         ),
       _ => (
@@ -302,6 +315,11 @@ class _EmptyState extends ConsumerWidget {
           PhosphorIconsRegular.house,
         ),
     };
+
+    // Для не-customer ролей даём явный CTA — присоединиться по коду.
+    final showJoinByCodeCta = activeRole == SystemRole.contractor ||
+        activeRole == SystemRole.master ||
+        activeRole == SystemRole.representative;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x32),
@@ -350,6 +368,17 @@ class _EmptyState extends ConsumerWidget {
                   label: 'Создать первый объект',
                   icon: PhosphorIconsBold.plus,
                   onPressed: onCreate,
+                ),
+              ),
+            ],
+            if (showJoinByCodeCta) ...[
+              const SizedBox(height: AppSpacing.x20),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260),
+                child: AppButton(
+                  label: 'Присоединиться по коду',
+                  icon: PhosphorIconsBold.qrCode,
+                  onPressed: onJoinByCode,
                 ),
               ),
             ],
