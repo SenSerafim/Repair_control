@@ -9,6 +9,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../legal_publications/presentation/legal_publications_sheet.dart';
 import '../../notifications/application/notifications_controller.dart';
+import '../../onboarding/application/tour_controller.dart';
 import '../application/profile_controller.dart';
 import 'delete_account_sheet.dart';
 import 'language_sheet.dart';
@@ -159,6 +160,21 @@ class ProfileScreen extends ConsumerWidget {
                           iconColor: AppColors.greenDark,
                           label: 'Помощь и FAQ',
                           onTap: () => context.push(AppRoutes.profileHelp),
+                        ),
+                        AppMenuRow(
+                          icon: PhosphorIconsFill.graduationCap,
+                          iconBg: AppColors.brandLight,
+                          iconColor: AppColors.brand,
+                          label: 'Пройти обучение заново',
+                          onTap: () async {
+                            await ref
+                                .read(tutorialCompletedProvider.notifier)
+                                .reset();
+                            // После reset listenable триггерит redirect →
+                            // /tour. Явный context.go для надёжности
+                            // на случай если listener не успел.
+                            if (context.mounted) context.go('/tour');
+                          },
                         ),
                         AppMenuRow(
                           icon: PhosphorIconsFill.chatCircleDots,

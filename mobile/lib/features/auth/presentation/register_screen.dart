@@ -29,6 +29,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _loading = false;
   AuthFailure? _failure;
   bool _obscure = true;
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _phoneError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -40,16 +44,42 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    if (_firstName.text.trim().isEmpty ||
-        _lastName.text.trim().isEmpty ||
-        !isValidPhoneE164(_phone.text) ||
-        _password.text.length < 8) {
-      setState(() => _failure = AuthFailure.validation);
+    final firstNameErr =
+        _firstName.text.trim().isEmpty ? 'Введите имя' : null;
+    final lastNameErr =
+        _lastName.text.trim().isEmpty ? 'Введите фамилию' : null;
+    String? phoneErr;
+    if (_phone.text.trim().isEmpty) {
+      phoneErr = 'Введите номер телефона';
+    } else if (!isValidPhoneE164(_phone.text)) {
+      phoneErr = 'Введите 10 цифр номера';
+    }
+    String? passwordErr;
+    if (_password.text.isEmpty) {
+      passwordErr = 'Введите пароль';
+    } else if (_password.text.length < 8) {
+      passwordErr = 'Минимум 8 символов';
+    }
+    if (firstNameErr != null ||
+        lastNameErr != null ||
+        phoneErr != null ||
+        passwordErr != null) {
+      setState(() {
+        _firstNameError = firstNameErr;
+        _lastNameError = lastNameErr;
+        _phoneError = phoneErr;
+        _passwordError = passwordErr;
+        _failure = null;
+      });
       return;
     }
     setState(() {
       _loading = true;
       _failure = null;
+      _firstNameError = null;
+      _lastNameError = null;
+      _phoneError = null;
+      _passwordError = null;
     });
     final failure = await ref.read(authControllerProvider.notifier).register(
           phone: phoneToE164(_phone.text),
@@ -74,17 +104,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
         children: [
-          if (_failure != null) ...[
+          if (_failure != null && _failure != AuthFailure.validation) ...[
             _ErrorBanner(message: _failure!.userMessage),
             const SizedBox(height: AppSpacing.x16),
           ],
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: AppInput(
                   controller: _firstName,
                   label: 'Имя',
                   placeholder: 'Константин',
+                  errorText: _firstNameError,
+                  onChanged: (_) {
+                    if (_firstNameError != null) {
+                      setState(() => _firstNameError = null);
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: AppSpacing.x10),
@@ -93,6 +130,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _lastName,
                   label: 'Фамилия',
                   placeholder: 'Иванов',
+                  errorText: _lastNameError,
+                  onChanged: (_) {
+                    if (_lastNameError != null) {
+                      setState(() => _lastNameError = null);
+                    }
+                  },
                 ),
               ),
             ],
@@ -101,9 +144,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           AppInput(
             controller: _phone,
             label: 'Номер телефона',
-            placeholder: '+7 (000) 000-00-00',
+            placeholder: '(000) 000-00-00',
             keyboardType: TextInputType.phone,
             inputFormatters: [PhoneInputFormatter()],
+            prefixIcon: const RuPhonePrefix(),
+            errorText: _phoneError,
+            onChanged: (_) {
+              if (_phoneError != null) {
+                setState(() => _phoneError = null);
+              }
+            },
           ),
           const SizedBox(height: AppSpacing.x12),
           AppInput(
@@ -111,6 +161,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             label: 'Пароль',
             placeholder: 'Минимум 8 символов',
             obscureText: _obscure,
+            errorText: _passwordError,
+            onChanged: (_) {
+              if (_passwordError != null) {
+                setState(() => _passwordError = null);
+              }
+            },
             suffixIcon: IconButton(
               icon: Icon(
                 _obscure

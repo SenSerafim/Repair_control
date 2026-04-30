@@ -51,6 +51,7 @@ export 'hierarchy_badge.dart';
 export 'photo_gallery_screen.dart';
 export 'photo_picker_sheet.dart';
 export 'pin_input.dart';
+export 'ru_phone_prefix.dart';
 export 'scope_badge.dart';
 export 'status_pill.dart';
 export 'success_screen.dart';

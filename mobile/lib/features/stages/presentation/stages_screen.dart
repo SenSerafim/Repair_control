@@ -8,6 +8,7 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../projects/application/project_controller.dart';
 import '../application/stages_controller.dart';
 import '../domain/stage.dart';
@@ -418,7 +419,7 @@ class _TileView extends StatelessWidget {
       ),
       itemBuilder: (_, i) {
         final s = stages[i];
-        return StageStripeCard(
+        final card = StageStripeCard(
           stage: s,
           display: StageDisplayStatus.of(s),
           orderIndex: i + 1,
@@ -427,6 +428,10 @@ class _TileView extends StatelessWidget {
           stepsTotal: 0,
           stepsDone: (s.progressCache / 100 * 0).round(),
         );
+        // Якорь на первой карточке для spotlight в демо-туре.
+        return i == 0
+            ? TourAnchor(id: 'stages.first_stage_card', child: card)
+            : card;
       },
     );
   }

@@ -33,11 +33,15 @@ class _AddRepresentativeScreenState
   }
 
   Future<void> _search() async {
-    final raw = phoneToE164(_phone.text);
-    if (!isValidPhoneE164(raw)) {
-      setState(() => _error = 'Введите корректный номер');
+    if (_phone.text.trim().isEmpty) {
+      setState(() => _error = 'Введите номер телефона');
       return;
     }
+    if (!isValidPhoneE164(_phone.text)) {
+      setState(() => _error = 'Введите 10 цифр номера');
+      return;
+    }
+    final raw = phoneToE164(_phone.text);
     setState(() {
       _busy = true;
       _error = null;
@@ -111,18 +115,15 @@ class _AddRepresentativeScreenState
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
             child: AppInput(
               controller: _phone,
-              placeholder: 'Номер телефона представителя',
+              label: 'Телефон представителя',
+              placeholder: '(000) 000-00-00',
               keyboardType: TextInputType.phone,
               inputFormatters: [PhoneInputFormatter()],
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(left: 14, right: 8),
-                child: Icon(
-                  PhosphorIconsRegular.magnifyingGlass,
-                  size: 18,
-                  color: AppColors.n400,
-                ),
-              ),
+              prefixIcon: const RuPhonePrefix(),
               errorText: _error,
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
             ),
           ),
           const SizedBox(height: AppSpacing.x12),

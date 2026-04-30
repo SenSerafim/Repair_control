@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../application/approvals_controller.dart';
 import '../domain/approval.dart';
 import 'approval_widgets.dart';
@@ -21,12 +22,20 @@ class ApprovalsScreen extends ConsumerStatefulWidget {
 
 class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+  // initState вместо `late final` — поздняя инициализация падает при
+  // dispose-before-build (бывает в /tour при быстром переключении экранов).
+  TabController? _tabs;
   String _scopeId = 'all';
 
   @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 2, vsync: this);
+  }
+
+  @override
   void dispose() {
-    _tabs.dispose();
+    _tabs?.dispose();
     super.dispose();
   }
 
@@ -46,17 +55,18 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
               ref.invalidate(approvalsControllerProvider(widget.projectId)),
         ),
         data: (buckets) {
+          final tabs = _tabs!;
           final pendingCount = _filter(buckets.pending).length;
           return Column(
             children: [
-              _Tabs(controller: _tabs, pendingCount: pendingCount),
+              _Tabs(controller: tabs, pendingCount: pendingCount),
               _ScopeFilter(
                 activeId: _scopeId,
                 onSelect: (id) => setState(() => _scopeId = id),
               ),
               Expanded(
                 child: TabBarView(
-                  controller: _tabs,
+                  controller: tabs,
                   children: [
                     _ListBody(
                       projectId: widget.projectId,
@@ -64,6 +74,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                       emptyTitle: 'Нет согласований',
                       emptyHint: 'Согласования появятся когда подрядчик '
                           'отправит шаг или этап на проверку.',
+                      withTourAnchor: true,
                     ),
                     _ListBody(
                       projectId: widget.projectId,
@@ -187,12 +198,16 @@ class _ListBody extends StatelessWidget {
     required this.items,
     required this.emptyTitle,
     required this.emptyHint,
+    this.withTourAnchor = false,
   });
 
   final String projectId;
   final List<Approval> items;
   final String emptyTitle;
   final String emptyHint;
+  // TabBarView держит обе вкладки одновременно — чтобы не получить
+  // дубль GlobalKey, anchor подключаем только в активной вкладке (pending).
+  final bool withTourAnchor;
 
   @override
   Widget build(BuildContext context) {
@@ -212,12 +227,17 @@ class _ListBody extends StatelessWidget {
       ),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
-      itemBuilder: (_, i) => ApprovalCard(
-        approval: items[i],
-        onTap: () => context.push(
-          '/projects/$projectId/approvals/${items[i].id}',
-        ),
-      ),
+      itemBuilder: (_, i) {
+        final card = ApprovalCard(
+          approval: items[i],
+          onTap: () => context.push(
+            '/projects/$projectId/approvals/${items[i].id}',
+          ),
+        );
+        return (i == 0 && withTourAnchor)
+            ? TourAnchor(id: 'approvals.first_approval', child: card)
+            : card;
+      },
     );
   }
 }

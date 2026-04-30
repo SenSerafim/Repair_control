@@ -7,6 +7,7 @@ import '../../../../core/access/system_role.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/widgets.dart';
+import '../../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../../steps/application/steps_controller.dart';
 import '../../../steps/domain/step.dart';
 import '../../domain/stage.dart';
@@ -88,19 +89,37 @@ class StageChecklistTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.x10),
             for (var i = 0; i < steps.length; i++)
-              ChecklistStepRow(
-                step: steps[i],
-                isActive: !locked &&
-                    display == StageDisplayStatus.active &&
-                    i == activeIdx,
-                locked: locked,
-                executorName: null,
-                completedAt: steps[i].doneAt,
-                annotation: _annotationFor(steps[i]),
-                substeps: const [],
-                onTap: () => onStepTap(steps[i]),
-                onToggleDone: () => onToggleStep(steps[i]),
-              ),
+              if (i == 0)
+                TourAnchor(
+                  id: 'stage_detail.first_step',
+                  child: ChecklistStepRow(
+                    step: steps[i],
+                    isActive: !locked &&
+                        display == StageDisplayStatus.active &&
+                        i == activeIdx,
+                    locked: locked,
+                    executorName: null,
+                    completedAt: steps[i].doneAt,
+                    annotation: _annotationFor(steps[i]),
+                    substeps: const [],
+                    onTap: () => onStepTap(steps[i]),
+                    onToggleDone: () => onToggleStep(steps[i]),
+                  ),
+                )
+              else
+                ChecklistStepRow(
+                  step: steps[i],
+                  isActive: !locked &&
+                      display == StageDisplayStatus.active &&
+                      i == activeIdx,
+                  locked: locked,
+                  executorName: null,
+                  completedAt: steps[i].doneAt,
+                  annotation: _annotationFor(steps[i]),
+                  substeps: const [],
+                  onTap: () => onStepTap(steps[i]),
+                  onToggleDone: () => onToggleStep(steps[i]),
+                ),
             if (canAddStep) ...[
               const SizedBox(height: AppSpacing.x8),
               AppDashedBorder(

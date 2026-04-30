@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/push/deep_link_router.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../application/notifications_controller.dart';
 import '../domain/app_notification.dart';
 import '../domain/notification_l10n.dart';
@@ -31,6 +33,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     return AppScaffold(
       showBack: true,
+      // Если попали сюда через deep-link / push-уведомление, history стека
+      // навигатора пуст — `maybePop` молча отказывает. В этом случае
+      // отправляем пользователя на /home, чтобы кнопка «Назад» гарантированно
+      // что-то делала. Pop оборачиваем в try/catch — go_router бросает
+      // assertion, если в этом же кадре стек навигатора уже изменился
+      // (множественные тапы / ре-build после refresh).
+      onBack: () => _onBack(context),
       title: 'Уведомления',
       padding: EdgeInsets.zero,
       actions: [
@@ -96,6 +105,31 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final path = note.routePath;
     if (path != null) context.push(path);
   }
+
+  void _onBack(BuildContext context) {
+    if (_popping) return;
+    _popping = true;
+    try {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.home);
+      }
+    } catch (_) {
+      // Навигатор в transition (двойной тап) или go_router нашёл коллизию
+      // ключей у страниц — fallback на /home гарантирует, что пользователь
+      // всё равно уйдёт с экрана.
+      context.go(AppRoutes.home);
+    } finally {
+      // Снимаем гард после frame, чтобы повторный тап в этом же кадре
+      // не пропустился.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _popping = false;
+      });
+    }
+  }
+
+  bool _popping = false;
 }
 
 class _TypeFilter extends StatelessWidget {
@@ -145,20 +179,27 @@ class _NotifList extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = <Widget>[];
     String? lastDayKey;
+    var firstTile = true;
     for (final n in items) {
       final dayKey = _dayKey(n.receivedAt);
       if (dayKey != lastDayKey) {
         children.add(_DateSeparator(label: _dayLabel(n.receivedAt)));
         lastDayKey = dayKey;
       }
+      final tile = _NotifTile(notification: n, onTap: () => onTap(n));
       children
-        ..add(_NotifTile(notification: n, onTap: () => onTap(n)))
+        ..add(
+          firstTile
+              ? TourAnchor(id: 'notifications.first_item', child: tile)
+              : tile,
+        )
         ..add(const Divider(
           height: 1,
           thickness: 1,
           indent: 68,
           color: AppColors.n100,
         ));
+      firstTile = false;
     }
     return ListView(
       padding: EdgeInsets.zero,

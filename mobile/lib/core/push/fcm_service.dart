@@ -10,6 +10,7 @@ import 'package:logger/logger.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/domain/auth_failure.dart';
 import '../../features/chat/application/chats_controller.dart';
 import '../../features/notifications/application/notifications_controller.dart';
 import '../../firebase_options.dart';
@@ -138,14 +139,36 @@ class FcmService {
   }
 
   Future<void> _registerDevice(String token) async {
-    try {
-      final repo = container.read(authRepositoryProvider);
-      await repo.registerDevice(
-        platform: Platform.isIOS ? 'ios' : 'android',
-        token: token,
-      );
-    } on AuthException catch (e) {
-      logger.w('Device register failed: ${e.failure}');
+    // Бекенд upsert по deviceId — повторные вызовы безопасны.
+    // Сетевые сбои и 5xx ретраим с экспоненциальным backoff (2,4,8,16,32с)
+    // — иначе FCM-токен не попадёт в БД и push'и не будут доходить до юзера.
+    const maxAttempts = 5;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final repo = container.read(authRepositoryProvider);
+        await repo.registerDevice(
+          platform: Platform.isIOS ? 'ios' : 'android',
+          token: token,
+        );
+        if (attempt > 1) {
+          logger.d('Device register succeeded on attempt $attempt');
+        }
+        return;
+      } on AuthException catch (e) {
+        final transient = e.failure == AuthFailure.network ||
+            e.failure == AuthFailure.server;
+        if (transient && attempt < maxAttempts) {
+          final delay = Duration(seconds: 1 << attempt);
+          logger.w(
+            'Device register attempt $attempt failed (${e.failure}), '
+            'retry in ${delay.inSeconds}s',
+          );
+          await Future<void>.delayed(delay);
+          continue;
+        }
+        logger.w('Device register failed (final): ${e.failure}');
+        return;
+      }
     }
   }
 

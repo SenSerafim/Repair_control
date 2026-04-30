@@ -47,6 +47,7 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
   _FoundState? _result;
   Invitation? _createdInvitation;
   String? _error;
+  String? _phoneError;
   MembershipRole? _role;
 
   @override
@@ -56,14 +57,19 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
   }
 
   Future<void> _search() async {
-    final raw = phoneToE164(_phone.text);
-    if (!isValidPhoneE164(raw)) {
-      setState(() => _error = 'Введите корректный телефон');
+    if (_phone.text.trim().isEmpty) {
+      setState(() => _phoneError = 'Введите номер телефона');
       return;
     }
+    if (!isValidPhoneE164(_phone.text)) {
+      setState(() => _phoneError = 'Введите 10 цифр номера');
+      return;
+    }
+    final raw = phoneToE164(_phone.text);
     setState(() {
       _searching = true;
       _error = null;
+      _phoneError = null;
       _result = null;
       _createdInvitation = null;
     });
@@ -100,12 +106,18 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
     if (!mounted) return;
     setState(() => _submitting = false);
     if (failure == null) {
-      Navigator.of(context).pop();
-      AppToast.show(
-        context,
-        message: 'Добавлен: ${result.user!.firstName}',
-        kind: AppToastKind.success,
-      );
+      final firstName = result.user!.firstName;
+      // Отложенный pop: даём текущему frame завершить ребилд, иначе go_router
+      // 14.8.1 ловит race на HeroController/GlobalKey root navigator.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        AppToast.show(
+          context,
+          message: 'Добавлен: $firstName',
+          kind: AppToastKind.success,
+        );
+      });
     } else {
       setState(() => _error = failure.userMessage);
     }
@@ -127,11 +139,16 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
                 role: role,
               );
       if (!mounted) return;
-      // Обновим список приглашений в TeamController.
-      ref.invalidate(teamControllerProvider(widget.projectId));
       setState(() {
         _submitting = false;
         _createdInvitation = invitation;
+      });
+      // Обновляем список приглашений после ребилда sheet'а в новом состоянии,
+      // иначе синхронный invalidate триггерит rebuild TeamScreen параллельно
+      // и у go_router 14.8.1 ломается HeroController/GlobalKey root navigator.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.invalidate(teamControllerProvider(widget.projectId));
       });
     } on TeamException catch (e) {
       if (!mounted) return;
@@ -180,37 +197,19 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
           AppInlineError(message: _error!),
           const SizedBox(height: AppSpacing.x12),
         ],
-        const Text('Телефон', style: AppTextStyles.caption),
-        const SizedBox(height: AppSpacing.x6),
-        TextField(
+        AppInput(
           controller: _phone,
+          label: 'Телефон',
+          placeholder: '(000) 000-00-00',
           keyboardType: TextInputType.phone,
           inputFormatters: [PhoneInputFormatter()],
-          decoration: InputDecoration(
-            hintText: '+7 000 000 00 00',
-            hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-            filled: true,
-            fillColor: AppColors.n0,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.brand, width: 1.5),
-            ),
-          ),
+          prefixIcon: const RuPhonePrefix(),
+          errorText: _phoneError,
+          onChanged: (_) {
+            if (_phoneError != null) {
+              setState(() => _phoneError = null);
+            }
+          },
         ),
         const SizedBox(height: AppSpacing.x12),
         AppButton(

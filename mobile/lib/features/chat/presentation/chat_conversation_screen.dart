@@ -14,6 +14,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../profile/data/profile_repository.dart';
 import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
@@ -37,6 +38,10 @@ class _ChatConversationScreenState
   bool _sending = false;
   bool _isTyping = false;
   Timer? _typingDebounce;
+  // Кэш контейнера: ProviderScope.containerOf нельзя дёргать в dispose,
+  // потому что элемент уже deactivated — будет assert. Кэшируем в
+  // didChangeDependencies, используем в dispose.
+  ProviderContainer? _containerCache;
 
   @override
   void initState() {
@@ -50,6 +55,12 @@ class _ChatConversationScreenState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _containerCache = ProviderScope.containerOf(context, listen: false);
+  }
+
+  @override
   void dispose() {
     _input
       ..removeListener(_onInputChanged)
@@ -60,8 +71,9 @@ class _ChatConversationScreenState
           .read(socketServiceProvider)
           .typing(widget.chatId, typing: false);
     }
-    final container = ProviderScope.containerOf(context, listen: false);
-    if (container.read(currentChatIdProvider) == widget.chatId) {
+    final container = _containerCache;
+    if (container != null &&
+        container.read(currentChatIdProvider) == widget.chatId) {
       container.read(currentChatIdProvider.notifier).state = null;
     }
     super.dispose();
@@ -807,34 +819,37 @@ class _ComposeBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 40),
-                decoration: BoxDecoration(
-                  color: AppColors.n50,
-                  border: Border.all(color: AppColors.n200, width: 1.5),
-                  borderRadius: BorderRadius.circular(AppRadius.r12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                alignment: Alignment.center,
-                child: TextField(
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: 4,
-                  textInputAction: TextInputAction.newline,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.n900,
+              child: TourAnchor(
+                id: 'chat_conversation.input',
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 40),
+                  decoration: BoxDecoration(
+                    color: AppColors.n50,
+                    border: Border.all(color: AppColors.n200, width: 1.5),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    hintText: 'Сообщение…',
-                    hintStyle: AppTextStyles.body.copyWith(
-                      color: AppColors.n400,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  alignment: Alignment.center,
+                  child: TextField(
+                    controller: controller,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.newline,
+                    style: const TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      color: AppColors.n900,
                     ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      hintText: 'Сообщение…',
+                      hintStyle: AppTextStyles.body.copyWith(
+                        color: AppColors.n400,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
                   ),
                 ),
               ),

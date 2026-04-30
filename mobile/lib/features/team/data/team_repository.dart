@@ -13,6 +13,24 @@ class TeamException implements Exception {
   final ApiError apiError;
 }
 
+/// Группа «проект + участники» для агрегированного экрана «Команда»
+/// (mobile-таб). Возвращается из `GET /api/me/teammates`.
+class TeammateGroup {
+  const TeammateGroup({
+    required this.projectId,
+    required this.projectTitle,
+    required this.ownerId,
+    this.owner,
+    required this.members,
+  });
+
+  final String projectId;
+  final String projectTitle;
+  final String ownerId;
+  final ProjectMemberUser? owner;
+  final List<Membership> members;
+}
+
 /// Объединяет members + invitations endpoints из projects.controller.
 /// Раздельный provider от ProjectsRepository — т.к. команда отдельное
 /// UX-пространство.
@@ -29,6 +47,30 @@ class TeamRepository {
         return r.data!
             .map((e) => Membership.parse(e as Map<String, dynamic>))
             .toList();
+      });
+
+  /// Все «соратники» пользователя через все его активные проекты.
+  /// Возвращает массив групп `{ project, owner, members }` —
+  /// для рендеринга на mobile-табе «Команда» с группировкой по проекту.
+  Future<List<TeammateGroup>> listTeammates() => _call(() async {
+        final r = await _dio.get<List<dynamic>>('/api/me/teammates');
+        return r.data!.map((raw) {
+          final m = raw as Map<String, dynamic>;
+          final project = m['project'] as Map<String, dynamic>;
+          final owner = m['owner'] as Map<String, dynamic>?;
+          final members = (m['members'] as List<dynamic>? ?? const [])
+              .map((e) => Membership.parse(
+                    Map<String, dynamic>.from(e as Map),
+                  ))
+              .toList();
+          return TeammateGroup(
+            projectId: project['id'] as String,
+            projectTitle: (project['title'] as String?) ?? '',
+            ownerId: (project['ownerId'] as String?) ?? '',
+            owner: owner == null ? null : ProjectMemberUser.parse(owner),
+            members: members,
+          );
+        }).toList();
       });
 
   Future<Membership> addMember({
@@ -141,4 +183,11 @@ class TeamRepository {
 
 final teamRepositoryProvider = Provider<TeamRepository>((ref) {
   return TeamRepository(ref.read(dioProvider));
+});
+
+/// Агрегированный список «команда из всех моих проектов» —
+/// для mobile-таба «Команда».
+final myTeammatesProvider =
+    FutureProvider<List<TeammateGroup>>((ref) async {
+  return ref.read(teamRepositoryProvider).listTeammates();
 });

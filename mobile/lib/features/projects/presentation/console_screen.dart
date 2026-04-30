@@ -11,6 +11,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/status_pill.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../notifications/application/notifications_controller.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/domain/traffic_light.dart';
@@ -179,9 +180,12 @@ class _BodyState extends ConsumerState<_Body> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.x16),
-                _StagesCarouselHeader(
-                  onAllTap: () =>
-                      context.push('/projects/$projectId/stages'),
+                TourAnchor(
+                  id: 'console.stages_tile',
+                  child: _StagesCarouselHeader(
+                    onAllTap: () =>
+                        context.push('/projects/$projectId/stages'),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.x10),
                 _StagesCarousel(projectId: projectId, stages: stages),

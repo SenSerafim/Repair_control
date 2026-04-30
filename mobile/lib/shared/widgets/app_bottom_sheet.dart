@@ -71,21 +71,29 @@ class AppBottomSheetHeader extends StatelessWidget {
   const AppBottomSheetHeader({
     required this.title,
     this.subtitle,
+    this.centered = false,
     super.key,
   });
 
   final String title;
   final String? subtitle;
 
+  /// `true` — выравнивает title и subtitle по центру (используется для
+  /// confirmation-sheet'ов вроде «План не согласован», «Точно удалить?»,
+  /// где левое выравнивание выглядит сломанным).
+  final bool centered;
+
   @override
   Widget build(BuildContext context) {
+    final align = centered ? TextAlign.center : TextAlign.start;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTextStyles.h1),
+        Text(title, style: AppTextStyles.h1, textAlign: align),
         if (subtitle != null) ...[
           const SizedBox(height: AppSpacing.x6),
-          Text(subtitle!, style: AppTextStyles.bodyMedium),
+          Text(subtitle!, style: AppTextStyles.bodyMedium, textAlign: align),
         ],
         const SizedBox(height: AppSpacing.x16),
       ],

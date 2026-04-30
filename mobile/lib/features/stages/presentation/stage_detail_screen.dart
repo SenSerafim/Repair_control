@@ -334,6 +334,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
       ref.read(stagesControllerProvider(widget.projectId).notifier);
 
   Future<void> _wrap(Future<dynamic> Function() action, String successMsg) async {
+    if (_busy) return;
     setState(() => _busy = true);
     try {
       final failure = await action();
@@ -352,6 +353,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
   }
 
   Future<void> _tryStart() async {
+    if (_busy) return;
     setState(() => _busy = true);
     try {
       await ref.read(stagesRepositoryProvider).start(
@@ -384,32 +386,41 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
   Future<void> _showPlanRequiredDialog() async {
     final go = await showAppBottomSheet<bool>(
       context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppBottomSheetHeader(
-            title: 'План не согласован',
-            subtitle:
-                'Этап нельзя запустить, пока заказчик не одобрит план работ.',
-          ),
-          AppButton(
-            label: 'Открыть согласование плана',
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-          const SizedBox(height: AppSpacing.x8),
-          AppButton(
-            label: 'Позже',
-            variant: AppButtonVariant.ghost,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-        ],
+      child: Builder(
+        builder: (sheetCtx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppBottomSheetHeader(
+              title: 'План не согласован',
+              subtitle:
+                  'Этап нельзя запустить, пока заказчик не одобрит план '
+                  'работ.',
+              centered: true,
+            ),
+            AppButton(
+              label: 'Открыть согласование плана',
+              onPressed: () => Navigator.of(sheetCtx).pop(true),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            AppButton(
+              label: 'Позже',
+              variant: AppButtonVariant.ghost,
+              onPressed: () => Navigator.of(sheetCtx).pop(false),
+            ),
+          ],
+        ),
       ),
     );
-    if ((go ?? false) && mounted) {
-      unawaited(
-        context.push(AppRoutes.projectPlanApprovalWith(widget.projectId)),
-      );
-    }
+    if (!(go ?? false) || !mounted) return;
+    // sheet закрылся, но в этом же кадре `_tryStart`'s finally делает
+    // setState(_busy = false) — ребилд ActionBar конкурирует с push.
+    // Отдаём навигацию в следующий frame, чтобы router не словил race
+    // на go_router 14.8.1 (HeroController/GlobalKey).
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    await context.push<void>(
+      AppRoutes.projectPlanApprovalWith(widget.projectId),
+    );
   }
 
   @override
@@ -434,11 +445,15 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
                     : 'План не согласован',
                 icon: Icons.play_arrow_rounded,
                 isLoading: _busy,
-                onPressed: widget.planAllowsStart
-                    ? _tryStart
-                    : () => context.push(
-                          AppRoutes.projectPlanApprovalWith(widget.projectId),
-                        ),
+                onPressed: _busy
+                    ? null
+                    : (widget.planAllowsStart
+                        ? _tryStart
+                        : () => context.push(
+                              AppRoutes.projectPlanApprovalWith(
+                                widget.projectId,
+                              ),
+                            )),
               ),
             ),
           );
@@ -451,7 +466,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
                 label: 'Запустить этап',
                 icon: Icons.play_arrow_rounded,
                 isLoading: _busy,
-                onPressed: _tryStart,
+                onPressed: _busy ? null : _tryStart,
               ),
             ),
           );

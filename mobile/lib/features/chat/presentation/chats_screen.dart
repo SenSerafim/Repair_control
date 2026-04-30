@@ -8,25 +8,125 @@ import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../application/chats_controller.dart';
+import '../data/chats_repository.dart';
 import '../domain/chat.dart';
 import 'new_chat_sheet.dart';
 
-class ChatsScreen extends StatelessWidget {
+class ChatsScreen extends ConsumerWidget {
   const ChatsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(myChatsProvider);
+
     return AppScaffold(
       title: 'Чаты',
-      body: AppEmptyState(
-        title: 'Чаты привязаны к проектам',
-        subtitle:
-            'Откройте проект и перейдите на плитку «Чаты» — там личные, '
-            'групповые и чаты этапов.',
-        icon: Icons.chat_bubble_outline_rounded,
-        actionLabel: 'К проектам',
-        onAction: () => context.go(AppRoutes.projects),
+      padding: EdgeInsets.zero,
+      body: async.when(
+        loading: () => const AppLoadingState(skeleton: AppChatListSkeleton()),
+        error: (e, _) => AppErrorState(
+          title: 'Не удалось загрузить чаты',
+          subtitle: e is ChatsException
+              ? '${e.failure.userMessage} (${e.apiError.code})'
+              : e.toString(),
+          onRetry: () => ref.invalidate(myChatsProvider),
+        ),
+        data: (items) {
+          if (items.isEmpty) {
+            return AppEmptyState(
+              title: 'Чатов пока нет',
+              subtitle:
+                  'Чаты создаются автоматически при добавлении участников '
+                  'в проект. Откройте проект, чтобы начать переписку.',
+              icon: Icons.chat_bubble_outline_rounded,
+              actionLabel: 'К проектам',
+              onAction: () => context.go(AppRoutes.projects),
+            );
+          }
+          // Фильтр для customer (как и в ProjectChatsScreen) —
+          // прячем чаты этапов, которые бригадир не сделал видимыми.
+          final role = ref.watch(activeRoleProvider);
+          final visible = items.where((it) {
+            final c = it.chat;
+            if (role != SystemRole.customer) return true;
+            if (c.type != ChatType.stage) return true;
+            return c.visibleToCustomer;
+          }).toList();
+          // Группировка по projectId с сохранением исходного порядка.
+          final grouped = <String, List<MyChatItem>>{};
+          final projectTitles = <String, String>{};
+          for (final it in visible) {
+            grouped.putIfAbsent(it.projectId, () => []).add(it);
+            projectTitles[it.projectId] = it.projectTitle;
+          }
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(myChatsProvider),
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                for (final entry in grouped.entries) ...[
+                  _ProjectGroupHeader(
+                    title: projectTitles[entry.key] ?? 'Проект',
+                    onTap: () =>
+                        context.push(AppRoutes.projectDetailWith(entry.key)),
+                  ),
+                  for (final it in entry.value)
+                    _ChatRow(
+                      chat: it.chat,
+                      onTap: () => context.push(
+                        AppRoutes.chatDetailWith(it.chat.id),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: AppSpacing.x16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ProjectGroupHeader extends StatelessWidget {
+  const _ProjectGroupHeader({required this.title, required this.onTap});
+
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.n50,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.n500,
+                    letterSpacing: 0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.n400,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -57,6 +157,9 @@ class ProjectChatsScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(skeleton: AppChatListSkeleton()),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить чаты',
+          subtitle: e is ChatsException
+              ? '${e.failure.userMessage} (${e.apiError.code})'
+              : e.toString(),
           onRetry: () => ref.invalidate(projectChatsProvider(projectId)),
         ),
         data: (chats) {
@@ -95,11 +198,16 @@ class ProjectChatsScreen extends ConsumerWidget {
                 indent: 76,
                 color: AppColors.n100,
               ),
-              itemBuilder: (_, i) => _ChatRow(
-                chat: visible[i],
-                onTap: () =>
-                    context.push(AppRoutes.chatDetailWith(visible[i].id)),
-              ),
+              itemBuilder: (_, i) {
+                final row = _ChatRow(
+                  chat: visible[i],
+                  onTap: () =>
+                      context.push(AppRoutes.chatDetailWith(visible[i].id)),
+                );
+                return i == 0
+                    ? TourAnchor(id: 'chats.first_chat', child: row)
+                    : row;
+              },
             ),
           );
         },

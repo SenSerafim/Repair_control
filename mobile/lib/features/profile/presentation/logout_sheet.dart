@@ -31,6 +31,7 @@ class _LogoutSheetState extends State<_LogoutSheet> {
   bool _busy = false;
 
   Future<void> _doLogout() async {
+    if (_busy) return;
     setState(() => _busy = true);
     Navigator.of(context).pop();
     await widget.rootRef.read(authControllerProvider.notifier).logout();
@@ -90,7 +91,7 @@ class _LogoutSheetState extends State<_LogoutSheet> {
           variant: AppButtonVariant.destructive,
           icon: PhosphorIconsRegular.signOut,
           isLoading: _busy,
-          onPressed: _doLogout,
+          onPressed: _busy ? null : _doLogout,
         ),
         const SizedBox(height: AppSpacing.x8),
         AppButton(

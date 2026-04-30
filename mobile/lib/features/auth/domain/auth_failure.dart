@@ -24,6 +24,19 @@ enum AuthFailure {
   /// Аккаунт забанен.
   banned,
 
+  /// 403 — у роли/пользователя нет права на это действие
+  /// (например, заказчик пытается одобрить шаг до бригадира).
+  forbidden,
+
+  /// 409 — конфликт состояния (например, попытка действия не из своего FSM-перехода).
+  conflict,
+
+  /// 404 — сущности нет / она удалена.
+  notFound,
+
+  /// 429 — частые запросы.
+  rateLimited,
+
   /// Нет интернета.
   network,
 
@@ -58,7 +71,10 @@ enum AuthFailure {
         ApiErrorKind.server => AuthFailure.server,
         ApiErrorKind.validation => AuthFailure.validation,
         ApiErrorKind.unauthorized => AuthFailure.invalidCredentials,
-        ApiErrorKind.rateLimited => AuthFailure.blocked,
+        ApiErrorKind.forbidden => AuthFailure.forbidden,
+        ApiErrorKind.notFound => AuthFailure.notFound,
+        ApiErrorKind.conflict => AuthFailure.conflict,
+        ApiErrorKind.rateLimited => AuthFailure.rateLimited,
         _ => AuthFailure.unknown,
       };
 
@@ -74,6 +90,14 @@ enum AuthFailure {
         AuthFailure.recoveryExpired =>
           'Код истёк. Запросите новый.',
         AuthFailure.banned => 'Аккаунт заблокирован. Напишите в поддержку.',
+        AuthFailure.forbidden =>
+          'У вашей роли нет прав на это действие. Возможно, нужно дождаться '
+              'решения заказчика или бригадира.',
+        AuthFailure.notFound => 'Объект не найден или был удалён.',
+        AuthFailure.conflict =>
+          'Действие сейчас недоступно: состояние уже изменилось. '
+              'Обновите страницу.',
+        AuthFailure.rateLimited => 'Слишком часто. Подождите немного.',
         AuthFailure.network => 'Нет подключения к интернету',
         AuthFailure.server => 'Сервер недоступен. Попробуйте позже.',
         AuthFailure.validation => 'Проверьте правильность заполнения',

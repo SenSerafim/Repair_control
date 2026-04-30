@@ -117,6 +117,7 @@ class _PhoneStep extends ConsumerStatefulWidget {
 
 class _PhoneStepState extends ConsumerState<_PhoneStep> {
   final _phone = TextEditingController();
+  String? _localError;
 
   @override
   void dispose() {
@@ -125,7 +126,15 @@ class _PhoneStepState extends ConsumerState<_PhoneStep> {
   }
 
   Future<void> _send() async {
-    if (!isValidPhoneE164(_phone.text)) return;
+    if (_phone.text.trim().isEmpty) {
+      setState(() => _localError = 'Введите номер телефона');
+      return;
+    }
+    if (!isValidPhoneE164(_phone.text)) {
+      setState(() => _localError = 'Введите 10 цифр номера');
+      return;
+    }
+    setState(() => _localError = null);
     await ref
         .read(recoveryControllerProvider.notifier)
         .sendCode(phoneToE164(_phone.text));
@@ -148,10 +157,16 @@ class _PhoneStepState extends ConsumerState<_PhoneStep> {
         AppInput(
           controller: _phone,
           label: 'Номер телефона',
-          placeholder: '+7 (000) 000-00-00',
+          placeholder: '(000) 000-00-00',
           keyboardType: TextInputType.phone,
           inputFormatters: [PhoneInputFormatter()],
-          errorText: failure?.userMessage,
+          prefixIcon: const RuPhonePrefix(),
+          errorText: _localError ?? failure?.userMessage,
+          onChanged: (_) {
+            if (_localError != null) {
+              setState(() => _localError = null);
+            }
+          },
         ),
         const Spacer(),
         AppButton(

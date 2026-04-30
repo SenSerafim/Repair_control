@@ -209,16 +209,18 @@ class StepsRepository {
   Future<void> uploadToStorage({
     required PresignedPhoto presigned,
     required Uint8List bytes,
+    required String mimeType,
   }) async {
     final rawDio = Dio();
     try {
       await rawDio.request<void>(
         presigned.url,
-        data: Stream.fromIterable([bytes]),
+        data: bytes,
         options: Options(
           method: presigned.method,
           headers: {
             ...presigned.headers,
+            'Content-Type': mimeType,
             'Content-Length': bytes.length.toString(),
           },
           sendTimeout: const Duration(seconds: 60),

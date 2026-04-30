@@ -26,6 +26,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   AuthFailure? _failure;
   bool _obscure = true;
   int _remainingAttempts = 3;
+  String? _phoneError;
+  String? _passwordEmptyError;
 
   @override
   void dispose() {
@@ -35,17 +37,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    if (_phone.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _failure = AuthFailure.validation);
-      return;
+    final phoneText = _phone.text;
+    String? phoneErr;
+    if (phoneText.trim().isEmpty) {
+      phoneErr = 'Введите номер телефона';
+    } else if (!isValidPhoneE164(phoneText)) {
+      phoneErr = 'Введите 10 цифр номера';
     }
-    if (!isValidPhoneE164(_phone.text)) {
-      setState(() => _failure = AuthFailure.validation);
+    final passwordEmpty = _password.text.isEmpty;
+    if (phoneErr != null || passwordEmpty) {
+      setState(() {
+        _phoneError = phoneErr;
+        _passwordEmptyError = passwordEmpty ? 'Введите пароль' : null;
+      });
       return;
     }
     setState(() {
       _loading = true;
       _failure = null;
+      _phoneError = null;
+      _passwordEmptyError = null;
     });
     final failure = await ref.read(authControllerProvider.notifier).login(
           phone: phoneToE164(_phone.text),
@@ -73,9 +84,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final hasError = _failure == AuthFailure.invalidCredentials;
-    final passwordError = hasError
-        ? 'Неверный пароль. Осталось $_remainingAttempts ${_pluralize(_remainingAttempts)}.'
-        : null;
+    final passwordError = _passwordEmptyError ??
+        (hasError
+            ? 'Неверный пароль. Осталось $_remainingAttempts ${_pluralize(_remainingAttempts)}.'
+            : null);
 
     return AppScaffold(
       showBack: true,
@@ -109,10 +121,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 AppInput(
                   controller: _phone,
                   label: 'Номер телефона',
-                  placeholder: '+7 (000) 000-00-00',
+                  placeholder: '(000) 000-00-00',
                   keyboardType: TextInputType.phone,
                   inputFormatters: [PhoneInputFormatter()],
-                  prefixIcon: const _CountryPrefix(),
+                  prefixIcon: const RuPhonePrefix(),
+                  errorText: _phoneError,
+                  onChanged: (_) {
+                    if (_phoneError != null) {
+                      setState(() => _phoneError = null);
+                    }
+                  },
                 ),
                 const SizedBox(height: AppSpacing.x12),
                 AppInput(
@@ -121,6 +139,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   placeholder: '••••••••',
                   obscureText: _obscure,
                   errorText: passwordError,
+                  onChanged: (_) {
+                    if (_passwordEmptyError != null) {
+                      setState(() => _passwordEmptyError = null);
+                    }
+                  },
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscure
@@ -198,34 +221,6 @@ String _pluralize(int n) {
   if (mod10 == 1 && mod100 != 11) return 'попытка';
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'попытки';
   return 'попыток';
-}
-
-class _CountryPrefix extends StatelessWidget {
-  const _CountryPrefix();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 14, right: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('🇷🇺', style: TextStyle(fontSize: 18)),
-          const SizedBox(width: 6),
-          const Text(
-            '+7',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.n700,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(width: 1, height: 22, color: AppColors.n200),
-        ],
-      ),
-    );
-  }
 }
 
 class _LoadingSkeleton extends StatelessWidget {

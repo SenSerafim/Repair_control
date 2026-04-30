@@ -19,22 +19,65 @@ class MessagesPage {
   final String? nextCursor;
 }
 
+/// Чат + контекст проекта (id + title) — для агрегированного inbox
+/// на табе «Чаты», где чаты группируются по проекту.
+class MyChatItem {
+  const MyChatItem({
+    required this.chat,
+    required this.projectId,
+    required this.projectTitle,
+  });
+
+  final Chat chat;
+  final String projectId;
+  final String projectTitle;
+}
+
 class ChatsRepository {
   ChatsRepository(this._dio);
   final Dio _dio;
 
-  Future<List<Chat>> listProject(String projectId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/chats',
-        );
-        return r.data!
-            .map((e) => Chat.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  /// Single-flight cache по projectId. Если 10 invalidate-ов
+  /// `projectChatsProvider` прилетают подряд (так бывает при WS-стормах
+  /// или retried-pull-to-refresh), Riverpod дёргает `build()` дважды,
+  /// но мы возвращаем уже выполняемый Future вместо новых HTTP.
+  final Map<String, Future<List<Chat>>> _listProjectInFlight = {};
+
+  Future<List<Chat>> listProject(String projectId) {
+    final existing = _listProjectInFlight[projectId];
+    if (existing != null) return existing;
+    final future = _call(() async {
+      final r = await _dio.get<List<dynamic>>(
+        '/api/projects/$projectId/chats',
+      );
+      return r.data!
+          .map((e) => Chat.parse(e as Map<String, dynamic>))
+          .toList();
+    });
+    _listProjectInFlight[projectId] = future;
+    future.whenComplete(() => _listProjectInFlight.remove(projectId));
+    return future;
+  }
 
   Future<Chat> get(String chatId) => _call(() async {
         final r = await _dio.get<Map<String, dynamic>>('/api/chats/$chatId');
         return Chat.parse(r.data!);
+      });
+
+  /// Все чаты текущего пользователя через все его активные проекты.
+  /// Используется на mobile-табе «Чаты» (agg-inbox).
+  Future<List<MyChatItem>> listMine() => _call(() async {
+        final r = await _dio.get<List<dynamic>>('/api/me/chats');
+        return r.data!.map((e) {
+          final m = e as Map<String, dynamic>;
+          final chat = Chat.parse(m);
+          final project = m['project'] as Map<String, dynamic>?;
+          return MyChatItem(
+            chat: chat,
+            projectId: project?['id'] as String? ?? chat.projectId ?? '',
+            projectTitle: project?['title'] as String? ?? '',
+          );
+        }).toList();
       });
 
   Future<Chat> createPersonal({

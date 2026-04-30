@@ -42,6 +42,8 @@ import '../../features/support_contacts/presentation/support_contacts_screen.dar
 import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/notifications/application/notifications_controller.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/onboarding/application/tour_controller.dart';
+import '../../features/onboarding/presentation/tour_shell.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/faq_detail_screen.dart';
 import '../../features/profile/presentation/feedback_screen.dart';
@@ -103,6 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           loc == AppRoutes.login ||
           loc == AppRoutes.register ||
           loc == AppRoutes.recovery;
+      final isTourArea = loc.startsWith('/tour');
 
       if (auth.status == AuthStatus.unknown) {
         return loc == AppRoutes.splash ? null : AppRoutes.splash;
@@ -110,7 +113,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (auth.status == AuthStatus.unauthenticated) {
         return isAuthArea ? null : AppRoutes.welcome;
       }
-      if (loc == AppRoutes.splash || isAuthArea) {
+
+      // Аутентифицированы. Решаем, нужен ли демо-тур.
+      final tutorialCompleted = ref.read(tutorialCompletedProvider);
+      if (tutorialCompleted == null) {
+        // Флаг ещё загружается из SecureStorage. Держим на splash, пока
+        // не получим значение — refreshListenable дёрнет redirect снова.
+        return loc == AppRoutes.splash ? null : null;
+      }
+      if (tutorialCompleted == false) {
+        return isTourArea ? null : '/tour';
+      }
+      // Тур пройден — стандартное поведение.
+      if (loc == AppRoutes.splash || isAuthArea || isTourArea) {
         return AppRoutes.projects;
       }
       return null;
@@ -135,6 +150,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.recovery,
         builder: (_, __) => const RecoveryScreen(),
+      ),
+      // S19: интерактивный демо-тур. Top-level route, ProviderScope с
+      // override-ами на 8 mock-репо живёт внутри TourShell — за пределами
+      // /tour моки не видны.
+      GoRoute(
+        path: '/tour',
+        builder: (_, __) => const TourShell(),
       ),
       // P2.4: deep-link /invite/:code (root-level).
       // repair-control://invite/123456 (Android scheme + iOS URL Type)
@@ -805,17 +827,25 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 class _AuthRefreshListenable extends ChangeNotifier {
   _AuthRefreshListenable(this._ref) {
-    _sub = _ref.listen<AuthState>(authControllerProvider, (prev, next) {
+    _authSub = _ref.listen<AuthState>(authControllerProvider, (prev, next) {
       if (prev?.status != next.status) notifyListeners();
+    });
+    // Tutorial-флаг hydrate-ится асинхронно после старта. Когда значение
+    // меняется (null → true|false, или после reset), редирект должен
+    // пере-вычислить путь.
+    _tutorialSub = _ref.listen<bool?>(tutorialCompletedProvider, (prev, next) {
+      if (prev != next) notifyListeners();
     });
   }
 
   final Ref _ref;
-  late final ProviderSubscription<AuthState> _sub;
+  late final ProviderSubscription<AuthState> _authSub;
+  late final ProviderSubscription<bool?> _tutorialSub;
 
   @override
   void dispose() {
-    _sub.close();
+    _authSub.close();
+    _tutorialSub.close();
     super.dispose();
   }
 }

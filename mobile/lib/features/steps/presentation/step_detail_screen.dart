@@ -764,14 +764,18 @@ class _ActionCtas extends ConsumerWidget {
       variant: AppButtonVariant.success,
       onPressed: () async {
         final failure = await controller.complete(step.id);
-        if (context.mounted) {
-          AppToast.show(
-            context,
-            message: failure == null ? successMsg : failure.userMessage,
-            kind: failure == null
-                ? AppToastKind.success
-                : AppToastKind.error,
-          );
+        if (!context.mounted) return;
+        AppToast.show(
+          context,
+          message: failure == null ? successMsg : failure.userMessage,
+          kind: failure == null
+              ? AppToastKind.success
+              : AppToastKind.error,
+        );
+        // На успехе закрываем экран шага — пользователь возвращается
+        // на экран этапа со списком шагов, где видит обновлённый статус.
+        if (failure == null && context.canPop()) {
+          context.pop();
         }
       },
     );

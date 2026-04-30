@@ -26,9 +26,20 @@ enum NoteScope {
   }
 
   String get displayName => switch (this) {
-        NoteScope.personal => 'Личные',
-        NoteScope.forMe => 'Мне напомнили',
-        NoteScope.stage => 'К этапу',
+        NoteScope.personal => 'Только мне',
+        NoteScope.forMe => 'Конкретному участнику',
+        NoteScope.stage => 'Всей команде этапа',
+      };
+
+  /// Короткое пояснение, которое показывается под радио-опцией в форме
+  /// создания заметки — отвечает на вопрос «кто это увидит?».
+  String get hint => switch (this) {
+        NoteScope.personal =>
+          'Никто, кроме вас, не увидит эту заметку. Подходит для напоминаний.',
+        NoteScope.forMe =>
+          'Адресная заметка одному участнику. Видна вам и адресату.',
+        NoteScope.stage =>
+          'Видна всем участникам этапа — мастерам, бригадиру, заказчику.',
       };
 }
 

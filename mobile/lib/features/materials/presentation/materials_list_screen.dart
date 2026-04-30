@@ -8,6 +8,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../application/materials_controller.dart';
 import '../domain/material_request.dart';
 import '_widgets/material_card.dart';
@@ -82,13 +83,24 @@ class MaterialsListScreen extends ConsumerWidget {
                 if (shared.isNotEmpty) ...[
                   const _SectionHeader(label: 'Общие материалы проекта'),
                   const SizedBox(height: AppSpacing.x8),
-                  for (final r in shared) ...[
-                    MaterialCard(
-                      request: r,
-                      onTap: () => context.push(
-                        '/projects/$projectId/materials/${r.id}',
+                  for (var i = 0; i < shared.length; i++) ...[
+                    if (i == 0)
+                      TourAnchor(
+                        id: 'materials.first_request',
+                        child: MaterialCard(
+                          request: shared[i],
+                          onTap: () => context.push(
+                            '/projects/$projectId/materials/${shared[i].id}',
+                          ),
+                        ),
+                      )
+                    else
+                      MaterialCard(
+                        request: shared[i],
+                        onTap: () => context.push(
+                          '/projects/$projectId/materials/${shared[i].id}',
+                        ),
                       ),
-                    ),
                     const SizedBox(height: AppSpacing.x10),
                   ],
                   const SizedBox(height: AppSpacing.x12),

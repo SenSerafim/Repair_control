@@ -6,6 +6,7 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../application/payments_controller.dart';
 import '../domain/payment.dart';
 import 'payment_card.dart';
@@ -82,11 +83,20 @@ class PaymentsListScreen extends ConsumerWidget {
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.x10),
-                    itemBuilder: (_, i) => PaymentCard(
-                      payment: filtered[i],
-                      onTap: () => context
-                          .push(AppRoutes.paymentDetailWith(filtered[i].id)),
-                    ),
+                    itemBuilder: (_, i) {
+                      final card = PaymentCard(
+                        payment: filtered[i],
+                        onTap: () => context.push(
+                          AppRoutes.paymentDetailWith(filtered[i].id),
+                        ),
+                      );
+                      return i == 0
+                          ? TourAnchor(
+                              id: 'payments_list.first_payment',
+                              child: card,
+                            )
+                          : card;
+                    },
                   ),
                 );
               },

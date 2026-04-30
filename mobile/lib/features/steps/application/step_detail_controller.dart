@@ -199,6 +199,7 @@ class StepDetailController
       await _repo.uploadToStorage(
         presigned: presigned,
         bytes: compressed.bytes,
+        mimeType: compressed.mimeType,
       );
       final photo = await _repo.confirmPhoto(
         stepId: arg.stepId,

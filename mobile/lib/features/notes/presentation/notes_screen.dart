@@ -341,7 +341,7 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
           const SizedBox(height: 12),
         ],
         const Text(
-          'ВИДИМОСТЬ',
+          'КТО УВИДИТ ЗАМЕТКУ',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -349,41 +349,15 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
             letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final s in NoteScope.values)
-              GestureDetector(
-                onTap: () => setState(() => _scope = s),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: AppDurations.fast,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _scope == s ? AppColors.brandLight : AppColors.n0,
-                    border: Border.all(
-                      color: _scope == s ? AppColors.brand : AppColors.n200,
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Text(
-                    s.displayName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _scope == s ? AppColors.brand : AppColors.n600,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        const SizedBox(height: 8),
+        for (final s in NoteScope.values) ...[
+          _ScopeOption(
+            scope: s,
+            selected: _scope == s,
+            onTap: () => setState(() => _scope = s),
+          ),
+          if (s != NoteScope.values.last) const SizedBox(height: 8),
+        ],
         const SizedBox(height: 16),
         const Text(
           'ТЕКСТ ЗАМЕТКИ',
@@ -430,6 +404,88 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
           onPressed: _submit,
         ),
       ],
+    );
+  }
+}
+
+class _ScopeOption extends StatelessWidget {
+  const _ScopeOption({
+    required this.scope,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final NoteScope scope;
+  final bool selected;
+  final VoidCallback onTap;
+
+  IconData get _icon => switch (scope) {
+        NoteScope.personal => Icons.lock_outline_rounded,
+        NoteScope.forMe => Icons.person_outline_rounded,
+        NoteScope.stage => Icons.groups_outlined,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.r12),
+      child: AnimatedContainer(
+        duration: AppDurations.fast,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brandLight : AppColors.n0,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.n200,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              _icon,
+              size: 22,
+              color: selected ? AppColors.brand : AppColors.n500,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    scope.displayName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? AppColors.brand : AppColors.n800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    scope.hint,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.n500,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: selected ? AppColors.brand : AppColors.n300,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

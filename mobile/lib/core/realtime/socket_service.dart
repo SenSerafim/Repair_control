@@ -48,6 +48,16 @@ class SocketService {
   final Logger _logger;
 
   io.Socket? _socket;
+  bool _connecting = false;
+  // Признак намеренного disconnect() — гасит автоматический reconnect при
+  // серверном `io server disconnect` (auth fail), чтобы logout не вызывал
+  // бесконечный цикл переподключений.
+  bool _intentionallyClosed = false;
+  // Backoff для server-initiated disconnect: socket.io сам не reconnect-ит,
+  // если бэкенд закрыл соединение, поэтому делаем это вручную с экспоненциальной
+  // задержкой 1s → 30s.
+  int _serverDisconnectAttempts = 0;
+  Timer? _reconnectTimer;
   final _connectedController = StreamController<bool>.broadcast();
   final _eventsController =
       StreamController<(String event, dynamic payload)>.broadcast();
@@ -68,9 +78,18 @@ class SocketService {
   bool get isConnected => _socket?.connected ?? false;
 
   Future<void> connect() async {
-    if (_socket != null) return;
+    // State-guard: пропускаем повторный connect, если уже соединены или
+    // в процессе. socket.io сам восстанавливает соединение при transport
+    // error через `setReconnectionAttempts(-1)` — нам не надо его дёргать.
+    if (_socket != null || _connecting) return;
+    _connecting = true;
+    _intentionallyClosed = false;
+    _reconnectTimer?.cancel();
     final token = await _storage.readAccessToken();
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) {
+      _connecting = false;
+      return;
+    }
 
     final url = '${_env.wsUrl}/chats';
     // Сначала создаём socket, потом цепляем callbacks отдельным statement —
@@ -88,6 +107,8 @@ class SocketService {
     );
     socket
       ..onConnect((_) {
+        _connecting = false;
+        _serverDisconnectAttempts = 0;
         _logger.d('WS /chats connected');
         _connectedController.add(true);
         // Re-join во все чаты, на которые подписаны до disconnect.
@@ -97,11 +118,23 @@ class SocketService {
           _logger.d('WS /chats re-join: ${_joinedChats.length} chat(s)');
         }
       })
-      ..onDisconnect((_) {
-        _logger.d('WS /chats disconnected');
+      ..onDisconnect((reason) {
+        // reason приходит из socket.io как:
+        // 'io server disconnect' | 'transport close' | 'ping timeout' | etc.
+        // 'io server disconnect' = бекенд сам закрыл (auth fail / kicked).
+        // socket.io в этом случае НЕ пытается reconnect самостоятельно,
+        // поэтому делаем это вручную с backoff. Транспортные disconnect
+        // (transport close, ping timeout) socket.io обрабатывает сам.
+        _logger.w('WS /chats disconnected: ${reason ?? "unknown"}');
         _connectedController.add(false);
+        if (!_intentionallyClosed && reason == 'io server disconnect') {
+          _scheduleServerReconnect();
+        }
       })
-      ..onConnectError((e) => _logger.w('WS /chats connect error: $e'))
+      ..onConnectError((e) {
+        _connecting = false;
+        _logger.w('WS /chats connect error: $e');
+      })
       ..onError((e) => _logger.w('WS /chats error: $e'));
 
     for (final event in const [
@@ -170,17 +203,47 @@ class SocketService {
   }
 
   Future<void> disconnect() async {
+    _intentionallyClosed = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _serverDisconnectAttempts = 0;
     _socket?.dispose();
     _socket = null;
+    _connecting = false;
     _joinedChats.clear();
     _connectedController.add(false);
   }
 
   void dispose() {
+    _intentionallyClosed = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _socket?.dispose();
     _socket = null;
     _connectedController.close();
     _eventsController.close();
+  }
+
+  /// `io server disconnect` означает, что бэкенд закрыл соединение
+  /// (чаще всего из-за просроченного JWT). socket.io не reconnect-ит сам в
+  /// этом сценарии, поэтому сбрасываем текущий socket и пробуем подключиться
+  /// заново — dio-интерсептор к моменту следующего connect успеет обновить
+  /// access-token. Backoff 1s → 30s, чтобы не флудить бэкенд.
+  void _scheduleServerReconnect() {
+    _reconnectTimer?.cancel();
+    final attempt = _serverDisconnectAttempts;
+    _serverDisconnectAttempts = (attempt + 1).clamp(0, 5);
+    final delayMs = (1000 * (1 << attempt)).clamp(1000, 30000);
+    _logger.d('WS /chats reconnect in ${delayMs}ms (attempt ${attempt + 1})');
+    _reconnectTimer = Timer(Duration(milliseconds: delayMs), () async {
+      if (_intentionallyClosed) return;
+      // Полностью пересоздаём socket: токен мог обновиться, dispose снимает
+      // все старые listeners и не оставляет «зомби»-сокет в памяти.
+      _socket?.dispose();
+      _socket = null;
+      _connecting = false;
+      await connect();
+    });
   }
 }
 

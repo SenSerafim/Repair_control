@@ -20,6 +20,7 @@ class SecureStorage {
   static const _kActiveRole = 'auth.activeRole';
   static const _kLocale = 'app.locale';
   static const _kThemeMode = 'app.themeMode';
+  static const _kTutorialCompleted = 'tutorial.completed';
 
   Future<String?> readAccessToken() => _storage.read(key: _kAccess);
   Future<void> writeAccessToken(String value) =>
@@ -55,4 +56,14 @@ class SecureStorage {
     await _storage.delete(key: _kRefresh);
     await _storage.delete(key: _kActiveRole);
   }
+
+  /// Флаг прохождения интерактивного демо-тура (S19). При первом логине,
+  /// пока флаг не выставлен, splash редиректит на `/tour`.
+  Future<bool> readTutorialCompleted() async {
+    final v = await _storage.read(key: _kTutorialCompleted);
+    return v == 'true';
+  }
+
+  Future<void> writeTutorialCompleted({required bool value}) =>
+      _storage.write(key: _kTutorialCompleted, value: value.toString());
 }

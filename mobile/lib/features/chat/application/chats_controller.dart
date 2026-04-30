@@ -23,6 +23,13 @@ final projectChatsProvider = AsyncNotifierProvider.family<
   ProjectChatsController.new,
 );
 
+/// Агрегированные чаты пользователя через все активные проекты —
+/// для mobile-таба «Чаты». Возвращает items с project-context'ом
+/// для группировки UI.
+final myChatsProvider = FutureProvider<List<MyChatItem>>((ref) async {
+  return ref.read(chatsRepositoryProvider).listMine();
+});
+
 class ProjectChatsController
     extends FamilyAsyncNotifier<List<Chat>, String> {
   @override
