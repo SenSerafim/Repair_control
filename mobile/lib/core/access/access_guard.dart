@@ -83,7 +83,9 @@ class AccessGuard {
     // и проверяются через canInProjectProvider.
     SystemRole.representative: {
       DomainAction.projectEdit,
-      DomainAction.projectInviteMember,
+      // projectInviteMember для representative — только через делегированный
+      // флаг canInviteMembers (см. _representativeFlagToActions). Backend
+      // также проверяет именно его. В статическом сете не держим.
       DomainAction.stageManage,
       DomainAction.stageStart,
       DomainAction.stagePause,

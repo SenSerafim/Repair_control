@@ -110,26 +110,42 @@ class _CreateSelfPurchaseScreenState
                     style: AppTextStyles.caption
                         .copyWith(color: AppColors.redDot),
                   ),
-                  data: (stages) => Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (!isMaster)
-                        ChoiceChip(
-                          label: const Text('Без этапа'),
-                          selected: _stageId == null,
-                          onSelected: (_) =>
-                              setState(() => _stageId = null),
-                        ),
-                      for (final s in stages)
-                        ChoiceChip(
-                          label: Text(s.title),
-                          selected: _stageId == s.id,
-                          onSelected: (_) =>
-                              setState(() => _stageId = s.id),
-                        ),
-                    ],
-                  ),
+                  data: (stages) {
+                    // Master может создать самозакуп только на этапах
+                    // с назначенным бригадиром — он адресат подтверждения
+                    // (gaps §4.3, backend: SELFPURCHASE_NO_FOREMAN_ON_STAGE).
+                    final visible = isMaster
+                        ? stages.where((s) => s.foremanIds.isNotEmpty).toList()
+                        : stages;
+                    if (isMaster && visible.isEmpty) {
+                      return Text(
+                        'На ваших этапах ещё нет бригадира — '
+                        'самозакуп пока невозможен.',
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.redDot),
+                      );
+                    }
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (!isMaster)
+                          ChoiceChip(
+                            label: const Text('Без этапа'),
+                            selected: _stageId == null,
+                            onSelected: (_) =>
+                                setState(() => _stageId = null),
+                          ),
+                        for (final s in visible)
+                          ChoiceChip(
+                            label: Text(s.title),
+                            selected: _stageId == s.id,
+                            onSelected: (_) =>
+                                setState(() => _stageId = s.id),
+                          ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: AppSpacing.x14),
                 const _Label(text: 'Сумма'),

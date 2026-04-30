@@ -54,21 +54,17 @@ class StageChecklistTab extends ConsumerWidget {
       ),
       data: (steps) {
         if (steps.isEmpty) {
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Column(
-              children: [
-                AppEmptyState(
-                  title: 'Шагов пока нет',
-                  subtitle: canAddStep
-                      ? 'Добавьте основной шаг — именно они определяют '
-                          'прогресс этапа.'
-                      : 'Шаги добавит бригадир этого этапа.',
-                  icon: Icons.checklist_rounded,
-                  actionLabel: canAddStep ? 'Добавить шаг' : null,
-                  onAction: canAddStep ? onAddStep : null,
-                ),
-              ],
+            child: AppEmptyState(
+              title: 'Шагов пока нет',
+              subtitle: canAddStep
+                  ? 'Добавьте основной шаг — именно они определяют '
+                      'прогресс этапа.'
+                  : 'Шаги добавит бригадир этого этапа.',
+              icon: Icons.checklist_rounded,
+              actionLabel: canAddStep ? 'Добавить шаг' : null,
+              onAction: canAddStep ? onAddStep : null,
             ),
           );
         }

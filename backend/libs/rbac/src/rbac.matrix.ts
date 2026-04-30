@@ -27,6 +27,9 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative')
         return !!ctx.representativeRights?.canInviteMembers;
+      // Бригадир приглашает только мастеров — точная проверка
+      // приглашаемой роли делается в InvitationsService.
+      if (ctx.membershipRole === 'foreman') return true;
       return false;
 
     case 'stage.manage':

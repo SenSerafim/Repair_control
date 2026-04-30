@@ -89,8 +89,8 @@ describe('RBAC matrix — ТЗ §1.5', () => {
         false,
       );
     });
-    it('foreman cannot invite', () => {
-      expect(canAccess('project.invite_member', foreman())).toBe(false);
+    it('foreman can invite (restricted to master role inside service)', () => {
+      expect(canAccess('project.invite_member', foreman())).toBe(true);
     });
   });
 

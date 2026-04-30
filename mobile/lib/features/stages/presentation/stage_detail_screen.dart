@@ -419,32 +419,40 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     final canRequest = ref.watch(canProvider(DomainAction.approvalRequest));
     final children = <Widget>[];
 
+    // Все элементы children должны быть Expanded — Row делит ширину поровну
+    // (или по flex). AppButton имеет fullWidth=true → без Expanded падает с
+    // «BoxConstraints forces an infinite width». Сепараторы между кнопками
+    // добавляются в общий for-loop ниже, не внутри case'ов.
     switch (widget.display) {
       case StageDisplayStatus.pending:
         if (canStart) {
           children.add(
-            AppButton(
-              label: widget.planAllowsStart
-                  ? 'Запустить этап'
-                  : 'План не согласован',
-              icon: Icons.play_arrow_rounded,
-              isLoading: _busy,
-              onPressed: widget.planAllowsStart
-                  ? _tryStart
-                  : () => context.push(
-                        AppRoutes.projectPlanApprovalWith(widget.projectId),
-                      ),
+            Expanded(
+              child: AppButton(
+                label: widget.planAllowsStart
+                    ? 'Запустить этап'
+                    : 'План не согласован',
+                icon: Icons.play_arrow_rounded,
+                isLoading: _busy,
+                onPressed: widget.planAllowsStart
+                    ? _tryStart
+                    : () => context.push(
+                          AppRoutes.projectPlanApprovalWith(widget.projectId),
+                        ),
+              ),
             ),
           );
         }
       case StageDisplayStatus.lateStart:
         if (canStart) {
           children.add(
-            AppButton(
-              label: 'Запустить этап',
-              icon: Icons.play_arrow_rounded,
-              isLoading: _busy,
-              onPressed: _tryStart,
+            Expanded(
+              child: AppButton(
+                label: 'Запустить этап',
+                icon: Icons.play_arrow_rounded,
+                isLoading: _busy,
+                onPressed: _tryStart,
+              ),
             ),
           );
         }
@@ -471,9 +479,6 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           );
         }
         if (canRequest) {
-          if (children.isNotEmpty) {
-            children.add(const SizedBox(width: AppSpacing.x10));
-          }
           // ТЗ §2.4: «На приёмку» доступно только когда все шаги завершены
           // (progressCache=100). Backend дублирует проверку — но кнопка
           // disabled даёт мгновенный фидбек без запроса.
@@ -499,13 +504,15 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
       case StageDisplayStatus.paused:
         if (canPause) {
           children.add(
-            AppButton(
-              label: 'Возобновить',
-              icon: Icons.play_arrow_rounded,
-              isLoading: _busy,
-              onPressed: () => _wrap(
-                () => _controller.resume(widget.stage.id),
-                'Этап возобновлён',
+            Expanded(
+              child: AppButton(
+                label: 'Возобновить',
+                icon: Icons.play_arrow_rounded,
+                isLoading: _busy,
+                onPressed: () => _wrap(
+                  () => _controller.resume(widget.stage.id),
+                  'Этап возобновлён',
+                ),
               ),
             ),
           );
@@ -520,7 +527,6 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
             ),
           ),
         );
-        children.add(const SizedBox(width: AppSpacing.x10));
         children.add(
           Expanded(
             flex: 2,
@@ -534,23 +540,27 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
       case StageDisplayStatus.rejected:
         if (canRequest) {
           children.add(
-            AppButton(
-              label: 'Исправить и отправить снова',
-              isLoading: _busy,
-              onPressed: () => _wrap(
-                () => _controller.sendToReview(widget.stage.id),
-                'Этап отправлен на приёмку',
+            Expanded(
+              child: AppButton(
+                label: 'Исправить и отправить снова',
+                isLoading: _busy,
+                onPressed: () => _wrap(
+                  () => _controller.sendToReview(widget.stage.id),
+                  'Этап отправлен на приёмку',
+                ),
               ),
             ),
           );
         }
       case StageDisplayStatus.done:
         children.add(
-          AppButton(
-            label: 'К списку этапов',
-            variant: AppButtonVariant.ghost,
-            onPressed: () =>
-                context.go('/projects/${widget.projectId}/stages'),
+          Expanded(
+            child: AppButton(
+              label: 'К списку этапов',
+              variant: AppButtonVariant.ghost,
+              onPressed: () =>
+                  context.go('/projects/${widget.projectId}/stages'),
+            ),
           ),
         );
     }
@@ -567,14 +577,11 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         color: AppColors.n0,
         border: Border(top: BorderSide(color: AppColors.n200)),
       ),
-      // AppButton по дефолту fullWidth=true → width:∞ внутри Row без констрейнта
-      // даёт «BoxConstraints forces an infinite width». Оборачиваем каждую
-      // кнопку в Expanded, чтобы Row делил доступную ширину.
       child: Row(
         children: [
           for (var i = 0; i < children.length; i++) ...[
             if (i > 0) const SizedBox(width: AppSpacing.x8),
-            Expanded(child: children[i]),
+            children[i],
           ],
         ],
       ),

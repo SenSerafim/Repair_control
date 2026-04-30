@@ -1,5 +1,11 @@
 import * as crypto from 'crypto';
-import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  GoneException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Clock, ErrorCodes, NotFoundError, PrismaService } from '@app/common';
 import { MembershipRole } from './members.service';
 
@@ -34,6 +40,16 @@ export class InvitationsService {
   }) {
     const project = await this.prisma.project.findUnique({ where: { id: params.projectId } });
     if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+
+    if (project.ownerId !== params.actorUserId) {
+      const actor = await this.prisma.membership.findFirst({
+        where: { projectId: params.projectId, userId: params.actorUserId },
+        select: { role: true },
+      });
+      if (actor?.role === 'foreman' && params.role !== 'master') {
+        throw new ForbiddenException('foreman can invite only master role');
+      }
+    }
 
     const expiresAt = new Date(
       this.clock.now().getTime() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000,
@@ -94,9 +110,23 @@ export class InvitationsService {
   async generateCode(input: GenerateInviteCodeInput) {
     const project = await this.prisma.project.findUnique({
       where: { id: input.projectId },
-      select: { id: true },
+      select: { id: true, ownerId: true },
     });
     if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+
+    // Бригадир может пригласить только мастера. RBAC matrix допускает
+    // foreman→project.invite_member на уровне роли — здесь сужаем до
+    // конкретной приглашаемой роли (ТЗ §1.5: foreman не приглашает
+    // representative/foreman).
+    if (project.ownerId !== input.byUserId) {
+      const actor = await this.prisma.membership.findFirst({
+        where: { projectId: input.projectId, userId: input.byUserId },
+        select: { role: true },
+      });
+      if (actor?.role === 'foreman' && input.role !== 'master') {
+        throw new ForbiddenException('foreman can invite only master role');
+      }
+    }
 
     const expiresAt = new Date(this.clock.now().getTime() + CODE_TTL_DAYS * 24 * 60 * 60 * 1000);
 
