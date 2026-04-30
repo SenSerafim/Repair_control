@@ -101,9 +101,24 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     WidgetRef ref,
     AppNotification note,
   ) {
+    if (_navigating) return;
+    _navigating = true;
     ref.read(notificationsProvider.notifier).markRead(note.id);
     final path = note.routePath;
-    if (path != null) context.push(path);
+    if (path == null) {
+      _navigating = false;
+      return;
+    }
+    // `/notifications` живёт top-level (вне `_HomeShell`), а большинство
+    // целевых путей — внутри ShellRoute. `context.push` из этого набора
+    // ломает go_router: HeroControllerScope создаёт второй Navigator с
+    // тем же `root` ключом → крах виджет-дерева, кнопка «назад» не работает.
+    // `context.go` чистит несовместимый стек и переключается на целевой
+    // маршрут как нормальная навигация по приложению.
+    context.go(path);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _navigating = false;
+    });
   }
 
   void _onBack(BuildContext context) {
@@ -130,6 +145,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   bool _popping = false;
+  bool _navigating = false;
 }
 
 class _TypeFilter extends StatelessWidget {

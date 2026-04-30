@@ -256,7 +256,13 @@ class FcmService {
       logger.w('No router registered — cannot navigate to $path');
       return;
     }
-    router.push(path);
+    // `go`, не `push`: deep-link из push-уведомления может прийти, когда
+    // пользователь стоит на любом экране (или приложение только что
+    // открылось из killed-state). `push` стекает целевой маршрут поверх
+    // текущего, и при переходе из top-level route (например `/notifications`)
+    // в shell-routed путь go_router падает с дубликатом NavigatorState
+    // root-key. `go` корректно перестраивает стек.
+    router.go(path);
   }
 
   GoRouter? _routerRef;
