@@ -36,6 +36,62 @@ export class UsersService {
     return safe;
   }
 
+  /**
+   * Все «соратники» пользователя по всем активным проектам, где он либо
+   * owner (заказчик), либо имеет membership. Используется на mobile-табе
+   * «Команда» (агрегированный inbox), чтобы пользователь не открывал
+   * каждый проект по отдельности.
+   *
+   * Возвращает список групп `{ project, owner, members[] }` —
+   * клиент группирует UI по проекту.
+   */
+  async listTeammates(userId: string) {
+    const projects = await this.prisma.project.findMany({
+      where: {
+        archivedAt: null,
+        OR: [{ ownerId: userId }, { memberships: { some: { userId } } }],
+      },
+      select: {
+        id: true,
+        title: true,
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            avatarUrl: true,
+          },
+        },
+        memberships: {
+          select: {
+            id: true,
+            userId: true,
+            role: true,
+            stageIds: true,
+            permissions: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return projects.map((p) => ({
+      project: { id: p.id, title: p.title, ownerId: p.ownerId },
+      owner: p.owner,
+      members: p.memberships,
+    }));
+  }
+
   async updateProfile(userId: string, input: UpdateProfileInput) {
     return this.prisma.user.update({
       where: { id: userId },

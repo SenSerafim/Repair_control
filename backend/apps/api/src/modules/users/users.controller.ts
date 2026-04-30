@@ -31,6 +31,11 @@ export class UsersController {
     return this.users.getProfile(req.user.userId);
   }
 
+  @Get('teammates')
+  async teammates(@Req() req: { user: AuthenticatedUser }) {
+    return this.users.listTeammates(req.user.userId);
+  }
+
   @Patch()
   async updateMe(@Req() req: { user: AuthenticatedUser }, @Body() dto: UpdateProfileDto) {
     return this.users.updateProfile(req.user.userId, dto);

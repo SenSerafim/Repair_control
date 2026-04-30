@@ -91,6 +91,16 @@ export class LegalPublicationsService {
 
     const etag = await this.computeFileEtag(dto.fileKey);
 
+    // Если у этого kind ещё нет ни одной активной публикации — авто-публикуем
+    // первую загруженную версию: иначе админ грузит документ, не нажимает
+    // отдельную кнопку «Опубликовать», и пользователи видят пустой список.
+    const hasActive = await this.prisma.legalPublication.findFirst({
+      where: { kind: dto.kind, isActive: true },
+      select: { id: true },
+    });
+    const autoPublish = !hasActive;
+    const now = autoPublish ? this.clock.now() : null;
+
     const created = await this.prisma.legalPublication.create({
       data: {
         kind: dto.kind,
@@ -101,14 +111,17 @@ export class LegalPublicationsService {
         sizeBytes: dto.sizeBytes,
         etag,
         version: nextVersion,
+        isActive: autoPublish,
+        publishedAt: now,
+        publishedById: autoPublish ? actorId : null,
       },
     });
     await this.audit.log({
       actorId,
-      action: 'legal_publication.created',
+      action: autoPublish ? 'legal_publication.created_and_published' : 'legal_publication.created',
       targetType: 'LegalPublication',
       targetId: created.id,
-      metadata: { kind: dto.kind, slug: dto.slug, version: nextVersion },
+      metadata: { kind: dto.kind, slug: dto.slug, version: nextVersion, autoPublish },
     });
     return created;
   }

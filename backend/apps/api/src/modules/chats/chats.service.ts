@@ -182,6 +182,40 @@ export class ChatsService {
     return chats.map((c) => this.serialize(c));
   }
 
+  /**
+   * Список всех чатов пользователя через все активные проекты.
+   * Используется на mobile-табе «Чаты» (агрегированный inbox), чтобы
+   * не заставлять пользователя сначала открывать конкретный проект.
+   *
+   * Возвращает чаты вместе с `project: { id, title }` — клиент группирует
+   * их по проекту для UX «папка по проекту».
+   */
+  async listForUser(
+    actorUserId: string,
+  ): Promise<(SerializedChat & { project: { id: string; title: string } })[]> {
+    const chats = await this.prisma.chat.findMany({
+      where: {
+        archivedAt: null,
+        // только проекты, которые ещё активны (не в архиве)
+        project: { archivedAt: null },
+        participants: { some: { userId: actorUserId, leftAt: null } },
+      },
+      include: {
+        participants: { select: { userId: true, joinedAt: true, leftAt: true } },
+        project: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Prisma типизирует relation как nullable, но WHERE-фильтр выше
+    // гарантирует наличие проекта — narrow через filter.
+    return chats
+      .filter((c): c is typeof c & { project: { id: string; title: string } } => c.project !== null)
+      .map((c) => ({
+        ...this.serialize(c),
+        project: { id: c.project.id, title: c.project.title },
+      }));
+  }
+
   async get(chatId: string, actorUserId: string): Promise<SerializedChat> {
     const chat = await this.prisma.chat.findUnique({
       where: { id: chatId },

@@ -49,6 +49,16 @@ export class ChatsController {
     return this.chats.listForProject(projectId, req.user.userId);
   }
 
+  /**
+   * Агрегированный список всех чатов текущего пользователя через все его
+   * активные проекты — для mobile-таба «Чаты». RBAC не нужен: возвращаем
+   * только чаты где userId — активный participant.
+   */
+  @Get('me/chats')
+  listMine(@Req() req: any) {
+    return this.chats.listForUser(req.user.userId);
+  }
+
   @Get('chats/:chatId')
   @RequireAccess({
     action: 'chat.read',

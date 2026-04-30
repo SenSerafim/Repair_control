@@ -45,6 +45,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (socket.handshake.headers.authorization as string | undefined);
     const user = await this.wsAuth.verify(token);
     if (!user) {
+      // Логируем причину чтобы клиент мог понять почему его дисконнектят:
+      // отсутствует токен / просрочен / пользователя нет в БД.
+      const reason = !token ? 'token_missing' : 'token_invalid';
+      this.logger.warn(`WS /chats auth failed (${reason}), socket=${socket.id}`);
+      socket.emit('auth_error', { reason });
       socket.disconnect(true);
       return;
     }

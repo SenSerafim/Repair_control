@@ -101,7 +101,26 @@ export class StepPhotosService {
       });
       return p;
     });
-    return photo;
+    // Возвращаем уже с presigned URL — иначе клиент вставит запись в state
+    // без `url`/`thumbUrl` и preview покажет «broken_image».
+    return this.attachPresignedUrls(photo);
+  }
+
+  /** Подмешивает presigned download URLs к записи `StepPhoto`. */
+  private async attachPresignedUrls<T extends { fileKey: string; thumbKey: string | null }>(p: T) {
+    let url: string | null = null;
+    let thumbUrl: string | null = null;
+    try {
+      url = (await this.files.createPresignedDownload(p.fileKey)).url;
+    } catch {
+      url = null;
+    }
+    try {
+      thumbUrl = p.thumbKey ? (await this.files.createPresignedDownload(p.thumbKey)).url : url;
+    } catch {
+      thumbUrl = null;
+    }
+    return { ...p, url, thumbUrl, downloadUrl: url };
   }
 
   async listForStep(stepId: string, viewer?: StepPhotosViewer) {
@@ -121,30 +140,9 @@ export class StepPhotosService {
       where: { stepId },
       orderBy: { createdAt: 'desc' },
     });
-    return Promise.all(
-      photos.map(async (p) => {
-        let url: string | null = null;
-        let thumbUrl: string | null = null;
-        try {
-          url = (await this.files.createPresignedDownload(p.fileKey)).url;
-        } catch {
-          url = null;
-        }
-        try {
-          thumbUrl = p.thumbKey ? (await this.files.createPresignedDownload(p.thumbKey)).url : url;
-        } catch {
-          thumbUrl = null;
-        }
-        return {
-          ...p,
-          // `url`/`thumbUrl` — то, что читает мобильный StepPhoto.parse.
-          // `downloadUrl` оставлен для backward-compat с тем, что было раньше.
-          url,
-          thumbUrl,
-          downloadUrl: url,
-        };
-      }),
-    );
+    // `url`/`thumbUrl` — то, что читает мобильный StepPhoto.parse.
+    // `downloadUrl` оставлен для backward-compat с тем, что было раньше.
+    return Promise.all(photos.map((p) => this.attachPresignedUrls(p)));
   }
 
   async delete(photoId: string, actorUserId: string) {
