@@ -728,6 +728,23 @@ final routerProvider = Provider<GoRouter>((ref) {
             paymentId: state.pathParameters['paymentId']!,
           ),
         ),
+        routes: [
+          // Top-level (вне ShellRoute) sibling для distribute — иначе push
+          // из /payments/:id в shell-route /projects/.../payments/.../distribute
+          // даёт duplicate page-keys и роняет HeroControllerScope с
+          // `!keyReservation.contains(key)` assertion. projectId приходит
+          // через query, потому что payment detail экран — top-level и не
+          // содержит projectId в path.
+          GoRoute(
+            path: 'distribute',
+            pageBuilder: slideLeftPage(
+              (_, state) => AdvanceDistributionScreen(
+                projectId: state.uri.queryParameters['projectId'] ?? '',
+                paymentId: state.pathParameters['paymentId']!,
+              ),
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/chats/:chatId',

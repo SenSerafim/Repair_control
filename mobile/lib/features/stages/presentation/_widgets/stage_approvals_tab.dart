@@ -2,6 +2,8 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/access/access_guard.dart';
+import '../../../../core/access/domain_actions.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/widgets.dart';
@@ -26,6 +28,12 @@ class StageApprovalsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(approvalsControllerProvider(projectId));
+    // RBAC: только customer/foreman/representative.canApprove + admin
+    // могут одобрять/отклонять. Master видит карточки, но без CTA —
+    // backend всё равно отдаст 403 на approve/reject.
+    final canDecide = ref.watch(canInProjectProvider(
+      (action: DomainAction.approvalDecide, projectId: projectId),
+    ));
     return async.when(
       loading: () => const AppLoadingState(),
       error: (e, _) => AppErrorState(
@@ -40,11 +48,17 @@ class StageApprovalsTab extends ConsumerWidget {
             .where((a) => a.stageId == stageId)
             .toList();
         if (pending.isEmpty && history.isEmpty) {
-          return const AppEmptyState(
-            title: 'Согласований нет',
-            subtitle: 'Здесь появятся отправленные на согласование шаги, '
-                'дополнительные работы и приёмка этапа.',
-            icon: Icons.fact_check_outlined,
+          // Center гарантирует, что AppEmptyState окажется ровно в середине
+          // вкладки. Без него Column внутри Padding опирается на baseline
+          // родителя и текст визуально «прижимается» к левому краю при
+          // длинных subtitle-строках.
+          return const Center(
+            child: AppEmptyState(
+              title: 'Согласований нет',
+              subtitle: 'Здесь появятся отправленные на согласование шаги, '
+                  'дополнительные работы и приёмка этапа.',
+              icon: Icons.fact_check_outlined,
+            ),
           );
         }
         return ListView(
@@ -56,8 +70,11 @@ class StageApprovalsTab extends ConsumerWidget {
               for (final a in pending) ...[
                 ApprovalPendingCard(
                   approval: a,
-                  onApprove: () => _approve(context, ref, a),
-                  onReject: () => _reject(context, ref, a),
+                  // Кнопки доступны только тем, у кого есть RBAC `approval.decide`.
+                  // Для master передаём заглушку, и `ApprovalPendingCard`
+                  // дисейблит CTA через `null` onPressed.
+                  onApprove: canDecide ? () => _approve(context, ref, a) : null,
+                  onReject: canDecide ? () => _reject(context, ref, a) : null,
                 ),
                 const SizedBox(height: AppSpacing.x10),
               ],

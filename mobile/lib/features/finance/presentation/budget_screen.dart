@@ -43,12 +43,37 @@ class BudgetScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(projectBudgetProvider(projectId));
     final tab = ref.watch(_budgetTabProvider);
+    // RBAC-проверки на UI-уровне дублируют backend (`finance.budget.*`,
+    // `finance.payment.create`). Ситуации:
+    //  · нет `view`  → экран блокируется заглушкой (заказчик не настроил
+    //    делегирование представителю, мастер на проекте без бюджета и т.п.);
+    //  · есть `view`, нет `edit`  → bare-read: hero + табы, без кнопки
+    //    «Открыть проект» в empty-state и без «Новая выплата» в footer;
+    //  · есть `view` + `paymentCreate` → отображается «Новая выплата».
+    final canViewBudget = ref.watch(canInProjectProvider(
+      (action: DomainAction.financeBudgetView, projectId: projectId),
+    ));
     final canCreatePayment = ref.watch(canInProjectProvider(
       (action: DomainAction.financePaymentCreate, projectId: projectId),
     ));
     final canEditBudget = ref.watch(canInProjectProvider(
       (action: DomainAction.financeBudgetEdit, projectId: projectId),
     ));
+
+    if (!canViewBudget) {
+      return const AppScaffold(
+        showBack: true,
+        title: 'Бюджет проекта',
+        body: Center(
+          child: AppEmptyState(
+            title: 'Бюджет недоступен',
+            subtitle: 'У вас нет прав на просмотр бюджета этого проекта. '
+                'Обратитесь к заказчику.',
+            icon: Icons.lock_outline_rounded,
+          ),
+        ),
+      );
+    }
 
     return AppScaffold(
       showBack: true,

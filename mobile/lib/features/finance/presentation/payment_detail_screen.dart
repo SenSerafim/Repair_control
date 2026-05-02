@@ -13,6 +13,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/payments_controller.dart';
 import '../domain/payment.dart';
+import '../domain/payment_policy.dart';
 import '_widgets/payment_amount_hero.dart';
 import '_widgets/payment_info_card.dart';
 import 'payment_sheets.dart';
@@ -382,20 +383,32 @@ class _Actions extends ConsumerWidget {
       ),
     ));
 
-    final canConfirm = hasConfirm &&
-        payment.status == PaymentStatus.pending &&
-        payment.toUserId == meId;
-    final canCancel = payment.status == PaymentStatus.pending &&
-        payment.fromUserId == meId;
-    final canDispute = hasDispute &&
-        payment.status == PaymentStatus.confirmed &&
-        (payment.toUserId == meId || payment.fromUserId == meId);
-    final canResolve = hasResolve && payment.status == PaymentStatus.disputed;
-    final canDistribute = hasCreate &&
-        payment.kind == PaymentKind.advance &&
-        payment.status == PaymentStatus.confirmed &&
-        payment.remainingToDistribute > 0 &&
-        payment.toUserId == meId;
+    // Все вычисления допустимости вынесены в PaymentPolicy — единая точка
+    // истины. См. таблицу матрицы прав в payment_policy.dart.
+    final canConfirm = PaymentPolicy.canConfirm(
+      payment: payment,
+      meId: meId,
+      hasConfirm: hasConfirm,
+    );
+    final canCancel = PaymentPolicy.canCancel(payment: payment, meId: meId);
+    final canDispute = PaymentPolicy.canDispute(
+      payment: payment,
+      meId: meId,
+      hasDispute: hasDispute,
+    );
+    final canResolve = PaymentPolicy.canResolve(
+      payment: payment,
+      hasResolve: hasResolve,
+    );
+    final canDistribute = PaymentPolicy.canDistribute(
+      payment: payment,
+      meId: meId,
+      hasCreate: hasCreate,
+    );
+    final canViewDistribution = PaymentPolicy.canViewDistribution(
+      payment: payment,
+      meId: meId,
+    );
 
     if (canConfirm) {
       buttons.add(
@@ -422,10 +435,7 @@ class _Actions extends ConsumerWidget {
           ),
         );
     }
-    final isParentAdvance = payment.kind == PaymentKind.advance &&
-        payment.parentPaymentId == null &&
-        (payment.children.isNotEmpty || payment.toUserId == meId);
-    if (isParentAdvance) {
+    if (canViewDistribution) {
       buttons
         ..add(const SizedBox(height: AppSpacing.x8))
         ..add(
@@ -433,8 +443,12 @@ class _Actions extends ConsumerWidget {
             label: 'Распределение аванса',
             variant: AppButtonVariant.secondary,
             icon: Icons.account_tree_outlined,
+            // Top-level URL `/payments/:id/distribute` (а НЕ
+            // `/projects/.../payments/.../distribute`), потому что текущий
+            // PaymentDetailScreen живёт top-level вне ShellRoute. Push в
+            // shell-route ломал стек go_router на `!keyReservation.contains`.
             onPressed: () => context.push(
-              '/projects/${payment.projectId}/payments/${payment.id}/distribute',
+              '/payments/${payment.id}/distribute?projectId=${payment.projectId}',
             ),
           ),
         );

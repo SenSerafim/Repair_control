@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 import { ChatType } from '@prisma/client';
 
@@ -81,6 +82,7 @@ export class ListMessagesQueryDto {
 
   @ApiPropertyOptional({ default: 50 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)

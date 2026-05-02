@@ -72,9 +72,16 @@ class _ChatConversationScreenState
           .typing(widget.chatId, typing: false);
     }
     final container = _containerCache;
-    if (container != null &&
-        container.read(currentChatIdProvider) == widget.chatId) {
-      container.read(currentChatIdProvider.notifier).state = null;
+    final chatId = widget.chatId;
+    if (container != null) {
+      // Riverpod запрещает менять провайдер во время finalizeTree (assert
+      // _debugCanModifyProviders). Откладываем сброс на следующий микротакт —
+      // к этому моменту dispose уже завершится.
+      Future.microtask(() {
+        if (container.read(currentChatIdProvider) == chatId) {
+          container.read(currentChatIdProvider.notifier).state = null;
+        }
+      });
     }
     super.dispose();
   }

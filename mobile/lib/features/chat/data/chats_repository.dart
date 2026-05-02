@@ -150,11 +150,16 @@ class ChatsRepository {
     int limit = 50,
   }) =>
       _call(() async {
+        // Workaround: бекенд DTO до версии 1.0.1 валидирует `limit` через
+        // `@IsInt()` без `@Type(() => Number)` и падает 400 на query-string.
+        // Default на бэке = 50, поэтому если не передавать `limit` явно,
+        // получаем тот же результат и обходим баг до релиза 1.0.1.
+        final useDefaultLimit = limit == 50;
         final r = await _dio.get<dynamic>(
           '/api/chats/$chatId/messages',
           queryParameters: {
             if (cursor != null) 'cursor': cursor,
-            'limit': limit,
+            if (!useDefaultLimit) 'limit': limit,
           },
         );
         final data = r.data;

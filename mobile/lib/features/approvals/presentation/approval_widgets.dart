@@ -135,8 +135,14 @@ class _Body extends StatelessWidget {
     final tone = _toneFor(approval.scope);
     final df = DateFormat('d MMM HH:mm', 'ru');
 
-    return Column(
+    // ClipRect защищает от RenderFlex overflow assert: Hero
+    // `flightShuttleBuilder` в момент анимации перехода на ApprovalDetail
+    // даёт Body очень маленький transient height (~12px), и без clipping
+    // Flutter роняет debug assert. Визуально — те же миллисекунды flight.
+    return ClipRect(
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Wrap(
           spacing: 6,
@@ -175,6 +181,7 @@ class _Body extends StatelessWidget {
           _PhotoRow(attachments: approval.attachments),
         ],
       ],
+      ),
     );
   }
 

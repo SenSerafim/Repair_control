@@ -21,8 +21,10 @@ class ApprovalPendingCard extends StatelessWidget {
   });
 
   final Approval approval;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
+  // Nullable — `null` = роль не имеет RBAC `approval.decide` (например,
+  // master). Кнопки автоматически дисейблятся, без серверного 403.
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -87,27 +89,44 @@ class ApprovalPendingCard extends StatelessWidget {
             style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
           ),
           const SizedBox(height: AppSpacing.x10),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: 'Одобрить',
-                  variant: AppButtonVariant.success,
-                  size: AppButtonSize.sm,
-                  onPressed: onApprove,
+          if (onApprove != null || onReject != null)
+            Row(
+              children: [
+                if (onApprove != null)
+                  Expanded(
+                    child: AppButton(
+                      label: 'Одобрить',
+                      variant: AppButtonVariant.success,
+                      size: AppButtonSize.sm,
+                      onPressed: onApprove,
+                    ),
+                  ),
+                if (onApprove != null && onReject != null)
+                  const SizedBox(width: AppSpacing.x8),
+                if (onReject != null)
+                  Expanded(
+                    child: AppButton(
+                      label: 'Отклонить',
+                      variant: AppButtonVariant.destructive,
+                      size: AppButtonSize.sm,
+                      onPressed: onReject,
+                    ),
+                  ),
+              ],
+            )
+          else
+            // Read-only режим (например, для мастера) — поясняем, почему
+            // нет CTA, чтобы юзер не искал кнопку.
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Решение принимает заказчик / бригадир',
+                style: AppTextStyles.tiny.copyWith(
+                  color: AppColors.n500,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-              const SizedBox(width: AppSpacing.x8),
-              Expanded(
-                child: AppButton(
-                  label: 'Отклонить',
-                  variant: AppButtonVariant.destructive,
-                  size: AppButtonSize.sm,
-                  onPressed: onReject,
-                ),
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );

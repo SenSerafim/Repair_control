@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/text_styles.dart';
@@ -35,7 +37,14 @@ class AppButton extends StatefulWidget {
   });
 
   final String label;
-  final VoidCallback? onPressed;
+
+  /// Обработчик тапа. Может быть синхронным (`() { ... }`) или асинхронным
+  /// (`() async { ... }` / возвращающим `Future`). Если возвращает `Future`,
+  /// кнопка автоматически дисейблится до его завершения и показывает
+  /// спиннер — это устраняет spam-tap (юзер жмёт 4 раза → 4 одинаковых
+  /// POST → 409 storm). Для синхронных хендлеров действует короткий
+  /// debounce, чтобы двойной тап не отправлял два запроса подряд.
+  final FutureOr<void> Function()? onPressed;
   final AppButtonVariant variant;
   final AppButtonSize size;
   final IconData? icon;
@@ -48,8 +57,13 @@ class AppButton extends StatefulWidget {
 
 class _AppButtonState extends State<AppButton> {
   bool _pressed = false;
+  bool _busy = false;
+  DateTime? _lastTap;
 
-  bool get _enabled => widget.onPressed != null && !widget.isLoading;
+  static const _syncDebounce = Duration(milliseconds: 350);
+
+  bool get _enabled =>
+      widget.onPressed != null && !widget.isLoading && !_busy;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +76,7 @@ class _AppButtonState extends State<AppButton> {
 
     final opacity = _pressed && _enabled ? 0.9 : 1.0;
     final scale = _pressed && _enabled ? 0.97 : 1.0;
+    final showSpinner = widget.isLoading || _busy;
 
     final child = Container(
       height: height,
@@ -77,7 +92,7 @@ class _AppButtonState extends State<AppButton> {
         border: spec.border,
         boxShadow: _enabled ? spec.shadow : null,
       ),
-      child: widget.isLoading
+      child: showSpinner
           ? SizedBox(
               height: 20,
               width: 20,
@@ -111,7 +126,7 @@ class _AppButtonState extends State<AppButton> {
       onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
       onTapCancel:
           _enabled ? () => setState(() => _pressed = false) : null,
-      onTap: _enabled ? widget.onPressed : null,
+      onTap: _enabled ? _handleTap : null,
       child: AnimatedOpacity(
         opacity: opacity,
         duration: AppDurations.fast,
@@ -122,6 +137,30 @@ class _AppButtonState extends State<AppButton> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleTap() async {
+    final cb = widget.onPressed;
+    if (cb == null || _busy) return;
+    final now = DateTime.now();
+    final last = _lastTap;
+    if (last != null && now.difference(last) < _syncDebounce) {
+      return;
+    }
+    _lastTap = now;
+    final result = cb();
+    if (result is Future<void>) {
+      setState(() => _busy = true);
+      try {
+        await result;
+      } catch (_) {
+        // Ошибки сетевого слоя обрабатываются вызывающей стороной
+        // (тосты / провайдеры). Кнопка обязана разблокироваться в любом
+        // случае, поэтому исключение проглатываем здесь и не пробрасываем.
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
   }
 
   static _ButtonSpec _specFor(AppButtonVariant v, {required bool enabled}) {

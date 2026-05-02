@@ -172,41 +172,36 @@ class _FeedRow extends StatelessWidget {
     return Container(
       color: AppColors.n0,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           AppFeedDot(tone: event.dotTone),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.summary,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.n800,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitleParts.join(' — '),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.n400,
-                    height: 1.4,
-                  ),
-                ),
-                if (event.isImmutable) ...[
-                  const SizedBox(height: 4),
-                  const AppImmutableBadge(),
-                ],
-              ],
+          const SizedBox(height: 8),
+          Text(
+            event.summary,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.n800,
+              height: 1.5,
             ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            subtitleParts.join(' — '),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.n400,
+              height: 1.4,
+            ),
+          ),
+          if (event.isImmutable) ...[
+            const SizedBox(height: 6),
+            const AppImmutableBadge(),
+          ],
         ],
       ),
     );
