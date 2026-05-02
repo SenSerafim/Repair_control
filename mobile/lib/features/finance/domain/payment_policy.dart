@@ -91,8 +91,8 @@ class PaymentPolicy {
   /// «Распределение аванса» (просмотр распределения) — родительский
   /// аванс, у которого либо уже есть дочерние выплаты, либо я получатель
   /// (бригадир). Заказчик-отправитель тоже видит, если есть дети.
-  /// Кнопка ведёт на `AdvanceDistributionScreen` — там RBAC ещё раз
-  /// проверяется на действия (создать/удалить child).
+  /// Кнопка открывает `showAdvanceDistributionSheet` — read-only обзор,
+  /// действия (создать/удалить child) — отдельные кнопки на детайле.
   static bool canViewDistribution({
     required Payment payment,
     required String? meId,

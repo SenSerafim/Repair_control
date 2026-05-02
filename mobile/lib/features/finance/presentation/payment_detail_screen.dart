@@ -54,17 +54,6 @@ class PaymentDetailScreen extends ConsumerWidget {
                     AppSpacing.x20,
                   ),
                   children: [
-                    Hero(
-                      tag: 'payment-${p.id}',
-                      flightShuttleBuilder: (_, __, dir, fromCtx, toCtx) {
-                        final hero = (dir == HeroFlightDirection.push
-                                ? fromCtx
-                                : toCtx)
-                            .widget as Hero;
-                        return hero.child;
-                      },
-                      child: const SizedBox(height: 1),
-                    ),
                     // Top status-pill (в дизайне — справа в header).
                     Center(
                       child: StatusPill(
@@ -443,12 +432,12 @@ class _Actions extends ConsumerWidget {
             label: 'Распределение аванса',
             variant: AppButtonVariant.secondary,
             icon: Icons.account_tree_outlined,
-            // Top-level URL `/payments/:id/distribute` (а НЕ
-            // `/projects/.../payments/.../distribute`), потому что текущий
-            // PaymentDetailScreen живёт top-level вне ShellRoute. Push в
-            // shell-route ломал стек go_router на `!keyReservation.contains`.
-            onPressed: () => context.push(
-              '/payments/${payment.id}/distribute?projectId=${payment.projectId}',
+            // Bottom sheet вместо push — go_router 14 при пуше поверх
+            // PaymentDetailScreen ловил `!keyReservation.contains(key)` →
+            // `_debugLocked`, и Navigator залипал так, что back не работал.
+            onPressed: () => showAdvanceDistributionSheet(
+              context,
+              parent: payment,
             ),
           ),
         );
