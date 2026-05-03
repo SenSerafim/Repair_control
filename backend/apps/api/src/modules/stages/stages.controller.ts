@@ -3,7 +3,14 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { StagesService } from './stages.service';
-import { CreateStageDto, PauseStageDto, ReorderStagesDto, UpdateStageDto } from './dto';
+import {
+  AssignForemanDto,
+  AssignMasterDto,
+  CreateStageDto,
+  PauseStageDto,
+  ReorderStagesDto,
+  UpdateStageDto,
+} from './dto';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 
 @ApiTags('stages')
@@ -24,7 +31,48 @@ export class StagesController {
     @Param('projectId') projectId: string,
     @Body() dto: CreateStageDto,
   ) {
-    return this.stages.create({ ...dto, projectId, actorUserId: req.user.userId });
+    return this.stages.create({
+      ...dto,
+      projectId,
+      actorUserId: req.user.userId,
+      actorSystemRole: req.user.systemRole,
+    });
+  }
+
+  /**
+   * П1.11 / 4.8 — кнопка «Назначить бригадира» на этапе. RBAC: stage.manage
+   * (только заказчик / представитель с canEditStages).
+   */
+  @Post(':stageId/assign-foreman')
+  @RequireAccess({
+    action: 'stage.manage',
+    resource: 'stage',
+    resourceIdFrom: { source: 'params', key: 'stageId' },
+  })
+  async assignForeman(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('stageId') stageId: string,
+    @Body() dto: AssignForemanDto,
+  ) {
+    return this.stages.assignForeman(stageId, dto.userId, req.user.userId);
+  }
+
+  /**
+   * П2.5 / 7.5 — кнопка «Назначить мастера» на этапе. Доступна бригадиру этапа,
+   * заказчику и представителю с canEditStages. Точная проверка — на уровне сервиса.
+   */
+  @Post(':stageId/assign-master')
+  @RequireAccess({
+    action: 'stage.manage',
+    resource: 'stage',
+    resourceIdFrom: { source: 'params', key: 'stageId' },
+  })
+  async assignMaster(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('stageId') stageId: string,
+    @Body() dto: AssignMasterDto,
+  ) {
+    return this.stages.assignMaster(stageId, dto.userId ?? null, req.user.userId);
   }
 
   @Get()

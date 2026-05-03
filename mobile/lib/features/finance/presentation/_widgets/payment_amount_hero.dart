@@ -60,7 +60,7 @@ class PaymentAmountHero extends StatelessWidget {
       };
 
   String _subtitle(PaymentStatus s) => switch (s) {
-        PaymentStatus.pending => 'Ожидает подтверждения подрядчика',
+        PaymentStatus.pending => 'Ожидает подтверждения бригадира',
         PaymentStatus.confirmed => 'Обе стороны подтвердили',
         PaymentStatus.disputed => 'Выплата оспорена',
         PaymentStatus.resolved => 'Спор разрешён',

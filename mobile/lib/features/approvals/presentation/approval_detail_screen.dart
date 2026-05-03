@@ -163,6 +163,10 @@ String _titleFor(Approval a) {
     ApprovalScope.extraWork => 'Дополнительная работа',
     ApprovalScope.deadlineChange => 'Перенос дедлайна',
     ApprovalScope.stageAccept => 'Приёмка этапа',
+    ApprovalScope.stageCreate => 'Этап от бригадира',
+    ApprovalScope.materialPurchase => 'Закупка материалов',
+    ApprovalScope.selfPurchase => 'Самокуп мастера',
+    ApprovalScope.paymentDispute => 'Спор по платежу',
   };
 }
 
@@ -170,13 +174,21 @@ String _subtitleFor(Approval a) {
   return switch (a.scope) {
     ApprovalScope.plan => 'Бригадир предложил план — проверьте этапы и сроки.',
     ApprovalScope.step =>
-      'Подрядчик отправил шаг на согласование. Проверьте фото и комментарий.',
+      'Бригадир отправил шаг на согласование. Проверьте фото и комментарий.',
     ApprovalScope.extraWork =>
       'Бригадир запрашивает работу сверх плана. Подтвердите включение в бюджет.',
     ApprovalScope.deadlineChange =>
       'Бригадир просит сдвинуть дату завершения этапа.',
     ApprovalScope.stageAccept =>
       'Бригадир сдаёт этап на приёмку. Сверьте результат с задачей.',
+    ApprovalScope.stageCreate =>
+      'Бригадир добавил новый этап. До согласования шаги заблокированы.',
+    ApprovalScope.materialPurchase =>
+      'Бригадир запрашивает закупку. После approve сумма спишется из бюджета.',
+    ApprovalScope.selfPurchase =>
+      'Мастер просит возместить расходы на материалы.',
+    ApprovalScope.paymentDispute =>
+      'Получатель платежа открыл спор по сумме.',
   };
 }
 
@@ -186,6 +198,11 @@ ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
       ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
       ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
       ApprovalScope.plan => ScopeBadgeTone.plan,
+      // Новые scope (П2.2): группируем под близкие тона.
+      ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
+      ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
+      ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
+      ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
     };
 
 class _DecisionBlock extends StatelessWidget {
@@ -241,7 +258,69 @@ class _ScopeBody extends StatelessWidget {
         return _DeadlineBody(approval: approval);
       case ApprovalScope.stageAccept:
         return _StageAcceptBody(approval: approval);
+      // П2.2 — новые scope. Минимальное body: текст + payload-ключи. UI-расширение
+      // в следующей итерации (отдельные body-виджеты material_purchase / self_purchase /
+      // payment_dispute / stage_create).
+      case ApprovalScope.stageCreate:
+      case ApprovalScope.materialPurchase:
+      case ApprovalScope.selfPurchase:
+      case ApprovalScope.paymentDispute:
+        return _GenericPayloadBody(approval: approval);
     }
+  }
+}
+
+/// П2.2 — fallback-виджет для новых scope (stageCreate / materialPurchase / selfPurchase /
+/// paymentDispute). Отображает payload как key-value список + комментарий.
+class _GenericPayloadBody extends StatelessWidget {
+  const _GenericPayloadBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = approval.payload.entries
+        .where((e) => e.value != null && e.value.toString().trim().isNotEmpty)
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionLabel('Параметры запроса'),
+        const SizedBox(height: AppSpacing.x8),
+        if (entries.isEmpty)
+          Text(
+            'Дополнительных данных нет',
+            style: AppTextStyles.body.copyWith(color: AppColors.n500),
+          )
+        else
+          ...entries.map(
+            (e) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      e.key,
+                      style: AppTextStyles.subtitle.copyWith(
+                        color: AppColors.n500,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      e.value.toString(),
+                      style: AppTextStyles.body,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 

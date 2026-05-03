@@ -9,7 +9,7 @@ import '../../core/theme/tokens.dart';
 /// - customer = Заказчик
 /// - representative = Представитель
 /// - foreman = Бригадир (backend `contractor`)
-/// - master = Мастер (на бекенде также называется «Подрядчик/Мастер» —
+/// - master = Мастер (на бекенде также называется «Бригадир/Мастер» —
 ///   мастер регистрируется и приглашается как `master`)
 enum AppRoleKind {
   customer,
@@ -30,7 +30,7 @@ enum AppRoleKind {
           'Доверенное лицо заказчика или бригадира',
         AppRoleKind.foreman =>
           'Ведёт работы по этапам, нанимает мастеров',
-        AppRoleKind.master => 'Подрядчик · выполняет шаги на этапах',
+        AppRoleKind.master => 'Бригадир · выполняет шаги на этапах',
       };
 
   IconData get icon => switch (this) {

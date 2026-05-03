@@ -1,6 +1,14 @@
 import { RepresentativeRights } from './rbac.types';
 
-export const DEFAULT_REPRESENTATIVE_RIGHTS: RepresentativeRights = {
+/**
+ * Дефолтные права представителя — все false (read-only-доступ к проекту + чат-write,
+ * см. P7.3 / решение раунд 1).
+ *
+ * canArchive намеренно отсутствует: архивирование проекта — эксклюзив заказчика
+ * (П7.1, П10.4). Любая попытка прокинуть это поле через JSON будет проигнорирована
+ * sanitize-функцией ниже.
+ */
+export const DEFAULT_REPRESENTATIVE_RIGHTS: Required<Omit<RepresentativeRights, 'canArchive'>> = {
   canEditStages: false,
   canApprove: false,
   canSeeBudget: false,
@@ -9,6 +17,8 @@ export const DEFAULT_REPRESENTATIVE_RIGHTS: RepresentativeRights = {
   canManageMaterials: false,
   canManageTools: false,
   canInviteMembers: false,
+  canCreateStages: false,
+  canManageTeam: false,
 };
 
 export const sanitizeRepresentativeRights = (
@@ -16,9 +26,11 @@ export const sanitizeRepresentativeRights = (
 ): RepresentativeRights => {
   const result: RepresentativeRights = { ...DEFAULT_REPRESENTATIVE_RIGHTS };
   if (!input) return result;
-  for (const key of Object.keys(DEFAULT_REPRESENTATIVE_RIGHTS) as (keyof RepresentativeRights)[]) {
+  for (const key of Object.keys(
+    DEFAULT_REPRESENTATIVE_RIGHTS,
+  ) as (keyof typeof DEFAULT_REPRESENTATIVE_RIGHTS)[]) {
     if (typeof input[key] === 'boolean') {
-      result[key] = input[key] as boolean;
+      (result as Record<string, boolean>)[key] = input[key] as boolean;
     }
   }
   return result;

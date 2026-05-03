@@ -90,7 +90,7 @@ class RejectedBanner extends StageBannerData {
   final int attempt;
 }
 
-/// Waiting (pending без подрядчика): красный «Не назначен».
+/// Waiting (pending без бригадира): красный «Не назначен».
 class WaitingNoContractorBanner extends StageBannerData {
   const WaitingNoContractorBanner();
 }

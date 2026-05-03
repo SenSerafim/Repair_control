@@ -12,7 +12,7 @@ import '../../projects/domain/membership.dart';
 import '../application/team_controller.dart';
 import '../data/team_repository.dart';
 
-/// s-add-member — full-screen экран поиска подрядчика по телефону.
+/// s-add-member — full-screen экран поиска бригадира по телефону.
 ///
 /// Дизайн `Кластер A` (s-add-member): info-banner с проектом → search-bar
 /// (телефон) → кнопка «Найти» → недавно добавленные.

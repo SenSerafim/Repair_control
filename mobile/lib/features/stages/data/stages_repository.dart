@@ -162,12 +162,9 @@ class StagesRepository {
             .toList();
       });
 
-  Future<List<StageTemplate>> listUserTemplates() => _call(() async {
-        final r = await _dio.get<List<dynamic>>('/api/templates/user');
-        return r.data!
-            .map((e) => StageTemplate.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  /// П1.7 — пользовательские шаблоны убраны из MVP. Метод оставлен ради backward-compat,
+  /// но теперь всегда возвращает пустой массив (на бекенде эндпоинт удалён).
+  Future<List<StageTemplate>> listUserTemplates() async => const [];
 
   Future<StageTemplate> getTemplate(String id) => _call(() async {
         final r =
@@ -194,16 +191,34 @@ class StagesRepository {
         return Stage.parse(r.data!);
       });
 
-  Future<StageTemplate> saveAsTemplate({
+  // П1.7 / 4.6 — `saveAsTemplate()` удалён. UI кнопка «Сохранить как шаблон» убрана.
+
+  /// П1.11 / 4.8 — назначить единственного бригадира на этап.
+  Future<Stage> assignForeman({
+    required String projectId,
     required String stageId,
-    required String title,
+    required String foremanUserId,
   }) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
-          '/api/templates/from-stage/$stageId',
-          data: {'title': title},
+          '/api/projects/$projectId/stages/$stageId/assign-foreman',
+          data: {'userId': foremanUserId},
         );
-        return StageTemplate.parse(r.data!);
+        return Stage.parse(r.data!);
+      });
+
+  /// П2.5 / 7.5 — назначить мастера на этап. Передать null для снятия назначения.
+  Future<Stage> assignMaster({
+    required String projectId,
+    required String stageId,
+    required String? masterUserId,
+  }) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/projects/$projectId/stages/$stageId/assign-master',
+          data: {if (masterUserId != null) 'userId': masterUserId},
+        );
+        return Stage.parse(r.data!);
       });
 
   Future<T> _call<T>(Future<T> Function() action) async {

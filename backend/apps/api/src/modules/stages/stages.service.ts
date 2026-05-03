@@ -24,6 +24,8 @@ export interface CreateStageInput {
   materialsBudget?: number;
   foremanIds?: string[];
   actorUserId: string;
+  /// Системная роль actor'а (для решения, нужно ли создавать stage_create approval, П2.4).
+  actorSystemRole?: 'customer' | 'representative' | 'contractor' | 'master' | 'admin';
 }
 
 export interface UpdateStageInput {
@@ -33,6 +35,8 @@ export interface UpdateStageInput {
   workBudget?: number;
   materialsBudget?: number;
   foremanIds?: string[];
+  /// П2.5 — назначенный мастер (один на этап).
+  masterId?: string | null;
   actorUserId: string;
 }
 
@@ -61,6 +65,30 @@ export class StagesService {
     const count = await this.prisma.stage.count({ where: { projectId: input.projectId } });
     const orderIndex = input.orderIndex ?? count;
 
+    // П2.4 — определить, нужен ли stage_create approval.
+    // Бригадир (contractor membership=foreman) — создаёт через approval,
+    // этап с плашкой «Ожидает согласования» (pendingApproval=true), шаги заблокированы.
+    // Заказчик / представитель с canCreateStages — без approval.
+    let needsApproval = false;
+    if (
+      input.actorSystemRole &&
+      input.actorSystemRole !== 'customer' &&
+      input.actorSystemRole !== 'admin'
+    ) {
+      const m = await this.prisma.membership.findFirst({
+        where: { projectId: input.projectId, userId: input.actorUserId, removedAt: null },
+        select: { role: true, permissions: true },
+      });
+      if (m?.role === 'foreman') {
+        needsApproval = true;
+      }
+      if (m?.role === 'representative') {
+        const perms = (m.permissions ?? {}) as Record<string, boolean | undefined>;
+        // canCreateStages → как заказчик (без approval). Иначе — нет права создавать.
+        needsApproval = !perms.canCreateStages;
+      }
+    }
+
     const plannedEnd = input.plannedEnd ? new Date(input.plannedEnd) : null;
     const stage = await this.prisma.$transaction(async (tx) => {
       const s = await tx.stage.create({
@@ -74,6 +102,7 @@ export class StagesService {
           workBudget: BigInt(input.workBudget ?? 0),
           materialsBudget: BigInt(input.materialsBudget ?? 0),
           foremanIds: input.foremanIds ?? [],
+          pendingApproval: needsApproval,
         },
       });
       await this.feed.emit({
@@ -81,8 +110,28 @@ export class StagesService {
         kind: 'stage_created',
         projectId: input.projectId,
         actorId: input.actorUserId,
-        payload: { stageId: s.id, title: s.title },
+        payload: { stageId: s.id, title: s.title, pendingApproval: needsApproval },
       });
+      if (needsApproval) {
+        // Сразу регистрируем approval. Адресат — заказчик.
+        await this.approvals.request({
+          scope: 'stage_create',
+          projectId: input.projectId,
+          stageId: s.id,
+          addresseeId: project.ownerId,
+          actorRole: 'customer',
+          payload: { title: s.title, plannedStart: s.plannedStart, plannedEnd: s.plannedEnd },
+          requestedById: input.actorUserId,
+          tx,
+        });
+        await this.feed.emit({
+          tx,
+          kind: 'stage_pending_approval',
+          projectId: input.projectId,
+          actorId: input.actorUserId,
+          payload: { stageId: s.id },
+        });
+      }
       return s;
     });
     await this.maybeWarnStageOverProject(stage, project.plannedEnd, input.actorUserId);
@@ -98,6 +147,94 @@ export class StagesService {
     }
 
     return this.serialize(stage);
+  }
+
+  /**
+   * П1.11 / 4.8 — назначить единственного бригадира на этап. RBAC уже проверен в guard
+   * (только заказчик / representative.canEditStages). Замена существующего — допустима.
+   */
+  async assignForeman(stageId: string, foremanUserId: string, actorUserId: string) {
+    const stage = await this.prisma.stage.findUnique({ where: { id: stageId } });
+    if (!stage) throw new NotFoundError(ErrorCodes.STAGE_NOT_FOUND, 'stage not found');
+
+    // Проверяем, что user — действительно foreman в проекте.
+    const m = await this.prisma.membership.findFirst({
+      where: {
+        projectId: stage.projectId,
+        userId: foremanUserId,
+        role: 'foreman',
+        removedAt: null,
+      },
+    });
+    if (!m) {
+      throw new InvalidInputError(
+        ErrorCodes.MEMBERSHIP_NOT_FOUND,
+        'user is not an active foreman of this project',
+      );
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.stage.update({
+        where: { id: stageId },
+        data: { foremanIds: [foremanUserId] },
+      });
+      await this.feed.emit({
+        tx,
+        kind: 'foreman_assigned',
+        projectId: stage.projectId,
+        actorId: actorUserId,
+        payload: { stageId, foremanUserId },
+      });
+      return u;
+    });
+    try {
+      await this.chats.ensureStageChat(stageId, actorUserId);
+    } catch (e) {
+      // silent
+    }
+    return this.serialize(updated);
+  }
+
+  /**
+   * П2.5 / 7.5 — назначить мастера на этап (один). Назначает заказчик, представитель с правом
+   * или бригадир этапа. Точная RBAC-проверка делается в контроллере/guard через stage.manage.
+   */
+  async assignMaster(stageId: string, masterUserId: string | null, actorUserId: string) {
+    const stage = await this.prisma.stage.findUnique({ where: { id: stageId } });
+    if (!stage) throw new NotFoundError(ErrorCodes.STAGE_NOT_FOUND, 'stage not found');
+
+    if (masterUserId !== null) {
+      const m = await this.prisma.membership.findFirst({
+        where: {
+          projectId: stage.projectId,
+          userId: masterUserId,
+          role: 'master',
+          removedAt: null,
+        },
+      });
+      if (!m) {
+        throw new InvalidInputError(
+          ErrorCodes.MEMBERSHIP_NOT_FOUND,
+          'user is not an active master of this project',
+        );
+      }
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.stage.update({
+        where: { id: stageId },
+        data: { masterId: masterUserId },
+      });
+      await this.feed.emit({
+        tx,
+        kind: masterUserId ? 'master_assigned' : 'master_unassigned',
+        projectId: stage.projectId,
+        actorId: actorUserId,
+        payload: { stageId, masterUserId },
+      });
+      return u;
+    });
+    return this.serialize(updated);
   }
 
   async get(stageId: string) {
@@ -264,9 +401,18 @@ export class StagesService {
       where: { id: stageId },
       select: {
         planApproved: true,
+        pendingApproval: true,
         project: { select: { requiresPlanApproval: true, planApproved: true } },
       },
     });
+    // П2.4 — этап в pendingApproval (создан бригадиром, ждёт согласования заказчика)
+    // не может стартовать.
+    if (stage?.pendingApproval) {
+      throw new ConflictError(
+        'stage.pending_approval',
+        'stage is awaiting customer approval (П2.4)',
+      );
+    }
     if (stage?.project.requiresPlanApproval && !stage.project.planApproved && !stage.planApproved) {
       throw new ConflictError(
         'approvals.plan_not_approved',
@@ -402,18 +548,37 @@ export class StagesService {
         actorId: actorUserId,
         payload: { stageId: stage.id },
       });
-      // Создаём Approval scope=stage_accept, адресат — владелец проекта (ТЗ §4.4)
+
+      // П2.6 / 7.6 — двухступенчатый approval сдачи этапа.
+      // Если actor — мастер этого этапа (есть masterId) → Approval#1 для бригадира.
+      // Иначе (бригадир сдаёт сам, либо мастера нет) → сразу Approval#1 для заказчика.
       const project = await tx.project.findUnique({
         where: { id: stage.projectId },
         select: { ownerId: true },
       });
-      if (project) {
+      if (!project) return;
+
+      const isMasterSubmission = stage.masterId === actorUserId && stage.foremanIds.length > 0;
+      if (isMasterSubmission) {
+        const foremanId = stage.foremanIds[0];
+        await this.approvals.request({
+          scope: 'stage_accept',
+          projectId: stage.projectId,
+          stageId: stage.id,
+          addresseeId: foremanId,
+          actorRole: 'foreman',
+          payload: { stageId: stage.id, step: 'foreman' },
+          requestedById: actorUserId,
+          tx,
+        });
+      } else {
         await this.approvals.request({
           scope: 'stage_accept',
           projectId: stage.projectId,
           stageId: stage.id,
           addresseeId: project.ownerId,
-          payload: { stageId: stage.id },
+          actorRole: 'customer',
+          payload: { stageId: stage.id, step: 'customer' },
           requestedById: actorUserId,
           tx,
         });

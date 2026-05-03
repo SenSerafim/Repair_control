@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Approval, ApprovalScope, ApprovalStatus, Prisma } from '@prisma/client';
+import { Approval, ApprovalScope, ApprovalStatus, MembershipRole, Prisma } from '@prisma/client';
 import {
   Clock,
   ConflictError,
@@ -18,6 +18,9 @@ export interface CreateApprovalInput {
   stageId?: string;
   stepId?: string;
   addresseeId: string;
+  /// П2.6 — какая роль должна решать (foreman / customer / etc).
+  /// Используется на UI для выбора видимости CTA «Принять/Отклонить» (П2.7).
+  actorRole?: MembershipRole;
   payload?: Record<string, unknown>;
   attachmentKeys?: string[];
   requestedById: string;
@@ -56,6 +59,7 @@ export class ApprovalsService {
           payload: (input.payload ?? {}) as Prisma.InputJsonValue,
           requestedById: input.requestedById,
           addresseeId: input.addresseeId,
+          actorRole: input.actorRole ?? null,
           status: 'pending',
           attemptNumber: 1,
         },
@@ -425,6 +429,45 @@ export class ApprovalsService {
       case 'plan':
         // план требует чтобы scope был customer-facing; stageId не обязателен
         break;
+      case 'stage_create': {
+        if (!input.stageId) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'stageId required for scope=stage_create',
+          );
+        }
+        break;
+      }
+      case 'material_purchase': {
+        const amount = (input.payload as any)?.amount;
+        if (typeof amount !== 'number' || amount <= 0) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'payload.amount > 0 required for material_purchase',
+          );
+        }
+        break;
+      }
+      case 'self_purchase': {
+        const amount = (input.payload as any)?.amount;
+        if (typeof amount !== 'number' || amount <= 0) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'payload.amount > 0 required for self_purchase',
+          );
+        }
+        break;
+      }
+      case 'payment_dispute': {
+        const paymentId = (input.payload as any)?.paymentId;
+        if (typeof paymentId !== 'string' || !paymentId) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'payload.paymentId required for payment_dispute',
+          );
+        }
+        break;
+      }
     }
   }
 
@@ -460,71 +503,267 @@ export class ApprovalsService {
       }
       case 'stage_accept': {
         if (!approval.stageId) return;
-        if (approval.status === 'approved') {
-          await tx.stage.update({
-            where: { id: approval.stageId },
-            data: { status: 'done', doneAt: now },
-          });
-          await this.feed.emit({
-            tx,
-            kind: 'stage_accepted',
-            projectId: approval.projectId,
-            actorId: approval.decidedById ?? undefined,
-            payload: { stageId: approval.stageId, approvalId: approval.id },
-          });
+        // П2.6 — двухступенчатый approval: actorRole=foreman → после approve создаётся
+        // вторая запись для заказчика; actorRole=customer → финальное решение этапа.
+        if (approval.actorRole === 'foreman') {
+          if (approval.status === 'approved') {
+            // Эскалация на заказчика (Approval#2)
+            const project = await tx.project.findUnique({
+              where: { id: approval.projectId },
+              select: { ownerId: true },
+            });
+            if (project) {
+              await tx.approval.create({
+                data: {
+                  scope: 'stage_accept',
+                  projectId: approval.projectId,
+                  stageId: approval.stageId,
+                  payload: approval.payload as Prisma.InputJsonValue,
+                  requestedById: approval.requestedById,
+                  addresseeId: project.ownerId,
+                  actorRole: 'customer',
+                  status: 'pending',
+                  attemptNumber: 1,
+                },
+              });
+              await this.feed.emit({
+                tx,
+                kind: 'approval_requested',
+                projectId: approval.projectId,
+                actorId: approval.requestedById,
+                payload: {
+                  scope: 'stage_accept',
+                  stageId: approval.stageId,
+                  step: 'customer',
+                  parentApprovalId: approval.id,
+                },
+              });
+            }
+          } else {
+            // Reject бригадира → этап обратно в active, мастер пересдаёт.
+            await tx.stage.update({
+              where: { id: approval.stageId },
+              data: { status: 'active' },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'stage_rejected_by_customer', // переиспользуем kind, payload помечает actor
+              projectId: approval.projectId,
+              actorId: approval.decidedById ?? undefined,
+              payload: {
+                stageId: approval.stageId,
+                approvalId: approval.id,
+                rejectedByRole: 'foreman',
+                comment: approval.decisionComment,
+              },
+            });
+          }
         } else {
-          await tx.stage.update({
-            where: { id: approval.stageId },
-            data: { status: 'rejected' },
-          });
-          await this.feed.emit({
-            tx,
-            kind: 'stage_rejected_by_customer',
-            projectId: approval.projectId,
-            actorId: approval.decidedById ?? undefined,
-            payload: {
-              stageId: approval.stageId,
-              approvalId: approval.id,
-              comment: approval.decisionComment,
-            },
-          });
+          // actorRole=customer (или null — backward compat) — финальное решение
+          if (approval.status === 'approved') {
+            await tx.stage.update({
+              where: { id: approval.stageId },
+              data: { status: 'done', doneAt: now },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'stage_accepted',
+              projectId: approval.projectId,
+              actorId: approval.decidedById ?? undefined,
+              payload: { stageId: approval.stageId, approvalId: approval.id },
+            });
+          } else {
+            // Reject заказчика → этап обратно в active, ОТВЕТСТВЕННЫЙ — бригадир (П2.6).
+            await tx.stage.update({
+              where: { id: approval.stageId },
+              data: { status: 'active' },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'stage_rejected_by_customer',
+              projectId: approval.projectId,
+              actorId: approval.decidedById ?? undefined,
+              payload: {
+                stageId: approval.stageId,
+                approvalId: approval.id,
+                rejectedByRole: 'customer',
+                comment: approval.decisionComment,
+              },
+            });
+          }
         }
         await this.calc.recalcStage(approval.stageId, tx);
+        break;
+      }
+      case 'stage_create': {
+        if (!approval.stageId) return;
+        if (approval.status === 'approved') {
+          // П2.4 — снимаем блокировку, этап становится доступным.
+          await tx.stage.update({
+            where: { id: approval.stageId },
+            data: { pendingApproval: false },
+          });
+          await this.feed.emit({
+            tx,
+            kind: 'stage_created',
+            projectId: approval.projectId,
+            actorId: approval.decidedById ?? undefined,
+            payload: { stageId: approval.stageId, approvedFromPending: true },
+          });
+        } else {
+          // Reject — этап удаляется (черновик не нужен).
+          await tx.stage.delete({ where: { id: approval.stageId } });
+        }
+        break;
+      }
+      case 'material_purchase': {
+        // П6.1 — approve бригадирской заявки на покупку.
+        // Списание из общего бюджета (см. payments/budget — учитывается через payload.amount).
+        if (approval.status === 'approved') {
+          const amount = Number(payload?.amount ?? 0);
+          if (amount > 0) {
+            await tx.project.update({
+              where: { id: approval.projectId },
+              data: { materialsBudget: { decrement: BigInt(amount) } },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'budget_updated',
+              projectId: approval.projectId,
+              actorId: approval.decidedById ?? undefined,
+              payload: {
+                delta: -amount,
+                reason: 'material_purchase_approved',
+                approvalId: approval.id,
+              },
+            });
+          }
+        }
+        break;
+      }
+      case 'self_purchase': {
+        // П6.1 — approve заявки на самокуп. Аналогично materials.
+        if (approval.status === 'approved') {
+          const amount = Number(payload?.amount ?? 0);
+          const fromMaterials = (payload?.kind as string) !== 'work';
+          if (amount > 0) {
+            await tx.project.update({
+              where: { id: approval.projectId },
+              data: fromMaterials
+                ? { materialsBudget: { decrement: BigInt(amount) } }
+                : { workBudget: { decrement: BigInt(amount) } },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'budget_updated',
+              projectId: approval.projectId,
+              actorId: approval.decidedById ?? undefined,
+              payload: {
+                delta: -amount,
+                reason: 'self_purchase_approved',
+                approvalId: approval.id,
+              },
+            });
+          }
+        }
+        break;
+      }
+      case 'payment_dispute': {
+        // П6.1 — approve диспута: помечаем платёж disputed/resolved, без авто-изменения бюджета
+        // (заказчик может донести через PATCH /projects/:id/budget).
+        const paymentId = payload?.paymentId as string | undefined;
+        if (paymentId && approval.status === 'approved') {
+          await tx.payment.update({
+            where: { id: paymentId },
+            data: { status: 'resolved', resolvedAt: now },
+          });
+          await this.feed.emit({
+            tx,
+            kind: 'payment_resolved',
+            projectId: approval.projectId,
+            actorId: approval.decidedById ?? undefined,
+            payload: { paymentId, approvalId: approval.id },
+          });
+        }
         break;
       }
       case 'extra_work': {
         if (!approval.stepId) return;
         const step = await tx.step.findUnique({ where: { id: approval.stepId } });
         if (!step) return;
-        if (approval.status === 'approved') {
-          const price = step.price ?? BigInt(0);
-          await tx.step.update({
-            where: { id: step.id },
-            data: { status: 'pending' },
-          });
-          await tx.stage.update({
-            where: { id: step.stageId },
-            data: { workBudget: { increment: price } },
-          });
-          await this.feed.emit({
-            tx,
-            kind: 'budget_updated',
-            projectId: approval.projectId,
-            actorId: approval.decidedById ?? undefined,
-            payload: {
-              stageId: step.stageId,
-              delta: Number(price),
-              reason: 'extra_work_approved',
-              approvalId: approval.id,
-            },
-          });
-          await this.calc.recalcStage(step.stageId, tx);
+
+        // П2.3 / 4.3 — двухступенчатая цепочка: если actorRole=foreman → после approve
+        // эскалация на заказчика (Approval#2). Только финальный approve customer
+        // фактически добавляет цену в бюджет — гарантируем «никаких списаний без заказчика».
+        if (approval.actorRole === 'foreman') {
+          if (approval.status === 'approved') {
+            const project = await tx.project.findUnique({
+              where: { id: approval.projectId },
+              select: { ownerId: true },
+            });
+            if (project) {
+              await tx.approval.create({
+                data: {
+                  scope: 'extra_work',
+                  projectId: approval.projectId,
+                  stepId: approval.stepId,
+                  payload: approval.payload as Prisma.InputJsonValue,
+                  requestedById: approval.requestedById,
+                  addresseeId: project.ownerId,
+                  actorRole: 'customer',
+                  status: 'pending',
+                  attemptNumber: 1,
+                },
+              });
+              await this.feed.emit({
+                tx,
+                kind: 'extra_work_requested',
+                projectId: approval.projectId,
+                actorId: approval.requestedById,
+                payload: {
+                  stepId: approval.stepId,
+                  step: 'customer',
+                  parentApprovalId: approval.id,
+                },
+              });
+            }
+          } else {
+            // Reject бригадира — заявка возвращается мастеру.
+            await tx.step.update({ where: { id: step.id }, data: { status: 'rejected' } });
+            await this.calc.recalcStage(step.stageId, tx);
+          }
         } else {
-          await tx.step.update({
-            where: { id: step.id },
-            data: { status: 'rejected' },
-          });
-          await this.calc.recalcStage(step.stageId, tx);
+          // actorRole=customer (или null, backward compat)
+          if (approval.status === 'approved') {
+            const price = step.price ?? BigInt(0);
+            await tx.step.update({
+              where: { id: step.id },
+              data: { status: 'pending' },
+            });
+            await tx.stage.update({
+              where: { id: step.stageId },
+              data: { workBudget: { increment: price } },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'budget_updated',
+              projectId: approval.projectId,
+              actorId: approval.decidedById ?? undefined,
+              payload: {
+                stageId: step.stageId,
+                delta: Number(price),
+                reason: 'extra_work_approved',
+                approvalId: approval.id,
+              },
+            });
+            await this.calc.recalcStage(step.stageId, tx);
+          } else {
+            await tx.step.update({
+              where: { id: step.id },
+              data: { status: 'rejected' },
+            });
+            await this.calc.recalcStage(step.stageId, tx);
+          }
         }
         break;
       }

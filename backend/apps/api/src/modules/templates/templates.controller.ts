@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TemplatesService } from './templates.service';
-import { CreateStageFromTemplateDto, SaveAsTemplateDto } from '../stages/dto';
-import { AuthenticatedUser } from '../auth/jwt.strategy';
 
+/**
+ * П1.7 / П4.6 — пользовательские шаблоны и «сохранить как шаблон» удалены из MVP.
+ * Endpoint'ы:
+ *   GET  /templates/platform   — список 8 платформенных шаблонов (П4.5).
+ *   GET  /templates/:id        — детальный template (для применения в wizard'е).
+ *
+ * Удалены:
+ *   - GET  /templates/user           — выдача user-шаблонов больше не делается;
+ *     если в БД остались записи kind='user', они скрыты на уровне сервиса.
+ *   - POST /templates/:id/apply      — применение через сервис, прямого endpoint'а не было нужно;
+ *     UI создаёт этап копированием полей шаблона в POST /projects/:id/stages.
+ *   - POST /templates/from-stage/:id — saveFromStage больше нет.
+ */
 @ApiTags('templates')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -17,41 +28,8 @@ export class TemplatesController {
     return this.templates.listPlatform();
   }
 
-  @Get('user')
-  async user(@Req() req: { user: AuthenticatedUser }) {
-    return this.templates.listUser(req.user.userId);
-  }
-
   @Get(':id')
   async get(@Param('id') id: string) {
     return this.templates.get(id);
-  }
-
-  @Post(':templateId/apply')
-  async apply(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('templateId') templateId: string,
-    @Body() dto: CreateStageFromTemplateDto,
-  ) {
-    return this.templates.applyToProject({
-      templateId,
-      projectId: dto.projectId,
-      actorUserId: req.user.userId,
-      plannedStart: dto.plannedStart,
-      plannedEnd: dto.plannedEnd,
-    });
-  }
-
-  @Post('from-stage/:stageId')
-  async saveFromStage(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('stageId') stageId: string,
-    @Body() dto: SaveAsTemplateDto,
-  ) {
-    return this.templates.createFromStage({
-      stageId,
-      authorId: req.user.userId,
-      title: dto.title,
-    });
   }
 }

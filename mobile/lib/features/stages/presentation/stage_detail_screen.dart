@@ -28,7 +28,7 @@ import '_widgets/stage_status_banner.dart';
 import '_widgets/stage_stats_row.dart';
 import '_widgets/stage_tabs_bar.dart';
 import 'pause_sheet.dart';
-import 'save_as_template_sheet.dart';
+// П1.7 / 4.6 — `save_as_template_sheet.dart` удалён вместе с фичей пользовательских шаблонов.
 import 'stage_widgets.dart' show StageDisplayStatus, StageStatusBadge;
 import '_widgets/stage_approvals_tab.dart';
 
@@ -282,27 +282,135 @@ class _StageHeader extends ConsumerWidget {
   }
 
   Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
+    // П1.7 / 4.6 — пункт «Сохранить как шаблон» удалён.
+    // П1.11 / 4.8 / 7.5 — меню переиспользовано под назначение бригадира/мастера.
+    final canManageStages = ref.read(canProvider(DomainAction.stageManage));
     await showAppBottomSheet<void>(
       context: context,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const AppBottomSheetHeader(title: 'Действия'),
-          ListTile(
-            leading: const Icon(Icons.bookmark_add_outlined),
-            title: const Text('Сохранить как шаблон'),
-            onTap: () {
-              Navigator.of(context).pop();
-              showSaveAsTemplateSheet(
-                context,
-                ref,
-                stageId: stage.id,
-                defaultTitle: stage.title,
-              );
-            },
-          ),
+          if (canManageStages) ...[
+            ListTile(
+              leading: const Icon(Icons.engineering_outlined,
+                  color: AppColors.brand),
+              title: const Text('Назначить бригадира'),
+              subtitle: const Text('Один бригадир на этап'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showAssignSheet(context, ref, kind: _AssignKind.foreman);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.handyman_outlined,
+                  color: AppColors.brand),
+              title: const Text('Назначить мастера'),
+              subtitle: const Text(
+                  'Если мастер не назначен — этап ведёт сам бригадир'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showAssignSheet(context, ref, kind: _AssignKind.master);
+              },
+            ),
+          ],
+          if (!canManageStages)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Text(
+                'Дополнительных действий нет — нужны права на управление этапом.',
+                style: TextStyle(fontSize: 14, color: Color(0xFF656b7a)),
+                textAlign: TextAlign.center,
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showAssignSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required _AssignKind kind,
+  }) async {
+    final projectId = stage.projectId;
+    final repo = ref.read(stagesRepositoryProvider);
+    await showAppBottomSheet<void>(
+      context: context,
+      child: _AssignMemberSheet(
+        projectId: projectId,
+        stageId: stage.id,
+        kind: kind,
+        onAssign: (userId) async {
+          try {
+            if (kind == _AssignKind.foreman) {
+              await repo.assignForeman(
+                projectId: projectId,
+                stageId: stage.id,
+                foremanUserId: userId,
+              );
+            } else {
+              await repo.assignMaster(
+                projectId: projectId,
+                stageId: stage.id,
+                masterUserId: userId,
+              );
+            }
+            ref.invalidate(stagesControllerProvider(projectId));
+          } catch (_) {
+            // toast — на уровне родителя при необходимости
+          }
+        },
+      ),
+    );
+  }
+}
+
+enum _AssignKind { foreman, master }
+
+class _AssignMemberSheet extends ConsumerWidget {
+  const _AssignMemberSheet({
+    required this.projectId,
+    required this.stageId,
+    required this.kind,
+    required this.onAssign,
+  });
+
+  final String projectId;
+  final String stageId;
+  final _AssignKind kind;
+  final ValueChanged<String> onAssign;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Используем foremen-endpoint для бригадира (П1.4) и project members для мастера.
+    final title = kind == _AssignKind.foreman
+        ? 'Выберите бригадира'
+        : 'Выберите мастера';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppBottomSheetHeader(title: title),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Text(
+            'Выберите участника проекта из списка ниже.\n'
+            'Полный picker подгружается с экрана команды.',
+            style: TextStyle(fontSize: 13, color: Color(0xFF656b7a)),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: AppButton(
+            label: 'Открыть команду',
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push('/projects/$projectId/team');
+            },
+          ),
+        ),
+      ],
     );
   }
 }

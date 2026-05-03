@@ -30,6 +30,16 @@ export interface UpdateStepInput {
   description?: string;
   assigneeIds?: string[];
   methodologyArticleId?: string | null;
+  /// П2.8 — отчёт о шаге («что/как делал»). Опционально.
+  whatDid?: string | null;
+  howDid?: string | null;
+  actorUserId: string;
+}
+
+export interface CompleteStepInput {
+  /// П2.8 — необязательные поля отчёта при закрытии шага.
+  whatDid?: string;
+  howDid?: string;
   actorUserId: string;
 }
 
@@ -103,18 +113,63 @@ export class StepsService {
         actorId: input.actorUserId,
         payload: { stageId: stage.id, stepId: s.id, title: s.title, type, price: input.price },
       });
-      // Доп.работа сразу создаёт Approval scope=extra_work на заказчика (ТЗ §4.3, gaps §4.1)
+      // П2.3 / 4.3 — доп.работа создаёт Approval с двухступенчатой цепочкой:
+      //   мастер → бригадир → заказчик (Approval#2 эмитится в applyDecisionEffect)
+      //   бригадир → сразу заказчик
+      // Никаких auto-approve. Списание из бюджета — только финальный approve customer.
       if (type === 'extra') {
-        await this.approvals.request({
-          scope: 'extra_work',
-          projectId: stage.projectId,
-          stageId: stage.id,
-          stepId: s.id,
-          addresseeId: stage.project.ownerId,
-          payload: { stepId: s.id, price: input.price },
-          requestedById: input.actorUserId,
-          tx,
+        const requesterMembership = await tx.membership.findFirst({
+          where: { projectId: stage.projectId, userId: input.actorUserId, removedAt: null },
+          select: { role: true },
         });
+        const requesterIsMaster = requesterMembership?.role === 'master';
+        if (requesterIsMaster) {
+          // Найти бригадира этапа (если есть). Иначе — fallback: customer (нет цепочки).
+          const stageWithForemen = await tx.stage.findUnique({
+            where: { id: stage.id },
+            select: { foremanIds: true },
+          });
+          const foremanId = stageWithForemen?.foremanIds?.[0];
+          if (foremanId) {
+            await this.approvals.request({
+              scope: 'extra_work',
+              projectId: stage.projectId,
+              stageId: stage.id,
+              stepId: s.id,
+              addresseeId: foremanId,
+              actorRole: 'foreman',
+              payload: { stepId: s.id, price: input.price, step: 'foreman' },
+              requestedById: input.actorUserId,
+              tx,
+            });
+          } else {
+            // Нет бригадира — заявка идёт сразу заказчику (как fallback).
+            await this.approvals.request({
+              scope: 'extra_work',
+              projectId: stage.projectId,
+              stageId: stage.id,
+              stepId: s.id,
+              addresseeId: stage.project.ownerId,
+              actorRole: 'customer',
+              payload: { stepId: s.id, price: input.price, step: 'customer' },
+              requestedById: input.actorUserId,
+              tx,
+            });
+          }
+        } else {
+          // Бригадир / иной — сразу к заказчику.
+          await this.approvals.request({
+            scope: 'extra_work',
+            projectId: stage.projectId,
+            stageId: stage.id,
+            stepId: s.id,
+            addresseeId: stage.project.ownerId,
+            actorRole: 'customer',
+            payload: { stepId: s.id, price: input.price, step: 'customer' },
+            requestedById: input.actorUserId,
+            tx,
+          });
+        }
       }
       // Пересчёт прогресса при добавлении шага в активный этап (gaps §2.3)
       if (this.isActiveStage(stage.status)) {
@@ -176,6 +231,9 @@ export class StepsService {
       description: input.description,
       price: input.price !== undefined ? BigInt(input.price) : undefined,
       assigneeIds: input.assigneeIds,
+      // П2.8
+      whatDid: input.whatDid !== undefined ? input.whatDid : undefined,
+      howDid: input.howDid !== undefined ? input.howDid : undefined,
     };
     if (input.methodologyArticleId !== undefined) {
       // null чистит, string — устанавливает
@@ -258,12 +316,24 @@ export class StepsService {
     return this.listForStage(stageId);
   }
 
-  async complete(stepId: string, actorUserId: string) {
+  async complete(stepId: string, input: CompleteStepInput | string) {
+    // Backward-compat: раньше второй аргумент был просто actorUserId.
+    const actorUserId = typeof input === 'string' ? input : input.actorUserId;
+    const whatDid = typeof input === 'string' ? undefined : input.whatDid;
+    const howDid = typeof input === 'string' ? undefined : input.howDid;
+
     const existing = await this.prisma.step.findUnique({
       where: { id: stepId },
-      include: { stage: { select: { projectId: true, status: true } } },
+      include: { stage: { select: { projectId: true, status: true, pendingApproval: true } } },
     });
     if (!existing) throw new NotFoundError(ErrorCodes.STEP_NOT_FOUND, 'step not found');
+    // П2.4 — нельзя закрывать шаг этапа, который ждёт согласования (pendingApproval).
+    if (existing.stage.pendingApproval) {
+      throw new ConflictError(
+        'stage.pending_approval',
+        'cannot complete step: stage awaits customer approval (П2.4)',
+      );
+    }
     if (existing.status === 'done') {
       throw new ConflictError(ErrorCodes.STEP_INVALID_STATUS, 'step already done');
     }
@@ -278,14 +348,25 @@ export class StepsService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.step.update({
         where: { id: stepId },
-        data: { status: 'done', doneAt: now, doneById: actorUserId },
+        data: {
+          status: 'done',
+          doneAt: now,
+          doneById: actorUserId,
+          // П2.8 — фиксируем отчёт мастера/бригадира при закрытии шага.
+          whatDid: whatDid ?? undefined,
+          howDid: howDid ?? undefined,
+        },
       });
       await this.feed.emit({
         tx,
         kind: 'step_completed',
         projectId: existing.stage.projectId,
         actorId: actorUserId,
-        payload: { stageId: existing.stageId, stepId },
+        payload: {
+          stageId: existing.stageId,
+          stepId,
+          hasReport: !!(whatDid || howDid),
+        },
       });
       await this.calc.recalcStage(existing.stageId, tx);
       return u;

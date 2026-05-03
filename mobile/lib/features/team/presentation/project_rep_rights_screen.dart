@@ -12,7 +12,7 @@ import '../data/team_repository.dart';
 ///
 /// Содержит карточку представителя сверху и две секции тоглов:
 /// «Просмотр» (always-on Этапы и шаги, плюс Бюджет проекта/этапов и Лента
-/// финансов) и «Действия» (Добавление этапов, Назначение подрядчиков,
+/// финансов) и «Действия» (Добавление этапов, Назначение бригадиров,
 /// Принятие/отклонение работ, Добавление подшагов).
 class ProjectRepRightsScreen extends ConsumerStatefulWidget {
   const ProjectRepRightsScreen({
@@ -198,7 +198,7 @@ class _ProjectRepRightsScreenState
                   onTap: () => setState(() => _addStages = !_addStages),
                 ),
                 AppMenuRow(
-                  label: 'Назначение подрядчиков',
+                  label: 'Назначение бригадиров',
                   trailing: _Toggle(
                     value: _assignContractors,
                     onChanged: (v) =>

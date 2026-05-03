@@ -24,7 +24,9 @@ import {
   GenerateInviteCodeDto,
   InviteByPhoneDto,
   JoinByCodeDto,
+  LeaveTeamDto,
   SearchUserDto,
+  UpdateBudgetDto,
   UpdateMembershipDto,
   UpdateProjectDto,
 } from './dto';
@@ -120,6 +122,38 @@ export class ProjectsController {
     return this.projects.restore(projectId, req.user.userId);
   }
 
+  /**
+   * П2.1 — изменение общего бюджета. RBAC: только заказчик (через finance.budget.edit + сервис).
+   * Без согласования. Любое изменение пишется в feed как budget_changed_by_customer.
+   */
+  @Patch(':projectId/budget')
+  @RequireAccess({
+    action: 'finance.budget.edit',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async updateBudget(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Body() dto: UpdateBudgetDto,
+  ) {
+    return this.projects.updateBudget(projectId, req.user.userId, dto);
+  }
+
+  /**
+   * П1.4 — picker аванса показывает всех бригадиров проекта без фильтра по этапу.
+   * Доступ: любой участник проекта (RBAC.project — приходит через invite_member).
+   */
+  @Get(':projectId/foremen')
+  @RequireAccess({
+    action: 'approval.list',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async listForemen(@Param('projectId') projectId: string) {
+    return this.projects.listForemen(projectId);
+  }
+
   @Post(':projectId/copy')
   @RequireAccess({
     action: 'project.edit',
@@ -189,6 +223,46 @@ export class ProjectsController {
     @Param('membershipId') membershipId: string,
   ) {
     await this.members.removeMembership(projectId, membershipId, req.user.userId);
+  }
+
+  // ---- Self-actions: leave team / hide for self (П2.16) ----
+
+  /**
+   * Soft-removal: пользователь сам выходит из команды проекта.
+   * Доступ — любой аутентифицированный (точечная проверка владения membership — внутри сервиса).
+   * RBAC.notification.settings.self использован как «аутентифицированный действует над собой».
+   */
+  @Post(':projectId/leave')
+  @RequireAccess({ action: 'notification.settings.self' })
+  async leaveTeam(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Body() dto: LeaveTeamDto,
+  ) {
+    return this.members.leaveTeam(projectId, req.user.userId, req.user.userId, {
+      toolsAction: dto.toolsAction,
+    });
+  }
+
+  /**
+   * Персональный hide-флаг: проект пропадает из списка пользователя без выхода из команды.
+   */
+  @Post(':projectId/hide')
+  @RequireAccess({ action: 'notification.settings.self' })
+  async hideForSelf(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+  ) {
+    return this.members.hideForSelf(projectId, req.user.userId);
+  }
+
+  @Post(':projectId/unhide')
+  @RequireAccess({ action: 'notification.settings.self' })
+  async unhideForSelf(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+  ) {
+    return this.members.unhideForSelf(projectId, req.user.userId);
   }
 
   // ---- Invitations ----

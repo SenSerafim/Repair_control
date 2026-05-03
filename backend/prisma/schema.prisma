@@ -64,6 +64,7 @@ enum NoteScope {
   personal
   for_me
   stage
+  team_broadcast
 }
 
 enum PaymentKind {
@@ -108,6 +109,9 @@ enum SelfPurchaseBy {
 }
 
 enum ToolIssuanceStatus {
+  requested
+  approved
+  rejected
   issued
   confirmed
   return_requested
@@ -120,6 +124,10 @@ enum ApprovalScope {
   extra_work
   deadline_change
   stage_accept
+  stage_create
+  material_purchase
+  self_purchase
+  payment_dispute
 }
 
 enum ApprovalStatus {
@@ -223,7 +231,18 @@ enum FeedEventKind {
   tool_returned
   foreman_removed
   foreman_replaced
+  foreman_assigned
+  master_assigned
+  master_unassigned
   stage_budget_edit_after_start
+  stage_pending_approval
+  budget_changed_by_customer
+  membership_left
+  membership_hidden
+  tool_requested
+  tool_request_approved
+  tool_request_rejected
+  tool_force_returned
   // ---- S5 ----
   chat_created
   chat_message_sent
@@ -292,6 +311,15 @@ enum NotificationKind {
   project_archived
   membership_added
   admin_announcement
+  // --- S+ (added 2026-05-04) ---
+  stage_foreman_assigned
+  stage_master_assigned
+  stage_create_requested
+  material_purchase_requested
+  payment_dispute_requested
+  budget_changed
+  tool_request_created
+  tool_request_decided
 }
 
 enum NotificationPriority {
@@ -456,15 +484,21 @@ model Project {
 }
 
 model Membership {
-  id          String         @id @default(cuid())
-  projectId   String
-  userId      String
-  role        MembershipRole
-  invitedById String?
-  stageIds    String[]       @default([])
-  permissions Json           @default("{}")
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  projectId     String
+  userId        String
+  role          MembershipRole
+  invitedById   String?
+  stageIds      String[]       @default([])
+  permissions   Json           @default("{}")
+  /// Soft-removal: участник вышел из команды или был удалён.
+  /// Все запросы фильтруются по removedAt IS NULL (см. P7.2).
+  removedAt     DateTime?
+  removedById   String?
+  /// Персональный hide-флаг — проект скрыт у этого пользователя без выхода.
+  hiddenForUser Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -472,6 +506,7 @@ model Membership {
   @@unique([projectId, userId, role])
   @@index([projectId])
   @@index([userId])
+  @@index([removedAt])
 }
 
 model ProjectInvitation {
@@ -515,7 +550,14 @@ model Stage {
   pauseDurationMs BigInt      @default(0)
   workBudget      BigInt      @default(0)
   materialsBudget BigInt      @default(0)
+  /// Бригадиры этапа. По решению заказчика (П1.11) — один бригадир на этап,
+  /// массив сохранён для обратной совместимости и групповых сценариев.
   foremanIds      String[]    @default([])
+  /// Назначенный мастер на этап (один). Если null — этап ведёт сам бригадир (П2.5/П2.6).
+  masterId        String?
+  /// Если true — этап создан бригадиром и ожидает согласования заказчика (П2.4).
+  /// До approve все step.* действия заблокированы.
+  pendingApproval Boolean     @default(false)
   progressCache   Int         @default(0)
   planApproved    Boolean     @default(false)
   startedAt       DateTime?
@@ -583,21 +625,25 @@ model TemplateStep {
 // ---------- Steps / Substeps / Photos ----------
 
 model Step {
-  id                    String     @id @default(cuid())
-  stageId               String
-  title                 String
-  orderIndex            Int
-  type                  StepType   @default(regular)
-  status                StepStatus @default(pending)
-  price                 BigInt?
-  description           String?
-  authorId              String
-  assigneeIds           String[]   @default([])
-  methodologyArticleId  String?
-  doneAt                DateTime?
-  doneById              String?
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
+  id                   String     @id @default(cuid())
+  stageId              String
+  title                String
+  orderIndex           Int
+  type                 StepType   @default(regular)
+  status               StepStatus @default(pending)
+  price                BigInt?
+  description          String?
+  /// Отчёт мастера/бригадира при закрытии шага (П2.8): «что делал».
+  whatDid              String?
+  /// Отчёт мастера/бригадира при закрытии шага (П2.8): «как делал».
+  howDid               String?
+  authorId             String
+  assigneeIds          String[]   @default([])
+  methodologyArticleId String?
+  doneAt               DateTime?
+  doneById             String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   stage              Stage               @relation(fields: [stageId], references: [id], onDelete: Cascade)
   methodologyArticle MethodologyArticle? @relation(fields: [methodologyArticleId], references: [id], onDelete: SetNull)
@@ -686,22 +732,26 @@ model Question {
 // ---------- Approvals ----------
 
 model Approval {
-  id               String         @id @default(cuid())
+  id               String          @id @default(cuid())
   scope            ApprovalScope
   projectId        String
   stageId          String?
   stepId           String?
-  payload          Json           @default("{}")
+  payload          Json            @default("{}")
   requestedById    String
   addresseeId      String
-  status           ApprovalStatus @default(pending)
-  attemptNumber    Int            @default(1)
-  requiresReassign Boolean        @default(false)
+  /// Роль адресата (П2.6): для двухступенчатого stage_accept здесь хранится
+  /// foreman или customer — в зависимости от того, какая ступень активна.
+  /// Используется в UI для выбора отображения CTA «Принять/Отклонить» (П2.7).
+  actorRole        MembershipRole?
+  status           ApprovalStatus  @default(pending)
+  attemptNumber    Int             @default(1)
+  requiresReassign Boolean         @default(false)
   decidedAt        DateTime?
   decidedById      String?
   decisionComment  String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   project     Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
   stage       Stage?               @relation(fields: [stageId], references: [id], onDelete: Cascade)
@@ -925,8 +975,8 @@ model SelfPurchase {
   // forwardedFromId указывает на master-оригинал. Связь нужна для UI «спор
   // изначально открыл мастер X», для отчётов и для feed-аналитики.
   forwardedFromId String?
-  forwardedFrom   SelfPurchase?  @relation("SelfPurchaseForward", fields: [forwardedFromId], references: [id], onDelete: SetNull)
-  forwardedBy     SelfPurchase[] @relation("SelfPurchaseForward")
+  forwardedFrom   SelfPurchase?      @relation("SelfPurchaseForward", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwardedBy     SelfPurchase[]     @relation("SelfPurchaseForward")
   idempotencyKey  String?            @unique
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
@@ -949,12 +999,19 @@ model ToolItem {
   issuedQty Int      @default(0)
   unit      String?  @default("шт")
   photoKey  String?
+  /// Серийный/инвентарный номер инструмента (П2.14). Свободный текст.
+  serial    String?
+  /// Если задан — инструмент привязан к конкретному проекту (бригадир/мастер
+  /// добавил инструмент «в проект»). Видим всем участникам этого проекта.
+  /// Если null — инструмент только в личном профиле владельца (My Tools).
+  projectId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   issuances ToolIssuance[]
 
   @@index([ownerId])
+  @@index([projectId])
 }
 
 model ToolIssuance {
@@ -1240,20 +1297,20 @@ enum LegalPublicationKind {
 }
 
 model LegalPublication {
-  id            String                @id @default(cuid())
+  id            String               @id @default(cuid())
   kind          LegalPublicationKind
-  slug          String                @unique
+  slug          String               @unique
   title         String
   fileKey       String
   mimeType      String
   sizeBytes     Int
-  etag          String                // sha256(file) для If-None-Match на public stream
+  etag          String // sha256(file) для If-None-Match на public stream
   version       Int
-  isActive      Boolean               @default(false)
+  isActive      Boolean              @default(false)
   publishedAt   DateTime?
   publishedById String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   @@index([kind, isActive])
   @@index([kind, version])
@@ -1275,16 +1332,16 @@ enum KnowledgeAssetKind {
 }
 
 model KnowledgeCategory {
-  id          String                  @id @default(cuid())
+  id          String                 @id @default(cuid())
   title       String
   description String?
-  iconKey     String?                  // имя phosphor-иконки для UI
-  scope       KnowledgeCategoryScope   @default(global)
-  moduleSlug  String?                  // 'stages'|'approvals'|'finance'|... если scope=project_module
-  orderIndex  Int                      @default(0)
-  isPublished Boolean                  @default(true)
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
+  iconKey     String? // имя phosphor-иконки для UI
+  scope       KnowledgeCategoryScope @default(global)
+  moduleSlug  String? // 'stages'|'approvals'|'finance'|... если scope=project_module
+  orderIndex  Int                    @default(0)
+  isPublished Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
   articles KnowledgeArticle[]
 
@@ -1293,17 +1350,17 @@ model KnowledgeCategory {
 }
 
 model KnowledgeArticle {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   categoryId  String
   title       String
-  body        String   @db.Text
-  etag        String                   // sha256(title+body+sorted asset fileKeys)
-  version     Int      @default(1)
-  isPublished Boolean  @default(true)
-  orderIndex  Int      @default(0)
+  body        String    @db.Text
+  etag        String // sha256(title+body+sorted asset fileKeys)
+  version     Int       @default(1)
+  isPublished Boolean   @default(true)
+  orderIndex  Int       @default(0)
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   category KnowledgeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   assets   KnowledgeAsset[]
@@ -1312,7 +1369,7 @@ model KnowledgeArticle {
 }
 
 model KnowledgeAsset {
-  id          String              @id @default(cuid())
+  id          String             @id @default(cuid())
   articleId   String
   kind        KnowledgeAssetKind
   fileKey     String
@@ -1321,10 +1378,10 @@ model KnowledgeAsset {
   durationSec Int?
   width       Int?
   height      Int?
-  thumbKey    String?               // для video — manual upload, ffmpeg отложен
+  thumbKey    String? // для video — manual upload, ffmpeg отложен
   caption     String?
-  orderIndex  Int                   @default(0)
-  createdAt   DateTime              @default(now())
+  orderIndex  Int                @default(0)
+  createdAt   DateTime           @default(now())
 
   article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
 

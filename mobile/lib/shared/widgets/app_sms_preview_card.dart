@@ -3,7 +3,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../core/theme/tokens.dart';
 
-/// Превью SMS-приглашения для «Подрядчик не найден» (`s-member-not-found`).
+/// Превью SMS-приглашения для «Бригадир не найден» (`s-member-not-found`).
 ///
 /// Белая карточка с border, header «SMS на +7 (...)» (синий иконка-чип) и
 /// телом сообщения в светло-сером блоке.

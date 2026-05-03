@@ -106,4 +106,14 @@ export interface RepresentativeRights {
   canManageMaterials?: boolean;
   canManageTools?: boolean;
   canInviteMembers?: boolean;
+  /// П2.4 — представитель с этим правом создаёт этапы без согласования
+  /// (как заказчик); audit/feed помечают actor_role=representative.
+  canCreateStages?: boolean;
+  /// П2.12 — управление командой (удаление участников через карточку).
+  /// Без этого права кнопка «Убрать из команды» в карточке скрыта.
+  canManageTeam?: boolean;
+  /// П7.1 / П10.4 — архивирование проекта представителю НЕ выдаётся
+  /// ни при каких условиях. Поле объявлено явно, чтобы валидатор сразу
+  /// отказывал при попытке выдать canArchive=true (см. sanitize).
+  canArchive?: never;
 }

@@ -17,7 +17,15 @@ import { PrismaService } from '@app/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 import { ToolsService } from './tools.service';
-import { CreateToolDto, IssueToolDto, ReturnToolDto, UpdateToolDto } from './dto';
+import {
+  AddToolsToProjectDto,
+  CreateToolDto,
+  IssueToolDto,
+  RejectRequestDto,
+  RequestToolDto,
+  ReturnToolDto,
+  UpdateToolDto,
+} from './dto';
 
 @ApiTags('tools')
 @ApiBearerAuth()
@@ -133,5 +141,62 @@ export class ToolsController {
   })
   async confirmReturn(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
     return this.tools.confirmReturn(id, req.user.userId);
+  }
+
+  // ---- П2.15: реестр + заявки на инструмент ----
+
+  /**
+   * Реестр инструментов проекта (виден всем участникам — П2.15).
+   * Используется на mobile в новой вкладке «Инструменты».
+   */
+  @Get('projects/:projectId/tool-registry')
+  async registry(@Param('projectId') projectId: string) {
+    return this.tools.listProjectRegistry(projectId);
+  }
+
+  /**
+   * Bulk-add «из моих инструментов в проект» (П2.15 / П3.2).
+   */
+  @Post('projects/:projectId/tools/from-my')
+  async addFromMy(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Body() dto: AddToolsToProjectDto,
+  ) {
+    const result: unknown[] = [];
+    for (const id of dto.toolItemIds) {
+      result.push(await this.tools.addToProject(id, projectId, req.user.userId));
+    }
+    return result;
+  }
+
+  /**
+   * Заявка на получение инструмента (П2.15). Доступно любому участнику проекта,
+   * у которого нет инструмента (валидируется в сервисе через ownerId !== byUserId).
+   */
+  @Post('tool-requests')
+  async requestTool(@Req() req: { user: AuthenticatedUser }, @Body() dto: RequestToolDto) {
+    return this.tools.requestTool({
+      toolItemId: dto.toolItemId,
+      byUserId: req.user.userId,
+      qty: dto.qty,
+      stageId: dto.stageId,
+    });
+  }
+
+  @Post('tool-requests/:id/approve')
+  @HttpCode(200)
+  async approveRequest(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    return this.tools.approveRequest(id, req.user.userId);
+  }
+
+  @Post('tool-requests/:id/reject')
+  @HttpCode(200)
+  async rejectRequest(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+    @Body() dto: RejectRequestDto,
+  ) {
+    return this.tools.rejectRequest(id, req.user.userId, dto.comment);
   }
 }

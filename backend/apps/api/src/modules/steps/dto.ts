@@ -74,6 +74,20 @@ export class UpdateStepDto {
   @Length(0, 2000)
   description?: string;
 
+  /// П2.8 — отчёт о шаге: «что делал». Опционально.
+  @ApiPropertyOptional({ description: 'Что делал (отчёт о шаге, опц., П2.8)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 5000)
+  whatDid?: string;
+
+  /// П2.8 — отчёт о шаге: «как делал». Опционально.
+  @ApiPropertyOptional({ description: 'Как делал (отчёт о шаге, опц., П2.8)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 5000)
+  howDid?: string;
+
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
@@ -85,6 +99,23 @@ export class UpdateStepDto {
   @IsOptional()
   @IsString()
   methodologyArticleId?: string | null;
+}
+
+/**
+ * П2.8 — закрытие шага с опциональным отчётом «что/как делал».
+ */
+export class CompleteStepDto {
+  @ApiPropertyOptional({ description: 'Что делал (опц.)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 5000)
+  whatDid?: string;
+
+  @ApiPropertyOptional({ description: 'Как делал (опц.)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 5000)
+  howDid?: string;
 }
 
 export class ReorderStepItemDto {

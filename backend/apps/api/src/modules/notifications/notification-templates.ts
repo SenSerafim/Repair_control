@@ -140,6 +140,55 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTempla
       body: String(payload.body ?? ''),
     }),
   },
+  // ---------- 2026-05-04: новые kind (П1.11, П2.4-2.6, П2.15, П2.18) ----------
+  stage_foreman_assigned: t(
+    'stage_foreman_assigned',
+    'high',
+    'Вы назначены бригадиром',
+    (p) => `Этап «${p.stageTitle ?? ''}» — назначен бригадиром`,
+  ),
+  stage_master_assigned: t(
+    'stage_master_assigned',
+    'high',
+    'Вы назначены мастером',
+    (p) => `Этап «${p.stageTitle ?? ''}» — назначен мастером`,
+  ),
+  stage_create_requested: t(
+    'stage_create_requested',
+    'critical',
+    'Этап ожидает согласования',
+    (p) => `Бригадир добавил этап «${p.title ?? ''}» — требуется согласование`,
+  ),
+  material_purchase_requested: t(
+    'material_purchase_requested',
+    'critical',
+    'Заявка на покупку материалов',
+    (p) => `Бригадир запрашивает покупку на ${p.amountRub ?? ''} ₽`,
+  ),
+  payment_dispute_requested: t(
+    'payment_dispute_requested',
+    'critical',
+    'Спор по платежу',
+    (p) => `Открыт спор: ${p.reason ?? ''}`,
+  ),
+  budget_changed: t(
+    'budget_changed',
+    'high',
+    'Бюджет проекта изменён',
+    (p) => `Новый общий бюджет: ${p.newTotalRub ?? ''} ₽`,
+  ),
+  tool_request_created: t(
+    'tool_request_created',
+    'high',
+    'Запрос на инструмент',
+    (p) => `Запрашивает: ${p.toolName ?? ''}`,
+  ),
+  tool_request_decided: t(
+    'tool_request_decided',
+    'high',
+    'Решение по инструменту',
+    (p) => `${p.toolName ?? ''} — ${p.decisionRu ?? 'обновлено'}`,
+  ),
 };
 
 /** Критичные типы — пользователь не может отключить. */

@@ -9,8 +9,10 @@ import {
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
 
+export type NoteScopeInput = 'personal' | 'for_me' | 'stage' | 'team_broadcast';
+
 export interface CreateNoteInput {
-  scope: 'personal' | 'for_me' | 'stage';
+  scope: NoteScopeInput;
   text: string;
   addresseeId?: string;
   stageId?: string;
@@ -21,7 +23,7 @@ export interface CreateNoteInput {
 export interface ListNotesParams {
   userId: string;
   projectId: string;
-  scope?: 'personal' | 'for_me' | 'stage';
+  scope?: NoteScopeInput;
   stageId?: string;
   search?: string;
 }
@@ -59,6 +61,19 @@ export class NotesService {
     return note;
   }
 
+  /**
+   * П1.10 — заметка для всей команды («впрок»). Не требует получателей; разрешено создать
+   * на проекте без team — станет видна всем по мере появления участников.
+   */
+  async createTeamBroadcast(input: { projectId: string; authorId: string; text: string }) {
+    return this.create({
+      scope: 'team_broadcast',
+      text: input.text,
+      projectId: input.projectId,
+      authorId: input.authorId,
+    });
+  }
+
   async list(params: ListNotesParams) {
     // scope-правила видимости:
     // - personal → только автор
@@ -70,9 +85,9 @@ export class NotesService {
     if (params.stageId) where.stageId = params.stageId;
     if (params.search) where.text = { contains: params.search, mode: 'insensitive' };
 
-    const scopes: Array<'personal' | 'for_me' | 'stage'> = params.scope
+    const scopes: NoteScopeInput[] = params.scope
       ? [params.scope]
-      : ['personal', 'for_me', 'stage'];
+      : ['personal', 'for_me', 'stage', 'team_broadcast'];
 
     const or: Prisma.NoteWhereInput[] = [];
     for (const sc of scopes) {
@@ -84,6 +99,9 @@ export class NotesService {
         });
       }
       if (sc === 'stage') or.push({ scope: 'stage' });
+      // П1.10 + П2.19 — team_broadcast виден всем участникам проекта (фильтр projectId выше),
+      // даже если заметка создана до их добавления в команду (исторически).
+      if (sc === 'team_broadcast') or.push({ scope: 'team_broadcast' });
     }
     where.OR = or;
 
@@ -157,6 +175,7 @@ export class NotesService {
         'stageId required for scope=stage',
       );
     }
+    // team_broadcast — никаких обязательных получателей (П1.10).
     if (!input.text || !input.text.trim()) {
       throw new InvalidInputError(ErrorCodes.NOTE_INVALID_SCOPE, 'text is required');
     }

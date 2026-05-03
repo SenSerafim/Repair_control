@@ -268,6 +268,11 @@ ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
       ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
       ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
       ApprovalScope.plan => ScopeBadgeTone.plan,
+      // П2.2 — новые scope.
+      ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
+      ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
+      ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
+      ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
     };
 
 ScopeBadgeTone _statusTone(ApprovalStatus s) => switch (s) {
@@ -297,6 +302,18 @@ String _subtitleFor(Approval a) {
     case ApprovalScope.stageAccept:
       final count = a.acceptPhotoCount ?? 0;
       return count > 0 ? '$count фото' : '';
+    case ApprovalScope.stageCreate:
+      final title = a.payload['title'] as String?;
+      return title?.isNotEmpty == true ? 'Этап «$title»' : 'Этап от бригадира';
+    case ApprovalScope.materialPurchase:
+      final amount = (a.payload['amount'] as num?)?.toInt();
+      return amount != null ? Money.format(amount) : 'Закупка';
+    case ApprovalScope.selfPurchase:
+      final amount = (a.payload['amount'] as num?)?.toInt();
+      return amount != null ? Money.format(amount) : 'Самокуп';
+    case ApprovalScope.paymentDispute:
+      final reason = a.payload['reason'] as String?;
+      return reason?.isNotEmpty == true ? reason! : 'Спор по платежу';
   }
 }
 

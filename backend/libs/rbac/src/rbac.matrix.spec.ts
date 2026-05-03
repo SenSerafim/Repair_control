@@ -58,10 +58,9 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
   });
 
-  describe('project.edit / project.archive', () => {
+  describe('project.edit', () => {
     it('owner-customer can edit', () => {
       expect(canAccess('project.edit', customer(true))).toBe(true);
-      expect(canAccess('project.archive', customer(true))).toBe(true);
     });
     it('non-owner customer cannot edit someone else project', () => {
       expect(canAccess('project.edit', customer(false))).toBe(false);
@@ -77,6 +76,27 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
   });
 
+  describe('project.archive (П7.1 / П10.4 — эксклюзив заказчика)', () => {
+    it('owner-customer can archive', () => {
+      expect(canAccess('project.archive', customer(true))).toBe(true);
+    });
+    it('non-owner customer cannot archive someone else project', () => {
+      expect(canAccess('project.archive', customer(false))).toBe(false);
+    });
+    it('representative cannot archive even with all rights', () => {
+      expect(
+        canAccess(
+          'project.archive',
+          representative({ canEditStages: true, canApprove: true, canManageTeam: true }),
+        ),
+      ).toBe(false);
+    });
+    it('foreman/master cannot archive', () => {
+      expect(canAccess('project.archive', foreman())).toBe(false);
+      expect(canAccess('project.archive', master())).toBe(false);
+    });
+  });
+
   describe('project.invite_member', () => {
     it('owner invites', () => {
       expect(canAccess('project.invite_member', customer(true))).toBe(true);
@@ -87,6 +107,11 @@ describe('RBAC matrix — ТЗ §1.5', () => {
       );
       expect(canAccess('project.invite_member', representative({ canInviteMembers: false }))).toBe(
         false,
+      );
+    });
+    it('representative with canManageTeam (П2.12) — also OK', () => {
+      expect(canAccess('project.invite_member', representative({ canManageTeam: true }))).toBe(
+        true,
       );
     });
     it('foreman can invite (restricted to master role inside service)', () => {

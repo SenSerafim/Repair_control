@@ -182,18 +182,16 @@ class ChatsRepository {
         return const MessagesPage(items: []);
       });
 
+  /// П1.1 — отправка только текста. Параметр attachmentKeys убран; даже если
+  /// клиент его передаст, бекенд вернёт 400 (см. messages.service.ts).
   Future<Message> sendMessage({
     required String chatId,
-    String? text,
-    List<String>? attachmentKeys,
+    required String text,
   }) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/chats/$chatId/messages',
-          data: {
-            if (text != null) 'text': text,
-            if (attachmentKeys != null) 'attachmentKeys': attachmentKeys,
-          },
+          data: {'text': text},
         );
         return Message.parse(r.data!);
       });
@@ -219,18 +217,9 @@ class ChatsRepository {
         await _dio.delete<void>('/api/chats/$chatId/messages/$messageId');
       });
 
-  Future<Message> forwardMessage({
-    required String chatId,
-    required String messageId,
-    required String toChatId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/chats/$chatId/messages/$messageId/forward',
-          data: {'toChatId': toChatId},
-        );
-        return Message.parse(r.data!);
-      });
+  // П1.2 — `forwardMessage` удалён из публичного API клиента. Серверный endpoint
+  // `POST /chats/:chatId/messages/:messageId/forward` остаётся (для возможного
+  // возврата фичи), но из mobile к нему не обращаемся.
 
   Future<void> markRead({
     required String chatId,

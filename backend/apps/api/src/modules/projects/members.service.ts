@@ -88,17 +88,199 @@ export class MembersService {
       return m;
     });
 
-    // Автосоздание project-чата при появлении foreman (ТЗ §10).
+    // П2.10 — каждый новый участник проекта автоматически попадает в общий project-чат.
+    // Чат создаётся лениво при первом appearance (foreman, customer-self, etc.).
     // Вне транзакции, чтобы не блокировать на Redis/socket — но если упадёт, не ронять membership.
-    if (input.role === 'foreman') {
-      try {
-        await this.chats.ensureProjectChat(input.projectId, input.actorUserId);
-      } catch (e) {
-        // logger из FeedService ловит; membership уже создан — не откатываем
-      }
+    try {
+      await this.chats.ensureProjectChat(input.projectId, input.actorUserId);
+      await this.chats.addProjectChatParticipant(input.projectId, input.userId);
+    } catch (e) {
+      // logger из FeedService ловит; membership уже создан — не откатываем
     }
 
     return created;
+  }
+
+  /**
+   * П2.16 — выход участника из команды (self-removal).
+   * Soft-removal: membership.removedAt = now(), доступ к проекту/чату теряется моментально (см. fillter
+   * по removedAt в listForUser/AccessGuard).
+   *
+   * Параллельно решает судьбу инструментов (П2.15):
+   *   - transfer_to_owner: ownerId всех инструментов меняется на заказчика, ToolIssuance сохраняется.
+   *   - take_away: инструменты удаляются из проекта (projectId=null), активные ToolIssuance принудительно
+   *     завершаются (force_returned), мастер получает уведомление.
+   */
+  async leaveTeam(
+    projectId: string,
+    userId: string,
+    actorUserId: string,
+    opts: { toolsAction?: 'transfer_to_owner' | 'take_away' } = {},
+  ) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId, removedAt: null },
+    });
+    if (!membership) {
+      throw new NotFoundError(ErrorCodes.MEMBERSHIP_NOT_FOUND, 'membership not found');
+    }
+    if (membership.role === 'customer') {
+      throw new InvalidInputError(
+        ErrorCodes.FORBIDDEN,
+        'owner cannot leave own project (use archive instead)',
+      );
+    }
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+
+    const action = opts.toolsAction ?? 'transfer_to_owner';
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Soft-remove membership.
+      await tx.membership.update({
+        where: { id: membership.id },
+        data: { removedAt: new Date(), removedById: actorUserId },
+      });
+
+      // 2. Покидаем все этапы (если был foreman/master).
+      if (membership.role === 'foreman') {
+        const activeStages = await tx.stage.findMany({
+          where: {
+            projectId,
+            status: { in: ['active', 'paused', 'review', 'pending'] },
+            foremanIds: { has: userId },
+          },
+        });
+        for (const stage of activeStages) {
+          await tx.stage.update({
+            where: { id: stage.id },
+            data: { foremanIds: stage.foremanIds.filter((id) => id !== userId) },
+          });
+        }
+        // Висячие approvals — пометить requiresReassign.
+        await tx.approval.updateMany({
+          where: { projectId, addresseeId: userId, status: 'pending' },
+          data: { requiresReassign: true },
+        });
+      }
+      if (membership.role === 'master') {
+        const stepsWithAssignment = await tx.step.findMany({
+          where: { stage: { projectId }, assigneeIds: { has: userId } },
+          select: { id: true, assigneeIds: true },
+        });
+        for (const s of stepsWithAssignment) {
+          await tx.step.update({
+            where: { id: s.id },
+            data: { assigneeIds: s.assigneeIds.filter((id) => id !== userId) },
+          });
+        }
+        await tx.stage.updateMany({
+          where: { projectId, masterId: userId },
+          data: { masterId: null },
+        });
+      }
+
+      // 3. Tools (П2.15).
+      const myTools = await tx.toolItem.findMany({
+        where: { ownerId: userId, projectId },
+      });
+      if (myTools.length > 0) {
+        if (action === 'transfer_to_owner') {
+          await tx.toolItem.updateMany({
+            where: { ownerId: userId, projectId },
+            data: { ownerId: project.ownerId },
+          });
+        } else {
+          // take_away — принудительно завершаем активные issuances + удаляем из проекта.
+          for (const tool of myTools) {
+            const active = await tx.toolIssuance.findMany({
+              where: {
+                toolItemId: tool.id,
+                status: {
+                  in: ['requested', 'approved', 'issued', 'confirmed', 'return_requested'],
+                },
+              },
+            });
+            for (const iss of active) {
+              await tx.toolIssuance.update({
+                where: { id: iss.id },
+                data: { status: 'returned', returnConfirmedAt: new Date() },
+              });
+              await this.feed.emit({
+                tx,
+                kind: 'tool_force_returned',
+                projectId,
+                actorId: actorUserId,
+                payload: { toolId: tool.id, toUserId: iss.toUserId },
+              });
+            }
+          }
+          await tx.toolItem.updateMany({
+            where: { ownerId: userId, projectId },
+            data: { projectId: null },
+          });
+        }
+      }
+
+      // 4. Чат — leftAt у участника.
+      try {
+        await this.chats.removeProjectChatParticipant(projectId, userId);
+      } catch (e) {
+        // не валим транзакцию из-за чата
+      }
+
+      // 5. Лента.
+      await this.feed.emit({
+        tx,
+        kind: 'membership_left',
+        projectId,
+        actorId: actorUserId,
+        payload: { userId, role: membership.role, toolsAction: action },
+      });
+    });
+
+    return { ok: true };
+  }
+
+  /**
+   * П2.16 — персональный hide. Проект исчезает из списка пользователя, но он остаётся в команде.
+   * Не влияет на чат/доступ (для возврата — отдельный endpoint unhide).
+   */
+  async hideForSelf(projectId: string, userId: string) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId, removedAt: null },
+    });
+    if (!membership) {
+      throw new NotFoundError(ErrorCodes.MEMBERSHIP_NOT_FOUND, 'membership not found');
+    }
+    await this.prisma.membership.update({
+      where: { id: membership.id },
+      data: { hiddenForUser: true },
+    });
+    await this.feed.emit({
+      kind: 'membership_hidden',
+      projectId,
+      actorId: userId,
+      payload: { userId },
+    });
+    return { ok: true };
+  }
+
+  async unhideForSelf(projectId: string, userId: string) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId, removedAt: null },
+    });
+    if (!membership) {
+      throw new NotFoundError(ErrorCodes.MEMBERSHIP_NOT_FOUND, 'membership not found');
+    }
+    await this.prisma.membership.update({
+      where: { id: membership.id },
+      data: { hiddenForUser: false },
+    });
+    return { ok: true };
   }
 
   async updateMembership(

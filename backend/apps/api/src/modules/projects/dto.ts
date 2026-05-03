@@ -186,3 +186,39 @@ export class JoinByCodeDto {
   @Matches(/^\d{6}$/, { message: 'code must contain only digits' })
   code!: string;
 }
+
+// ---------- P2.1 (раздел 5.3) — отдельная форма «Изменить общий бюджет» ----------
+
+export class UpdateBudgetDto {
+  @ApiProperty({ required: false, type: 'integer', description: 'Бюджет работ, копейки' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  workBudget?: number;
+
+  @ApiProperty({ required: false, type: 'integer', description: 'Бюджет материалов, копейки' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  materialsBudget?: number;
+
+  @ApiProperty({ required: false, description: 'Причина изменения (логируется в feed)' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  reason?: string;
+}
+
+// ---------- P2.16 — выход / hide ----------
+
+export class LeaveTeamDto {
+  @ApiProperty({
+    required: false,
+    enum: ['transfer_to_owner', 'take_away'],
+    description:
+      'Что сделать с инструментами участника, оставшимися в проекте (П2.15). По умолчанию transfer_to_owner.',
+  })
+  @IsOptional()
+  @IsEnum(['transfer_to_owner', 'take_away'])
+  toolsAction?: 'transfer_to_owner' | 'take_away';
+}

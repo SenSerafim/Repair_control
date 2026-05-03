@@ -87,24 +87,35 @@ export class ProjectsService {
   async listForUser(userId: string, status?: ProjectStatus, activeRole?: SystemRole) {
     const where: Prisma.ProjectWhereInput = { status };
 
+    // П2.16: фильтр membership.removedAt=null + hiddenForUser=false для всех ролей кроме owner-customer.
+    const activeMembership = (
+      role?: 'customer' | 'representative' | 'foreman' | 'master',
+    ): Prisma.MembershipWhereInput => ({
+      userId,
+      role,
+      removedAt: null,
+      hiddenForUser: false,
+    });
+
     switch (activeRole) {
       case 'customer':
+        // owner-customer всегда видит свои проекты, hiddenForUser к нему не применяется
         where.ownerId = userId;
         break;
       case 'representative':
-        where.memberships = { some: { userId, role: 'representative' } };
+        where.memberships = { some: activeMembership('representative') };
         break;
       case 'contractor':
-        where.memberships = { some: { userId, role: 'foreman' } };
+        where.memberships = { some: activeMembership('foreman') };
         break;
       case 'master':
-        where.memberships = { some: { userId, role: 'master' } };
+        where.memberships = { some: activeMembership('master') };
         break;
       case 'admin':
         break;
       default:
-        // Legacy / неизвестная роль — owner ИЛИ любой membership.
-        where.OR = [{ ownerId: userId }, { memberships: { some: { userId } } }];
+        // Legacy / неизвестная роль — owner ИЛИ активный membership.
+        where.OR = [{ ownerId: userId }, { memberships: { some: activeMembership() } }];
         break;
     }
 
@@ -174,6 +185,68 @@ export class ProjectsService {
       actorId: actorUserId,
     });
     return this.serialize(updated);
+  }
+
+  /**
+   * П2.1 / 5.3 — изменение общего бюджета. Только заказчик. Без согласования.
+   * Любое изменение фиксируется в feed (категория budget_changed_by_customer)
+   * с прежним и новым значением + причиной (опц.). Это и есть «audit-log».
+   */
+  async updateBudget(
+    projectId: string,
+    actorUserId: string,
+    input: { workBudget?: number; materialsBudget?: number; reason?: string },
+  ) {
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+    if (project.status === 'archived') {
+      throw new ConflictError(ErrorCodes.PROJECT_ARCHIVED, 'archived project is read-only');
+    }
+
+    const prevWork = Number(project.workBudget);
+    const prevMaterials = Number(project.materialsBudget);
+    const nextWork = input.workBudget !== undefined ? input.workBudget : prevWork;
+    const nextMaterials =
+      input.materialsBudget !== undefined ? input.materialsBudget : prevMaterials;
+
+    const updated = await this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        workBudget: BigInt(nextWork),
+        materialsBudget: BigInt(nextMaterials),
+      },
+    });
+
+    await this.feed.emit({
+      kind: 'budget_changed_by_customer',
+      projectId,
+      actorId: actorUserId,
+      payload: {
+        actor_role: 'customer',
+        prev: { work: prevWork, materials: prevMaterials, total: prevWork + prevMaterials },
+        next: { work: nextWork, materials: nextMaterials, total: nextWork + nextMaterials },
+        reason: input.reason ?? null,
+      },
+    });
+
+    return this.serialize(updated);
+  }
+
+  /**
+   * П1.4 — список бригадиров проекта без фильтра по этапам (для picker аванса
+   * и других сценариев назначения). Возвращает только активные membership.
+   */
+  async listForemen(projectId: string) {
+    const memberships = await this.prisma.membership.findMany({
+      where: { projectId, role: 'foreman', removedAt: null },
+      select: {
+        userId: true,
+        user: {
+          select: { id: true, firstName: true, lastName: true, phone: true, avatarUrl: true },
+        },
+      },
+    });
+    return memberships.map((m) => m.user);
   }
 
   /**

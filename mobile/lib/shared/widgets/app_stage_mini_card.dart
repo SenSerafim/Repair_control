@@ -6,7 +6,7 @@ import 'status_pill.dart';
 
 /// Мини-карточка этапа в карусели консоли (s-console-* StagesScroll).
 ///
-/// 160 ширина, 4 индикатора в столбик: подрядчик, прогресс шагов,
+/// 160 ширина, 4 индикатора в столбик: бригадир, прогресс шагов,
 /// открытые вопросы, сроки. Каждый индикатор — иконка + текст или
 /// «warning»-pill с цветным фоном при предупреждении.
 class AppStageMiniCard extends StatelessWidget {
@@ -39,7 +39,7 @@ class AppStageMiniCard extends StatelessWidget {
   /// 0..1
   final double progress;
 
-  /// `true` — подрядчик не назначен (красная пилюля).
+  /// `true` — бригадир не назначен (красная пилюля).
   final bool assigneeAlert;
 
   /// `true` — есть открытые вопросы (жёлтая пилюля).

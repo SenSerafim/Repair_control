@@ -94,13 +94,17 @@ export class MessagesService {
     await this.chats.assertNotArchived(chatId);
     await this.chats.assertActiveParticipant(chatId, actorUserId);
 
-    const hasText = !!input.text?.trim();
-    const hasAttachments = Array.isArray(input.attachmentKeys) && input.attachmentKeys.length > 0;
-    if (!hasText && !hasAttachments) {
+    // П1.1 — вложения в чате убраны полностью. Любая попытка прислать attachmentKeys → 400.
+    if (Array.isArray(input.attachmentKeys) && input.attachmentKeys.length > 0) {
       throw new InvalidInputError(
         ErrorCodes.CHAT_MESSAGE_EMPTY,
-        'message requires text or attachments',
+        'attachments are disabled in chat (П1.1)',
       );
+    }
+
+    const hasText = !!input.text?.trim();
+    if (!hasText) {
+      throw new InvalidInputError(ErrorCodes.CHAT_MESSAGE_EMPTY, 'message requires text');
     }
 
     const chat = await this.prisma.chat.findUnique({
@@ -113,8 +117,8 @@ export class MessagesService {
         data: {
           chatId,
           authorId: actorUserId,
-          text: input.text?.trim() || null,
-          attachmentKeys: input.attachmentKeys ?? [],
+          text: input.text!.trim(),
+          attachmentKeys: [],
           createdAt: this.clock.now(),
         },
       });
@@ -197,6 +201,11 @@ export class MessagesService {
     this.events.emit('chat.message.deleted', { chatId: msg.chatId, messageId });
   }
 
+  /**
+   * П1.2 — кнопка «Переслать» убрана из UI. Endpoint оставлен для возможного возврата фичи,
+   * но в admin-API/публичном клиенте маршрут не подключён. Метод по-прежнему работает,
+   * чтобы существующие forward-связи (forwardedFromId) сохраняли смысл.
+   */
   async forward(
     sourceMessageId: string,
     toChatId: string,

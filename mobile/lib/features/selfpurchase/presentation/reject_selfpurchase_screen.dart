@@ -70,7 +70,7 @@ class _RejectSelfPurchaseScreenState
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Подрядчик получит уведомление с причиной отклонения. Сумма не попадёт в бюджет.',
+                          'Бригадир получит уведомление с причиной отклонения. Сумма не попадёт в бюджет.',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.redText,
                             fontWeight: FontWeight.w700,

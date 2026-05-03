@@ -20,6 +20,7 @@ import { SubstepsService } from './substeps.service';
 import { StepPhotosService, StepPhotosViewer } from './step-photos.service';
 import {
   AddSubstepDto,
+  CompleteStepDto,
   ConfirmPhotoDto,
   CreateStepDto,
   PresignPhotoDto,
@@ -111,8 +112,16 @@ export class StepsController {
     resource: 'step',
     resourceIdFrom: { source: 'params', key: 'stepId' },
   })
-  async completeStep(@Req() req: { user: AuthenticatedUser }, @Param('stepId') stepId: string) {
-    return this.steps.complete(stepId, req.user.userId);
+  async completeStep(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('stepId') stepId: string,
+    @Body() dto?: CompleteStepDto,
+  ) {
+    return this.steps.complete(stepId, {
+      actorUserId: req.user.userId,
+      whatDid: dto?.whatDid,
+      howDid: dto?.howDid,
+    });
   }
 
   @Post('steps/:stepId/uncomplete')

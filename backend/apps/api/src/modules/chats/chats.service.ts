@@ -138,6 +138,44 @@ export class ChatsService {
     }
   }
 
+  // ---------- Public shortcut: add/remove из project-chat ----------
+
+  /**
+   * П2.10 — каждый член проекта автоматически попадает в общий project-чат.
+   * Идемпотентен: если чата ещё нет — создаст; если участник уже есть и leftAt=null — no-op.
+   * Если участник был удалён (leftAt!=null) — повторно активирует (joinedAt=now, leftAt=null).
+   */
+  async addProjectChatParticipant(projectId: string, userId: string): Promise<void> {
+    const chat = await this.ensureProjectChat(projectId, userId);
+    await this.prisma.chatParticipant.upsert({
+      where: { chatId_userId: { chatId: chat.id, userId } },
+      create: { chatId: chat.id, userId, joinedAt: this.clock.now() },
+      update: { leftAt: null, joinedAt: this.clock.now() },
+    });
+    this.events.emit('chat.participant.added', { chatId: chat.id, userId });
+  }
+
+  /**
+   * П1.6 — удалённый из команды участник теряет доступ к чату моментально.
+   * Soft-leave: leftAt=now, сообщения сохраняются.
+   */
+  async removeProjectChatParticipant(projectId: string, userId: string): Promise<void> {
+    const chat = await this.prisma.chat.findFirst({
+      where: { projectId, type: ChatType.project, archivedAt: null },
+      select: { id: true },
+    });
+    if (!chat) return;
+    const participant = await this.prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId: chat.id, userId } },
+    });
+    if (!participant || participant.leftAt !== null) return;
+    await this.prisma.chatParticipant.update({
+      where: { id: participant.id },
+      data: { leftAt: this.clock.now() },
+    });
+    this.events.emit('chat.participant.removed', { chatId: chat.id, userId });
+  }
+
   // ---------- leaveAllChats (при удалении membership) ----------
 
   async leaveAllChats(userId: string, projectId: string): Promise<void> {

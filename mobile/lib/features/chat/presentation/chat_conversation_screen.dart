@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/access/access_guard.dart';
@@ -15,13 +12,14 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
-import '../../profile/data/profile_repository.dart';
 import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
-import '../domain/chat.dart';
 import '../domain/message.dart';
-import 'chat_attachment_preview_screen.dart';
 
+/// Telegram-стиль чат проекта (П1.5).
+/// П1.1 — кнопки attach (фото/файлы) удалены.
+/// П1.2 — пункт «Переслать» в long-press menu удалён.
+/// П1.3 — push идёт всем участникам (поведение на бекенде, см. notifications.service).
 class ChatConversationScreen extends ConsumerStatefulWidget {
   const ChatConversationScreen({required this.chatId, super.key});
 
@@ -38,9 +36,6 @@ class _ChatConversationScreenState
   bool _sending = false;
   bool _isTyping = false;
   Timer? _typingDebounce;
-  // Кэш контейнера: ProviderScope.containerOf нельзя дёргать в dispose,
-  // потому что элемент уже deactivated — будет assert. Кэшируем в
-  // didChangeDependencies, используем в dispose.
   ProviderContainer? _containerCache;
 
   @override
@@ -67,16 +62,11 @@ class _ChatConversationScreenState
       ..dispose();
     _typingDebounce?.cancel();
     if (_isTyping) {
-      ref
-          .read(socketServiceProvider)
-          .typing(widget.chatId, typing: false);
+      ref.read(socketServiceProvider).typing(widget.chatId, typing: false);
     }
     final container = _containerCache;
     final chatId = widget.chatId;
     if (container != null) {
-      // Riverpod запрещает менять провайдер во время finalizeTree (assert
-      // _debugCanModifyProviders). Откладываем сброс на следующий микротакт —
-      // к этому моменту dispose уже завершится.
       Future.microtask(() {
         if (container.read(currentChatIdProvider) == chatId) {
           container.read(currentChatIdProvider.notifier).state = null;
@@ -96,33 +86,27 @@ class _ChatConversationScreenState
     _typingDebounce = Timer(const Duration(seconds: 3), () {
       if (_isTyping) {
         _isTyping = false;
-        ref
-            .read(socketServiceProvider)
-            .typing(widget.chatId, typing: false);
+        ref.read(socketServiceProvider).typing(widget.chatId, typing: false);
       }
     });
   }
 
-  Future<void> _send({String? overrideText, List<String>? attachmentKeys}) async {
-    final text = (overrideText ?? _input.text).trim();
-    if (text.isEmpty && (attachmentKeys == null || attachmentKeys.isEmpty)) {
-      return;
-    }
+  Future<void> _send() async {
+    final text = _input.text.trim();
+    if (text.isEmpty) return;
     if (_sending) return;
     setState(() => _sending = true);
     final failure = await ref
         .read(messagesProvider(widget.chatId).notifier)
-        .send(text: text, attachmentKeys: attachmentKeys);
+        .send(text: text);
     if (!mounted) return;
     setState(() => _sending = false);
     if (failure == null) {
-      if (overrideText == null) _input.clear();
+      _input.clear();
       _typingDebounce?.cancel();
       if (_isTyping) {
         _isTyping = false;
-        ref
-            .read(socketServiceProvider)
-            .typing(widget.chatId, typing: false);
+        ref.read(socketServiceProvider).typing(widget.chatId, typing: false);
       }
     } else {
       AppToast.show(
@@ -131,98 +115,6 @@ class _ChatConversationScreenState
         kind: AppToastKind.error,
       );
     }
-  }
-
-  Future<void> _openAttach() async {
-    final picked = await showAppBottomSheet<_AttachChoice>(
-      context: context,
-      child: _AttachSheet(
-        onPick: (c) => Navigator.of(context).pop(c),
-      ),
-    );
-    if (picked == null || !mounted) return;
-    if (picked == _AttachChoice.photo) {
-      await _photoFlow();
-    } else {
-      await _documentFlow();
-    }
-  }
-
-  Future<void> _photoFlow() async {
-    final picker = ImagePicker();
-    final x = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 1920,
-    );
-    if (x == null || !mounted) return;
-    final result = await Navigator.of(context).push<ChatAttachmentResult>(
-      MaterialPageRoute(
-        builder: (_) => ChatAttachmentPreviewScreen(file: File(x.path)),
-      ),
-    );
-    if (result == null || !mounted) return;
-    await _uploadAndSend(
-      file: File(x.path),
-      filename: x.name,
-      caption: result.caption,
-    );
-  }
-
-  Future<void> _documentFlow() async {
-    final picker = ImagePicker();
-    final x = await picker.pickMedia(imageQuality: 80, maxWidth: 1920);
-    if (x == null || !mounted) return;
-    await _uploadAndSend(file: File(x.path), filename: x.name);
-  }
-
-  Future<void> _uploadAndSend({
-    required File file,
-    required String filename,
-    String? caption,
-  }) async {
-    setState(() => _sending = true);
-    try {
-      final size = await file.length();
-      final mime = _mimeFromName(filename);
-      final repo = ref.read(profileRepositoryProvider);
-      final presigned = await repo.presignUpload(
-        originalName: filename,
-        mimeType: mime,
-        sizeBytes: size,
-        scope: 'chat_attachment',
-      );
-      final bytes = await file.readAsBytes();
-      final dio = Dio();
-      await dio.put<void>(
-        presigned.url,
-        data: bytes,
-        options: Options(
-          headers: {...presigned.headers, 'Content-Type': mime},
-        ),
-      );
-      await _send(
-        overrideText: caption,
-        attachmentKeys: [presigned.key],
-      );
-    } catch (e) {
-      if (mounted) {
-        AppToast.show(
-          context,
-          message: 'Не удалось загрузить вложение',
-          kind: AppToastKind.error,
-        );
-        setState(() => _sending = false);
-      }
-    }
-  }
-
-  String _mimeFromName(String name) {
-    final lower = name.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-    if (lower.endsWith('.pdf')) return 'application/pdf';
-    return 'application/octet-stream';
   }
 
   @override
@@ -245,8 +137,7 @@ class _ChatConversationScreenState
               loading: () => const AppLoadingState(),
               error: (e, _) => AppErrorState(
                 title: 'Ошибка',
-                onRetry: () =>
-                    ref.invalidate(messagesProvider(widget.chatId)),
+                onRetry: () => ref.invalidate(messagesProvider(widget.chatId)),
               ),
               data: (msgs) {
                 if (msgs.isEmpty) {
@@ -267,8 +158,8 @@ class _ChatConversationScreenState
                   itemBuilder: (_, i) {
                     final msg = msgs[i];
                     final prev = i + 1 < msgs.length ? msgs[i + 1] : null;
-                    final showDateSeparator = prev == null ||
-                        !_sameDay(prev.createdAt, msg.createdAt);
+                    final showDateSeparator =
+                        prev == null || !_sameDay(prev.createdAt, msg.createdAt);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -289,9 +180,8 @@ class _ChatConversationScreenState
                         _Bubble(
                           message: msg,
                           isMine: msg.authorId == me,
-                          showSenderLabel: isGroupChat && msg.authorId != me,
-                          showForwardAction:
-                              isGroupChat && !msg.isDeleted,
+                          showSenderLabel:
+                              isGroupChat && msg.authorId != me,
                           onEdit: canWrite ? () => _promptEdit(msg) : null,
                           onDelete: canWrite
                               ? () => ref
@@ -299,7 +189,6 @@ class _ChatConversationScreenState
                                       .notifier)
                                   .delete(msg.id)
                               : null,
-                          onForward: () => _openForwardSheet(msg),
                         ),
                       ],
                     );
@@ -314,7 +203,6 @@ class _ChatConversationScreenState
               controller: _input,
               sending: _sending,
               onSend: _send,
-              onAttach: _openAttach,
             ),
         ],
       ),
@@ -322,9 +210,6 @@ class _ChatConversationScreenState
   }
 
   bool _isGroupChatTitle(String title) {
-    // Heuristic: project/stage chats typically have non-personal titles.
-    // Точная инфа в Chat.type, но через заголовок достаточно для отображения
-    // sender-label и forward-action.
     return title.toLowerCase().contains('чат') ||
         title.toLowerCase().contains('проект') ||
         title.toLowerCase().contains('этап');
@@ -381,44 +266,6 @@ class _ChatConversationScreenState
     );
     c.dispose();
   }
-
-  Future<void> _openForwardSheet(Message m) async {
-    final chat = await ref.read(chatsRepositoryProvider).get(widget.chatId);
-    final projectId = chat.projectId;
-    if (projectId == null) {
-      if (!mounted) return;
-      AppToast.show(
-        context,
-        message: 'Пересылка доступна только для чатов проекта',
-        kind: AppToastKind.info,
-      );
-      return;
-    }
-    final chats = await ref
-        .read(chatsRepositoryProvider)
-        .listProject(projectId);
-    if (!mounted) return;
-    final targets = chats.where((c) => c.id != widget.chatId).toList();
-    await showAppBottomSheet<void>(
-      context: context,
-      child: _ForwardSheet(
-        preview: m.text ?? (m.hasAttachments ? 'Вложение' : '—'),
-        chats: targets,
-        onPick: (toChatId) async {
-          final f = await ref
-              .read(messagesProvider(widget.chatId).notifier)
-              .forward(messageId: m.id, toChatId: toChatId);
-          if (!mounted) return;
-          Navigator.of(context).pop();
-          AppToast.show(
-            context,
-            message: f == null ? 'Переслано' : f.userMessage,
-            kind: f == null ? AppToastKind.success : AppToastKind.error,
-          );
-        },
-      ),
-    );
-  }
 }
 
 final _chatTitleProvider =
@@ -431,202 +278,20 @@ final _chatTitleProvider =
   }
 });
 
-enum _AttachChoice { photo, document }
-
-class _AttachSheet extends StatelessWidget {
-  const _AttachSheet({required this.onPick});
-
-  final ValueChanged<_AttachChoice> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 4),
-          child: Text(
-            'Прикрепить',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.n900,
-            ),
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: Text(
-            'Выберите тип вложения',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.n400,
-            ),
-          ),
-        ),
-        AppOptionRow(
-          icon: Icons.image_outlined,
-          iconBg: AppColors.brandLight,
-          iconFg: AppColors.brand,
-          title: 'Фото',
-          subtitle: 'Из галереи или камеры',
-          onTap: () => onPick(_AttachChoice.photo),
-        ),
-        const SizedBox(height: 10),
-        AppOptionRow(
-          icon: Icons.description_outlined,
-          iconBg: AppColors.greenLight,
-          iconFg: AppColors.greenDark,
-          title: 'Документ',
-          subtitle: 'PDF, DOCX, изображение',
-          onTap: () => onPick(_AttachChoice.document),
-        ),
-      ],
-    );
-  }
-}
-
-class _ForwardSheet extends StatelessWidget {
-  const _ForwardSheet({
-    required this.preview,
-    required this.chats,
-    required this.onPick,
-  });
-
-  final String preview;
-  final List<Chat> chats;
-  final ValueChanged<String> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 4),
-          child: Text(
-            'Переслать сообщение',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.n900,
-            ),
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: Text(
-            'Выберите чат для пересылки',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.n400,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.x12),
-          decoration: BoxDecoration(
-            color: AppColors.n50,
-            border: Border.all(color: AppColors.n200),
-            borderRadius: BorderRadius.circular(AppRadius.r12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Сообщение',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.n400,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                preview,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.n700,
-                  height: 1.4,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        if (chats.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Text(
-              'Нет других чатов в этом проекте',
-              style: AppTextStyles.caption.copyWith(color: AppColors.n500),
-              textAlign: TextAlign.center,
-            ),
-          )
-        else
-          ...chats.map(
-            (c) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppOptionRow(
-                icon: _iconFor(c.type),
-                iconBg: _bgFor(c.type),
-                iconFg: _fgFor(c.type),
-                title: c.title ?? c.type.displayName,
-                subtitle: '${c.type.displayName} · ${c.participants.length} участников',
-                onTap: () => onPick(c.id),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  IconData _iconFor(ChatType t) => switch (t) {
-        ChatType.project => Icons.home_outlined,
-        ChatType.stage => Icons.layers_outlined,
-        ChatType.personal => Icons.person_outline,
-        ChatType.group => Icons.group_outlined,
-      };
-
-  Color _bgFor(ChatType t) => switch (t) {
-        ChatType.project => AppColors.brandLight,
-        ChatType.stage => AppColors.yellowBg,
-        ChatType.personal => AppColors.greenLight,
-        ChatType.group => AppColors.purpleBg,
-      };
-
-  Color _fgFor(ChatType t) => switch (t) {
-        ChatType.project => AppColors.brand,
-        ChatType.stage => AppColors.yellowText,
-        ChatType.personal => AppColors.greenDark,
-        ChatType.group => AppColors.purple,
-      };
-}
-
 class _Bubble extends StatelessWidget {
   const _Bubble({
     required this.message,
     required this.isMine,
     required this.showSenderLabel,
-    required this.showForwardAction,
     required this.onEdit,
     required this.onDelete,
-    required this.onForward,
   });
 
   final Message message;
   final bool isMine;
   final bool showSenderLabel;
-  final bool showForwardAction;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-  final VoidCallback onForward;
 
   bool get _editWindowOpen =>
       message.canEdit(byUserId: message.authorId, now: DateTime.now());
@@ -635,8 +300,7 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final body = message.isDeleted
         ? 'Сообщение удалено'
-        : (message.text ??
-            (message.hasAttachments ? 'Вложение' : ''));
+        : (message.text ?? '');
     final time = DateFormat('HH:mm', 'ru').format(message.createdAt);
     final senderColor = _seedColor(message.authorId);
 
@@ -645,10 +309,7 @@ class _Bubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (!isMine) ...[
-          AppAvatar(
-            seed: message.authorId,
-            size: 32,
-          ),
+          AppAvatar(seed: message.authorId, size: 32),
           const SizedBox(width: 6),
         ],
         Flexible(
@@ -662,7 +323,8 @@ class _Bubble extends StatelessWidget {
             senderColor: senderColor,
             time: time,
             editedMark: message.isEdited && !message.isDeleted,
-            forwardedLabel: message.isForwarded ? 'Переслано' : null,
+            // П1.2 — forwardedLabel и forward action удалены из UI.
+            forwardedLabel: null,
             onLongPress:
                 message.isDeleted ? null : () => _showActions(context),
           ),
@@ -672,28 +334,13 @@ class _Bubble extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment:
-            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Align(
-            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-            child: bubbleAndAvatar,
-          ),
-          if (showForwardAction)
-            Padding(
-              padding: EdgeInsets.only(left: isMine ? 0 : 38),
-              child: AppMessageActions(
-                onForward: onForward,
-                alignToRight: isMine,
-              ),
-            ),
-        ],
+      child: Align(
+        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+        child: bubbleAndAvatar,
       ),
     );
   }
 
-  /// Стабильный цвет имени отправителя из brand/green/purple/orange/red.
   Color _seedColor(String userId) {
     const palette = [
       AppColors.brand,
@@ -710,6 +357,8 @@ class _Bubble extends StatelessWidget {
     return '${userId.substring(0, 6)}…';
   }
 
+  /// Long-press menu: «Копировать», «Редактировать» (свои, окно 15 мин), «Удалить» (свои).
+  /// П1.2 — пункт «Переслать» удалён.
   void _showActions(BuildContext context) {
     showAppBottomSheet<void>(
       context: context,
@@ -726,14 +375,6 @@ class _Bubble extends StatelessWidget {
                 color: AppColors.n900,
               ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.reply_all_rounded, color: AppColors.brand),
-            title: const Text('Переслать'),
-            onTap: () {
-              Navigator.of(context).pop();
-              onForward();
-            },
           ),
           if (isMine) ...[
             if (onEdit != null)
@@ -785,13 +426,11 @@ class _ComposeBar extends StatelessWidget {
     required this.controller,
     required this.sending,
     required this.onSend,
-    required this.onAttach,
   });
 
   final TextEditingController controller;
   final bool sending;
   final VoidCallback onSend;
-  final VoidCallback onAttach;
 
   @override
   Widget build(BuildContext context) {
@@ -806,25 +445,7 @@ class _ComposeBar extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            InkResponse(
-              onTap: sending ? null : onAttach,
-              radius: 22,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: AppColors.n100,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.add_rounded,
-                  size: 20,
-                  color: AppColors.n500,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
+            // П1.1 — кнопка attach (paperclip/+) удалена.
             Expanded(
               child: TourAnchor(
                 id: 'chat_conversation.input',
@@ -855,7 +476,8 @@ class _ComposeBar extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
                 ),

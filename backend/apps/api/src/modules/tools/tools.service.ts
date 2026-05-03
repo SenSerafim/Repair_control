@@ -17,6 +17,20 @@ export interface CreateToolInput {
   totalQty: number;
   unit?: string;
   photoKey?: string;
+  /// П2.14 — серийный/инвентарный номер. Свободный текст.
+  serial?: string;
+  /// П2.15 — инструмент сразу добавляется в проект (виден всем участникам).
+  /// Если не задан — это инструмент только в личном профиле.
+  projectId?: string;
+}
+
+export interface RequestToolInput {
+  toolItemId: string;
+  byUserId: string;
+  /// Кол-во запрашиваемых единиц (default 1).
+  qty?: number;
+  /// Опц. этап, в рамках которого требуется инструмент.
+  stageId?: string;
 }
 
 export interface IssueToolInput {
@@ -39,16 +53,10 @@ export class ToolsService {
   // ---------- ToolItem (профильные инструменты бригадира) ----------
 
   async createToolItem(input: CreateToolInput): Promise<ToolItem> {
-    // Проверяем, что актёр имеет роль contractor (foreman)
-    const owner = await this.prisma.user.findUnique({
-      where: { id: input.ownerId },
-      include: { roles: true },
-    });
+    // П2.14 / П8.1: создавать может ЛЮБОЙ пользователь — каждый только от своего имени.
+    // Прежняя проверка «только contractor» снята по решению заказчика (раунд 1, 2026-05-03).
+    const owner = await this.prisma.user.findUnique({ where: { id: input.ownerId } });
     if (!owner) throw new NotFoundError(ErrorCodes.TOOL_NOT_FOUND, 'owner not found');
-    const hasContractorRole = owner.roles.some((r) => r.role === 'contractor' && r.isActive);
-    if (!hasContractorRole) {
-      throw new ForbiddenError(ErrorCodes.TOOL_OWNER_NOT_FOREMAN, 'only contractor can own tools');
-    }
     return this.prisma.toolItem.create({
       data: {
         ownerId: input.ownerId,
@@ -56,6 +64,8 @@ export class ToolsService {
         totalQty: input.totalQty,
         unit: input.unit ?? 'шт',
         photoKey: input.photoKey,
+        serial: input.serial,
+        projectId: input.projectId ?? null,
       },
     });
   }
@@ -120,7 +130,205 @@ export class ToolsService {
     await this.prisma.toolItem.delete({ where: { id } });
   }
 
+  /**
+   * П2.15 — добавить уже существующий из «Моих инструментов» в проект.
+   * Ставит ProjectId на ToolItem (видимость в реестре проекта). Bulk-вариант — на уровне controller.
+   */
+  async addToProject(
+    toolItemId: string,
+    projectId: string,
+    actorUserId: string,
+  ): Promise<ToolItem> {
+    const tool = await this.prisma.toolItem.findUnique({ where: { id: toolItemId } });
+    if (!tool) throw new NotFoundError(ErrorCodes.TOOL_NOT_FOUND, 'tool not found');
+    if (tool.ownerId !== actorUserId) {
+      throw new ForbiddenError(ErrorCodes.TOOL_ACCESS_DENIED, 'only owner can add to project');
+    }
+    return this.prisma.toolItem.update({ where: { id: toolItemId }, data: { projectId } });
+  }
+
+  /**
+   * П2.15 — реестр инструментов проекта. Виден всем участникам проекта (прозрачность
+   * «у кого сейчас находится»). Не путать с listIssuancesForProject (история выдач).
+   */
+  async listProjectRegistry(projectId: string): Promise<
+    (ToolItem & {
+      currentHolderId: string | null;
+      hasActiveRequest: boolean;
+    })[]
+  > {
+    const items = await this.prisma.toolItem.findMany({
+      where: { projectId },
+      include: {
+        issuances: {
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        },
+      },
+    });
+    return items.map((t) => {
+      const lastConfirmed = t.issuances.find((i) => i.status === 'confirmed');
+      const activeRequest = t.issuances.find(
+        (i) => i.status === 'requested' || i.status === 'approved',
+      );
+      return {
+        ...t,
+        currentHolderId: lastConfirmed?.toUserId ?? t.ownerId,
+        hasActiveRequest: !!activeRequest,
+      };
+    });
+  }
+
   // ---------- ToolIssuance ----------
+
+  /**
+   * П2.15 — заявка на получение инструмента: бригадир/мастер запрашивает у владельца.
+   * Создаёт ToolIssuance(status=requested). Дальше владелец approve/reject.
+   */
+  async requestTool(input: RequestToolInput): Promise<ToolIssuance> {
+    const tool = await this.prisma.toolItem.findUnique({ where: { id: input.toolItemId } });
+    if (!tool) throw new NotFoundError(ErrorCodes.TOOL_NOT_FOUND, 'tool not found');
+    if (!tool.projectId) {
+      throw new InvalidInputError(
+        ErrorCodes.TOOL_INSUFFICIENT_QTY,
+        'tool is not attached to any project',
+      );
+    }
+    if (tool.ownerId === input.byUserId) {
+      throw new InvalidInputError(
+        ErrorCodes.TOOL_ACCESS_DENIED,
+        'cannot request your own tool — it is already yours',
+      );
+    }
+    const qty = input.qty ?? 1;
+    const available = tool.totalQty - tool.issuedQty;
+    if (qty > available) {
+      throw new ConflictError(
+        ErrorCodes.TOOL_INSUFFICIENT_QTY,
+        `requested ${qty}, available ${available}`,
+      );
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const iss = await tx.toolIssuance.create({
+        data: {
+          toolItemId: tool.id,
+          projectId: tool.projectId!,
+          stageId: input.stageId ?? null,
+          toUserId: input.byUserId,
+          issuedById: tool.ownerId,
+          qty,
+          status: 'requested',
+        },
+      });
+      await this.feed.emit({
+        tx,
+        kind: 'tool_requested',
+        projectId: tool.projectId,
+        actorId: input.byUserId,
+        payload: {
+          issuanceId: iss.id,
+          toolId: tool.id,
+          toolName: tool.name,
+          addresseeId: tool.ownerId,
+          requestedById: input.byUserId,
+          qty,
+        },
+      });
+      return iss;
+    });
+  }
+
+  /**
+   * П2.15 — владелец одобряет заявку. ToolIssuance: requested → approved.
+   * После approved owner фактически передаёт инструмент (issued + далее confirmed).
+   */
+  async approveRequest(issuanceId: string, actorUserId: string): Promise<ToolIssuance> {
+    const iss = await this.prisma.toolIssuance.findUnique({
+      where: { id: issuanceId },
+      include: { toolItem: true },
+    });
+    if (!iss) throw new NotFoundError(ErrorCodes.TOOL_ISSUANCE_NOT_FOUND, 'issuance not found');
+    if (iss.toolItem.ownerId !== actorUserId) {
+      throw new ForbiddenError(ErrorCodes.TOOL_ACCESS_DENIED, 'only owner can approve');
+    }
+    if (iss.status !== 'requested') {
+      throw new ConflictError(
+        ErrorCodes.TOOL_ISSUANCE_INVALID_STATUS,
+        `cannot approve in status ${iss.status}`,
+      );
+    }
+    const available = iss.toolItem.totalQty - iss.toolItem.issuedQty;
+    if (iss.qty > available) {
+      throw new ConflictError(
+        ErrorCodes.TOOL_INSUFFICIENT_QTY,
+        `requested ${iss.qty}, available ${available}`,
+      );
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const u = await tx.toolIssuance.update({
+        where: { id: issuanceId },
+        data: { status: 'approved' },
+      });
+      await tx.toolItem.update({
+        where: { id: iss.toolItemId },
+        data: { issuedQty: { increment: iss.qty } },
+      });
+      await this.feed.emit({
+        tx,
+        kind: 'tool_request_approved',
+        projectId: iss.projectId,
+        actorId: actorUserId,
+        payload: {
+          issuanceId,
+          toolId: iss.toolItemId,
+          toolName: iss.toolItem.name,
+          requestedById: iss.toUserId,
+        },
+      });
+      return u;
+    });
+  }
+
+  async rejectRequest(
+    issuanceId: string,
+    actorUserId: string,
+    comment?: string,
+  ): Promise<ToolIssuance> {
+    const iss = await this.prisma.toolIssuance.findUnique({
+      where: { id: issuanceId },
+      include: { toolItem: true },
+    });
+    if (!iss) throw new NotFoundError(ErrorCodes.TOOL_ISSUANCE_NOT_FOUND, 'issuance not found');
+    if (iss.toolItem.ownerId !== actorUserId) {
+      throw new ForbiddenError(ErrorCodes.TOOL_ACCESS_DENIED, 'only owner can reject');
+    }
+    if (iss.status !== 'requested') {
+      throw new ConflictError(
+        ErrorCodes.TOOL_ISSUANCE_INVALID_STATUS,
+        `cannot reject in status ${iss.status}`,
+      );
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const u = await tx.toolIssuance.update({
+        where: { id: issuanceId },
+        data: { status: 'rejected' },
+      });
+      await this.feed.emit({
+        tx,
+        kind: 'tool_request_rejected',
+        projectId: iss.projectId,
+        actorId: actorUserId,
+        payload: {
+          issuanceId,
+          toolId: iss.toolItemId,
+          toolName: iss.toolItem.name,
+          requestedById: iss.toUserId,
+          comment,
+        },
+      });
+      return u;
+    });
+  }
 
   async issue(input: IssueToolInput): Promise<ToolIssuance> {
     const tool = await this.prisma.toolItem.findUnique({ where: { id: input.toolItemId } });

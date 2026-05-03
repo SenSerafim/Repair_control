@@ -77,7 +77,7 @@ class _MemberNotFoundScreenState
 
     return AppScaffold(
       showBack: true,
-      title: 'Подрядчик не найден',
+      title: 'Бригадир не найден',
       backgroundColor: AppColors.n50,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
       body: ListView(

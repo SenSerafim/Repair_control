@@ -144,3 +144,21 @@ export class SaveAsTemplateDto {
   @Length(1, 200)
   title!: string;
 }
+
+// ---------- П1.11 / 4.8 / 7.5 ----------
+
+export class AssignForemanDto {
+  @ApiProperty({ description: 'userId единственного бригадира на этап' })
+  @IsString()
+  userId!: string;
+}
+
+export class AssignMasterDto {
+  @ApiProperty({
+    required: false,
+    description: 'userId мастера. Передать null/undefined чтобы снять назначение.',
+  })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+}

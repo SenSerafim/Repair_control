@@ -18,21 +18,37 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       return ctx.systemRole === 'customer';
 
     case 'project.edit':
-    case 'project.archive':
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
       return false;
 
+    case 'project.archive':
+      // П7.1 / П10.4: архивирование — эксклюзив заказчика.
+      // Представителю это право НЕ выдаётся ни при каких условиях.
+      return ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId;
+
     case 'project.invite_member':
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative')
-        return !!ctx.representativeRights?.canInviteMembers;
+        return (
+          !!ctx.representativeRights?.canInviteMembers || !!ctx.representativeRights?.canManageTeam
+        );
       // Бригадир приглашает только мастеров — точная проверка
       // приглашаемой роли делается в InvitationsService.
       if (ctx.membershipRole === 'foreman') return true;
       return false;
 
     case 'stage.manage':
+      // П2.4: создание этапа — заказчик / представитель с canCreateStages
+      // (без согласования) / бригадир (через stage_create approval, см. сервис).
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative')
+        return (
+          !!ctx.representativeRights?.canEditStages || !!ctx.representativeRights?.canCreateStages
+        );
+      if (ctx.membershipRole === 'foreman') return true;
+      return false;
+
     case 'stage.start':
     case 'stage.pause':
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;

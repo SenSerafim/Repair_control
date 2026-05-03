@@ -303,7 +303,7 @@ class _LateStart extends StatelessWidget {
       iconColor: AppColors.yellowText,
       title: 'Не начат вовремя',
       subtitle:
-          'Дата старта$dateLabel прошла. Назначьте подрядчика и нажмите «Старт».',
+          'Дата старта$dateLabel прошла. Назначьте бригадира и нажмите «Старт».',
       titleColor: AppColors.yellowText,
     );
   }
@@ -374,7 +374,7 @@ class _Rejected extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// Waiting — красный «Подрядчик не назначен»
+// Waiting — красный «Бригадир не назначен»
 // ─────────────────────────────────────────────────────────────────────
 class _WaitingNoContractor extends StatelessWidget {
   const _WaitingNoContractor();
@@ -386,7 +386,7 @@ class _WaitingNoContractor extends StatelessWidget {
       border: AppColors.redDot.withValues(alpha: 0.4),
       icon: Icons.person_off_outlined,
       iconColor: AppColors.redText,
-      title: 'Подрядчик не назначен',
+      title: 'Бригадир не назначен',
       subtitle: 'Этап не может быть запущен.',
       titleColor: AppColors.redText,
     );

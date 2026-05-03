@@ -18,12 +18,13 @@ export class TemplatesService {
     });
   }
 
-  async listUser(authorId: string) {
-    return this.prisma.template.findMany({
-      where: { kind: 'user', authorId },
-      include: { steps: { orderBy: { orderIndex: 'asc' } } },
-      orderBy: { createdAt: 'desc' },
-    });
+  /**
+   * П1.7 / 4.6 — пользовательские шаблоны больше не предлагаются.
+   * Метод оставлен для backward-compat (внутренние вызовы), но возвращает пустой массив.
+   * Существующие записи kind='user' остаются в БД sealed.
+   */
+  async listUser(_authorId: string) {
+    return [];
   }
 
   async get(id: string) {

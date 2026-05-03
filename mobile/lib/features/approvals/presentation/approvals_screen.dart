@@ -72,7 +72,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                       projectId: widget.projectId,
                       items: _filter(buckets.pending),
                       emptyTitle: 'Нет согласований',
-                      emptyHint: 'Согласования появятся когда подрядчик '
+                      emptyHint: 'Согласования появятся когда бригадир '
                           'отправит шаг или этап на проверку.',
                       withTourAnchor: true,
                     ),

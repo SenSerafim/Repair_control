@@ -143,6 +143,21 @@ const exportRequester: RecipientResolver = async (ev, prisma) => {
   return job ? [job.requestedById] : [];
 };
 
+const stageMasterFromPayload: RecipientResolver = async (ev) => {
+  const id = (ev.payload as any)?.masterUserId;
+  return typeof id === 'string' && id ? [id] : [];
+};
+
+const stageForemanIdFromPayload: RecipientResolver = async (ev) => {
+  const id = (ev.payload as any)?.foremanUserId;
+  return typeof id === 'string' && id ? [id] : [];
+};
+
+const toolHolderFromPayload: RecipientResolver = async (ev) => {
+  const id = (ev.payload as any)?.toUserId;
+  return typeof id === 'string' && id ? [id] : [];
+};
+
 const MAPPINGS: Partial<Record<FeedEventKind, RoutingRule>> = {
   approval_requested: { kind: 'approval_requested', recipients: addresseeFromPayload },
   approval_approved: { kind: 'approval_approved', recipients: requesterFromPayload },
@@ -175,6 +190,16 @@ const MAPPINGS: Partial<Record<FeedEventKind, RoutingRule>> = {
   membership_added: { kind: 'membership_added', recipients: addresseeFromPayload },
   export_completed: { kind: 'export_completed', recipients: exportRequester },
   export_failed: { kind: 'export_failed', recipients: exportRequester },
+  // ---- 2026-05-04: новые события П1.11 / П2.4-2.6 / П2.15 / П2.18 ----
+  foreman_assigned: { kind: 'stage_foreman_assigned', recipients: stageForemanIdFromPayload },
+  master_assigned: { kind: 'stage_master_assigned', recipients: stageMasterFromPayload },
+  master_unassigned: { kind: 'stage_master_assigned', recipients: stageMasterFromPayload },
+  stage_pending_approval: { kind: 'stage_create_requested', recipients: projectOwnerAndReps },
+  budget_changed_by_customer: { kind: 'budget_changed', recipients: projectMembers },
+  tool_requested: { kind: 'tool_request_created', recipients: addresseeFromPayload },
+  tool_request_approved: { kind: 'tool_request_decided', recipients: requesterFromPayload },
+  tool_request_rejected: { kind: 'tool_request_decided', recipients: requesterFromPayload },
+  tool_force_returned: { kind: 'tool_request_decided', recipients: toolHolderFromPayload },
 };
 
 function buildDeepLink(ev: {
@@ -196,6 +221,16 @@ function buildDeepLink(ev: {
     export_failed: `exports/${payload.jobId ?? ''}`,
     material_request_created: `materials/${payload.requestId ?? ''}`,
     selfpurchase_created: `selfpurchases/${payload.selfPurchaseId ?? ''}`,
+    // ---- П2.18 ----
+    foreman_assigned: `stages/${payload.stageId ?? ''}`,
+    master_assigned: `stages/${payload.stageId ?? ''}`,
+    master_unassigned: `stages/${payload.stageId ?? ''}`,
+    stage_pending_approval: `stages/${payload.stageId ?? ''}`,
+    budget_changed_by_customer: `budget`,
+    tool_requested: `tools/${payload.toolId ?? ''}`,
+    tool_request_approved: `tools/${payload.toolId ?? ''}`,
+    tool_request_rejected: `tools/${payload.toolId ?? ''}`,
+    tool_force_returned: `tools/${payload.toolId ?? ''}`,
   };
   const tail = map[ev.kind];
   if (!tail) return `repair://projects/${ev.projectId}`;

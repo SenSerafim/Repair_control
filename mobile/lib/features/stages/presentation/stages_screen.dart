@@ -19,7 +19,7 @@ import 'stage_widgets.dart' show StageDisplayStatus;
 /// c-stages-tile / c-stages-list / c-stages-empty / c-stages-loading.
 ///
 /// Pixel-perfect редизайн под Кластер C: header (project title + subtitle),
-/// pill-segmented view-toggle, фильтр-чипы (5 + Без подрядчика), tile/list
+/// pill-segmented view-toggle, фильтр-чипы (5 + Без бригадира), tile/list
 /// карточки нового стиля. Drag-and-drop сохранён в list-режиме.
 class StagesScreen extends ConsumerStatefulWidget {
   const StagesScreen({required this.projectId, super.key});
@@ -46,7 +46,7 @@ enum _Filter {
         _Filter.pending => 'Ожидает',
         _Filter.paused => 'На паузе',
         _Filter.done => 'Завершён',
-        _Filter.noContractor => 'Без подрядчика',
+        _Filter.noContractor => 'Без бригадира',
       };
 
   bool match(Stage s) {

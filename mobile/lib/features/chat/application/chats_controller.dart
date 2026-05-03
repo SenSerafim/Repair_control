@@ -215,17 +215,16 @@ class MessagesController
     }
   }
 
-  Future<AuthFailure?> send({
-    required String text,
-    List<String>? attachmentKeys,
-  }) async {
+  /// П1.1 — only text. attachmentKeys параметр удалён из публичного API.
+  Future<AuthFailure?> send({required String text}) async {
+    if (text.trim().isEmpty) {
+      return null;
+    }
     try {
       final m = await ref.read(chatsRepositoryProvider).sendMessage(
             chatId: arg,
-            text: text.isEmpty ? null : text,
-            attachmentKeys: attachmentKeys,
+            text: text,
           );
-      // WS должен прислать — но вставим сразу для латентности.
       _handleIncoming(m);
       return null;
     } on ChatsException catch (e) {
@@ -266,21 +265,7 @@ class MessagesController
     }
   }
 
-  Future<AuthFailure?> forward({
-    required String messageId,
-    required String toChatId,
-  }) async {
-    try {
-      await ref.read(chatsRepositoryProvider).forwardMessage(
-            chatId: arg,
-            messageId: messageId,
-            toChatId: toChatId,
-          );
-      return null;
-    } on ChatsException catch (e) {
-      return e.failure;
-    }
-  }
+  // П1.2 — `forward()` удалён. UI long-press пункт «Переслать» не показывается.
 
   Future<void> markRead(String messageId) async {
     try {
