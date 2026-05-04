@@ -5,12 +5,17 @@ part 'note.freezed.dart';
 enum NoteScope {
   personal,
   forMe,
-  stage;
+  stage,
+  /// П1.10 / П2.19 — заметка для всей команды проекта; разрешено создавать
+  /// «впрок» (когда команда ещё пуста). Видна каждому участнику с момента
+  /// создания, исторически (П10.7).
+  teamBroadcast;
 
   String get apiValue => switch (this) {
         NoteScope.personal => 'personal',
         NoteScope.forMe => 'for_me',
         NoteScope.stage => 'stage',
+        NoteScope.teamBroadcast => 'team_broadcast',
       };
 
   static NoteScope fromString(String? raw) {
@@ -19,6 +24,8 @@ enum NoteScope {
         return NoteScope.forMe;
       case 'stage':
         return NoteScope.stage;
+      case 'team_broadcast':
+        return NoteScope.teamBroadcast;
       case 'personal':
       default:
         return NoteScope.personal;
@@ -29,6 +36,7 @@ enum NoteScope {
         NoteScope.personal => 'Только мне',
         NoteScope.forMe => 'Конкретному участнику',
         NoteScope.stage => 'Всей команде этапа',
+        NoteScope.teamBroadcast => 'Всей команде проекта',
       };
 
   /// Короткое пояснение, которое показывается под радио-опцией в форме
@@ -40,6 +48,8 @@ enum NoteScope {
           'Адресная заметка одному участнику. Видна вам и адресату.',
         NoteScope.stage =>
           'Видна всем участникам этапа — мастерам, бригадиру, заказчику.',
+        NoteScope.teamBroadcast =>
+          'Видна всей команде проекта. Можно создать заранее — будущие участники тоже увидят её исторически.',
       };
 }
 

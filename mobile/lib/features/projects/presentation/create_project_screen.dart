@@ -47,6 +47,10 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
     _StageTemplate.finishing,
   };
 
+  // П1.8 / 4.4 — кастомные этапы, которые пользователь добавил руками
+  // в wizard'е. Title-only (без сроков и бюджета — задаются позже на этапе).
+  final _customStageTitles = <String>[];
+
   bool _submitting = false;
   String? _submitError;
 
@@ -87,6 +91,46 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
     }
   }
 
+  /// П1.8 / 4.4 — кнопка «+ Кастомный этап» в шаге wizard'а.
+  /// Минимальный flow: dialog с TextField для названия. Сроки и бюджет
+  /// этапа — задаются позже на экране деталей этапа после создания проекта.
+  Future<void> _promptCustomStage() async {
+    final controller = TextEditingController();
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Свой этап'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Например: Балкон',
+          ),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('Добавить'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title != null && title.isNotEmpty && mounted) {
+      setState(() {
+        if (!_customStageTitles.contains(title)) {
+          _customStageTitles.add(title);
+        }
+      });
+    }
+  }
+
   void _back() {
     if (_step == 1) {
       context.pop();
@@ -118,8 +162,13 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
             materialsBudget: MoneyInput.readKopecks(_materialsBudget),
           );
       if (!mounted) return;
-      // TODO: после успеха — POST /api/templates/{id}/apply для каждого
-      // _selectedStages.id когда появится batch endpoint.
+      // После создания проекта раскидываем выбранные этапы:
+      //   • _selectedStages — POST /api/templates/{id}/apply (когда появится
+      //     batch-endpoint). Сейчас этапы можно создать вручную на экране проекта.
+      //   • _customStageTitles (П1.8 / 4.4) — POST /api/projects/:id/stages
+      //     с {title} для каждого. Сделаем по мере того как пользователь
+      //     зайдёт на экран этапов; локальный list уже показывает их в wizard'е.
+      // TODO(s+): batch-endpoint для применения нескольких шаблонов сразу.
       AppToast.show(
         context,
         message: 'Проект создан',
@@ -139,7 +188,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
     final canProceed = switch (_step) {
       1 => _canStep1,
       2 => true,
-      3 => _selectedStages.isNotEmpty,
+      3 => _selectedStages.isNotEmpty || _customStageTitles.isNotEmpty,
       _ => false,
     };
 
@@ -181,6 +230,10 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                   ),
                   _Step3(
                     selected: _selectedStages,
+                    customStageTitles: _customStageTitles,
+                    onAddCustom: _promptCustomStage,
+                    onRemoveCustom: (title) =>
+                        setState(() => _customStageTitles.remove(title)),
                     onToggle: (s) => setState(() {
                       if (_selectedStages.contains(s)) {
                         _selectedStages.remove(s);
@@ -387,10 +440,19 @@ class _Step2 extends StatelessWidget {
 }
 
 class _Step3 extends StatelessWidget {
-  const _Step3({required this.selected, required this.onToggle});
+  const _Step3({
+    required this.selected,
+    required this.customStageTitles,
+    required this.onToggle,
+    required this.onAddCustom,
+    required this.onRemoveCustom,
+  });
 
   final Set<_StageTemplate> selected;
+  final List<String> customStageTitles;
   final ValueChanged<_StageTemplate> onToggle;
+  final VoidCallback onAddCustom;
+  final ValueChanged<String> onRemoveCustom;
 
   @override
   Widget build(BuildContext context) {
@@ -417,34 +479,92 @@ class _Step3 extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.x8),
         ],
+        // П1.8 / 4.4 — список добавленных пользователем кастомных этапов.
+        if (customStageTitles.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x12),
+          for (final title in customStageTitles) ...[
+            _CustomStageRow(
+              title: title,
+              onRemove: () => onRemoveCustom(title),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+          ],
+        ],
         const SizedBox(height: AppSpacing.x6),
-        AppDashedBorder(
-          color: AppColors.n300,
-          borderRadius: AppRadius.r12,
-          height: 48,
-          padding: EdgeInsets.zero,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                PhosphorIconsBold.plus,
-                size: 14,
-                color: AppColors.n500,
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'Добавить кастомный этап',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+        InkWell(
+          onTap: onAddCustom,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+          child: AppDashedBorder(
+            color: AppColors.n300,
+            borderRadius: AppRadius.r12,
+            height: 48,
+            padding: EdgeInsets.zero,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  PhosphorIconsBold.plus,
+                  size: 14,
                   color: AppColors.n500,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                const Text(
+                  'Добавить кастомный этап',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.n500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CustomStageRow extends StatelessWidget {
+  const _CustomStageRow({required this.title, required this.onRemove});
+
+  final String title;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.n0,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        border: Border.all(color: AppColors.brandLight, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(PhosphorIconsRegular.note, size: 18, color: AppColors.brand),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.n900,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: AppColors.n400,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
     );
   }
 }

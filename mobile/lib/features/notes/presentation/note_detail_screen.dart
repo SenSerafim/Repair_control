@@ -149,6 +149,7 @@ class _Content extends StatelessWidget {
       case NoteScope.forMe:
         return AppRoleBadgeTone.foreman;
       case NoteScope.stage:
+      case NoteScope.teamBroadcast:
         return AppRoleBadgeTone.representative;
     }
   }

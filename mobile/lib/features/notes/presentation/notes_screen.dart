@@ -166,6 +166,7 @@ class _NoteTile extends StatelessWidget {
       case NoteScope.forMe:
         return AppRoleBadgeTone.foreman;
       case NoteScope.stage:
+      case NoteScope.teamBroadcast:
         return AppRoleBadgeTone.representative;
     }
   }
@@ -423,6 +424,7 @@ class _ScopeOption extends StatelessWidget {
         NoteScope.personal => Icons.lock_outline_rounded,
         NoteScope.forMe => Icons.person_outline_rounded,
         NoteScope.stage => Icons.groups_outlined,
+        NoteScope.teamBroadcast => Icons.campaign_outlined,
       };
 
   @override
