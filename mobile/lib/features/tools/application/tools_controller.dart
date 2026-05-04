@@ -162,3 +162,95 @@ class ToolIssuancesController
     }
   }
 }
+
+/// П2.15 — реестр инструментов проекта (виден всем участникам).
+/// Каждая запись — это ToolItem + currentHolderId + hasActiveRequest.
+class ProjectToolEntry {
+  const ProjectToolEntry({
+    required this.tool,
+    required this.currentHolderId,
+    required this.hasActiveRequest,
+  });
+
+  final ToolItem tool;
+  final String currentHolderId;
+  final bool hasActiveRequest;
+
+  bool get isHeldByOwner => currentHolderId == tool.ownerId;
+}
+
+final projectToolRegistryProvider = AsyncNotifierProvider.family<
+    ProjectToolRegistryController, List<ProjectToolEntry>, String>(
+  ProjectToolRegistryController.new,
+);
+
+class ProjectToolRegistryController
+    extends FamilyAsyncNotifier<List<ProjectToolEntry>, String> {
+  @override
+  Future<List<ProjectToolEntry>> build(String projectId) async {
+    final raw =
+        await ref.read(toolsRepositoryProvider).projectRegistry(projectId);
+    return raw.map((m) {
+      return ProjectToolEntry(
+        tool: ToolItem.parse(m),
+        currentHolderId: m['currentHolderId'] as String? ?? '',
+        hasActiveRequest: m['hasActiveRequest'] as bool? ?? false,
+      );
+    }).toList();
+  }
+
+  ToolsRepository get _repo => ref.read(toolsRepositoryProvider);
+
+  /// П2.15 — заявка на инструмент.
+  Future<AuthFailure?> requestTool({
+    required String toolItemId,
+    int qty = 1,
+    String? stageId,
+  }) async {
+    try {
+      await _repo.requestTool(
+        toolItemId: toolItemId,
+        qty: qty,
+        stageId: stageId,
+      );
+      ref.invalidateSelf();
+      return null;
+    } on ToolsException catch (e) {
+      return e.failure;
+    }
+  }
+
+  Future<AuthFailure?> approveRequest(String issuanceId) async {
+    try {
+      await _repo.approveRequest(issuanceId);
+      ref.invalidateSelf();
+      ref.invalidate(toolIssuancesProvider(arg));
+      return null;
+    } on ToolsException catch (e) {
+      return e.failure;
+    }
+  }
+
+  Future<AuthFailure?> rejectRequest(String issuanceId, {String? comment}) async {
+    try {
+      await _repo.rejectRequest(issuanceId: issuanceId, comment: comment);
+      ref.invalidateSelf();
+      ref.invalidate(toolIssuancesProvider(arg));
+      return null;
+    } on ToolsException catch (e) {
+      return e.failure;
+    }
+  }
+
+  /// П3.2 — bulk-add «из моих инструментов в проект».
+  Future<AuthFailure?> addFromMy(List<String> toolItemIds) async {
+    try {
+      await _repo.addToolsFromMy(projectId: arg, toolItemIds: toolItemIds);
+      ref.invalidateSelf();
+      ref.invalidate(myToolsProvider);
+      return null;
+    } on ToolsException catch (e) {
+      return e.failure;
+    }
+  }
+}

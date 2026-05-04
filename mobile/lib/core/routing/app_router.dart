@@ -85,6 +85,7 @@ import '../../features/team/presentation/team_screen.dart';
 import '../../features/tools/presentation/add_tool_screen.dart';
 import '../../features/tools/presentation/issue_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
+import '../../features/tools/presentation/project_tools_screen.dart';
 import '../../features/tools/presentation/tool_detail_screen.dart';
 import '../../features/tools/presentation/tool_issuances_screen.dart';
 import '../../shared/widgets/widgets.dart';
@@ -562,6 +563,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                     ],
+                  ),
+                  // П2.15 — реестр инструментов проекта.
+                  GoRoute(
+                    path: 'tool-registry',
+                    pageBuilder: slideLeftPage(
+                      (_, state) => ProjectToolsScreen(
+                        projectId: state.pathParameters['projectId']!,
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: 'chats',

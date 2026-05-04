@@ -8,8 +8,10 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../application/team_controller.dart';
+import '../data/team_repository.dart';
 import '../domain/invitation.dart';
 import 'generate_invite_code_sheet.dart';
 import 'rep_rights_sheet.dart';
@@ -121,12 +123,104 @@ class TeamScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+                // П2.16 — кнопка «Выйти из команды» для не-заказчика.
+                _LeaveTeamSection(projectId: projectId, members: team.members),
               ],
             ),
           );
         },
       ),
     );
+  }
+}
+
+/// П2.16 — секция «Выйти из команды» внизу экрана команды. Видна только тем,
+/// у кого есть активная membership в этом проекте, и кто не заказчик
+/// (заказчик не может «выйти», у него только архивирование, см. backend).
+class _LeaveTeamSection extends ConsumerWidget {
+  const _LeaveTeamSection({required this.projectId, required this.members});
+
+  final String projectId;
+  final List<Membership> members;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.read(authControllerProvider).userId;
+    if (me == null) return const SizedBox.shrink();
+    final mine = members.where((m) => m.userId == me).toList();
+    if (mine.isEmpty) return const SizedBox.shrink();
+    final isOwnerOnly = mine.every((m) => m.role == MembershipRole.customer);
+    if (isOwnerOnly) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.x24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppButton(
+            label: 'Выйти из команды',
+            variant: AppButtonVariant.destructive,
+            onPressed: () => _confirmLeave(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmLeave(BuildContext context, WidgetRef ref) async {
+    // Сначала спрашиваем, что делать с инструментами этого пользователя
+    // в проекте — П2.15. Если у пользователя нет инструментов, бэкенд
+    // просто игнорирует toolsAction.
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Выйти из команды?'),
+        content: const Text(
+          'Вы потеряете доступ к проекту, чату и документам моментально.\n\n'
+          'Если у вас есть инструменты в этом проекте, выберите, что с ними:',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('transfer_to_owner'),
+            child: const Text('Передать заказчику'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.redText),
+            onPressed: () => Navigator.of(ctx).pop('take_away'),
+            child: const Text('Забрать с собой'),
+          ),
+        ],
+      ),
+    );
+    if (action == null || !context.mounted) return;
+    try {
+      await ref.read(teamRepositoryProvider).leaveTeam(
+            projectId: projectId,
+            toolsAction: action,
+          );
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: 'Вы вышли из команды',
+        kind: AppToastKind.success,
+      );
+      // Возврат на главный список проектов; экран команды текущего проекта
+      // больше не доступен.
+      while (context.canPop()) {
+        context.pop();
+      }
+    } on TeamException catch (e) {
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: e.failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    }
   }
 }
 

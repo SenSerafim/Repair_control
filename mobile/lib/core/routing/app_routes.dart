@@ -191,6 +191,11 @@ class AppRoutes {
   static String toolIssueWith(String projectId) =>
       '/projects/$projectId/tools/new';
 
+  /// П2.15 — реестр инструментов проекта (вкладка «Инструменты»).
+  static const projectTools = '/projects/:projectId/tool-registry';
+  static String projectToolsWith(String projectId) =>
+      '/projects/$projectId/tool-registry';
+
   // Payments / Documents / Notifications / Methodology — root-level
   // экраны, вызываемые из FCM-deep-link и из projectDetail-меню.
   static const paymentDetail = '/payments/:paymentId';

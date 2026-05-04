@@ -171,6 +171,33 @@ class TeamRepository {
         );
       });
 
+  /// П2.16 — выход участника из команды (self-removal).
+  /// [toolsAction]: 'transfer_to_owner' (default) или 'take_away' — что
+  /// делать с инструментами выходящего, оставшимися в проекте (П2.15).
+  Future<void> leaveTeam({
+    required String projectId,
+    String? toolsAction,
+  }) =>
+      _call(() async {
+        await _dio.post<void>(
+          '/api/projects/$projectId/leave',
+          data: {
+            if (toolsAction != null) 'toolsAction': toolsAction,
+          },
+        );
+      });
+
+  /// П2.16 — персональный hide (проект исчезает у меня без выхода из команды).
+  Future<void> hideForSelf(String projectId) =>
+      _call(() async {
+        await _dio.post<void>('/api/projects/$projectId/hide');
+      });
+
+  Future<void> unhideForSelf(String projectId) =>
+      _call(() async {
+        await _dio.post<void>('/api/projects/$projectId/unhide');
+      });
+
   Future<T> _call<T>(Future<T> Function() action) async {
     try {
       return await action();
