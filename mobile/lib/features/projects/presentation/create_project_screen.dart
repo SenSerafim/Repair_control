@@ -6,6 +6,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../stages/data/stages_repository.dart';
 import '../application/project_controller.dart';
 import '../data/projects_repository.dart';
 import 'money_input.dart';
@@ -95,33 +96,10 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   /// Минимальный flow: dialog с TextField для названия. Сроки и бюджет
   /// этапа — задаются позже на экране деталей этапа после создания проекта.
   Future<void> _promptCustomStage() async {
-    final controller = TextEditingController();
     final title = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Свой этап'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Например: Балкон',
-          ),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Добавить'),
-          ),
-        ],
-      ),
+      builder: (_) => const _CustomStageDialog(),
     );
-    controller.dispose();
     if (title != null && title.isNotEmpty && mounted) {
       setState(() {
         if (!_customStageTitles.contains(title)) {
@@ -161,18 +139,35 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
             workBudget: MoneyInput.readKopecks(_workBudget),
             materialsBudget: MoneyInput.readKopecks(_materialsBudget),
           );
+      // П1.8 / 4.4 — сразу после создания проекта раскидываем выбранные этапы.
+      // Порядок: пресеты в порядке enum _StageTemplate, затем кастомные.
+      // Создание идёт последовательно — orderIndex проставляется явно, чтобы
+      // не зависеть от гонки на бэке. Ошибка одного этапа не валит остальные.
+      final orderedPresets = _StageTemplate.values
+          .where(_selectedStages.contains)
+          .map((s) => s.title)
+          .toList();
+      final stageTitles = [...orderedPresets, ..._customStageTitles];
+      final stagesRepo = ref.read(stagesRepositoryProvider);
+      final failedStages = <String>[];
+      for (var i = 0; i < stageTitles.length; i++) {
+        try {
+          await stagesRepo.create(
+            projectId: created.id,
+            title: stageTitles[i],
+            orderIndex: i,
+          );
+        } on StagesException {
+          failedStages.add(stageTitles[i]);
+        }
+      }
       if (!mounted) return;
-      // После создания проекта раскидываем выбранные этапы:
-      //   • _selectedStages — POST /api/templates/{id}/apply (когда появится
-      //     batch-endpoint). Сейчас этапы можно создать вручную на экране проекта.
-      //   • _customStageTitles (П1.8 / 4.4) — POST /api/projects/:id/stages
-      //     с {title} для каждого. Сделаем по мере того как пользователь
-      //     зайдёт на экран этапов; локальный list уже показывает их в wizard'е.
-      // TODO(s+): batch-endpoint для применения нескольких шаблонов сразу.
       AppToast.show(
         context,
-        message: 'Проект создан',
-        kind: AppToastKind.success,
+        message: failedStages.isEmpty
+            ? 'Проект создан'
+            : 'Проект создан, не удалось добавить этапы: ${failedStages.join(', ')}',
+        kind: failedStages.isEmpty ? AppToastKind.success : AppToastKind.info,
       );
       context.go('/projects/${created.id}');
     } on ProjectsException catch (e) {
@@ -520,6 +515,51 @@ class _Step3 extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomStageDialog extends StatefulWidget {
+  const _CustomStageDialog();
+
+  @override
+  State<_CustomStageDialog> createState() => _CustomStageDialogState();
+}
+
+class _CustomStageDialogState extends State<_CustomStageDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Свой этап'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: 'Например: Балкон',
+        ),
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Отмена'),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: const Text('Добавить'),
         ),
       ],
     );

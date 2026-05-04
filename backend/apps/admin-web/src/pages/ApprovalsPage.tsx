@@ -1,8 +1,23 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'cancelled'];
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'pending — ждёт ответа',
+  approved: 'approved — согласовано',
+  rejected: 'rejected — отклонено',
+  cancelled: 'cancelled — отменено инициатором',
+};
+
 const SCOPES = ['plan', 'step', 'extra_work', 'deadline_change', 'stage_accept'];
+const SCOPE_LABELS: Record<string, string> = {
+  plan: 'plan — утверждение плана этапа',
+  step: 'step — приёмка отдельного шага',
+  extra_work: 'extra_work — доп.работа (увеличение бюджета)',
+  deadline_change: 'deadline_change — перенос дедлайна',
+  stage_accept: 'stage_accept — приёмка этапа целиком',
+};
 
 export function ApprovalsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -47,12 +62,23 @@ export function ApprovalsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="approvals"
+        title="Согласования"
+        summary="Все запросы на согласование между ролями. FSM: pending → approved/rejected/cancelled. Если запрос отклонили, бригадир может пересоздать его — счётчик попыток (attemptNumber) увеличится."
+        bullets={[
+          '5 типов (scope): plan — утверждение плана этапа; step — приёмка шага; extra_work — доп.работа (бюджет растёт только после approved); deadline_change — перенос дедлайна; stage_accept — приёмка этапа целиком.',
+          'Заказчик не может одобрять напрямую то, что должен сначала проверить бригадир (правило из gaps §3.3) — backend это валидирует на уровне FSM.',
+          'Поле «Попытка» — это attemptNumber: сколько раз ту же сущность отправляли на согласование (увеличивается после rejected → пересоздание).',
+          'Эта страница read-only: модерация согласований происходит в мобайле. Здесь — для разбора инцидентов и аналитики.',
+        ]}
+      />
       <div className="filters">
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {STATUS_LABELS[s] ?? s}
             </option>
           ))}
         </select>
@@ -60,12 +86,12 @@ export function ApprovalsPage() {
           <option value="">Все типы</option>
           {SCOPES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {SCOPE_LABELS[s] ?? s}
             </option>
           ))}
         </select>
         <input
-          placeholder="Project ID"
+          placeholder="UUID проекта"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && reload()}
@@ -80,7 +106,7 @@ export function ApprovalsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Scope</th>
+              <th>Тип</th>
               <th>Статус</th>
               <th>Попытка</th>
               <th>От кого</th>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { uploadWithProgress } from '../lib/upload';
+import { PageHelp } from '../lib/PageHelp';
 
 interface LegalPublication {
   id: string;
@@ -140,6 +141,17 @@ export function LegalPublicationsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="legal-pdf"
+        title="Юридические документы в формате PDF"
+        summary="Публикация PDF-версий юридических документов (политика, соглашение, согласие на ПДн). PDF выкладывается в S3 и отдаётся через публичный endpoint /legal/public/<slug>.pdf без авторизации — мобайл открывает их во внешнем браузере."
+        bullets={[
+          'Slug — часть URL (только латиница в нижнем регистре, цифры и дефис, 2–80 символов). Например, slug «privacy-policy» даст ссылку /legal/public/privacy-policy.pdf.',
+          'Активная публикация на каждый kind — одна. Загрузка нового PDF не отключает старый автоматически: чтобы заменить, нужно деактивировать предыдущий или загрузить с тем же slug.',
+          'Файл — только application/pdf, до 25 MB. Загрузка идёт двумя шагами: presigned URL → S3 → подтверждение в админке (создаётся запись + публикация).',
+          'Markdown-версии (раздел «Юр. тексты Markdown») и PDF-публикации хранятся параллельно. Мобайл сам решает, что показывать — обычно PDF предпочтительнее, потому что юридически чище.',
+        ]}
+      />
       <div className="muted" style={{ marginBottom: 16 }}>
         PDF-публикации юридических документов. Открываются на мобайле через
         внешний браузер по публичной ссылке вида

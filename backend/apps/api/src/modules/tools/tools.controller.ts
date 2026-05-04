@@ -94,7 +94,7 @@ export class ToolsController {
 
   @Get('projects/:projectId/tool-issuances')
   @RequireAccess({
-    action: 'tools.manage',
+    action: 'tools.view_project',
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function AuditPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -25,6 +26,17 @@ export function AuditPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="audit"
+        title="Журнал аудита"
+        summary="Иммутабельный лог всех значимых действий в системе: административных (бан, сброс пароля), бизнес-событий (публикация юр. документа, рассылка), системных (forceArchive проекта). Используется для разбора инцидентов и для соответствия 152-ФЗ."
+        bullets={[
+          'Запись в audit делает только бекенд — стереть/изменить запись из админки нельзя.',
+          'Поле «Action» — машинный код события (user.ban, legal.published, project.force_archive…). Фильтр работает по точному совпадению или подстроке.',
+          'Actor — тот, кто действие совершил (UUID администратора). Target — над кем/чем (тип:UUID).',
+          'Metadata — JSON с произвольным контекстом (причина бана, версия документа и т. п.).',
+        ]}
+      />
       <div className="row" style={{ marginBottom: 12, gap: 8 }}>
         <input
           placeholder="Фильтр по action (user.ban, legal.published, ...)"
@@ -43,9 +55,9 @@ export function AuditPage() {
       <div className="card">
         <div className="row" style={{ fontWeight: 700, fontSize: 13, color: '#667' }}>
           <div style={{ flex: 1 }}>Время</div>
-          <div style={{ flex: 2 }}>Action</div>
-          <div style={{ flex: 2 }}>Actor → Target</div>
-          <div style={{ flex: 2 }}>Metadata</div>
+          <div style={{ flex: 2 }}>Действие</div>
+          <div style={{ flex: 2 }}>Кто → над кем</div>
+          <div style={{ flex: 2 }}>Подробности</div>
         </div>
       </div>
       {items.map((a) => (

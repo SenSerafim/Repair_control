@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/access/system_role.dart';
+import '../../../core/error/api_error.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../projects/application/projects_list_controller.dart';
@@ -17,17 +20,27 @@ final profileControllerProvider =
 class ProfileController extends AsyncNotifier<UserProfile> {
   @override
   Future<UserProfile> build() async {
-    ref.listen<AuthStatus>(
-      authControllerProvider.select((s) => s.status),
-      (prev, next) {
-        if (next == AuthStatus.unauthenticated) {
-          state = AsyncError(
-            'unauthenticated',
-            StackTrace.current,
-          );
-        }
-      },
-    );
+    // Watch на статус авторизации — это закрывает гонку при холодном старте,
+    // когда build стартует параллельно с auth.bootstrap(). Пока статус
+    // `unknown` — провайдер висит в loading; при переходе в `authenticated`
+    // build вызывается заново и идёт за /me с уже валидным токеном; при
+    // `unauthenticated` — явная ошибка для UI/redirect.
+    final status = ref.watch(authControllerProvider.select((s) => s.status));
+
+    if (status == AuthStatus.unauthenticated) {
+      throw ProfileException(
+        AuthFailure.sessionExpired,
+        const ApiError(kind: ApiErrorKind.unauthorized, statusCode: 401),
+      );
+    }
+
+    if (status == AuthStatus.unknown) {
+      // bootstrap ещё не завершился. Возвращаем future, которая никогда не
+      // завершится в этом build — riverpod отменит её, когда status сменится
+      // и build перезапустится. UI получит loading state, не error.
+      return Completer<UserProfile>().future;
+    }
+
     final repo = ref.read(profileRepositoryProvider);
     return repo.getMe();
   }

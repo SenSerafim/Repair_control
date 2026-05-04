@@ -63,11 +63,16 @@ const mkPrisma = () => {
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
 
+const mkChats = () =>
+  ({
+    ensureProjectChat: jest.fn().mockResolvedValue({ id: 'chat-mock' }),
+  }) as any;
+
 describe('ProjectsService.create', () => {
   it('создаёт проект, добавляет owner-membership (косвенно через prisma.create), пишет событие в ленту', async () => {
     const { prisma, projects } = mkPrisma();
     const feed = mkFeed();
-    const svc = new ProjectsService(prisma, feed, new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, feed, new FixedClock(NOW), mkChats());
     const p = await svc.create({
       ownerId: 'u-owner',
       title: 'Квартира',
@@ -82,7 +87,7 @@ describe('ProjectsService.create', () => {
 
   it('validates plannedStart <= plannedEnd', async () => {
     const { prisma } = mkPrisma();
-    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW), mkChats());
     await expect(
       svc.create({
         ownerId: 'u',
@@ -98,7 +103,7 @@ describe('ProjectsService.archive/restore', () => {
   it('archive помечает status=archived и пишет в ленту', async () => {
     const { prisma } = mkPrisma();
     const feed = mkFeed();
-    const svc = new ProjectsService(prisma, feed, new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, feed, new FixedClock(NOW), mkChats());
     const p = await svc.create({ ownerId: 'u', title: 'T' });
     const archived = await svc.archive(p.id, 'u');
     expect(archived.status).toBe('archived');
@@ -107,7 +112,7 @@ describe('ProjectsService.archive/restore', () => {
 
   it('restore возвращает active', async () => {
     const { prisma } = mkPrisma();
-    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW), mkChats());
     const p = await svc.create({ ownerId: 'u', title: 'T' });
     await svc.archive(p.id, 'u');
     const restored = await svc.restore(p.id, 'u');
@@ -116,7 +121,7 @@ describe('ProjectsService.archive/restore', () => {
 
   it('update на архивном проекте → 409', async () => {
     const { prisma } = mkPrisma();
-    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW), mkChats());
     const p = await svc.create({ ownerId: 'u', title: 'T' });
     await svc.archive(p.id, 'u');
     await expect(svc.update(p.id, { title: 'New' }, 'u')).rejects.toThrow(ConflictError);
@@ -124,7 +129,7 @@ describe('ProjectsService.archive/restore', () => {
 
   it('archive → 404 для несуществующего', async () => {
     const { prisma } = mkPrisma();
-    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW), mkChats());
     await expect(svc.archive('p-missing', 'u')).rejects.toThrow(NotFoundError);
   });
 });
@@ -132,7 +137,7 @@ describe('ProjectsService.archive/restore', () => {
 describe('ProjectsService.copy — ТЗ §4.3', () => {
   it('копирует название (с суффиксом), этапы и плановые бюджеты; не копирует прогресс', async () => {
     const { prisma, projects, stages } = mkPrisma();
-    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW), mkChats());
     const src = await svc.create({
       ownerId: 'u',
       title: 'Оригинал',
@@ -159,7 +164,7 @@ describe('ProjectsService.copy — ТЗ §4.3', () => {
 
   it('можно задать новое название при копировании', async () => {
     const { prisma } = mkPrisma();
-    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new ProjectsService(prisma, mkFeed(), new FixedClock(NOW), mkChats());
     const src = await svc.create({ ownerId: 'u', title: 'Оригинал' });
     const copy = await svc.copy(src.id, 'u', 'Кастомная копия');
     expect(copy.title).toBe('Кастомная копия');

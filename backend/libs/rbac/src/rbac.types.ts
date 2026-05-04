@@ -35,6 +35,7 @@ export const DOMAIN_ACTIONS = [
   'selfpurchase.confirm',
   'tools.issue',
   'tools.return',
+  'tools.view_project',
   'approval.list',
   // ---------- S5 ----------
   'chat.write',

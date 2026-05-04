@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 const TYPES = ['project', 'stage', 'personal', 'group'];
+const TYPE_LABELS: Record<string, string> = {
+  project: 'project — общий чат проекта',
+  stage: 'stage — чат отдельного этапа',
+  personal: 'personal — личный диалог двух пользователей',
+  group: 'group — произвольная групповая беседа',
+};
 
 export function ChatsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -35,17 +42,28 @@ export function ChatsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="chats"
+        title="Чаты"
+        summary="Список всех чатов в системе с разбивкой по типам. Реальный обмен сообщениями идёт через WebSocket Gateway /chats. Содержимое сообщений видно только участникам — здесь отображается только метаинформация."
+        bullets={[
+          '4 типа: project (общий по проекту), stage (по конкретному этапу), personal (1-на-1), group (произвольная группа).',
+          '«Видим заказчику» — флаг visibleToCustomer. Если выключен — чат скрыт от роли customer (используется для внутренней координации мастеров и бригадира).',
+          'Сообщения — общее число MessagesEntry в чате. Включает удалённые (soft-delete) и отредактированные.',
+          'Эта страница не показывает контент сообщений — только сводку. Открыть переписку можно только через мобайл, имея доступ к проекту.',
+        ]}
+      />
       <div className="filters">
         <select value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">Все типы</option>
           {TYPES.map((t) => (
             <option key={t} value={t}>
-              {t}
+              {TYPE_LABELS[t] ?? t}
             </option>
           ))}
         </select>
         <input
-          placeholder="Project ID"
+          placeholder="UUID проекта"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && reload()}

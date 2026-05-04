@@ -20,7 +20,7 @@ export function Login({ onSuccess }: LoginProps) {
       setToken(r.accessToken);
       onSuccess();
     } catch (e: any) {
-      setError(e.message ?? 'login failed');
+      setError(e.message ?? 'не удалось войти');
     } finally {
       setLoading(false);
     }
@@ -28,8 +28,12 @@ export function Login({ onSuccess }: LoginProps) {
 
   return (
     <form className="login" onSubmit={submit}>
-      <h1>Вход в админку</h1>
-      <label>Телефон (admin)</label>
+      <h1>Вход в админ-панель</h1>
+      <div className="muted" style={{ marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
+        Введите телефон и пароль учётной записи с ролью <code>admin</code>.
+        Доступ к админке закрыт RBAC: обычные пользователи получат 403.
+      </div>
+      <label>Телефон администратора</label>
       <input value={phone} onChange={(e) => setPhone(e.target.value)} autoFocus />
       <label>Пароль</label>
       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -40,7 +44,8 @@ export function Login({ onSuccess }: LoginProps) {
       )}
       <button disabled={loading}>{loading ? 'Вход…' : 'Войти'}</button>
       <div className="muted" style={{ marginTop: 16 }}>
-        Staging demo: <code>+79990000000</code> / <code>staging-demo-12345</code>
+        Демо для staging-стенда: <code>+79990000000</code> / <code>staging-demo-12345</code>.
+        В production эти креды не работают.
       </div>
     </form>
   );

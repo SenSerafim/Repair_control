@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Min,
+} from 'class-validator';
 
 export class CreateAdvanceDto {
   @ApiProperty({ description: 'Получатель (foreman)' })
@@ -70,6 +79,18 @@ export class DisputePaymentDto {
   @ArrayMaxSize(10)
   @IsString({ each: true })
   photoKeys?: string[];
+
+  /// §6.1 — заявленная сумма (для Approval payload).
+  @ApiPropertyOptional({ description: 'Заявленная сумма к выплате/возврату в копейках' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  claimedAmount?: number;
+
+  @ApiPropertyOptional({ enum: ['underpayment', 'overpayment', 'other'] })
+  @IsOptional()
+  @IsEnum(['underpayment', 'overpayment', 'other'])
+  kind?: 'underpayment' | 'overpayment' | 'other';
 }
 
 export class ResolvePaymentDto {

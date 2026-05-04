@@ -51,43 +51,43 @@ const GROUPS: TabGroup[] = [
   {
     label: 'Обзор',
     items: [
-      { key: 'dashboard', label: 'Dashboard', icon: '◐' },
-      { key: 'audit', label: 'Audit log', icon: '⌘' },
-      { key: 'notifications', label: 'Notifications', icon: '◈' },
+      { key: 'dashboard', label: 'Сводка', icon: '◐' },
+      { key: 'audit', label: 'Журнал аудита', icon: '⌘' },
+      { key: 'notifications', label: 'Логи уведомлений', icon: '◈' },
     ],
   },
   {
     label: 'Пользователи',
-    items: [{ key: 'users', label: 'Users', icon: '◇' }],
+    items: [{ key: 'users', label: 'Пользователи', icon: '◇' }],
   },
   {
     label: 'Данные проектов',
     items: [
-      { key: 'projects', label: 'Projects', icon: '⬡' },
-      { key: 'stages', label: 'Stages', icon: '▤' },
-      { key: 'approvals', label: 'Approvals', icon: '◉' },
-      { key: 'payments', label: 'Payments', icon: '₽' },
-      { key: 'materials', label: 'Materials', icon: '▣' },
-      { key: 'documents', label: 'Documents', icon: '▧' },
-      { key: 'chats', label: 'Chats', icon: '◗' },
+      { key: 'projects', label: 'Проекты', icon: '⬡' },
+      { key: 'stages', label: 'Этапы', icon: '▤' },
+      { key: 'approvals', label: 'Согласования', icon: '◉' },
+      { key: 'payments', label: 'Платежи', icon: '₽' },
+      { key: 'materials', label: 'Материалы', icon: '▣' },
+      { key: 'documents', label: 'Документы', icon: '▧' },
+      { key: 'chats', label: 'Чаты', icon: '◗' },
     ],
   },
   {
     label: 'Контент',
     items: [
-      { key: 'feedback', label: 'Feedback', icon: '✉' },
+      { key: 'feedback', label: 'Обратная связь', icon: '✉' },
       { key: 'faq', label: 'FAQ', icon: '?' },
-      { key: 'legal', label: 'Legal (markdown)', icon: '§' },
-      { key: 'legal-publications', label: 'Юр.документы PDF', icon: '⤓' },
+      { key: 'legal', label: 'Юр. тексты (Markdown)', icon: '§' },
+      { key: 'legal-publications', label: 'Юр. документы PDF', icon: '⤓' },
       { key: 'knowledge', label: 'База знаний', icon: '☷' },
-      { key: 'broadcast', label: 'Broadcasts', icon: '⟸' },
+      { key: 'broadcast', label: 'Рассылки', icon: '⟸' },
     ],
   },
   {
     label: 'Система',
     items: [
       { key: 'support-contacts', label: 'Контакты поддержки', icon: '☎' },
-      { key: 'settings', label: 'Settings', icon: '⚙' },
+      { key: 'settings', label: 'Настройки', icon: '⚙' },
     ],
   },
 ];
@@ -203,7 +203,7 @@ export function App() {
           <div className="topbar-user">
             <span className="muted">
               {me
-                ? `${me.firstName ?? ''} ${me.lastName ?? ''} · ${me.systemRole ?? 'admin'}`
+                ? `${me.firstName ?? ''} ${me.lastName ?? ''} · роль: ${me.systemRole ?? 'admin'}`
                 : '…'}
             </span>
             <button

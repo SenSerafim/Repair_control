@@ -19,6 +19,7 @@ import {
   CreateMaterialRequestDto,
   DisputeMaterialDto,
   MarkBoughtDto,
+  RequestMaterialPurchaseDto,
   ResolveMaterialDto,
 } from './dto';
 
@@ -123,5 +124,33 @@ export class MaterialsController {
     @Body() dto: ResolveMaterialDto,
   ) {
     return this.materials.resolve(id, { resolution: dto.resolution, actorUserId: req.user.userId });
+  }
+
+  /// §6.1 — заявка от бригадира на approve закупки материалов до фактической покупки.
+  /// Создаёт Approval(scope=material_purchase, addressee=customer).
+  /// MaterialRequest появляется только после approve (см. ApprovalsService.decide).
+  @Post('projects/:projectId/materials/purchase-approvals')
+  @HttpCode(201)
+  @RequireAccess({
+    action: 'materials.manage',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async requestPurchaseApproval(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Body() dto: RequestMaterialPurchaseDto,
+  ) {
+    return this.materials.requestPurchaseApproval({
+      projectId,
+      stageId: dto.stageId,
+      title: dto.title,
+      amount: dto.amount,
+      items: dto.items,
+      comment: dto.comment,
+      supplier: dto.supplier,
+      photoKeys: dto.photoKeys,
+      actorUserId: req.user.userId,
+    });
   }
 }

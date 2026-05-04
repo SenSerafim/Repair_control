@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function ProjectsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -49,13 +50,24 @@ export function ProjectsPage() {
         <button className="ghost" onClick={() => setSelected(null)} style={{ marginBottom: 12 }}>
           ← К списку
         </button>
+        <PageHelp
+          storageKey="project-detail"
+          title="Карточка проекта"
+          summary="Детальная информация по одному проекту: владелец, команда, этапы, сводка активности. Внизу — раздел «Модерация» с principalным admin-действием «Принудительно архивировать»."
+          bullets={[
+            'Команда — все участники проекта (memberships) с их ролями.',
+            'Этапы — список Stage с прогрессом (progressCache в %) и статусом светофора.',
+            'Принудительная архивация (force archive) переводит проект в статус archived от лица админа, минуя обычный workflow согласования. Используется для зависших или некорректных проектов. Действие пишется в журнал аудита.',
+            'Архивированный проект остаётся в системе только для чтения — ни команда, ни заказчик ничего не могут менять.',
+          ]}
+        />
         <div className="card">
           <h3 style={{ margin: 0 }}>{selected.title}</h3>
           <div className="muted">{selected.address ?? '—'}</div>
           <div style={{ marginTop: 8 }}>
             <span className="badge">{selected.status}</span>{' '}
             <span className="muted">
-              Owner: {selected.owner.firstName} {selected.owner.lastName} ({selected.owner.phone})
+              Владелец: {selected.owner.firstName} {selected.owner.lastName} ({selected.owner.phone})
             </span>
           </div>
           <div className="muted" style={{ marginTop: 8 }}>
@@ -85,10 +97,10 @@ export function ProjectsPage() {
         </div>
 
         <div className="card">
-          <strong>Активность</strong>
+          <strong>Сводка по активности</strong>
           <div className="muted" style={{ marginTop: 6 }}>
-            Платежи: {selected._count.payments} · Материалы: {selected._count.materialRequests} ·
-            Самозакупы: {selected._count.selfPurchases} · Чатов: {selected._count.chats} ·
+            Платежей: {selected._count.payments} · Материалов: {selected._count.materialRequests} ·
+            Самозакупов: {selected._count.selfPurchases} · Чатов: {selected._count.chats} ·
             Документов: {selected._count.documents} · Экспортов: {selected._count.exportJobs}
           </div>
         </div>
@@ -96,8 +108,12 @@ export function ProjectsPage() {
         {selected.status !== 'archived' && (
           <div className="card">
             <strong>Модерация</strong>
+            <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+              Принудительно архивирует проект. Использовать только если штатная архивация невозможна
+              (проект завис, конфликт сторон, требование регулятора).
+            </div>
             <div style={{ marginTop: 8 }}>
-              <button onClick={forceArchive}>Force archive</button>
+              <button onClick={forceArchive}>Принудительно архивировать</button>
             </div>
           </div>
         )}
@@ -107,6 +123,17 @@ export function ProjectsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="projects-list"
+        title="Проекты"
+        summary="Все проекты в системе. Поиск по названию/адресу, фильтр по статусу. Клик по карточке открывает подробности с командой, этапами и кнопкой принудительной архивации."
+        bullets={[
+          'Статус: active — проект ведётся, archived — закрыт (только чтение).',
+          'Owner — заказчик-владелец проекта (тот, кто его создал).',
+          'Цифры справа: размер команды, количество этапов и платежей по проекту.',
+          'Клик по строке открывает детальный экран с действиями администратора.',
+        ]}
+      />
       <div className="row" style={{ marginBottom: 12, gap: 8 }}>
         <input
           placeholder="Поиск по названию / адресу"
@@ -120,8 +147,8 @@ export function ProjectsPage() {
           style={{ flex: 0, minWidth: 140 }}
         >
           <option value="">Все статусы</option>
-          <option value="active">active</option>
-          <option value="archived">archived</option>
+          <option value="active">активные</option>
+          <option value="archived">архив</option>
         </select>
         <button onClick={reload} style={{ flex: 0 }}>
           Применить
@@ -146,7 +173,7 @@ export function ProjectsPage() {
               <strong>{p.title}</strong> <span className="badge">{p.status}</span>
               <div className="muted">{p.address ?? '—'}</div>
               <div className="muted">
-                Owner: {p.owner.firstName} {p.owner.lastName} · {p.owner.phone}
+                Владелец: {p.owner.firstName} {p.owner.lastName} · {p.owner.phone}
               </div>
             </div>
             <div className="muted" style={{ flex: 0, textAlign: 'right', fontSize: 13 }}>

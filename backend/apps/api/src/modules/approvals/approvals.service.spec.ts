@@ -1,6 +1,9 @@
 import { ApprovalsService } from './approvals.service';
 import { FeedService } from '../feed/feed.service';
 import { ProgressCalculator } from '../stages/progress-calculator';
+import { SelfPurchasesService } from '../selfpurchases/selfpurchases.service';
+import { PaymentsService } from '../payments/payments.service';
+import { MaterialsService } from '../materials/materials.service';
 import {
   ConflictError,
   FixedClock,
@@ -9,6 +12,14 @@ import {
   NotFoundError,
   PrismaService,
 } from '@app/common';
+
+// §6.1 — стабы делегатов. В тестах ApprovalsService для self_purchase /
+// payment_dispute / material_purchase делегирование никогда не активируется
+// (тесты используют scope plan/step/extra_work/deadline_change/stage_accept),
+// поэтому стабы можно оставить пустыми.
+const stubSelfPurchases = {} as unknown as SelfPurchasesService;
+const stubPayments = {} as unknown as PaymentsService;
+const stubMaterials = {} as unknown as MaterialsService;
 
 const NOW = new Date('2026-06-10T12:00:00Z');
 
@@ -207,7 +218,15 @@ describe('ApprovalsService.request — валидация scope', () => {
   it('scope=step без stepId → InvalidInputError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     await expect(
       svc.request({
         scope: 'step',
@@ -222,7 +241,15 @@ describe('ApprovalsService.request — валидация scope', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     await expect(
       svc.request({
         scope: 'stage_accept',
@@ -238,7 +265,15 @@ describe('ApprovalsService.request — валидация scope', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     await expect(
       svc.request({
         scope: 'deadline_change',
@@ -254,7 +289,15 @@ describe('ApprovalsService.request — валидация scope', () => {
   it('archived project — request отклоняется', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'archived' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     await expect(
       svc.request({
         scope: 'plan',
@@ -269,7 +312,15 @@ describe('ApprovalsService.request — валидация scope', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -291,7 +342,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
     st.stages.set('s1', { id: 's1', projectId: 'p1', status: 'pending' });
     st.stages.set('s2', { id: 's2', projectId: 'p1', status: 'pending' });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -316,7 +375,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', status: 'review' });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'stage_accept',
       projectId: 'p1',
@@ -343,7 +410,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', status: 'review' });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'stage_accept',
       projectId: 'p1',
@@ -378,7 +453,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
       price: BigInt(12000),
     });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'extra_work',
       projectId: 'p1',
@@ -414,7 +497,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
       status: 'pending_approval',
       price: BigInt(12000),
     });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'extra_work',
       projectId: 'p1',
@@ -445,7 +536,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
       originalEnd: new Date('2026-07-01'),
     });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const newEndIso = '2026-08-15T00:00:00.000Z';
     const a = await svc.request({
       scope: 'deadline_change',
@@ -471,7 +570,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
   it('reject без comment → InvalidInputError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -490,7 +597,15 @@ describe('ApprovalsService.decide — применение эффектов', ()
   it('повторный decide на уже решённый → Conflict', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -523,7 +638,15 @@ describe('ApprovalsService — gaps §3.3 (customer не решает мимо �
       foremanIds: ['f1'],
     });
     st.steps.set('st1', { id: 'st1', stageId: 's1', status: 'in_progress', price: null });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'step',
       projectId: 'p1',
@@ -551,7 +674,15 @@ describe('ApprovalsService — gaps §3.3 (customer не решает мимо �
       foremanIds: ['f1'],
     });
     st.steps.set('st1', { id: 'st1', stageId: 's1', status: 'in_progress', price: null });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'step',
       projectId: 'p1',
@@ -574,7 +705,15 @@ describe('ApprovalsService.resubmit', () => {
   it('только автор может resubmit; attemptNumber++, status=pending', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -598,7 +737,15 @@ describe('ApprovalsService.resubmit', () => {
   it('не автор → ForbiddenError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -617,7 +764,15 @@ describe('ApprovalsService.resubmit', () => {
   it('resubmit не из rejected → Conflict', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -633,7 +788,15 @@ describe('ApprovalsService.cancel', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     const feed = mkFeed();
-    const svc = new ApprovalsService(st.prisma, feed, mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -649,7 +812,15 @@ describe('ApprovalsService.cancel', () => {
   it('не автор → 403', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -662,7 +833,15 @@ describe('ApprovalsService.cancel', () => {
   it('не-pending → Conflict', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -688,7 +867,15 @@ describe('ApprovalsService — авторизация decide', () => {
       role: 'representative',
       permissions: { canApprove: false },
     });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -713,7 +900,15 @@ describe('ApprovalsService — авторизация decide', () => {
       role: 'representative',
       permissions: { canApprove: true },
     });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -731,7 +926,15 @@ describe('ApprovalsService — авторизация decide', () => {
   it('случайный пользователь → 403', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     const a = await svc.request({
       scope: 'plan',
       projectId: 'p1',
@@ -751,7 +954,15 @@ describe('ApprovalsService — авторизация decide', () => {
 describe('ApprovalsService — не найдено', () => {
   it('decide на несуществующий → 404', async () => {
     const st = mkPrisma();
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     await expect(
       svc.decide('missing', {
         actorUserId: 'owner',
@@ -763,7 +974,15 @@ describe('ApprovalsService — не найдено', () => {
 
   it('request в несуществующий проект → 404', async () => {
     const st = mkPrisma();
-    const svc = new ApprovalsService(st.prisma, mkFeed(), mkCalc(), new FixedClock(NOW));
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubPayments,
+      stubMaterials,
+    );
     await expect(
       svc.request({
         scope: 'plan',

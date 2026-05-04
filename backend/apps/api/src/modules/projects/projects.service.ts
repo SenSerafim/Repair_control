@@ -9,6 +9,7 @@ import {
   PrismaService,
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
+import { ChatsService } from '../chats/chats.service';
 
 export interface CreateProjectInput {
   ownerId: string;
@@ -37,6 +38,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
     private readonly clock: Clock,
+    private readonly chats: ChatsService,
   ) {}
 
   async create(input: CreateProjectInput) {
@@ -66,6 +68,10 @@ export class ProjectsService {
       actorId: input.ownerId,
       payload: { title: project.title },
     });
+    // П2.10 — общий project-chat создаётся сразу при создании проекта,
+    // владелец автоматически становится первым участником. Все, кого добавят
+    // в проект позже, попадают в чат через members.service.ts → addProjectChatParticipant.
+    await this.chats.ensureProjectChat(project.id, input.ownerId);
     return this.serialize(project);
   }
 
@@ -301,6 +307,8 @@ export class ProjectsService {
       actorId: actorUserId,
       payload: { sourceProjectId: projectId },
     });
+    // П2.10 — копия проекта тоже сразу получает общий чат с владельцем-customer.
+    await this.chats.ensureProjectChat(copy.id, source.ownerId);
     return this.serialize(copy);
   }
 

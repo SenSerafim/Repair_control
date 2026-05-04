@@ -259,69 +259,15 @@ class _ScopeBody extends StatelessWidget {
         return _DeadlineBody(approval: approval);
       case ApprovalScope.stageAccept:
         return _StageAcceptBody(approval: approval);
-      // П2.2 — новые scope. Минимальное body: текст + payload-ключи. UI-расширение
-      // в следующей итерации (отдельные body-виджеты material_purchase / self_purchase /
-      // payment_dispute / stage_create).
       case ApprovalScope.stageCreate:
+        return _StageCreateBody(approval: approval);
       case ApprovalScope.materialPurchase:
+        return _MaterialPurchaseBody(approval: approval);
       case ApprovalScope.selfPurchase:
+        return _SelfPurchaseBody(approval: approval);
       case ApprovalScope.paymentDispute:
-        return _GenericPayloadBody(approval: approval);
+        return _PaymentDisputeBody(approval: approval);
     }
-  }
-}
-
-/// П2.2 — fallback-виджет для новых scope (stageCreate / materialPurchase / selfPurchase /
-/// paymentDispute). Отображает payload как key-value список + комментарий.
-class _GenericPayloadBody extends StatelessWidget {
-  const _GenericPayloadBody({required this.approval});
-
-  final Approval approval;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = approval.payload.entries
-        .where((e) => e.value != null && e.value.toString().trim().isNotEmpty)
-        .toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _SectionLabel('Параметры запроса'),
-        const SizedBox(height: AppSpacing.x8),
-        if (entries.isEmpty)
-          Text(
-            'Дополнительных данных нет',
-            style: AppTextStyles.body.copyWith(color: AppColors.n500),
-          )
-        else
-          ...entries.map(
-            (e) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      e.key,
-                      style: AppTextStyles.subtitle.copyWith(
-                        color: AppColors.n500,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      e.value.toString(),
-                      style: AppTextStyles.body,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
   }
 }
 
@@ -961,6 +907,481 @@ class _StageAcceptBody extends StatelessWidget {
         .toList()
       ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
     return rejected.isEmpty ? null : rejected.first.comment;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Stage create (П2.2 / 4.4) — этап от бригадира
+// ──────────────────────────────────────────────────────────────────────
+
+class _StageCreateBody extends StatelessWidget {
+  const _StageCreateBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final df = DateFormat('d MMM y', 'ru');
+    final title = approval.payload['title']?.toString();
+    final start = _date(approval.payload['plannedStart']);
+    final end = _date(approval.payload['plannedEnd']);
+    final workBudget = (approval.payload['workBudget'] as num?)?.toInt();
+    final materialsBudget =
+        (approval.payload['materialsBudget'] as num?)?.toInt();
+    final comment = approval.payload['comment'] as String?;
+    final days = (start != null && end != null)
+        ? end.difference(start).inDays
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            color: AppColors.brandLight,
+            borderRadius: AppRadius.card,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title != null && title.isNotEmpty) ...[
+                Text(
+                  title,
+                  style: AppTextStyles.h2.copyWith(color: AppColors.brand),
+                ),
+                const SizedBox(height: AppSpacing.x10),
+              ],
+              if (start != null || end != null)
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.event_outlined,
+                      size: 16,
+                      color: AppColors.brand,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      [
+                        if (start != null) df.format(start),
+                        if (end != null) df.format(end),
+                      ].join(' — '),
+                      style: AppTextStyles.subtitle.copyWith(
+                        color: AppColors.brand,
+                      ),
+                    ),
+                    if (days != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '· $days ${_plural(days, "день", "дня", "дней")}',
+                        style: AppTextStyles.tiny.copyWith(
+                          color: AppColors.brand,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+            ],
+          ),
+        ),
+        if (workBudget != null || materialsBudget != null) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Бюджет этапа'),
+          const SizedBox(height: AppSpacing.x8),
+          Row(
+            children: [
+              if (workBudget != null)
+                Expanded(
+                  child: _BudgetChip(
+                    label: 'Работа',
+                    amount: workBudget,
+                  ),
+                ),
+              if (workBudget != null && materialsBudget != null)
+                const SizedBox(width: AppSpacing.x10),
+              if (materialsBudget != null)
+                Expanded(
+                  child: _BudgetChip(
+                    label: 'Материалы',
+                    amount: materialsBudget,
+                  ),
+                ),
+            ],
+          ),
+        ],
+        if (comment != null && comment.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Комментарий'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: comment),
+        ],
+      ],
+    );
+  }
+}
+
+DateTime? _date(Object? raw) =>
+    raw is String ? DateTime.tryParse(raw) : null;
+
+class _BudgetChip extends StatelessWidget {
+  const _BudgetChip({required this.label, required this.amount});
+  final String label;
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: AppColors.n50,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.tiny.copyWith(color: AppColors.n500)),
+          const SizedBox(height: 2),
+          Text(
+            Money.format(amount),
+            style: AppTextStyles.subtitle.copyWith(color: AppColors.n800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Material purchase (П2.2 / 6.1) — закупка материалов бригадиром
+// ──────────────────────────────────────────────────────────────────────
+
+class _MaterialPurchaseBody extends StatelessWidget {
+  const _MaterialPurchaseBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = (approval.payload['amount'] as num?)?.toInt();
+    final supplier = approval.payload['supplier'] as String?;
+    final comment = approval.payload['comment'] as String?;
+    final items = (approval.payload['items'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            color: AppColors.purpleBg,
+            borderRadius: AppRadius.card,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Сумма закупки',
+                style: AppTextStyles.tiny.copyWith(color: AppColors.purple),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                amount == null ? '—' : Money.format(amount),
+                style: AppTextStyles.h1.copyWith(
+                  fontSize: 26,
+                  color: AppColors.purple,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Спишется из бюджета материалов после approve',
+                style: AppTextStyles.tiny.copyWith(color: AppColors.purple),
+              ),
+            ],
+          ),
+        ),
+        if (items.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Список'),
+          const SizedBox(height: AppSpacing.x8),
+          for (final it in items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      it['name']?.toString() ?? '—',
+                      style: AppTextStyles.body,
+                    ),
+                  ),
+                  if (it['qty'] != null)
+                    Text(
+                      '${it['qty']} ${it['unit'] ?? ''}'.trim(),
+                      style: AppTextStyles.subtitle.copyWith(
+                        color: AppColors.n500,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+        if (supplier != null && supplier.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Поставщик'),
+          const SizedBox(height: AppSpacing.x8),
+          Text(supplier, style: AppTextStyles.body),
+        ],
+        if (comment != null && comment.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Комментарий'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: comment),
+        ],
+        if (approval.attachments.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Фото'),
+          const SizedBox(height: AppSpacing.x8),
+          _DetailPhotoGrid(attachments: approval.attachments, columns: 2),
+        ],
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Self purchase (П2.2 / 6.1) — самокуп мастера
+// ──────────────────────────────────────────────────────────────────────
+
+class _SelfPurchaseBody extends StatelessWidget {
+  const _SelfPurchaseBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = (approval.payload['amount'] as num?)?.toInt();
+    final byRole = approval.payload['byRole'] as String?;
+    final comment = approval.payload['comment'] as String?;
+    final kind = approval.payload['kind'] as String? ?? 'materials';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            gradient: AppGradients.planInfo,
+            borderRadius: AppRadius.card,
+            boxShadow: AppShadows.shBlue,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'К возмещению',
+                style: AppTextStyles.tiny.copyWith(color: AppColors.n0),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                amount == null ? '—' : Money.format(amount),
+                style: AppTextStyles.h1.copyWith(
+                  fontSize: 26,
+                  color: AppColors.n0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                kind == 'work'
+                    ? 'Спишется из бюджета работ после approve'
+                    : 'Спишется из бюджета материалов после approve',
+                style: AppTextStyles.tiny.copyWith(
+                  color: AppColors.n0.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (byRole != null) ...[
+          const SizedBox(height: AppSpacing.x12),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x12,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.n50,
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: AppColors.n500,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  byRole == 'master'
+                      ? 'Заявка от мастера'
+                      : 'Заявка от бригадира',
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.n700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (comment != null && comment.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Комментарий'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: comment),
+        ],
+        if (approval.attachments.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Чеки и фото'),
+          const SizedBox(height: AppSpacing.x8),
+          _DetailPhotoGrid(attachments: approval.attachments, columns: 2),
+        ],
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Payment dispute (П2.2 / 6.1) — спор по сумме платежа
+// ──────────────────────────────────────────────────────────────────────
+
+class _PaymentDisputeBody extends StatelessWidget {
+  const _PaymentDisputeBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final originalAmount =
+        (approval.payload['originalAmount'] as num?)?.toInt();
+    final claimedAmount = (approval.payload['claimedAmount'] as num?)?.toInt();
+    final reason = approval.payload['reason'] as String?;
+    final kind = approval.payload['kind'] as String?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _AmountChip(
+                label: 'Платёж',
+                value: originalAmount == null
+                    ? '—'
+                    : Money.format(originalAmount),
+                tone: _DateTone.danger,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.n400,
+              ),
+            ),
+            Expanded(
+              child: _AmountChip(
+                label: 'Заявлено',
+                value: claimedAmount == null
+                    ? '—'
+                    : Money.format(claimedAmount),
+                tone: _DateTone.success,
+              ),
+            ),
+          ],
+        ),
+        if (kind != null && kind.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x12),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x12,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.yellowBg,
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+            ),
+            child: Text(
+              switch (kind) {
+                'underpayment' => 'Не доплатили',
+                'overpayment' => 'Переплата',
+                _ => 'Спор',
+              },
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.yellowText,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+        if (reason != null && reason.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Причина'),
+          const SizedBox(height: AppSpacing.x8),
+          _CommentBox(text: reason),
+        ],
+        if (approval.attachments.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.x16),
+          const _SectionLabel('Подтверждение'),
+          const SizedBox(height: AppSpacing.x8),
+          _DetailPhotoGrid(attachments: approval.attachments, columns: 2),
+        ],
+      ],
+    );
+  }
+}
+
+class _AmountChip extends StatelessWidget {
+  const _AmountChip({
+    required this.label,
+    required this.value,
+    required this.tone,
+  });
+  final String label;
+  final String value;
+  final _DateTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg =
+        tone == _DateTone.danger ? AppColors.redBg : AppColors.greenLight;
+    final fg =
+        tone == _DateTone.danger ? AppColors.redText : AppColors.greenDark;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.tiny.copyWith(color: fg, letterSpacing: 0.4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTextStyles.subtitle.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

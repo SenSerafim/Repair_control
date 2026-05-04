@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { MaterialRequest, Prisma } from '@prisma/client';
 import {
   Clock,
@@ -11,6 +11,7 @@ import {
   PrismaService,
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 export interface CreateRequestInput {
   projectId: string;
@@ -28,13 +29,206 @@ export interface CreateRequestInput {
   actorUserId: string;
 }
 
+export interface RequestPurchaseApprovalInput {
+  projectId: string;
+  stageId?: string;
+  title: string;
+  amount: number;
+  items: Array<{ name: string; qty: number; unit?: string; pricePerUnit?: number }>;
+  comment?: string;
+  supplier?: string;
+  photoKeys?: string[];
+  actorUserId: string;
+}
+
 @Injectable()
 export class MaterialsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
     private readonly clock: Clock,
+    @Inject(forwardRef(() => ApprovalsService))
+    private readonly approvals: ApprovalsService,
   ) {}
+
+  /**
+   * §6.1 — заявка на закупку материалов от бригадира.
+   * Создаёт Approval(scope=material_purchase). MaterialRequest появляется ТОЛЬКО
+   * после approve заказчиком (см. resolvePurchaseApproval).
+   */
+  async requestPurchaseApproval(input: RequestPurchaseApprovalInput) {
+    if (input.items.length === 0) {
+      throw new InvalidInputError(
+        ErrorCodes.MATERIAL_INVALID_STATUS,
+        'at least one item is required',
+      );
+    }
+    const amount = Money.ofKopeks(input.amount).ensurePositive();
+    const project = await this.prisma.project.findUnique({
+      where: { id: input.projectId },
+      select: { id: true, ownerId: true, status: true },
+    });
+    if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+    if (project.status === 'archived') {
+      throw new ConflictError(ErrorCodes.PROJECT_ARCHIVED, 'archived project');
+    }
+    const m = await this.prisma.membership.findFirst({
+      where: { projectId: project.id, userId: input.actorUserId, removedAt: null },
+      select: { role: true },
+    });
+    if (!m || m.role !== 'foreman') {
+      throw new ForbiddenError(
+        ErrorCodes.FORBIDDEN,
+        'only foreman can request material purchase approval',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const approval = await this.approvals.request({
+        scope: 'material_purchase',
+        projectId: project.id,
+        stageId: input.stageId,
+        addresseeId: project.ownerId,
+        actorRole: 'customer',
+        payload: {
+          title: input.title,
+          amount: Number(amount.kopeks()),
+          items: input.items,
+          comment: input.comment ?? null,
+          supplier: input.supplier ?? null,
+          stageId: input.stageId ?? null,
+        },
+        attachmentKeys: input.photoKeys ?? [],
+        requestedById: input.actorUserId,
+        tx,
+      });
+      return approval;
+    });
+  }
+
+  /**
+   * §6.1 — точка делегирования из ApprovalsService.decide для scope=material_purchase.
+   * Approve → MaterialRequest(status=open) + декремент materialsBudget.
+   * Reject → no-op (Approval уходит в rejected).
+   */
+  async resolvePurchaseApproval(
+    approvalId: string,
+    input: {
+      decision: 'approved' | 'rejected';
+      comment?: string;
+      actorUserId: string;
+      actorSystemRole: 'customer' | 'representative' | 'contractor' | 'master' | 'admin';
+    },
+  ) {
+    const approval = await this.prisma.approval.findUnique({ where: { id: approvalId } });
+    if (!approval) throw new NotFoundError(ErrorCodes.APPROVAL_NOT_FOUND, 'approval not found');
+    if (approval.status !== 'pending') {
+      throw new ConflictError(ErrorCodes.APPROVAL_INVALID_STATUS, `approval is ${approval.status}`);
+    }
+    const payload = approval.payload as {
+      title?: string;
+      amount?: number;
+      items?: Array<{
+        name: string;
+        qty: number;
+        unit?: string;
+        pricePerUnit?: number;
+        note?: string;
+      }>;
+      comment?: string;
+      stageId?: string;
+    };
+
+    const now = this.clock.now();
+    return this.prisma.$transaction(async (tx) => {
+      await tx.approval.update({
+        where: { id: approvalId },
+        data: {
+          status: input.decision,
+          decidedAt: now,
+          decidedById: input.actorUserId,
+          decisionComment: input.comment,
+        },
+      });
+      await tx.approvalAttempt.create({
+        data: {
+          approvalId,
+          attemptNumber: approval.attemptNumber,
+          action: input.decision,
+          actorId: input.actorUserId,
+          comment: input.comment,
+        },
+      });
+
+      if (input.decision === 'approved') {
+        const amount = BigInt(payload.amount ?? 0);
+        // Списание из общего бюджета материалов (см. §5.3 решение).
+        if (amount > BigInt(0)) {
+          await tx.project.update({
+            where: { id: approval.projectId },
+            data: { materialsBudget: { decrement: amount } },
+          });
+        }
+        const items = payload.items ?? [];
+        const created = await tx.materialRequest.create({
+          data: {
+            projectId: approval.projectId,
+            stageId: payload.stageId ?? approval.stageId ?? null,
+            createdById: approval.requestedById,
+            recipient: 'foreman',
+            title: payload.title ?? 'Закупка материалов',
+            comment: payload.comment ?? null,
+            status: 'open',
+            items: {
+              create: items.map((it) => ({
+                name: it.name.trim(),
+                qty: new Prisma.Decimal(it.qty),
+                unit: it.unit,
+                note: it.note,
+                pricePerUnit: it.pricePerUnit != null ? BigInt(it.pricePerUnit) : null,
+                totalPrice:
+                  it.pricePerUnit != null ? BigInt(Math.round(it.pricePerUnit * it.qty)) : null,
+              })),
+            },
+          },
+        });
+        await this.feed.emit({
+          tx,
+          kind: 'material_request_created',
+          projectId: approval.projectId,
+          actorId: input.actorUserId,
+          payload: {
+            requestId: created.id,
+            stageId: created.stageId,
+            recipient: 'foreman',
+            fromApprovalId: approval.id,
+          },
+        });
+        await this.feed.emit({
+          tx,
+          kind: 'budget_updated',
+          projectId: approval.projectId,
+          actorId: input.actorUserId,
+          payload: {
+            delta: -Number(amount),
+            reason: 'material_purchase_approved',
+            approvalId: approval.id,
+          },
+        });
+      }
+      await this.feed.emit({
+        tx,
+        kind: input.decision === 'approved' ? 'approval_approved' : 'approval_rejected',
+        projectId: approval.projectId,
+        actorId: input.actorUserId,
+        payload: {
+          approvalId,
+          scope: 'material_purchase',
+        },
+      });
+      return tx.approval.findUnique({ where: { id: approvalId } });
+    });
+  }
 
   async createRequest(input: CreateRequestInput): Promise<MaterialRequest> {
     const project = await this.prisma.project.findUnique({

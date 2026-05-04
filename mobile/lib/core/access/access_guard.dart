@@ -59,8 +59,10 @@ class AccessGuard {
       DomainAction.materialsManage,
       DomainAction.materialFinalize,
       DomainAction.selfPurchaseConfirm,
-      // tools.* — заказчик инструменты НЕ видит (ТЗ §1.4, gaps §6.1).
-      // Backend RBAC явно блокирует — не запрашиваем эти эндпоинты с UI.
+      // tools.* — заказчик write-действия не делает (issue/manage/return),
+      // но read-only видимость инструмента в проекте включена: его инструменты
+      // тоже могут быть на объекте (П2.15, уточнение от заказчика).
+      DomainAction.toolsViewProject,
       DomainAction.chatRead,
       DomainAction.chatWrite,
       DomainAction.chatCreatePersonal,
@@ -90,6 +92,8 @@ class AccessGuard {
       DomainAction.documentRead,
       DomainAction.methodologyRead,
       DomainAction.questionManage,
+      // Read-only инструмент в проекте (П2.15) — write остаётся под canManageTools.
+      DomainAction.toolsViewProject,
       // Чат — write по умолчанию (П7.3, "может смотреть всё + писать в чат")
       DomainAction.chatRead,
       DomainAction.chatWrite,
@@ -122,6 +126,7 @@ class AccessGuard {
       DomainAction.toolsManage,
       DomainAction.toolsIssue,
       DomainAction.toolsReturn,
+      DomainAction.toolsViewProject,
       DomainAction.chatRead,
       DomainAction.chatWrite,
       DomainAction.chatCreatePersonal,
@@ -150,6 +155,7 @@ class AccessGuard {
       DomainAction.financePaymentDispute,
       DomainAction.selfPurchaseCreate,
       DomainAction.toolsReturn,
+      DomainAction.toolsViewProject,
       DomainAction.chatRead,
       DomainAction.chatWrite,
       DomainAction.documentRead,

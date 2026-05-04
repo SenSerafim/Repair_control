@@ -369,6 +369,8 @@ class _MemberRow extends ConsumerWidget {
   }) async {
     final user = member.user;
     if (user == null) return;
+    final commonProjects = await _loadCommonProjects(ref, user.id);
+    if (!context.mounted) return;
     await showMemberCardSheet(
       context,
       data: MemberCardData(
@@ -379,7 +381,9 @@ class _MemberRow extends ConsumerWidget {
         currentProjectTitle: '', // не показываем — экран уже в контексте проекта
         phone: user.phone,
         avatarUrl: user.avatarUrl,
+        commonProjects: commonProjects,
       ),
+      onOpenProject: (id) => context.go('/projects/$id'),
       onRemoveFromTeam: canManage
           ? () async {
               final failure = await ref
@@ -397,6 +401,37 @@ class _MemberRow extends ConsumerWidget {
             }
           : null,
     );
+  }
+
+  /// Собирает список общих проектов с этим участником (кроме текущего).
+  /// Источник — `myTeammatesProvider` (GET /api/me/teammates), кешируется
+  /// в Riverpod, так что повторный вызов недорогой.
+  Future<List<({String id, String title, String role})>> _loadCommonProjects(
+    WidgetRef ref,
+    String otherUserId,
+  ) async {
+    try {
+      final groups = await ref.read(myTeammatesProvider.future);
+      final out = <({String id, String title, String role})>[];
+      for (final g in groups) {
+        if (g.projectId == projectId) continue;
+        if (g.ownerId == otherUserId) {
+          out.add((id: g.projectId, title: g.projectTitle, role: 'Заказчик'));
+          continue;
+        }
+        final m = g.members.where((mm) => mm.userId == otherUserId).firstOrNull;
+        if (m != null) {
+          out.add((
+            id: g.projectId,
+            title: g.projectTitle,
+            role: m.role.displayName,
+          ));
+        }
+      }
+      return out;
+    } on Object {
+      return const [];
+    }
   }
 }
 

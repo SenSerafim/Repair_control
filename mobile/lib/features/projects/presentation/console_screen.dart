@@ -810,8 +810,12 @@ class _NavSections extends ConsumerWidget {
       action: DomainAction.selfPurchaseCreate,
       projectId: projectId,
     )));
+    // П2.15 — плитка «Инструмент» видна всем активным участникам проекта,
+    // включая customer/representative (их инструменты тоже могут быть на
+    // объекте). Write-действия (выдать/принять) внутри экрана уже гейтятся
+    // отдельно через toolsIssue/toolsReturn.
     final canTools = ref.watch(canInProjectProvider((
-      action: DomainAction.toolsIssue,
+      action: DomainAction.toolsViewProject,
       projectId: projectId,
     )));
     final canApprovals = ref.watch(canInProjectProvider((

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function UsersList({ onSelect }: { onSelect(id: string): void }) {
   const [items, setItems] = useState<any[]>([]);
@@ -35,6 +36,17 @@ export function UsersList({ onSelect }: { onSelect(id: string): void }) {
 
   return (
     <div>
+      <PageHelp
+        storageKey="users-list"
+        title="Пользователи"
+        summary="Список всех зарегистрированных пользователей. Поиск, фильтр по роли и статусу бана. Клик по строке открывает карточку пользователя с подробностями и действиями (бан / сброс пароля / разлогин)."
+        bullets={[
+          'Поиск ищет по телефону, имени и email одновременно. Нажмите Enter для применения.',
+          'Активная роль — та, под которой пользователь сейчас работает в мобайле (одну учётку можно иметь в нескольких ролях, переключение через профиль).',
+          'Бейдж BANNED означает, что пользователь не может войти. Снять бан можно в карточке.',
+          'Цифры справа: сколько проектов он владеет (ownedProjects) + в скольких состоит (memberships); число активных сессий.',
+        ]}
+      />
       <div className="row" style={{ marginBottom: 12, gap: 8 }}>
         <input
           placeholder="Поиск по телефону / имени / email"
@@ -48,11 +60,11 @@ export function UsersList({ onSelect }: { onSelect(id: string): void }) {
           style={{ flex: 0, minWidth: 140 }}
         >
           <option value="">Все роли</option>
-          <option value="customer">customer</option>
-          <option value="representative">representative</option>
-          <option value="contractor">contractor</option>
-          <option value="master">master</option>
-          <option value="admin">admin</option>
+          <option value="customer">Заказчик (customer)</option>
+          <option value="representative">Представитель (representative)</option>
+          <option value="contractor">Бригадир (contractor)</option>
+          <option value="master">Мастер (master)</option>
+          <option value="admin">Администратор (admin)</option>
         </select>
         <select
           value={banned}
@@ -88,7 +100,7 @@ export function UsersList({ onSelect }: { onSelect(id: string): void }) {
               </strong>
               {u.bannedAt && (
                 <span className="badge new" style={{ marginLeft: 8 }}>
-                  BANNED
+                  ЗАБАНЕН
                 </span>
               )}
               <div className="muted">

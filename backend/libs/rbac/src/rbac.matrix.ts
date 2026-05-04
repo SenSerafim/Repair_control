@@ -171,6 +171,18 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       // Инструмент выдаёт только бригадир-владелец (ownerId совпадает в сервисе).
       return ctx.membershipRole === 'foreman';
 
+    case 'tools.view_project':
+      // Read-only видимость инструмента в проекте: реестр + список выдач.
+      // Видна любому активному участнику проекта (customer-owner /
+      // representative / foreman / master) — даже у заказчика инструмент
+      // может быть на объекте (П2.15). Write-операции (issue/return/manage)
+      // остаются под более узкими правами.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return true;
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      return false;
+
     case 'tools.return':
       // Возврат: мастер инициирует, бригадир подтверждает. Customer не видит (ТЗ §1.4).
       if (ctx.membershipRole === 'customer') return false;

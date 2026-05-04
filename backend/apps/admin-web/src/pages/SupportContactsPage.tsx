@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 interface SupportContacts {
   support_max_url: string;
@@ -115,6 +116,17 @@ export function SupportContactsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="support-contacts"
+        title="Контакты поддержки"
+        summary="Каналы связи, которые видит пользователь на экране «Связаться с поддержкой» в мобайле. Все четыре поля независимы: пустое не показывается. Сохраняются как ключи app-settings (support_max_url / support_vk_url / support_email / support_phone)."
+        bullets={[
+          'MAX и VK — ссылки на каналы. Открываются в браузере телефона. Только https://. Можно использовать vk.me/... для прямого диалога.',
+          'Email — открывается через mailto:. Телефон — через tel:; формат «+7…», только цифры и плюс впереди.',
+          'Изменения подхватываются в мобайле сразу при следующем открытии экрана «Помощь / Поддержка» (запрос /me/app-settings).',
+          'Если хотите временно скрыть канал — очистите поле и сохраните; иконка пропадёт у пользователей.',
+        ]}
+      />
       <div className="muted" style={{ marginBottom: 16 }}>
         Контакты поддержки. Везде, где в мобильном приложении есть ссылка
         «Связаться с поддержкой», открывается единый экран с этими контактами.

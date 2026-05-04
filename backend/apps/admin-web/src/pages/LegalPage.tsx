@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 const KINDS: Array<'privacy' | 'tos' | 'data_processing_consent'> = [
   'privacy',
   'tos',
   'data_processing_consent',
 ];
+
+const KIND_LABELS: Record<string, string> = {
+  privacy: 'privacy — Политика конфиденциальности',
+  tos: 'tos — Пользовательское соглашение',
+  data_processing_consent: 'data_processing_consent — Согласие на обработку ПДн (152-ФЗ)',
+};
 
 export function LegalPage() {
   const [kind, setKind] = useState<'privacy' | 'tos' | 'data_processing_consent'>('privacy');
@@ -60,6 +67,17 @@ export function LegalPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="legal-md"
+        title="Юридические тексты в Markdown"
+        summary="Версионируемые юридические документы для мобайла: политика конфиденциальности, пользовательское соглашение и согласие на обработку ПДн. Хранятся как Markdown, отдаются мобайлу через публичный endpoint /legal/:kind."
+        bullets={[
+          'Чёрновая версия (DRAFT) — её можно редактировать. После «Опубликовать» она становится ACTIVE: предыдущая ACTIVE деактивируется, а у всех пользователей сбрасывается флаг согласия (152-ФЗ требует пересогласия при любом изменении).',
+          'Опубликованную версию редактировать нельзя — только создать новую.',
+          'Если нужны PDF-документы (для подписей, для сторонних регуляторов) — используйте раздел «Юр. документы PDF».',
+          'Поле version инкрементируется автоматически. Заказчик в мобайле увидит индикатор обновлённой версии.',
+        ]}
+      />
       <div className="row" style={{ marginBottom: 12, gap: 8 }}>
         <select
           value={kind}
@@ -70,7 +88,7 @@ export function LegalPage() {
         >
           {KINDS.map((k) => (
             <option key={k} value={k}>
-              {k}
+              {KIND_LABELS[k] ?? k}
             </option>
           ))}
         </select>
@@ -121,7 +139,7 @@ export function LegalPage() {
             ) : (
               <>
                 <button className="secondary" onClick={save}>
-                  Сохранить
+                  Сохранить черновик
                 </button>
                 <button onClick={publish}>Опубликовать</button>
               </>
@@ -143,12 +161,12 @@ export function LegalPage() {
                 </strong>
                 {d.isActive && (
                   <span className="badge read" style={{ marginLeft: 8 }}>
-                    ACTIVE
+                    АКТИВНАЯ
                   </span>
                 )}
                 {!d.publishedAt && (
                   <span className="badge new" style={{ marginLeft: 8 }}>
-                    DRAFT
+                    ЧЕРНОВИК
                   </span>
                 )}
               </div>

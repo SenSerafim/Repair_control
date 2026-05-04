@@ -86,6 +86,14 @@ const mkPrisma = () => {
         return sp;
       }),
     },
+    // §6.1 — mirror Approval-таблица (используется decide для синхронизации статуса).
+    approval: {
+      findFirst: jest.fn(() => null),
+      update: jest.fn(({ data }: any) => data),
+    },
+    approvalAttempt: {
+      create: jest.fn(({ data }: any) => ({ id: 'at-mock', ...data })),
+    },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
   return {
@@ -104,7 +112,9 @@ describe('SelfPurchasesService.create — gaps §4.3 иерархия', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 8000_00,
@@ -120,7 +130,9 @@ describe('SelfPurchasesService.create — gaps §4.3 иерархия', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
     st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       stageId: 's1',
@@ -135,7 +147,9 @@ describe('SelfPurchasesService.create — gaps §4.3 иерархия', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.create({ projectId: 'p1', amount: 1000, actorUserId: 'master1' }),
     ).rejects.toThrow(InvalidInputError);
@@ -146,7 +160,9 @@ describe('SelfPurchasesService.create — gaps §4.3 иерархия', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: [] });
     st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.create({
         projectId: 'p1',
@@ -160,7 +176,9 @@ describe('SelfPurchasesService.create — gaps §4.3 иерархия', () => {
   it('не участник проекта → ForbiddenError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.create({ projectId: 'p1', amount: 100, actorUserId: 'stranger' }),
     ).rejects.toThrow(ForbiddenError);
@@ -173,7 +191,9 @@ describe('SelfPurchasesService.decide', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const feed = mkFeed();
-    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 8000_00,
@@ -194,7 +214,9 @@ describe('SelfPurchasesService.decide', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 100,
@@ -210,7 +232,9 @@ describe('SelfPurchasesService.decide', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const feed = mkFeed();
-    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 100,
@@ -230,7 +254,9 @@ describe('SelfPurchasesService.decide', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 100,
@@ -247,7 +273,9 @@ describe('SelfPurchasesService.decide', () => {
     st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
     st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
     const feed = mkFeed();
-    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const original = await svc.create({
       projectId: 'p1',
       stageId: 's1',
@@ -284,7 +312,9 @@ describe('SelfPurchasesService.decide', () => {
     st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
     st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
     const feed = mkFeed();
-    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const original = await svc.create({
       projectId: 'p1',
       stageId: 's1',
@@ -307,7 +337,9 @@ describe('SelfPurchasesService.decide', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const feed = mkFeed();
-    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 100,
@@ -329,7 +361,9 @@ describe('SelfPurchasesService.decide', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const sp = await svc.create({
       projectId: 'p1',
       amount: 100,
@@ -343,7 +377,9 @@ describe('SelfPurchasesService.decide', () => {
 
   it('get 404', async () => {
     const st = mkPrisma();
-    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
   });
 
@@ -391,7 +427,9 @@ describe('SelfPurchasesService.decide', () => {
 
     it('owner видит только foreman→customer', async () => {
       const st = seed();
-      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+        request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+      } as any);
       const list = await svc.listForProject('p1', {
         userId: 'customer1',
         isOwner: true,
@@ -402,7 +440,9 @@ describe('SelfPurchasesService.decide', () => {
 
     it('foreman видит и свои (исходящие) и входящие master→foreman', async () => {
       const st = seed();
-      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+        request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+      } as any);
       const list = await svc.listForProject('p1', {
         userId: 'foreman1',
         membershipRole: 'foreman',
@@ -412,7 +452,9 @@ describe('SelfPurchasesService.decide', () => {
 
     it('master1 видит только своё', async () => {
       const st = seed();
-      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+        request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+      } as any);
       const list = await svc.listForProject('p1', {
         userId: 'master1',
         membershipRole: 'master',
@@ -422,7 +464,9 @@ describe('SelfPurchasesService.decide', () => {
 
     it('master2 не видит самозакуп master1', async () => {
       const st = seed();
-      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+        request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+      } as any);
       const list = await svc.listForProject('p1', {
         userId: 'master2',
         membershipRole: 'master',
@@ -432,7 +476,9 @@ describe('SelfPurchasesService.decide', () => {
 
     it('owner получает 403 на самозакуп master→foreman через get()', async () => {
       const st = seed();
-      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW));
+      const svc = new SelfPurchasesService(st.prisma, mkFeed(), new FixedClock(NOW), {
+        request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+      } as any);
       await expect(
         svc.get('sp_m2f', { userId: 'customer1', isOwner: true, membershipRole: 'customer' }),
       ).rejects.toThrow(ForbiddenError);

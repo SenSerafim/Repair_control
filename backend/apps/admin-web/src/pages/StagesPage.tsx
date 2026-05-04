@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 const STATUSES = [
   'pending',
@@ -10,6 +11,16 @@ const STATUSES = [
   'rejected',
   'overdue',
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'pending — ожидает старта',
+  active: 'active — в работе',
+  paused: 'paused — на паузе',
+  review: 'review — на согласовании заказчика',
+  done: 'done — принят',
+  rejected: 'rejected — заказчик отклонил',
+  overdue: 'overdue — просрочен',
+};
 
 export function StagesPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -54,17 +65,28 @@ export function StagesPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="stages"
+        title="Этапы проектов"
+        summary="Список этапов (Stage) по всем проектам. Этап — это блок работ внутри проекта (например, «Демонтаж»). Имеет собственный прогресс и статус из 7 состояний."
+        bullets={[
+          'Статусы: pending → active → review → done. Из active можно уйти в paused (с обязательной причиной), из review — в rejected (заказчик отклонил приёмку), любое незакрытое состояние при просрочке дедлайна — overdue.',
+          'Прогресс (progressCache) — материализованный показатель, считается фоновым cron каждые 15 минут плюс при изменении шагов/паузы/дедлайна.',
+          'Шагов — количество дочерних Step внутри этапа. Шаги — самый мелкий уровень декомпозиции работ.',
+          'Фильтр Project ID — UUID проекта; без фильтра показываются этапы всех проектов.',
+        ]}
+      />
       <div className="filters">
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {STATUS_LABELS[s] ?? s}
             </option>
           ))}
         </select>
         <input
-          placeholder="Project ID"
+          placeholder="UUID проекта"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && reload()}

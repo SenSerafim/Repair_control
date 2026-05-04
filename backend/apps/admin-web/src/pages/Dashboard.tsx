@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function Dashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -34,6 +35,17 @@ export function Dashboard() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="dashboard"
+        title="Сводка по системе"
+        summary="Обзорная страница админки. Показывает текущее состояние БД и активность за последние сутки. Цифры обновляются при каждом входе на страницу."
+        bullets={[
+          'Пользователи / Проекты / Чаты / Документы — всего записей в БД с разбивкой по статусу.',
+          'Обратная связь — счётчики писем от пользователей по статусам (new/read/archived).',
+          'Уведомления (24 ч) — push, отправленные за последние сутки: успешно/с ошибкой, плюс рассылки и экспорты.',
+          'Распределение по ролям — сколько пользователей с какой системной ролью (customer / representative / contractor / master / admin).',
+        ]}
+      />
       <h2 style={{ marginTop: 0 }}>Обзор системы</h2>
       <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
         {tile(
@@ -49,20 +61,20 @@ export function Dashboard() {
         {tile('Чатов', stats.chats.total)}
         {tile('Документов', stats.documents.total)}
       </div>
-      <h3 style={{ marginTop: 24 }}>Feedback</h3>
+      <h3 style={{ marginTop: 24 }}>Обратная связь</h3>
       <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
         {tile('Новых', stats.feedback.new)}
         {tile('Прочитанных', stats.feedback.read)}
-        {tile('Архив', stats.feedback.archived)}
+        {tile('В архиве', stats.feedback.archived)}
       </div>
-      <h3 style={{ marginTop: 24 }}>Уведомления (24 ч)</h3>
+      <h3 style={{ marginTop: 24 }}>Уведомления (за 24 часа)</h3>
       <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
         {tile('Доставлено', stats.notifications.delivered_24h)}
         {tile('Ошибок', stats.notifications.failed_24h)}
         {tile('Рассылок', stats.broadcasts.sent_24h)}
         {tile('Отчётов готово', stats.exports.done, `ошибок: ${stats.exports.failed}`)}
       </div>
-      <h3 style={{ marginTop: 24 }}>Распределение по ролям</h3>
+      <h3 style={{ marginTop: 24 }}>Распределение пользователей по ролям</h3>
       <div className="card">
         {Object.entries(stats.users.byRole as Record<string, number>).map(([role, count]) => (
           <div key={role} className="row" style={{ justifyContent: 'space-between' }}>

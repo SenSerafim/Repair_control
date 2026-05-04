@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function UserDetail({ userId, onBack }: { userId: string; onBack(): void }) {
   const [u, setU] = useState<any>(null);
@@ -57,6 +58,18 @@ export function UserDetail({ userId, onBack }: { userId: string; onBack(): void 
         ← К списку
       </button>
 
+      <PageHelp
+        storageKey="user-detail"
+        title="Карточка пользователя"
+        summary="Полная информация по одному пользователю и три административных действия. Все действия пишутся в журнал аудита и видны в нижней секции «Аудит»."
+        bullets={[
+          'Бан/разбан — пользователь сразу теряет возможность входа. Активные сессии не отзываются автоматически — используйте кнопку «Принудительный выход».',
+          'Сброс пароля — генерирует временный пароль, отзывает все refresh-сессии. Пароль показывается один раз во всплывающем окне, передайте его пользователю по защищённому каналу.',
+          'Принудительный выход — отзывает все активные сессии пользователя, не меняя пароля. Пригодится если устройство утеряно.',
+          'Сессии — список refresh-токенов: deviceId и IP-fingerprint, к которым они привязаны.',
+        ]}
+      />
+
       <div className="card">
         <div className="row">
           <div className="grow">
@@ -70,16 +83,16 @@ export function UserDetail({ userId, onBack }: { userId: string; onBack(): void 
             <div className="muted">Создан: {new Date(u.createdAt).toLocaleString()}</div>
             {u.lastSeenAt && (
               <div className="muted">
-                Посл. активность: {new Date(u.lastSeenAt).toLocaleString()}
+                Последняя активность: {new Date(u.lastSeenAt).toLocaleString()}
               </div>
             )}
           </div>
           <div style={{ flex: 0, textAlign: 'right' }}>
             <div style={{ marginBottom: 6 }}>
               {u.bannedAt ? (
-                <span className="badge new">BANNED</span>
+                <span className="badge new">ЗАБАНЕН</span>
               ) : (
-                <span className="badge read">ACTIVE</span>
+                <span className="badge read">АКТИВЕН</span>
               )}
             </div>
             <div className="muted" style={{ fontSize: 13 }}>
@@ -96,6 +109,9 @@ export function UserDetail({ userId, onBack }: { userId: string; onBack(): void 
 
       <div className="card">
         <strong>Роли</strong>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Все роли пользователя в системе. Активная — та, под которой он сейчас работает.
+        </div>
         <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           {u.roles.map((r: any) => (
             <span key={r.role} className="badge">
@@ -106,7 +122,10 @@ export function UserDetail({ userId, onBack }: { userId: string; onBack(): void 
       </div>
 
       <div className="card">
-        <strong>Действия</strong>
+        <strong>Действия администратора</strong>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Все три кнопки пишутся в журнал аудита (см. ниже) и в общий audit log.
+        </div>
         <div className="row" style={{ gap: 8, marginTop: 8 }}>
           {u.bannedAt ? (
             <button onClick={doUnban}>Разбанить</button>
@@ -117,23 +136,29 @@ export function UserDetail({ userId, onBack }: { userId: string; onBack(): void 
             Сбросить пароль
           </button>
           <button className="secondary" onClick={doLogout}>
-            Force logout
+            Принудительный выход
           </button>
         </div>
       </div>
 
       <div className="card">
         <strong>Активные сессии: {u.sessions?.length ?? 0}</strong>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Refresh-токены, привязанные к устройствам. Каждая запись = одно вошедшее устройство.
+        </div>
         {u.sessions?.slice(0, 5).map((s: any) => (
           <div key={s.id} className="muted" style={{ marginTop: 6, fontSize: 13 }}>
-            device={s.deviceId} · IP fp: {s.ipFingerprint} · до{' '}
+            устройство={s.deviceId} · отпечаток IP: {s.ipFingerprint} · активна до{' '}
             {new Date(s.expiresAt).toLocaleString()}
           </div>
         ))}
       </div>
 
       <div className="card">
-        <strong>Audit (последние действия над пользователем)</strong>
+        <strong>Аудит (последние действия над пользователем)</strong>
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          Из таблицы AuditLog: что произошло с этим пользователем (бан, сброс пароля, выход и т. п.).
+        </div>
         {audit.length === 0 && (
           <div className="muted" style={{ marginTop: 8 }}>
             Записей нет.
@@ -143,7 +168,7 @@ export function UserDetail({ userId, onBack }: { userId: string; onBack(): void 
           <div key={a.id} style={{ marginTop: 8, fontSize: 13 }}>
             <span className="badge">{a.action}</span>{' '}
             <span className="muted">
-              {new Date(a.createdAt).toLocaleString()} · actor: {a.actorId}
+              {new Date(a.createdAt).toLocaleString()} · кем: {a.actorId}
             </span>
           </div>
         ))}

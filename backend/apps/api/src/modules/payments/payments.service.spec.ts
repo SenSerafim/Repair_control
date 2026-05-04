@@ -168,7 +168,9 @@ describe('PaymentsService.createAdvance', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const feed = mkFeed();
-    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -185,7 +187,9 @@ describe('PaymentsService.createAdvance', () => {
   it('amount=0 → InvalidInputError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'active' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.createAdvance({ projectId: 'p1', toUserId: 'x', amount: 0, actorUserId: 'c' }),
     ).rejects.toThrow(InvalidInputError);
@@ -195,7 +199,9 @@ describe('PaymentsService.createAdvance', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'm1', role: 'master' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.createAdvance({ projectId: 'p1', toUserId: 'm1', amount: 100, actorUserId: 'c' }),
     ).rejects.toThrow(InvalidInputError);
@@ -204,7 +210,9 @@ describe('PaymentsService.createAdvance', () => {
   it('project archived → Conflict', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'archived' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.createAdvance({ projectId: 'p1', toUserId: 'f', amount: 100, actorUserId: 'c' }),
     ).rejects.toThrow(ConflictError);
@@ -217,7 +225,9 @@ describe('PaymentsService.confirm (двустороннее подтвержде
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const feed = mkFeed();
-    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -236,7 +246,9 @@ describe('PaymentsService.confirm (двустороннее подтвержде
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -250,7 +262,9 @@ describe('PaymentsService.confirm (двустороннее подтвержде
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -270,7 +284,9 @@ describe('PaymentsService.createDistribution', () => {
     st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
     st.memberships.push({ projectId: 'p1', userId: 'master2', role: 'master' });
     st.memberships.push({ projectId: 'p1', userId: 'master3', role: 'master' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const advance = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -313,7 +329,9 @@ describe('PaymentsService.createDistribution', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'f1', role: 'foreman' });
     st.memberships.push({ projectId: 'p1', userId: 'm1', role: 'master' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const advance = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'f1',
@@ -377,7 +395,9 @@ describe('PaymentsService.dispute + resolve', () => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const feed = mkFeed();
-    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -400,7 +420,9 @@ describe('PaymentsService.dispute + resolve', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -414,7 +436,9 @@ describe('PaymentsService.dispute + resolve', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -432,7 +456,9 @@ describe('PaymentsService.cancel', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -447,7 +473,9 @@ describe('PaymentsService.cancel', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
     st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -462,7 +490,9 @@ describe('PaymentsService.cancel', () => {
 describe('PaymentsService.get not found', () => {
   it('404 на несуществующий id', async () => {
     const st = mkPrisma();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
   });
 });
@@ -542,7 +572,9 @@ describe('PaymentsService.listForProject — visibility', () => {
 
   it('owner видит все 3 платежа', async () => {
     const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const list = await svc.listForProject('p1', {
       userId: 'customer1',
       isOwner: true,
@@ -553,7 +585,9 @@ describe('PaymentsService.listForProject — visibility', () => {
 
   it('master1 видит только d1', async () => {
     const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const list = await svc.listForProject('p1', {
       userId: 'master1',
       membershipRole: 'master',
@@ -563,7 +597,9 @@ describe('PaymentsService.listForProject — visibility', () => {
 
   it('foreman1 видит advance + 2 distribution (свои исходящие)', async () => {
     const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const list = await svc.listForProject('p1', {
       userId: 'foreman1',
       membershipRole: 'foreman',
@@ -573,7 +609,9 @@ describe('PaymentsService.listForProject — visibility', () => {
 
   it('outsider (customer без isOwner) → пусто', async () => {
     const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const list = await svc.listForProject('p1', {
       userId: 'noone',
       membershipRole: 'customer', // не owner
@@ -583,7 +621,9 @@ describe('PaymentsService.listForProject — visibility', () => {
 
   it('representative с canSeeBudget видит всё', async () => {
     const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const list = await svc.listForProject('p1', {
       userId: 'rep1',
       membershipRole: 'representative',
@@ -594,7 +634,9 @@ describe('PaymentsService.listForProject — visibility', () => {
 
   it('master2 не видит платёж master1 (P0.7.a get)', async () => {
     const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(svc.get('d1', { userId: 'master2', membershipRole: 'master' })).rejects.toThrow(
       /payment not visible/i,
     );

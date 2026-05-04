@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
+
+const ROLE_LABELS: Record<string, string> = {
+  customer: 'Заказчики',
+  representative: 'Представители',
+  contractor: 'Бригадиры',
+  master: 'Мастера',
+};
 
 export function BroadcastPage() {
   const [title, setTitle] = useState('');
@@ -52,7 +60,7 @@ export function BroadcastPage() {
 
   const doSend = async () => {
     if (!title.trim() || !body.trim()) return alert('Заполните заголовок и текст');
-    if (!confirm(`Отправить рассылку? Получатели: ${preview?.count ?? '?'}`)) return;
+    if (!confirm(`Отправить рассылку? Получателей: ${preview?.count ?? '?'}`)) return;
     setSending(true);
     try {
       await api.sendBroadcast({
@@ -79,12 +87,24 @@ export function BroadcastPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="broadcast"
+        title="Рассылки push-уведомлений"
+        summary="Массовая отправка push-уведомлений пользователям с гибкой фильтрацией. Фильтры комбинируются «И»: роль + платформа + список проектов. Рассылка идёт через тот же провайдер, что и обычные пуши."
+        bullets={[
+          'Сначала жмите «Превью» — увидите количество получателей и примеры UUID. Кнопка «Отправить» включается только после превью, чтобы случайно не послать всем.',
+          'Если ни одна роль не выбрана — рассылка идёт по всем ролям. То же с платформой (iOS / Android).',
+          'Project IDs — UUID проектов через пробел/запятую/точку с запятой. Тогда уведомление получат только участники этих проектов.',
+          'Deep-link — необязательная схема вида repair://projects/<id>; при тапе на пуш мобайл откроет соответствующий экран.',
+          'История рассылок внизу: targetCount = сколько было в выборке, deliveredCount = сколько подтвердил провайдер. Расхождение = ошибки доставки (см. логи уведомлений).',
+        ]}
+      />
       <div className="card">
         <strong>Новая рассылка</strong>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Заголовок"
+          placeholder="Заголовок (видно в шапке push)"
           style={{ marginTop: 8 }}
         />
         <textarea
@@ -112,7 +132,7 @@ export function BroadcastPage() {
               onClick={() => toggleRole(r)}
               style={{ flex: 0 }}
             >
-              {r}
+              {ROLE_LABELS[r] ?? r}
             </button>
           ))}
         </div>
@@ -131,13 +151,13 @@ export function BroadcastPage() {
               }}
               style={{ flex: 0 }}
             >
-              {p === '' ? 'Все' : p}
+              {p === '' ? 'Все' : p === 'ios' ? 'iOS' : 'Android'}
             </button>
           ))}
         </div>
 
         <div className="muted" style={{ marginTop: 12 }}>
-          Project IDs (опционально, через пробел/запятую — рассылка только участникам этих проектов):
+          UUID проектов (опционально, через пробел или запятую — рассылка только участникам этих проектов):
         </div>
         <input
           value={projectIdsRaw}
@@ -151,7 +171,7 @@ export function BroadcastPage() {
 
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
           <button className="secondary" onClick={doPreview}>
-            Preview
+            Превью
           </button>
           <button onClick={doSend} disabled={sending || !preview}>
             {sending ? 'Отправка…' : 'Отправить'}
@@ -185,9 +205,9 @@ export function BroadcastPage() {
               </div>
             </div>
             <div className="muted" style={{ flex: 0, textAlign: 'right', fontSize: 13 }}>
-              Target: {c.targetCount}
+              В выборке: {c.targetCount}
               <br />
-              Delivered: {c.deliveredCount}
+              Доставлено: {c.deliveredCount}
               <br />
               {c.sentAt && new Date(c.sentAt).toLocaleString()}
             </div>

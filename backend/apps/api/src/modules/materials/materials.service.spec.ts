@@ -175,7 +175,9 @@ describe('MaterialsService.createRequest', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', status: 'active', ownerId: 'c1' });
     const feed = mkFeed();
-    const svc = new MaterialsService(st.prisma, feed, new FixedClock(NOW));
+    const svc = new MaterialsService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const r = await svc.createRequest({
       projectId: 'p1',
       recipient: 'foreman',
@@ -193,7 +195,9 @@ describe('MaterialsService.createRequest', () => {
   it('пустой items → InvalidInputError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', status: 'active', ownerId: 'c1' });
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.createRequest({
         projectId: 'p1',
@@ -208,7 +212,9 @@ describe('MaterialsService.createRequest', () => {
   it('archived project → Conflict', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', status: 'archived', ownerId: 'c1' });
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(
       svc.createRequest({
         projectId: 'p1',
@@ -233,7 +239,9 @@ describe('MaterialsService FSM', () => {
       role: 'master',
       stageIds: ['s1'],
     });
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const r = await svc.createRequest({
       projectId: 'p1',
       stageId: 's1',
@@ -283,7 +291,9 @@ describe('MaterialsService FSM', () => {
     await svc.markItemBought(items[0].id, { pricePerUnit: 100 }, 'foreman1');
     const feed = mkFeed();
     // Создаём новый svc с пойманным feed — для утверждения
-    const svc2 = new MaterialsService(st.prisma, feed, new FixedClock(NOW));
+    const svc2 = new MaterialsService(st.prisma, feed, new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     const finalized = await svc2.finalize(requestId, 'foreman1');
     expect(finalized.status).toBe('bought');
     expect(finalized.finalizedAt).toEqual(NOW);
@@ -329,7 +339,9 @@ describe('MaterialsService FSM', () => {
 
   it('get 404', async () => {
     const st = mkPrisma();
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW));
+    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
+      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+    } as any);
     await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
   });
 });

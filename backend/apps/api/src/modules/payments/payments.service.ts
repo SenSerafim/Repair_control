@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Payment, PaymentKind, PaymentStatus, Prisma } from '@prisma/client';
 import {
   Clock,
@@ -11,6 +11,7 @@ import {
   PrismaService,
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 export interface CreateAdvanceInput {
   projectId: string;
@@ -51,6 +52,8 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
     private readonly clock: Clock,
+    @Inject(forwardRef(() => ApprovalsService))
+    private readonly approvals: ApprovalsService,
   ) {}
 
   async createAdvance(input: CreateAdvanceInput): Promise<Payment> {
@@ -288,6 +291,7 @@ export class PaymentsService {
     reason: string,
     actorUserId: string,
     photoKeys: string[] = [],
+    options?: { claimedAmount?: number; kind?: 'underpayment' | 'overpayment' | 'other' },
   ): Promise<Payment> {
     const payment = await this.prisma.payment.findUnique({ where: { id: paymentId } });
     if (!payment) throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'payment not found');
@@ -304,6 +308,16 @@ export class PaymentsService {
       );
     }
 
+    // §6.1 — диспут уходит в Approvals Inbox. Адресат — заказчик.
+    // Цепочка через бригадира с canApprove обрабатывается в общем правиле (см. слайс E).
+    const project = await this.prisma.project.findUnique({
+      where: { id: payment.projectId },
+      select: { ownerId: true },
+    });
+    if (!project) {
+      throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.payment.update({
         where: { id: paymentId },
@@ -318,6 +332,107 @@ export class PaymentsService {
         projectId: payment.projectId,
         actorId: actorUserId,
         payload: { paymentId, reason, photoCount: photoKeys.length },
+      });
+      // §6.1 — mirror Approval. Источник истины — Payment / PaymentDispute.
+      // ApprovalsService.decide для scope=payment_dispute делегирует в resolveDispute.
+      await this.approvals.request({
+        scope: 'payment_dispute',
+        projectId: payment.projectId,
+        addresseeId: project.ownerId,
+        actorRole: 'customer',
+        payload: {
+          paymentId,
+          originalAmount: Number(payment.amount),
+          claimedAmount: options?.claimedAmount ?? Number(payment.amount),
+          kind: options?.kind ?? 'other',
+          reason,
+        },
+        attachmentKeys: photoKeys,
+        requestedById: actorUserId,
+        tx,
+      });
+      return u;
+    });
+    return this.serialize(updated);
+  }
+
+  /**
+   * §6.1 — точка делегирования из ApprovalsService.decide для scope=payment_dispute.
+   * Approve → дисп закрыт, Payment.status='resolved'. Reject → платёж возвращается в pending,
+   * dispute закрывается без resolution.
+   */
+  async resolveDispute(
+    paymentId: string,
+    input: {
+      decision: 'approved' | 'rejected';
+      comment?: string;
+      actorUserId: string;
+      actorSystemRole: 'customer' | 'representative' | 'contractor' | 'master' | 'admin';
+    },
+  ): Promise<Payment> {
+    const payment = await this.prisma.payment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw new NotFoundError(ErrorCodes.PAYMENT_NOT_FOUND, 'payment not found');
+    if (payment.status !== 'disputed') {
+      throw new ConflictError(
+        ErrorCodes.PAYMENT_INVALID_STATUS,
+        'can resolve only disputed payments',
+      );
+    }
+
+    const now = this.clock.now();
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.payment.update({
+        where: { id: paymentId },
+        data:
+          input.decision === 'approved'
+            ? { status: 'resolved', resolvedAt: now, resolvedAmount: payment.amount }
+            : { status: 'pending', disputedAt: null },
+      });
+      await tx.paymentDispute.updateMany({
+        where: { paymentId, status: 'open' },
+        data: {
+          status: input.decision === 'approved' ? 'resolved' : 'rejected',
+          resolution: input.comment,
+          resolvedAt: now,
+          resolvedBy: input.actorUserId,
+        },
+      });
+      // Синхронизировать mirror Approval(scope=payment_dispute).
+      const mirror = await tx.approval.findFirst({
+        where: {
+          projectId: payment.projectId,
+          scope: 'payment_dispute',
+          status: 'pending',
+          payload: { path: ['paymentId'], equals: paymentId },
+        },
+        select: { id: true, attemptNumber: true },
+      });
+      if (mirror) {
+        await tx.approval.update({
+          where: { id: mirror.id },
+          data: {
+            status: input.decision,
+            decidedAt: now,
+            decidedById: input.actorUserId,
+            decisionComment: input.comment,
+          },
+        });
+        await tx.approvalAttempt.create({
+          data: {
+            approvalId: mirror.id,
+            attemptNumber: mirror.attemptNumber,
+            action: input.decision,
+            actorId: input.actorUserId,
+            comment: input.comment,
+          },
+        });
+      }
+      await this.feed.emit({
+        tx,
+        kind: input.decision === 'approved' ? 'payment_resolved' : 'payment_disputed',
+        projectId: payment.projectId,
+        actorId: input.actorUserId,
+        payload: { paymentId, approvalDecision: input.decision },
       });
       return u;
     });

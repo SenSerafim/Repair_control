@@ -140,6 +140,37 @@ class MaterialsRepository {
         return MaterialRequest.parse(r.data!);
       });
 
+  /// §6.1 — заявка от бригадира на согласование закупки материалов.
+  /// Бэкенд создаёт Approval(scope=material_purchase). MaterialRequest появится
+  /// автоматически после approve заказчиком.
+  /// Возвращает payload Approval (не MaterialRequest).
+  Future<Map<String, dynamic>> requestPurchaseApproval({
+    required String projectId,
+    required String title,
+    required int amount,
+    required List<MaterialItemInput> items,
+    String? stageId,
+    String? comment,
+    String? supplier,
+    List<String>? photoKeys,
+  }) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/projects/$projectId/materials/purchase-approvals',
+          data: {
+            'title': title,
+            'amount': amount,
+            'items': items.map((e) => e.toJson()).toList(),
+            if (stageId != null) 'stageId': stageId,
+            if (comment != null && comment.isNotEmpty) 'comment': comment,
+            if (supplier != null && supplier.isNotEmpty) 'supplier': supplier,
+            if (photoKeys != null && photoKeys.isNotEmpty)
+              'photoKeys': photoKeys,
+          },
+        );
+        return r.data!;
+      });
+
   Future<T> _call<T>(Future<T> Function() action) async {
     try {
       return await action();

@@ -1,8 +1,22 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 const STATUSES = ['pending', 'confirmed', 'disputed', 'resolved', 'cancelled'];
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'pending — ожидает подтверждения',
+  confirmed: 'confirmed — подтверждено получателем',
+  disputed: 'disputed — открыт спор',
+  resolved: 'resolved — спор разрешён (с пересчётом)',
+  cancelled: 'cancelled — отменено отправителем',
+};
+
 const KINDS = ['advance', 'distribution', 'work'];
+const KIND_LABELS: Record<string, string> = {
+  advance: 'advance — аванс заказчик→бригадир',
+  distribution: 'distribution — распределение бригадир→мастер',
+  work: 'work — оплата за работу',
+};
 
 export function PaymentsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -58,12 +72,23 @@ export function PaymentsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="payments"
+        title="Платежи"
+        summary="Все денежные операции по проектам. Хранятся в копейках (int64), форматирование — в рублях. Каждая выплата проходит FSM из 5 статусов, доплаты к авансу связаны через parentPaymentId."
+        bullets={[
+          'Виды: advance — аванс от заказчика бригадиру; distribution — бригадир раскидывает аванс на мастеров (parentPaymentId ссылается на исходный advance); work — оплата за выполненную работу.',
+          'Спор (disputed): получатель оспорил сумму. После разрешения статус становится resolved, поле resolvedAmount хранит финальную сумму.',
+          'Все POST /payments* защищены Idempotency-Key middleware на бекенде — повторный клик не создаст дубликат.',
+          'Эта страница read-only. Все действия с деньгами доступны только в мобайле, где есть RBAC и обязательный Idempotency-Key из клиента.',
+        ]}
+      />
       <div className="filters">
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {STATUS_LABELS[s] ?? s}
             </option>
           ))}
         </select>
@@ -71,12 +96,12 @@ export function PaymentsPage() {
           <option value="">Все виды</option>
           {KINDS.map((k) => (
             <option key={k} value={k}>
-              {k}
+              {KIND_LABELS[k] ?? k}
             </option>
           ))}
         </select>
         <input
-          placeholder="Project ID"
+          placeholder="UUID проекта"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && reload()}
@@ -106,7 +131,7 @@ export function PaymentsPage() {
                   <strong>{money(p.amount)}</strong>
                   {p.resolvedAmount && (
                     <div className="muted" style={{ fontSize: 11 }}>
-                      → {money(p.resolvedAmount)}
+                      → после спора: {money(p.resolvedAmount)}
                     </div>
                   )}
                 </td>

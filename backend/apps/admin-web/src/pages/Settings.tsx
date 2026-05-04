@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<any[]>([]);
@@ -46,10 +47,21 @@ export function SettingsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="settings"
+        title="Системные настройки (key-value)"
+        summary="Произвольный реестр настроек приложения в виде ключ→значение. Хранятся в таблице AppSetting. Часть ключей публикуется на мобильные клиенты через GET /me/app-settings."
+        bullets={[
+          'Каждая запись — одна строка с ключом (snake_case) и строковым значением. Значение можно править на месте и сохранять кнопкой «Сохранить».',
+          'Кнопка «+ Ключ» создаёт новую запись (через два prompt-окна: ключ → значение).',
+          'Контакты поддержки лучше править на странице «Контакты поддержки» — там валидация и подсказки.',
+          'Изменения применяются сразу. Мобильные клиенты подхватят их при следующем входе или открытии экрана, который читает app-settings.',
+        ]}
+      />
       <div className="row" style={{ marginBottom: 12 }}>
         <div className="muted grow">
-          Ключи приложения (support URL, версии политик). Публичные — через{' '}
-          <code>GET /me/app-settings</code>.
+          Ключи приложения (URL поддержки, версии политик и т. п.). Публичные значения отдаются
+          мобайлу через <code>GET /me/app-settings</code>.
         </div>
         <button onClick={createNew} style={{ flex: 0 }}>
           + Ключ
@@ -71,7 +83,7 @@ export function SettingsPage() {
           </div>
           <div className="muted" style={{ marginTop: 6 }}>
             Обновлено: {new Date(s.updatedAt).toLocaleString()}
-            {s.updatedBy ? ` · by ${s.updatedBy}` : ''}
+            {s.updatedBy ? ` · кем: ${s.updatedBy}` : ''}
           </div>
         </div>
       ))}

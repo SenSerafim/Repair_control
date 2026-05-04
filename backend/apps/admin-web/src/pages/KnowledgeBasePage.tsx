@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { uploadWithProgress } from '../lib/upload';
+import { PageHelp } from '../lib/PageHelp';
 
 interface Category {
   id: string;
@@ -136,10 +137,17 @@ function CategoryList({ onOpen }: { onOpen: (c: Category) => void }) {
 
   return (
     <div>
-      <div className="muted" style={{ marginBottom: 12 }}>
-        Категории Базы знаний. Глобальные доступны всем; project_module —
-        контекстная справка для конкретного модуля мобайла.
-      </div>
+      <PageHelp
+        storageKey="knowledge-list"
+        title="База знаний"
+        summary="Двухуровневая справка для пользователей мобайла: категории → статьи. К каждой статье можно прикрепить медиа (фото, видео, PDF). Доступна на трёх точках входа: профиль, экран помощи, контекстная кнопка «?» внутри модулей."
+        bullets={[
+          'Категория глобальная (scope=global) — видна на главном экране базы знаний всем. project_module — контекстная справка к конкретному модулю мобайла (stages / approvals / finance / materials / tools / chats / documents / team / console).',
+          'Категория «скрыта» (isPublished=false) не отдаётся мобайлу — удобно держать черновики до готовности.',
+          'Order index влияет на порядок отображения. Меньше — выше в списке.',
+          'Удаление категории каскадно удаляет все статьи и медиа в ней. Это необратимо.',
+        ]}
+      />
       {error && <div className="error" style={{ marginBottom: 12 }}>{error}</div>}
 
       <div className="row" style={{ marginBottom: 12 }}>
@@ -270,7 +278,7 @@ function CategoryForm({
         />
       </label>
       <label style={{ display: 'block', marginBottom: 8 }}>
-        <div className="muted">Scope</div>
+        <div className="muted">Область видимости (scope)</div>
         <select
           value={scope}
           onChange={(e) => setScope(e.target.value as any)}
@@ -282,7 +290,7 @@ function CategoryForm({
       </label>
       {scope === 'project_module' && (
         <label style={{ display: 'block', marginBottom: 8 }}>
-          <div className="muted">Module slug</div>
+          <div className="muted">Идентификатор модуля (moduleSlug)</div>
           <select
             value={moduleSlug}
             onChange={(e) => setModuleSlug(e.target.value)}
@@ -296,7 +304,7 @@ function CategoryForm({
         </label>
       )}
       <label style={{ display: 'block', marginBottom: 8 }}>
-        <div className="muted">Order index</div>
+        <div className="muted">Порядок (order index — меньше = выше)</div>
         <input
           type="number"
           value={orderIndex}
@@ -382,9 +390,20 @@ function CategoryDetail({
           {category.title}
         </div>
         <button onClick={() => setShowEdit(!showEdit)} style={{ flex: 0 }}>
-          {showEdit ? 'Закрыть' : 'Edit'}
+          {showEdit ? 'Закрыть' : 'Изменить'}
         </button>
       </div>
+      <PageHelp
+        storageKey="knowledge-category"
+        title="Статьи внутри категории"
+        summary="Статьи — это единицы контента базы знаний. Каждая хранит Markdown-тело и ссылки на медиа. ETag-кеш на бекенде позволяет мобайлу не перекачивать неизменившиеся статьи."
+        bullets={[
+          'Версия статьи (v1, v2…) растёт при каждом сохранении. Этот же номер используется в ETag.',
+          'Статья «не опубликована» (isPublished=false) — доступна только в админке. На мобайле не отдаётся.',
+          'Для редактирования статьи откройте её кликом по карточке. Внутри будет редактор + загрузка медиа.',
+          'Кнопка «Изменить» сверху редактирует категорию (название, scope, видимость).',
+        ]}
+      />
 
       {showEdit && (
         <CategoryForm
@@ -581,6 +600,18 @@ function ArticleEditor({
         </div>
         <div className="muted" style={{ flex: 0, fontSize: 12 }}>v{article.version}</div>
       </div>
+
+      <PageHelp
+        storageKey="knowledge-article"
+        title="Редактор статьи"
+        summary="Редактирование одной статьи базы знаний: заголовок, Markdown-тело, флаг публикации и список медиа. Сохранение увеличивает version и обновляет ETag — мобайл при следующем запросе подтянет новую версию."
+        bullets={[
+          'Тело — Markdown. Синтаксис: # заголовки, **жирный**, *курсив*, списки, ссылки [текст](url), таблицы, цитаты (>). Ссылки на медиа из этой же статьи лучше вставлять кнопкой «Добавить медиа», а не вручную.',
+          'Снятие галочки «Опубликована» прячет статью от мобайла, не удаляя её.',
+          'Раздел «Медиа» — фото (JPG/PNG), видео (MP4/MOV) и PDF. Лимит 200 MB на файл, у видео нужно вручную загрузить обложку (миниатюру).',
+          'Удаление статьи каскадно удаляет все её медиа. Действие необратимо.',
+        ]}
+      />
 
       {error && <div className="error" style={{ marginBottom: 12 }}>{error}</div>}
 

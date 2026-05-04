@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Prisma, SelfPurchase, SelfPurchaseBy, SelfPurchaseStatus } from '@prisma/client';
 import {
   Clock,
@@ -11,6 +11,7 @@ import {
   PrismaService,
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
+import { ApprovalsService } from '../approvals/approvals.service';
 
 export interface CreateSelfPurchaseInput {
   projectId: string;
@@ -56,6 +57,8 @@ export class SelfPurchasesService {
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
     private readonly clock: Clock,
+    @Inject(forwardRef(() => ApprovalsService))
+    private readonly approvals: ApprovalsService,
   ) {}
 
   async create(input: CreateSelfPurchaseInput): Promise<SelfPurchase> {
@@ -136,6 +139,26 @@ export class SelfPurchasesService {
           amount: Number(amount.kopeks()),
         },
       });
+      // §6.1 — mirror Approval, чтобы заявка попала в общий Inbox согласований.
+      // Источник истины — SelfPurchase. ApprovalsService.decide для scope=self_purchase
+      // делегирует обратно в SelfPurchasesService.decide; applyDecisionEffect — no-op.
+      await this.approvals.request({
+        scope: 'self_purchase',
+        projectId: project.id,
+        stageId: input.stageId,
+        addresseeId,
+        actorRole: byRole === 'master' ? 'foreman' : 'customer',
+        payload: {
+          selfPurchaseId: sp.id,
+          amount: Number(amount.kopeks()),
+          byRole,
+          kind: 'materials',
+          comment: input.comment ?? null,
+        },
+        attachmentKeys: input.photoKeys ?? [],
+        requestedById: input.actorUserId,
+        tx,
+      });
       return sp;
     });
     return this.serialize(created);
@@ -199,8 +222,39 @@ export class SelfPurchasesService {
           decisionComment: input.comment,
         },
       });
+      // §6.1 — синхронизировать mirror Approval (scope=self_purchase, payload.selfPurchaseId=id)
+      // в pending → approved/rejected. Делаем напрямую, без applyDecisionEffect (он no-op для self_purchase).
+      const mirror = await tx.approval.findFirst({
+        where: {
+          projectId: sp.projectId,
+          scope: 'self_purchase',
+          status: 'pending',
+          payload: { path: ['selfPurchaseId'], equals: id },
+        },
+        select: { id: true, attemptNumber: true },
+      });
+      if (mirror) {
+        await tx.approval.update({
+          where: { id: mirror.id },
+          data: {
+            status: input.decision,
+            decidedAt: now,
+            decidedById: input.actorUserId,
+            decisionComment: input.comment,
+          },
+        });
+        await tx.approvalAttempt.create({
+          data: {
+            approvalId: mirror.id,
+            attemptNumber: mirror.attemptNumber,
+            action: input.decision,
+            actorId: input.actorUserId,
+            comment: input.comment,
+          },
+        });
+      }
       if (willForward && project) {
-        await tx.selfPurchase.create({
+        const forwarded = await tx.selfPurchase.create({
           data: {
             projectId: sp.projectId,
             stageId: sp.stageId,
@@ -220,6 +274,25 @@ export class SelfPurchasesService {
           projectId: sp.projectId,
           actorId: input.actorUserId,
           payload: { selfPurchaseId: id, forwardedToOwnerId: project.ownerId },
+        });
+        // §6.1 — также создаём mirror Approval для forwarded SelfPurchase
+        await this.approvals.request({
+          scope: 'self_purchase',
+          projectId: sp.projectId,
+          stageId: sp.stageId ?? undefined,
+          addresseeId: project.ownerId,
+          actorRole: 'customer',
+          payload: {
+            selfPurchaseId: forwarded.id,
+            amount: Number(sp.amount),
+            byRole: 'foreman',
+            kind: 'materials',
+            comment: sp.comment ?? null,
+            forwardedFromSelfPurchaseId: sp.id,
+          },
+          attachmentKeys: sp.photoKeys ?? [],
+          requestedById: input.actorUserId,
+          tx,
         });
       } else {
         await this.feed.emit({

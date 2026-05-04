@@ -28,6 +28,7 @@ enum DomainAction {
   toolsManage('tools.manage'),
   toolsIssue('tools.issue'),
   toolsReturn('tools.return'),
+  toolsViewProject('tools.view_project'),
   chatRead('chat.read'),
   chatWrite('chat.write'),
   chatCreatePersonal('chat.create_personal'),

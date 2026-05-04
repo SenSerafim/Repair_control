@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function FeedbackList() {
   const [items, setItems] = useState<any[]>([]);
@@ -34,12 +35,23 @@ export function FeedbackList() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="feedback"
+        title="Обратная связь от пользователей"
+        summary="Сообщения, отправленные пользователями через экран «Обратная связь» в мобайле. К каждому письму могут быть приложены файлы (скриншоты, фото) — они хранятся в S3 и здесь показываются только их количество."
+        bullets={[
+          'Статусы: new — новое (не прочитано); read — оператор открыл; archived — обработано/неактуально.',
+          'Кнопка «Прочитано» переводит в read. «В архив» — финальный статус. Никаких ответов из админки нет — связь с пользователем оператор поддерживает по контактам поддержки.',
+          'Поле «От» — UUID отправителя. По UUID можно перейти в раздел «Пользователи» и найти его карточку.',
+          'Этот экран не отвечает в духе чата — это только триаж входящих писем.',
+        ]}
+      />
       <div className="row" style={{ marginBottom: 12 }}>
         <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
           <option value="">Все статусы</option>
-          <option value="new">new</option>
-          <option value="read">read</option>
-          <option value="archived">archived</option>
+          <option value="new">новые</option>
+          <option value="read">прочитанные</option>
+          <option value="archived">в архиве</option>
         </select>
         <button className="secondary" onClick={reload}>
           Обновить

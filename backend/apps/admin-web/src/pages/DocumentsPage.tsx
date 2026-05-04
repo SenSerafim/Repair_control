@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 export function DocumentsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -39,6 +40,17 @@ export function DocumentsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="documents"
+        title="Документы проектов"
+        summary="Все файлы, прикреплённые к проектам через раздел «Документы» в мобайле. Файлы хранятся в MinIO/S3, в БД — только метаданные. Категория задаётся пользователем при загрузке (договор, смета, акт и т. п.)."
+        bullets={[
+          'Категория — одна из 7 предопределённых: contract / estimate / act / specification / drawing / photo / other.',
+          'Размер выводится в Б/КБ/МБ. Жёсткий лимит на размер — определяется политикой FilesService на бекенде.',
+          'Кто загрузил — UUID (или имя) Membership-пользователя проекта; админка видит всех, заказчик — только то, что разрешено его правами в проекте.',
+          'Эта страница read-only: документы загружаются/удаляются только в мобайле под RBAC проекта.',
+        ]}
+      />
       <div className="filters">
         <input
           placeholder="Поиск по названию"
@@ -47,7 +59,7 @@ export function DocumentsPage() {
           onKeyDown={(e) => e.key === 'Enter' && reload()}
         />
         <input
-          placeholder="Project ID"
+          placeholder="UUID проекта"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && reload()}
@@ -97,7 +109,7 @@ export function DocumentsPage() {
             {items.length === 0 && (
               <tr>
                 <td colSpan={6} className="muted" style={{ textAlign: 'center' }}>
-                  Пусто
+                  Записей нет
                 </td>
               </tr>
             )}

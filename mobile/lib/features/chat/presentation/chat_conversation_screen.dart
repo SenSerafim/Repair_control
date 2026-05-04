@@ -13,6 +13,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../team/application/team_controller.dart';
+import '../../team/data/team_repository.dart';
 import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
 import '../domain/message.dart';
@@ -248,6 +249,8 @@ class _ChatConversationScreenState
     if (m.userId != authorUserId) return; // не нашли — молча
     final user = m.user;
     if (user == null || !mounted) return;
+    final commonProjects = await _loadCommonProjects(authorUserId, projectId);
+    if (!mounted) return;
     await showMemberCardSheet(
       context,
       data: MemberCardData(
@@ -258,11 +261,39 @@ class _ChatConversationScreenState
         currentProjectTitle: chat.title ?? 'Проект',
         phone: user.phone,
         avatarUrl: user.avatarUrl,
+        commonProjects: commonProjects,
       ),
-      onOpenChat: () {
-        // уже в чате — ничего не делаем
-      },
     );
+  }
+
+  /// Общие с собеседником проекты (кроме текущего) — для блока «Другие
+  /// общие проекты» в карточке. Берётся из закешированного teammates-списка.
+  Future<List<({String id, String title, String role})>> _loadCommonProjects(
+    String otherUserId,
+    String currentProjectId,
+  ) async {
+    try {
+      final groups = await ref.read(myTeammatesProvider.future);
+      final out = <({String id, String title, String role})>[];
+      for (final g in groups) {
+        if (g.projectId == currentProjectId) continue;
+        if (g.ownerId == otherUserId) {
+          out.add((id: g.projectId, title: g.projectTitle, role: 'Заказчик'));
+          continue;
+        }
+        final mm = g.members.where((x) => x.userId == otherUserId).firstOrNull;
+        if (mm != null) {
+          out.add((
+            id: g.projectId,
+            title: g.projectTitle,
+            role: mm.role.displayName,
+          ));
+        }
+      }
+      return out;
+    } on Object {
+      return const [];
+    }
   }
 
   Future<void> _promptEdit(Message m) async {

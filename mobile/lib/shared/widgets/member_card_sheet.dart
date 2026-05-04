@@ -37,8 +37,9 @@ class MemberCardData {
   final String? email;
   final String? avatarUrl;
 
-  /// Другие общие с текущим пользователем проекты ({id, title}).
-  final List<({String id, String title})> commonProjects;
+  /// Другие общие с текущим пользователем проекты — id, название, роль участника
+  /// в этом проекте (для подписи под названием).
+  final List<({String id, String title, String role})> commonProjects;
 
   String get fullName => '$firstName $lastName'.trim();
 }
@@ -203,7 +204,7 @@ class _MemberCardSheet extends StatelessWidget {
                   iconBg: AppColors.n50,
                   iconFg: AppColors.n500,
                   title: p.title,
-                  subtitle: 'Открыть проект',
+                  subtitle: p.role,
                   onTap: () {
                     Navigator.of(context).pop();
                     onOpenProject?.call(p.id);

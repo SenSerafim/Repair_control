@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/config/app_theme_mode.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -140,14 +139,6 @@ class ProfileScreen extends ConsumerWidget {
                               : 'English',
                           onTap: () => _openLanguageSheet(context, ref),
                         ),
-                        AppMenuRow(
-                          icon: _themeIcon(ref.watch(themeModeProvider)),
-                          iconBg: AppColors.n100,
-                          iconColor: AppColors.n600,
-                          label: 'Тема',
-                          value: _themeLabel(ref.watch(themeModeProvider)),
-                          onTap: () => _openThemeSheet(context, ref),
-                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.x12),
@@ -264,60 +255,11 @@ class ProfileScreen extends ConsumerWidget {
     return unread > 99 ? '99+' : '$unread';
   }
 
-  IconData _themeIcon(ThemeMode mode) => switch (mode) {
-        ThemeMode.light => PhosphorIconsFill.sun,
-        ThemeMode.dark => PhosphorIconsFill.moon,
-        ThemeMode.system => PhosphorIconsFill.circleHalf,
-      };
-
-  String _themeLabel(ThemeMode mode) => switch (mode) {
-        ThemeMode.light => 'Светлая',
-        ThemeMode.dark => 'Тёмная',
-        ThemeMode.system => 'Системная',
-      };
-
   Future<void> _openLanguageSheet(
     BuildContext context,
     WidgetRef ref,
   ) async {
     await showLanguageSheet(context, ref);
-  }
-
-  Future<void> _openThemeSheet(BuildContext context, WidgetRef ref) async {
-    final current = ref.read(themeModeProvider);
-    final picked = await showAppBottomSheet<ThemeMode>(
-      context: context,
-      child: Builder(
-        builder: (ctx) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const AppBottomSheetHeader(
-              title: 'Тема приложения',
-              subtitle: 'Выберите внешний вид интерфейса',
-            ),
-            for (final m in ThemeMode.values)
-              AppMenuRow(
-                icon: _themeIcon(m),
-                iconBg: AppColors.n100,
-                iconColor: AppColors.n600,
-                label: _themeLabel(m),
-                trailing: m == current
-                    ? const Icon(
-                        PhosphorIconsBold.check,
-                        size: 18,
-                        color: AppColors.brand,
-                      )
-                    : null,
-                onTap: () => Navigator.of(ctx).pop(m),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (picked != null) {
-      await ref.read(themeModeProvider.notifier).setMode(picked);
-    }
   }
 }
 

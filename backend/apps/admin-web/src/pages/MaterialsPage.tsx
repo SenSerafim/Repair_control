@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { PageHelp } from '../lib/PageHelp';
 
 const STATUSES = [
   'draft',
@@ -11,6 +12,17 @@ const STATUSES = [
   'resolved',
   'cancelled',
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'draft — черновик',
+  open: 'open — заявка отправлена',
+  partiallyBought: 'partiallyBought — куплено частично',
+  bought: 'bought — всё куплено',
+  delivered: 'delivered — доставлено на объект',
+  disputed: 'disputed — оспорено',
+  resolved: 'resolved — спор разрешён',
+  cancelled: 'cancelled — отменено',
+};
 
 export function MaterialsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -44,17 +56,28 @@ export function MaterialsPage() {
 
   return (
     <div>
+      <PageHelp
+        storageKey="materials"
+        title="Заявки на материалы"
+        summary="Список MaterialRequest — заявки на закупку материалов внутри проектов. Каждая заявка имеет статус из FSM на 8 состояний и набор позиций (items) с галочкой «куплено / доставлено»."
+        bullets={[
+          'Получатель — тот, кто закупает (recipient): обычно бригадир или мастер. Чек-лист позиций ведётся в мобайле.',
+          'partiallyBought — часть позиций отмечена как куплена, часть ещё нет. После закрытия всех позиций статус автоматически становится bought.',
+          'disputed → resolved — спор по ассортименту/ценам. Разрешение приводит к перерасчёту бюджета.',
+          'Эта страница read-only: заявки создаются и закрываются в мобайле. Здесь — для аналитики и разбора инцидентов.',
+        ]}
+      />
       <div className="filters">
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {STATUS_LABELS[s] ?? s}
             </option>
           ))}
         </select>
         <input
-          placeholder="Project ID"
+          placeholder="UUID проекта"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && reload()}

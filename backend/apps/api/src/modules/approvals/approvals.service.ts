@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { Approval, ApprovalScope, ApprovalStatus, MembershipRole, Prisma } from '@prisma/client';
 import {
   Clock,
@@ -11,6 +11,9 @@ import {
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
 import { ProgressCalculator } from '../stages/progress-calculator';
+import { SelfPurchasesService } from '../selfpurchases/selfpurchases.service';
+import { PaymentsService } from '../payments/payments.service';
+import { MaterialsService } from '../materials/materials.service';
 
 export interface CreateApprovalInput {
   scope: ApprovalScope;
@@ -41,6 +44,12 @@ export class ApprovalsService {
     private readonly feed: FeedService,
     private readonly calc: ProgressCalculator,
     private readonly clock: Clock,
+    @Inject(forwardRef(() => SelfPurchasesService))
+    private readonly selfpurchases: SelfPurchasesService,
+    @Inject(forwardRef(() => PaymentsService))
+    private readonly payments: PaymentsService,
+    @Inject(forwardRef(() => MaterialsService))
+    private readonly materials: MaterialsService,
   ) {}
 
   /**
@@ -50,6 +59,45 @@ export class ApprovalsService {
   async request(input: CreateApprovalInput): Promise<Approval> {
     const run = async (tx: Prisma.TransactionClient): Promise<Approval> => {
       await this.validateRequest(input, tx);
+      // §6.1 / E — общее правило: если адресат — заказчик и инициатор НЕ бригадир,
+      // а в проекте есть бригадир с правом canApprove (или role=foreman без явных прав
+      // — он бригадир по дефолту) — вставляем промежуточную ступень foreman→customer.
+      // Применяется к scope, где это семантически уместно: self_purchase / payment_dispute /
+      // material_purchase / extra_work / stage_accept.
+      const eligibleScopes: ApprovalScope[] = [
+        'self_purchase',
+        'payment_dispute',
+        'material_purchase',
+        'extra_work',
+        'stage_accept',
+      ];
+      let effectiveAddresseeId = input.addresseeId;
+      let effectiveActorRole = input.actorRole;
+      if (eligibleScopes.includes(input.scope) && input.actorRole === 'customer') {
+        const initiator = await tx.membership.findFirst({
+          where: {
+            projectId: input.projectId,
+            userId: input.requestedById,
+            removedAt: null,
+          },
+          select: { role: true },
+        });
+        if (initiator?.role !== 'foreman') {
+          // Есть ли бригадир в проекте, готовый принять промежуточную ступень?
+          const foreman = await tx.membership.findFirst({
+            where: {
+              projectId: input.projectId,
+              role: 'foreman',
+              removedAt: null,
+            },
+            select: { userId: true },
+          });
+          if (foreman) {
+            effectiveAddresseeId = foreman.userId;
+            effectiveActorRole = 'foreman';
+          }
+        }
+      }
       const created = await tx.approval.create({
         data: {
           scope: input.scope,
@@ -58,8 +106,8 @@ export class ApprovalsService {
           stepId: input.stepId ?? null,
           payload: (input.payload ?? {}) as Prisma.InputJsonValue,
           requestedById: input.requestedById,
-          addresseeId: input.addresseeId,
-          actorRole: input.actorRole ?? null,
+          addresseeId: effectiveAddresseeId,
+          actorRole: effectiveActorRole ?? null,
           status: 'pending',
           attemptNumber: 1,
         },
@@ -149,6 +197,53 @@ export class ApprovalsService {
         ErrorCodes.APPROVAL_REJECT_COMMENT_REQUIRED,
         'comment is required when rejecting',
       );
+    }
+
+    // §6.1 — для mirror-approvals (self_purchase / payment_dispute / material_purchase)
+    // источник истины — соответствующий доменный сервис. Делегируем туда.
+    // Источник синхронизирует Approval.status в той же транзакции.
+    const payload = approval.payload as Record<string, unknown>;
+    if (approval.scope === 'self_purchase') {
+      const spId = payload.selfPurchaseId as string | undefined;
+      if (spId) {
+        await this.selfpurchases.decide(spId, {
+          decision: input.decision,
+          comment: input.comment,
+          actorUserId: input.actorUserId,
+          // forwardOnApprove не активируем: для customer-step forward не нужен
+          // (это уже forwarded запись); для foreman-step мы хотим автоматический
+          // forward, поэтому проверяем actorRole approval.
+          forwardOnApprove: approval.actorRole === 'foreman',
+        });
+        const refreshed = await this.prisma.approval.findUnique({ where: { id: approvalId } });
+        return refreshed!;
+      }
+    }
+    if (approval.scope === 'payment_dispute') {
+      const paymentId = payload.paymentId as string | undefined;
+      if (paymentId) {
+        await this.payments.resolveDispute(paymentId, {
+          decision: input.decision,
+          comment: input.comment,
+          actorUserId: input.actorUserId,
+          actorSystemRole: input.actorSystemRole,
+        });
+        const refreshed = await this.prisma.approval.findUnique({ where: { id: approvalId } });
+        return refreshed!;
+      }
+    }
+    if (approval.scope === 'material_purchase') {
+      const requestId = payload.materialRequestId as string | undefined;
+      if (requestId) {
+        await this.materials.resolvePurchaseApproval(requestId, {
+          decision: input.decision,
+          comment: input.comment,
+          actorUserId: input.actorUserId,
+          actorSystemRole: input.actorSystemRole,
+        });
+        const refreshed = await this.prisma.approval.findUnique({ where: { id: approvalId } });
+        return refreshed!;
+      }
     }
 
     const isProjectOwner =
@@ -627,75 +722,13 @@ export class ApprovalsService {
         }
         break;
       }
-      case 'material_purchase': {
-        // П6.1 — approve бригадирской заявки на покупку.
-        // Списание из общего бюджета (см. payments/budget — учитывается через payload.amount).
-        if (approval.status === 'approved') {
-          const amount = Number(payload?.amount ?? 0);
-          if (amount > 0) {
-            await tx.project.update({
-              where: { id: approval.projectId },
-              data: { materialsBudget: { decrement: BigInt(amount) } },
-            });
-            await this.feed.emit({
-              tx,
-              kind: 'budget_updated',
-              projectId: approval.projectId,
-              actorId: approval.decidedById ?? undefined,
-              payload: {
-                delta: -amount,
-                reason: 'material_purchase_approved',
-                approvalId: approval.id,
-              },
-            });
-          }
-        }
-        break;
-      }
-      case 'self_purchase': {
-        // П6.1 — approve заявки на самокуп. Аналогично materials.
-        if (approval.status === 'approved') {
-          const amount = Number(payload?.amount ?? 0);
-          const fromMaterials = (payload?.kind as string) !== 'work';
-          if (amount > 0) {
-            await tx.project.update({
-              where: { id: approval.projectId },
-              data: fromMaterials
-                ? { materialsBudget: { decrement: BigInt(amount) } }
-                : { workBudget: { decrement: BigInt(amount) } },
-            });
-            await this.feed.emit({
-              tx,
-              kind: 'budget_updated',
-              projectId: approval.projectId,
-              actorId: approval.decidedById ?? undefined,
-              payload: {
-                delta: -amount,
-                reason: 'self_purchase_approved',
-                approvalId: approval.id,
-              },
-            });
-          }
-        }
-        break;
-      }
+      case 'material_purchase':
+      case 'self_purchase':
       case 'payment_dispute': {
-        // П6.1 — approve диспута: помечаем платёж disputed/resolved, без авто-изменения бюджета
-        // (заказчик может донести через PATCH /projects/:id/budget).
-        const paymentId = payload?.paymentId as string | undefined;
-        if (paymentId && approval.status === 'approved') {
-          await tx.payment.update({
-            where: { id: paymentId },
-            data: { status: 'resolved', resolvedAt: now },
-          });
-          await this.feed.emit({
-            tx,
-            kind: 'payment_resolved',
-            projectId: approval.projectId,
-            actorId: approval.decidedById ?? undefined,
-            payload: { paymentId, approvalId: approval.id },
-          });
-        }
+        // §6.1 — mirror Approvals. Источник истины — доменный сервис
+        // (SelfPurchasesService / PaymentsService / MaterialsService).
+        // ApprovalsService.decide делегирует туда; applyDecisionEffect
+        // не должен дублировать списание/обновление состояния.
         break;
       }
       case 'extra_work': {
