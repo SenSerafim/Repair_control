@@ -5,6 +5,10 @@ import '../../../shared/widgets/status_pill.dart';
 part 'tool.freezed.dart';
 
 enum ToolIssuanceStatus {
+  /// П2.15 — заявка на инструмент создана, ожидает approve владельца.
+  requested,
+  approved,
+  rejected,
   issued,
   confirmed,
   returnRequested,
@@ -12,6 +16,12 @@ enum ToolIssuanceStatus {
 
   static ToolIssuanceStatus fromString(String? raw) {
     switch (raw) {
+      case 'requested':
+        return ToolIssuanceStatus.requested;
+      case 'approved':
+        return ToolIssuanceStatus.approved;
+      case 'rejected':
+        return ToolIssuanceStatus.rejected;
       case 'confirmed':
         return ToolIssuanceStatus.confirmed;
       case 'return_requested':
@@ -25,6 +35,9 @@ enum ToolIssuanceStatus {
   }
 
   String get apiValue => switch (this) {
+        ToolIssuanceStatus.requested => 'requested',
+        ToolIssuanceStatus.approved => 'approved',
+        ToolIssuanceStatus.rejected => 'rejected',
         ToolIssuanceStatus.issued => 'issued',
         ToolIssuanceStatus.confirmed => 'confirmed',
         ToolIssuanceStatus.returnRequested => 'return_requested',
@@ -32,6 +45,9 @@ enum ToolIssuanceStatus {
       };
 
   String get displayName => switch (this) {
+        ToolIssuanceStatus.requested => 'Запрошен',
+        ToolIssuanceStatus.approved => 'Одобрен',
+        ToolIssuanceStatus.rejected => 'Отклонён',
         ToolIssuanceStatus.issued => 'Выдан',
         ToolIssuanceStatus.confirmed => 'Подтверждён',
         ToolIssuanceStatus.returnRequested => 'Возврат',
@@ -39,6 +55,9 @@ enum ToolIssuanceStatus {
       };
 
   Semaphore get semaphore => switch (this) {
+        ToolIssuanceStatus.requested => Semaphore.yellow,
+        ToolIssuanceStatus.approved => Semaphore.blue,
+        ToolIssuanceStatus.rejected => Semaphore.red,
         ToolIssuanceStatus.issued => Semaphore.blue,
         ToolIssuanceStatus.confirmed => Semaphore.green,
         ToolIssuanceStatus.returnRequested => Semaphore.yellow,
@@ -56,6 +75,10 @@ class ToolItem with _$ToolItem {
     required int issuedQty,
     String? unit,
     String? photoKey,
+    /// П2.14 — серийный/инвентарный номер.
+    String? serial,
+    /// П2.15 — если задан, инструмент привязан к проекту (виден в реестре).
+    String? projectId,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _ToolItem;
@@ -68,6 +91,8 @@ class ToolItem with _$ToolItem {
         issuedQty: (json['issuedQty'] as num?)?.toInt() ?? 0,
         unit: json['unit'] as String?,
         photoKey: json['photoKey'] as String?,
+        serial: json['serial'] as String?,
+        projectId: json['projectId'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );

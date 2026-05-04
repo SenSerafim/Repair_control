@@ -32,6 +32,10 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     required int totalQty,
     String? unit,
     String? photoKey,
+    /// П2.14 — серийный номер.
+    String? serial,
+    /// П2.15 — сразу привязать к проекту (опц.).
+    String? projectId,
   }) async {
     try {
       final t = await _repo.createTool(
@@ -39,6 +43,8 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
         totalQty: totalQty,
         unit: unit,
         photoKey: photoKey,
+        serial: serial,
+        projectId: projectId,
       );
       _upsert(t);
       return null;

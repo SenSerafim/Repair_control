@@ -30,6 +30,10 @@ class ToolsRepository {
     required int totalQty,
     String? unit,
     String? photoKey,
+    /// П2.14 — серийный/инвентарный номер (опц.).
+    String? serial,
+    /// П2.15 — сразу привязать к проекту (опц.).
+    String? projectId,
   }) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
@@ -39,6 +43,8 @@ class ToolsRepository {
             'totalQty': totalQty,
             if (unit != null && unit.isNotEmpty) 'unit': unit,
             if (photoKey != null) 'photoKey': photoKey,
+            if (serial != null && serial.isNotEmpty) 'serial': serial,
+            if (projectId != null) 'projectId': projectId,
           },
         );
         return ToolItem.parse(r.data!);
@@ -127,6 +133,74 @@ class ToolsRepository {
   Future<ToolIssuance> returnConfirm(String id) => _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/tool-issuances/$id/return-confirm',
+        );
+        return ToolIssuance.parse(r.data!);
+      });
+
+  // ───── П2.15: реестр проекта + заявки на инструмент ─────
+
+  /// Реестр инструментов проекта (виден всем участникам).
+  /// Каждая запись — ToolItem + currentHolderId + hasActiveRequest.
+  Future<List<Map<String, dynamic>>> projectRegistry(String projectId) =>
+      _call(() async {
+        final r = await _dio.get<List<dynamic>>(
+          '/api/projects/$projectId/tool-registry',
+        );
+        return r.data!.cast<Map<String, dynamic>>();
+      });
+
+  /// Bulk-add «из моих инструментов в проект».
+  Future<List<ToolItem>> addToolsFromMy({
+    required String projectId,
+    required List<String> toolItemIds,
+  }) =>
+      _call(() async {
+        final r = await _dio.post<List<dynamic>>(
+          '/api/projects/$projectId/tools/from-my',
+          data: {'toolItemIds': toolItemIds},
+        );
+        return r.data!
+            .map((e) => ToolItem.parse(e as Map<String, dynamic>))
+            .toList();
+      });
+
+  /// Заявка на получение инструмента (бригадир/мастер запрашивает у владельца).
+  Future<ToolIssuance> requestTool({
+    required String toolItemId,
+    int? qty,
+    String? stageId,
+  }) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/tool-requests',
+          data: {
+            'toolItemId': toolItemId,
+            if (qty != null) 'qty': qty,
+            if (stageId != null) 'stageId': stageId,
+          },
+        );
+        return ToolIssuance.parse(r.data!);
+      });
+
+  /// Approve заявки на инструмент (действие владельца).
+  Future<ToolIssuance> approveRequest(String issuanceId) => _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/tool-requests/$issuanceId/approve',
+        );
+        return ToolIssuance.parse(r.data!);
+      });
+
+  /// Reject заявки на инструмент (с опциональным комментарием).
+  Future<ToolIssuance> rejectRequest({
+    required String issuanceId,
+    String? comment,
+  }) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/tool-requests/$issuanceId/reject',
+          data: {
+            if (comment != null && comment.isNotEmpty) 'comment': comment,
+          },
         );
         return ToolIssuance.parse(r.data!);
       });

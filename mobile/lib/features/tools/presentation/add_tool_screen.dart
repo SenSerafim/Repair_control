@@ -18,14 +18,15 @@ class AddToolScreen extends ConsumerStatefulWidget {
 class _AddToolScreenState extends ConsumerState<AddToolScreen> {
   final _name = TextEditingController();
   final _qty = TextEditingController(text: '1');
-  final _desc = TextEditingController();
+  // П2.14 — серийный/инвентарный номер. Свободный текст, опц.
+  final _serial = TextEditingController();
   bool _busy = false;
 
   @override
   void dispose() {
     _name.dispose();
     _qty.dispose();
-    _desc.dispose();
+    _serial.dispose();
     super.dispose();
   }
 
@@ -45,11 +46,12 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
     final failure = await ref.read(myToolsProvider.notifier).create(
           name: name,
           totalQty: qty,
+          serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),
         );
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure == null) {
-      AppToast.show(context, message: '✓ Добавлено', kind: AppToastKind.success);
+      AppToast.show(context, message: 'Добавлено', kind: AppToastKind.success);
       context.pop();
     } else {
       AppToast.show(
@@ -81,12 +83,20 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
             placeholder: '1',
             keyboardType: TextInputType.number,
           ),
+          const SizedBox(height: 4),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              'Если нужно учитывать каждый инструмент отдельно — добавьте каждую единицу '
+              'своей записью с уникальным серийным номером.',
+              style: TextStyle(fontSize: 11, color: AppColors.n400),
+            ),
+          ),
           const SizedBox(height: AppSpacing.x12),
           AppInput(
-            controller: _desc,
-            label: 'Описание (необязательно)',
-            placeholder: 'Серийный номер, характеристики...',
-            maxLines: 3,
+            controller: _serial,
+            label: 'Серийный номер',
+            placeholder: 'Опционально, например: SN-12345',
           ),
           const SizedBox(height: AppSpacing.x32),
           AppButton(

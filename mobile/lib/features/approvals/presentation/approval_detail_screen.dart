@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -972,11 +973,36 @@ class _BottomActions extends ConsumerWidget {
 
   final Approval approval;
 
+  /// П2.6 / П7.7 — CTA «Принять/Отклонить» показываются ТОЛЬКО тому, чья
+  /// активная роль совпадает с `Approval.actorRole` текущей ступени.
+  /// Если actorRole не задан (старые approvals без двухступенчатой FSM) —
+  /// fallback на canDecide-проверку (как раньше).
+  bool _matchesActorRole(WidgetRef ref) {
+    final activeRole = ref.read(activeRoleProvider);
+    final actorRole = approval.actorRole;
+    if (actorRole == null) return true; // legacy fallback
+    switch (actorRole) {
+      case ApprovalActorRole.customer:
+        return activeRole == SystemRole.customer || activeRole == SystemRole.admin;
+      case ApprovalActorRole.representative:
+        return activeRole == SystemRole.representative ||
+            activeRole == SystemRole.customer ||
+            activeRole == SystemRole.admin;
+      case ApprovalActorRole.foreman:
+        return activeRole == SystemRole.contractor;
+      case ApprovalActorRole.master:
+        return activeRole == SystemRole.master;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canDecide = ref.watch(canInProjectProvider(
+    final baseCanDecide = ref.watch(canInProjectProvider(
       (action: DomainAction.approvalDecide, projectId: approval.projectId),
     ));
+    // П7.7 — фильтр по actorRole: если активная роль не совпадает с ожидаемой
+    // ступенью, CTA скрываются. Read-only с плашкой «Ждёт согласования {role}».
+    final canDecide = baseCanDecide && _matchesActorRole(ref);
     final canRequest = ref.watch(canInProjectProvider(
       (action: DomainAction.approvalRequest, projectId: approval.projectId),
     ));
@@ -1015,6 +1041,40 @@ class _BottomActions extends ConsumerWidget {
                 onPressed: () => _cancel(context, ref),
               ),
             ],
+          );
+        }
+        // П7.7 — пользователь видит approval, но не может принять решение
+        // (его роль не соответствует actorRole активной ступени). Показываем
+        // read-only плашку с ожидаемой ролью.
+        if (baseCanDecide && approval.actorRole != null) {
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x16,
+              vertical: AppSpacing.x14,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.n50,
+              border: Border(top: BorderSide(color: AppColors.n200)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.hourglass_top_outlined,
+                  size: 18,
+                  color: AppColors.n400,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ждёт согласования ${approval.actorRole!.displayName}',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.n500,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         }
         return const SizedBox.shrink();
