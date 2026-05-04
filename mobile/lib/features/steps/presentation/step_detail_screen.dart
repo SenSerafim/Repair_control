@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/access/system_role.dart';
+import '../data/steps_repository.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -102,14 +104,11 @@ class StepDetailScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x12),
                 _Header(step: data.step),
                 const SizedBox(height: AppSpacing.x20),
-              _SubstepsSection(
-                detailKey: _key,
-                substeps: data.substeps,
-              ),
+              // П4.1 / П2.8 — отчёт о шаге: «что делал» / «как делал» + фото.
+              // Substep-чеклист и questions-thread скрыты (вопросы переехали в чат проекта).
+              _ReportSection(detailKey: _key, step: data.step),
               const SizedBox(height: AppSpacing.x20),
               _PhotosSection(detailKey: _key, photos: data.photos),
-              const SizedBox(height: AppSpacing.x20),
-              _QuestionsSection(detailKey: _key, questions: data.questions),
               const SizedBox(height: AppSpacing.x24),
               _ActionCtas(
                 projectId: projectId,
@@ -778,6 +777,197 @@ class _ActionCtas extends ConsumerWidget {
           context.pop();
         }
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// П4.1 / П2.8 — Отчёт о шаге: «что делал» / «как делал», оба опциональны.
+// Заменяет substep-чеклист и questions thread.
+// ─────────────────────────────────────────────────────────────────────
+class _ReportSection extends ConsumerStatefulWidget {
+  const _ReportSection({required this.detailKey, required this.step});
+
+  final StepDetailKey detailKey;
+  final Step step;
+
+  @override
+  ConsumerState<_ReportSection> createState() => _ReportSectionState();
+}
+
+class _ReportSectionState extends ConsumerState<_ReportSection> {
+  late final TextEditingController _whatDid;
+  late final TextEditingController _howDid;
+  bool _saving = false;
+  String _initialWhat = '';
+  String _initialHow = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initialWhat = widget.step.whatDid ?? '';
+    _initialHow = widget.step.howDid ?? '';
+    _whatDid = TextEditingController(text: _initialWhat);
+    _howDid = TextEditingController(text: _initialHow);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReportSection old) {
+    super.didUpdateWidget(old);
+    // Re-sync если step обновился из-вне (например, после save).
+    if ((widget.step.whatDid ?? '') != _initialWhat) {
+      _initialWhat = widget.step.whatDid ?? '';
+      _whatDid.text = _initialWhat;
+    }
+    if ((widget.step.howDid ?? '') != _initialHow) {
+      _initialHow = widget.step.howDid ?? '';
+      _howDid.text = _initialHow;
+    }
+  }
+
+  @override
+  void dispose() {
+    _whatDid.dispose();
+    _howDid.dispose();
+    super.dispose();
+  }
+
+  bool get _canManage =>
+      ref.read(canProvider(DomainAction.stepManage)) &&
+      widget.step.status != StepStatus.done;
+
+  bool get _isDirty =>
+      _whatDid.text.trim() != _initialWhat.trim() ||
+      _howDid.text.trim() != _initialHow.trim();
+
+  Future<void> _save() async {
+    if (!_isDirty || _saving) return;
+    setState(() => _saving = true);
+    final repo = ref.read(stepsRepositoryProvider);
+    try {
+      await repo.updateStep(
+        stepId: widget.step.id,
+        whatDid: _whatDid.text.trim(),
+        howDid: _howDid.text.trim(),
+      );
+      _initialWhat = _whatDid.text.trim();
+      _initialHow = _howDid.text.trim();
+      // Re-fetch detail чтобы поля шага в state обновились.
+      ref.read(stepDetailProvider(widget.detailKey).notifier).refresh();
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'Отчёт сохранён',
+          kind: AppToastKind.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'Не удалось сохранить отчёт',
+          kind: AppToastKind.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final readOnly = !_canManage;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: AppColors.n0,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.n200),
+        boxShadow: AppShadows.sh1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Отчёт',
+            style: AppTextStyles.h2,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Опционально опишите ход работы. Поля можно оставить пустыми.',
+            style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          _LabeledField(
+            label: 'Что делал',
+            child: TextField(
+              controller: _whatDid,
+              readOnly: readOnly,
+              maxLines: 4,
+              minLines: 2,
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: AppColors.n50,
+                hintText: 'Например: уложил плитку в санузле',
+                border: OutlineInputBorder(borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          _LabeledField(
+            label: 'Как делал',
+            child: TextField(
+              controller: _howDid,
+              readOnly: readOnly,
+              maxLines: 4,
+              minLines: 2,
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: AppColors.n50,
+                hintText: 'Например: с гидроизоляцией под плиткой, шов 2мм',
+                border: OutlineInputBorder(borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          if (!readOnly) ...[
+            const SizedBox(height: AppSpacing.x12),
+            AppButton(
+              label: _saving ? 'Сохранение…' : 'Сохранить отчёт',
+              onPressed: _isDirty && !_saving ? _save : null,
+              variant: AppButtonVariant.ghost,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6, left: 4),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.n500,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+        child,
+      ],
     );
   }
 }

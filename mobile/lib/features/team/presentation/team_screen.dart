@@ -162,22 +162,25 @@ class _MemberRow extends ConsumerWidget {
     ));
 
     final roleTone = _toneFor(member.role);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        border: Border.all(color: AppColors.n200),
-        borderRadius: AppRadius.card,
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Row(
-        children: [
-          AppAvatar(
-            seed: member.userId,
-            name: name,
-            imageUrl: user?.avatarUrl,
-            size: 40,
-          ),
+    return InkWell(
+      borderRadius: AppRadius.card,
+      onTap: () => _showCard(context, ref, name: name, canManage: canManage),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.n0,
+          border: Border.all(color: AppColors.n200),
+          borderRadius: AppRadius.card,
+          boxShadow: AppShadows.sh1,
+        ),
+        child: Row(
+          children: [
+            AppAvatar(
+              seed: member.userId,
+              name: name,
+              imageUrl: user?.avatarUrl,
+              size: 40,
+            ),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(
@@ -257,8 +260,48 @@ class _MemberRow extends ConsumerWidget {
               color: AppColors.n400,
             ),
           ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  /// П2.1 — карточка участника команды (общий компонент с чатом, П1.4).
+  Future<void> _showCard(
+    BuildContext context,
+    WidgetRef ref, {
+    required String name,
+    required bool canManage,
+  }) async {
+    final user = member.user;
+    if (user == null) return;
+    await showMemberCardSheet(
+      context,
+      data: MemberCardData(
+        userId: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roleInCurrentProject: member.role.displayName,
+        currentProjectTitle: '', // не показываем — экран уже в контексте проекта
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+      ),
+      onRemoveFromTeam: canManage
+          ? () async {
+              final failure = await ref
+                  .read(teamControllerProvider(projectId).notifier)
+                  .removeMember(member.id);
+              if (!context.mounted) return;
+              AppToast.show(
+                context,
+                message:
+                    failure == null ? 'Участник удалён' : failure.userMessage,
+                kind: failure == null
+                    ? AppToastKind.success
+                    : AppToastKind.error,
+              );
+            }
+          : null,
     );
   }
 }

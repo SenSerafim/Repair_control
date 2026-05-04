@@ -48,6 +48,7 @@ export 'attempt_badge.dart';
 export 'celebration/house_celebration_overlay.dart';
 export 'connectivity_banner.dart';
 export 'hierarchy_badge.dart';
+export 'member_card_sheet.dart';
 export 'photo_gallery_screen.dart';
 export 'photo_picker_sheet.dart';
 export 'pin_input.dart';

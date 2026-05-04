@@ -88,6 +88,11 @@ class Step with _$Step {
     /// `StepDetailScreen` показывает кнопку «Открыть методичку»
     /// (deep-link на `/methodology/articles/:id`).
     String? methodologyArticleId,
+
+    /// П2.8 — отчёт мастера/бригадира при закрытии шага. Опциональные текстовые
+    /// поля «что делал» / «как делал». Прочитать в UI: ReportSection.
+    String? whatDid,
+    String? howDid,
   }) = _Step;
 
   static Step parse(Map<String, dynamic> json) => Step(
@@ -119,6 +124,8 @@ class Step with _$Step {
             (json['photos'] as List<dynamic>?)?.length ??
             0,
         methodologyArticleId: json['methodologyArticleId'] as String?,
+        whatDid: json['whatDid'] as String?,
+        howDid: json['howDid'] as String?,
       );
 }
 

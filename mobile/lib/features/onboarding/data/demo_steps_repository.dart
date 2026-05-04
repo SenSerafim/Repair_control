@@ -38,6 +38,8 @@ class DemoStepsRepository extends StepsRepository {
     int? price,
     String? description,
     List<String>? assigneeIds,
+    String? whatDid,
+    String? howDid,
   }) async =>
       DemoData.stepById(stepId);
 
@@ -51,7 +53,12 @@ class DemoStepsRepository extends StepsRepository {
   }) async {}
 
   @override
-  Future<Step> completeStep(String stepId) async => DemoData.stepById(stepId);
+  Future<Step> completeStep(
+    String stepId, {
+    String? whatDid,
+    String? howDid,
+  }) async =>
+      DemoData.stepById(stepId);
 
   @override
   Future<Step> uncompleteStep(String stepId) async => DemoData.stepById(stepId);

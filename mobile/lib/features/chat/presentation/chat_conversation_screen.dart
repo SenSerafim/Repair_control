@@ -12,6 +12,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
+import '../../team/application/team_controller.dart';
 import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
 import '../domain/message.dart';
@@ -189,6 +190,9 @@ class _ChatConversationScreenState
                                       .notifier)
                                   .delete(msg.id)
                               : null,
+                          onTap: msg.authorId == me
+                              ? null
+                              : () => _showMemberCard(msg.authorId),
                         ),
                       ],
                     );
@@ -227,6 +231,38 @@ class _ChatConversationScreenState
     if (diff == 0) return 'Сегодня';
     if (diff == 1) return 'Вчера';
     return DateFormat('d MMMM y', 'ru').format(t);
+  }
+
+  /// П1.4 — карточка собеседника при тапе на чужое сообщение.
+  Future<void> _showMemberCard(String authorUserId) async {
+    final chat = await ref.read(chatsRepositoryProvider).get(widget.chatId);
+    final projectId = chat.projectId;
+    if (projectId == null || !mounted) return;
+    final teamAsync = ref.read(teamControllerProvider(projectId));
+    final team = teamAsync.value;
+    if (team == null || !mounted) return;
+    final m = team.members.firstWhere(
+      (mm) => mm.userId == authorUserId,
+      orElse: () => team.members.first,
+    );
+    if (m.userId != authorUserId) return; // не нашли — молча
+    final user = m.user;
+    if (user == null || !mounted) return;
+    await showMemberCardSheet(
+      context,
+      data: MemberCardData(
+        userId: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roleInCurrentProject: m.role.displayName,
+        currentProjectTitle: chat.title ?? 'Проект',
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+      ),
+      onOpenChat: () {
+        // уже в чате — ничего не делаем
+      },
+    );
   }
 
   Future<void> _promptEdit(Message m) async {
@@ -285,6 +321,7 @@ class _Bubble extends StatelessWidget {
     required this.showSenderLabel,
     required this.onEdit,
     required this.onDelete,
+    this.onTap,
   });
 
   final Message message;
@@ -292,6 +329,7 @@ class _Bubble extends StatelessWidget {
   final bool showSenderLabel;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onTap;
 
   bool get _editWindowOpen =>
       message.canEdit(byUserId: message.authorId, now: DateTime.now());
@@ -309,7 +347,10 @@ class _Bubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (!isMine) ...[
-          AppAvatar(seed: message.authorId, size: 32),
+          GestureDetector(
+            onTap: onTap,
+            child: AppAvatar(seed: message.authorId, size: 32),
+          ),
           const SizedBox(width: 6),
         ],
         Flexible(
@@ -325,6 +366,8 @@ class _Bubble extends StatelessWidget {
             editedMark: message.isEdited && !message.isDeleted,
             // П1.2 — forwardedLabel и forward action удалены из UI.
             forwardedLabel: null,
+            // П1.4 — короткий тап на чужой бабл показывает карточку участника.
+            onTap: onTap,
             onLongPress:
                 message.isDeleted ? null : () => _showActions(context),
           ),

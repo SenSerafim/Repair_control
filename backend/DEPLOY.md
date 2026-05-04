@@ -42,9 +42,14 @@ healthz → docker image prune. На каждый шаг печатает `=== [
                                                    └─────────────────┘
 ```
 
-Compose-стек на сервере: `api` (GHCR), `admin-web` (локальный nginx-build),
-`postgres:16`, `redis:7`, `minio` (контейнер запущен, но api использует
-внешний Selectel S3 — см. ниже).
+Compose-стек на сервере: `api` (GHCR), `admin-web` (контейнер из compose,
+сейчас не используется — см. ниже), `postgres:16`, `redis:7`, `minio`
+(контейнер запущен, но api использует внешний Selectel S3 — см. ниже).
+
+**Внимание:** прод-админка живёт **не** в docker-контейнере `admin-web`, а
+как статический SPA в `/var/www/admin-repair/`, который nginx сервит на
+`/admin/`. Поэтому `server-update.sh` админку не обновляет — её надо
+билдить и заливать отдельно. См. секцию «Admin-web deploy» ниже.
 
 ## Где что лежит
 
@@ -192,6 +197,62 @@ docker ps
 docker system df
 df -h /
 ```
+
+## Admin-web deploy (статический SPA)
+
+Прод-админка — Vite/React SPA, лежит на сервере как статика в
+`/var/www/admin-repair/` и сервится nginx по пути `/admin/`. Контейнер
+`admin-web` из docker-compose **не используется** в проде.
+
+`server-update.sh` админку **не обновляет**. После любых изменений в
+`backend/apps/admin-web/src/**` (новые страницы, обновления API-клиента,
+поправки текстов) нужно собрать и залить вручную.
+
+### Сборка локально
+
+```bash
+cd backend/apps/admin-web
+npm ci   # один раз
+VITE_BASE=/admin/ \
+VITE_API_BASE_URL=http://193.181.209.219 \
+  npm run build
+# → dist/index.html + dist/assets/index-<hash>.js + .css
+```
+
+`VITE_BASE=/admin/` обязательно — без него bundle будет ссылаться на
+`/assets/...` вместо `/admin/assets/...` и nginx отдаст 404.
+
+### Заливка на сервер
+
+```bash
+ssh admin@193.181.209.219 'sudo rm -rf /var/www/admin-repair/* && sudo mkdir -p /var/www/admin-repair'
+scp -r backend/apps/admin-web/dist/* admin@193.181.209.219:/tmp/admin-repair/
+ssh admin@193.181.209.219 'sudo cp -r /tmp/admin-repair/* /var/www/admin-repair/ && sudo chown -R admin:sudo /var/www/admin-repair/ && rm -rf /tmp/admin-repair'
+```
+
+(Если `sudo rm` ругается на права — `sudo` спрашивает пароль admin'а
+интерактивно; пароль см. `backend/secrets/server-access.md`.)
+
+После заливки сразу доступно `http://193.181.209.219/admin/` — nginx ничего
+не нужно перезагружать (статика). Hash в имени бандла меняется на каждой
+сборке, кэш браузера сам инвалидируется.
+
+### Smoke-проверка
+
+```bash
+curl -sf http://193.181.209.219/admin/ | grep '<script.*assets/index-'
+# должен показать актуальный <hash>.js — совпадает с localhost build
+```
+
+### Когда нужно пересобирать
+
+- Любая правка в `backend/apps/admin-web/src/**` (страницы, api.ts, App.tsx).
+- Новый эндпоинт в админ-API (если админка должна о нём знать).
+- Новый раздел/таб в боковом меню.
+
+Пропуск этого шага = админ видит **старую** версию интерфейса. Признак
+проблемы: новой фичи (например, «Юр.документы PDF») нет в боковом меню,
+хотя в коде она есть и закоммичена. Решение — пересобрать и залить.
 
 ## Известные «гримасы» (не считать багом деплоя)
 

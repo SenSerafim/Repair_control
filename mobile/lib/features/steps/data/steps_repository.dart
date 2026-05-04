@@ -87,6 +87,9 @@ class StepsRepository {
     int? price,
     String? description,
     List<String>? assigneeIds,
+    /// П2.8 — поля отчёта о шаге («что делал» / «как делал»).
+    String? whatDid,
+    String? howDid,
   }) =>
       _call(() async {
         final r = await _dio.patch<Map<String, dynamic>>(
@@ -96,6 +99,8 @@ class StepsRepository {
             if (price != null) 'price': price,
             if (description != null) 'description': description,
             if (assigneeIds != null) 'assigneeIds': assigneeIds,
+            if (whatDid != null) 'whatDid': whatDid,
+            if (howDid != null) 'howDid': howDid,
           },
         );
         return Step.parse(r.data!);
@@ -121,9 +126,20 @@ class StepsRepository {
         );
       });
 
-  Future<Step> completeStep(String stepId) => _call(() async {
-        final r = await _dio
-            .post<Map<String, dynamic>>('/api/steps/$stepId/complete');
+  /// П2.8 — `complete` принимает опциональный отчёт.
+  Future<Step> completeStep(
+    String stepId, {
+    String? whatDid,
+    String? howDid,
+  }) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/steps/$stepId/complete',
+          data: {
+            if (whatDid != null) 'whatDid': whatDid,
+            if (howDid != null) 'howDid': howDid,
+          },
+        );
         return Step.parse(r.data!);
       });
 
