@@ -118,14 +118,16 @@ export class StepsService {
       //   бригадир → сразу заказчик
       // Никаких auto-approve. Списание из бюджета — только финальный approve customer.
       if (type === 'extra') {
-        const requesterMembership = await tx.membership.findFirst({
+        // Используем this.prisma (а не tx) для read-only — это безопасно: чтение
+        // membership не требует транзакционной согласованности с создаваемым step.
+        const requesterMembership = await this.prisma.membership.findFirst({
           where: { projectId: stage.projectId, userId: input.actorUserId, removedAt: null },
           select: { role: true },
         });
         const requesterIsMaster = requesterMembership?.role === 'master';
         if (requesterIsMaster) {
           // Найти бригадира этапа (если есть). Иначе — fallback: customer (нет цепочки).
-          const stageWithForemen = await tx.stage.findUnique({
+          const stageWithForemen = await this.prisma.stage.findUnique({
             where: { id: stage.id },
             select: { foremanIds: true },
           });

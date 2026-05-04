@@ -65,9 +65,15 @@ export class PaymentsService {
       throw new ConflictError(ErrorCodes.PROJECT_ARCHIVED, 'archived project');
     }
 
-    // Получатель аванса — участник проекта с ролью foreman
+    // Получатель аванса — активный участник проекта с ролью foreman.
+    // П2.16 — soft-removed (removedAt!=null) исключаются.
     const foreman = await this.prisma.membership.findFirst({
-      where: { projectId: project.id, userId: input.toUserId, role: 'foreman' },
+      where: {
+        projectId: project.id,
+        userId: input.toUserId,
+        role: 'foreman',
+        removedAt: null,
+      },
     });
     if (!foreman) {
       throw new InvalidInputError(
@@ -138,9 +144,14 @@ export class PaymentsService {
       );
     }
 
-    // Получатель — master проекта
+    // Получатель — активный master проекта (П2.16: removedAt=null).
     const master = await this.prisma.membership.findFirst({
-      where: { projectId: parent.projectId, userId: input.toUserId, role: 'master' },
+      where: {
+        projectId: parent.projectId,
+        userId: input.toUserId,
+        role: 'master',
+        removedAt: null,
+      },
     });
     if (!master) {
       throw new InvalidInputError(

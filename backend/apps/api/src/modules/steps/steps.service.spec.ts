@@ -127,6 +127,16 @@ const mkPrisma = () => {
             where.userId.in.includes(m.userId),
         ),
       ),
+      // П2.3 — добавлено для проверки роли инициатора extra_work.
+      findFirst: jest.fn(({ where }: any) => {
+        const found = memberships.find(
+          (m) =>
+            m.projectId === where.projectId &&
+            m.userId === where.userId &&
+            (where.role ? m.role === where.role : true),
+        );
+        return Promise.resolve(found ?? null);
+      }),
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };

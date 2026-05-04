@@ -387,8 +387,10 @@ export class MembersService {
   }
 
   async list(projectId: string) {
+    // П2.16 — отображаем только активных участников. Soft-removed (removedAt!=null)
+    // в команде проекта не показываются.
     return this.prisma.membership.findMany({
-      where: { projectId },
+      where: { projectId, removedAt: null },
       include: {
         user: {
           select: { id: true, firstName: true, lastName: true, phone: true, avatarUrl: true },

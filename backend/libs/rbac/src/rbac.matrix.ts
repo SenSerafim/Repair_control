@@ -220,18 +220,12 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       return false;
     }
 
-    case 'chat.create_personal': {
-      // Любой active member проекта может инициировать personal-чат (ТЗ §10 + цитата клиента про подрядчиков).
-      // Запрет самому-себе валидируется в сервисе.
-      return !!ctx.membershipRole;
-    }
-
+    case 'chat.create_personal':
     case 'chat.create_group': {
-      // Group-чат может создать owner / rep.canInviteMembers / foreman.
-      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
-      if (ctx.membershipRole === 'representative')
-        return !!ctx.representativeRights?.canInviteMembers;
-      if (ctx.membershipRole === 'foreman') return true;
+      // П1.6 (раунд 1, 2026-05-03) — личных и групповых чатов в MVP больше нет.
+      // На проект — один общий чат, создаётся автоматически. Endpoints оставлены
+      // в коде для возможного возврата; матрица всегда возвращает false, AccessGuard
+      // ответит 403 на любые попытки создания.
       return false;
     }
 

@@ -164,39 +164,41 @@ void main() {
     });
   });
 
-  group('AccessGuard — representative', () {
-    test('почти все права (действует от имени заказчика)', () {
-      // Базовый набор — представитель имеет почти всё.
+  group('AccessGuard — representative (П7.3 — read-only by default + чат)', () {
+    test('по умолчанию — только смотреть и писать в чат', () {
+      // Раунд 2026-05-03: представитель read-only + чат-write. Любое write
+      // действие выдаётся только через явные представительские права
+      // (см. canInProjectProvider в access_guard.dart).
       for (final a in [
         DomainAction.chatRead,
         DomainAction.chatWrite,
         DomainAction.documentRead,
-        DomainAction.documentWrite,
         DomainAction.financeBudgetView,
-        DomainAction.financePaymentCreate,
-        DomainAction.financePaymentConfirm,
-        DomainAction.approvalDecide,
-        DomainAction.stageManage,
-        DomainAction.stepManage,
-        DomainAction.materialsManage,
-        DomainAction.toolsManage,
-        DomainAction.projectInviteMember,
+        DomainAction.approvalList,
         DomainAction.noteManage,
         DomainAction.methodologyRead,
       ]) {
         expect(AccessGuard.can(SystemRole.representative, a), isTrue,
-            reason: 'representative должен иметь $a');
+            reason: 'representative должен иметь $a (read-only baseline)');
       }
     });
 
-    test('НЕ имеет необратимых действий без делегирования', () {
-      // Несколько ключевых необратимых: архивация проекта, удаление
-      // документов, окончательный resolve выплат, редактирование бюджета.
+    test('НЕ имеет write-действий без делегирования', () {
+      // Архивирование никогда не выдаётся (П7.1, П10.4 — эксклюзив заказчика).
+      // Все остальные write-actions — только через RepresentativeRights.
       for (final a in [
         DomainAction.projectArchive,
+        DomainAction.projectInviteMember,
+        DomainAction.projectEdit,
+        DomainAction.stageManage,
+        DomainAction.stepManage,
+        DomainAction.financePaymentCreate,
         DomainAction.financePaymentResolve,
         DomainAction.financeBudgetEdit,
+        DomainAction.materialsManage,
+        DomainAction.toolsManage,
         DomainAction.documentDelete,
+        DomainAction.approvalDecide,
       ]) {
         expect(AccessGuard.can(SystemRole.representative, a), isFalse,
             reason: 'representative без делегирования не должен иметь $a');
@@ -230,16 +232,19 @@ void main() {
       );
     });
 
-    test('approvalDecide — customer/contractor/representative/admin (не master)',
+    test('approvalDecide — customer/contractor/admin; representative — только с canApprove',
         () {
       expect(AccessGuard.can(SystemRole.customer, DomainAction.approvalDecide),
           isTrue);
       expect(
           AccessGuard.can(SystemRole.contractor, DomainAction.approvalDecide),
           isTrue);
+      // П7.3 — представитель без делегированного canApprove не имеет approvalDecide.
+      // Тест проверяет именно baseline-матрицу. Делегированные права проверяются
+      // через canInProjectProvider (см. отдельные unit-тесты на providers).
       expect(
         AccessGuard.can(SystemRole.representative, DomainAction.approvalDecide),
-        isTrue,
+        isFalse,
       );
       expect(AccessGuard.can(SystemRole.admin, DomainAction.approvalDecide),
           isTrue);

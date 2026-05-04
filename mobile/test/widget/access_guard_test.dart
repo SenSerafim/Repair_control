@@ -58,23 +58,31 @@ void main() {
           isFalse);
     });
 
-    test('representative — почти всё, кроме необратимого', () {
-      // Представитель действует от имени заказчика — имеет основные
-      // полномочия. Бэкенд проверяет конкретные representativeRights.
+    test('representative — read-only baseline (П7.3, раунд 2026-05-03)', () {
+      // По умолчанию представитель только смотрит и пишет в чат.
+      // Любое write-действие выдаётся через RepresentativeRights и
+      // проверяется через canInProjectProvider.
       expect(AccessGuard.can(SystemRole.representative, DomainAction.chatRead),
           isTrue);
+      expect(AccessGuard.can(SystemRole.representative, DomainAction.chatWrite),
+          isTrue);
+      expect(
+          AccessGuard.can(
+              SystemRole.representative, DomainAction.financeBudgetView),
+          isTrue);
+      // Write-actions — без делегирования НЕТ.
       expect(
           AccessGuard.can(
               SystemRole.representative, DomainAction.approvalDecide),
-          isTrue);
+          isFalse);
       expect(
           AccessGuard.can(
               SystemRole.representative, DomainAction.financePaymentCreate),
-          isTrue);
+          isFalse);
       expect(
           AccessGuard.can(SystemRole.representative, DomainAction.stageManage),
-          isTrue);
-      // Необратимые действия — нет.
+          isFalse);
+      // Архивирование — никогда (П7.1, П10.4).
       expect(
           AccessGuard.can(
               SystemRole.representative, DomainAction.projectArchive),

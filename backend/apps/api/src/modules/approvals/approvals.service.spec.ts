@@ -335,7 +335,10 @@ describe('ApprovalsService.decide — применение эффектов', ()
     expect(kinds).toContain('stage_accepted');
   });
 
-  it('stage_accept rejected → stage.status=rejected; emit stage_rejected_by_customer', async () => {
+  it('stage_accept rejected → stage.status=active (П2.6 — на доработку); emit stage_rejected_by_customer', async () => {
+    // По решению П2.6 (раунд 2026-05-03): reject заказчика возвращает этап в active,
+    // ответственный — бригадир. Этап не помечается «rejected» — он продолжает идти,
+    // бригадир дорабатывает и повторно отправляет на согласование.
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
     st.stages.set('s1', { id: 's1', projectId: 'p1', status: 'review' });
@@ -354,7 +357,7 @@ describe('ApprovalsService.decide — применение эффектов', ()
       decision: 'rejected',
       comment: 'плохо сделано',
     });
-    expect(st.stages.get('s1')!.status).toBe('rejected');
+    expect(st.stages.get('s1')!.status).toBe('active');
     const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
     expect(kinds).toContain('stage_rejected_by_customer');
   });

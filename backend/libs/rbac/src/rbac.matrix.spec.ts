@@ -362,30 +362,22 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
   });
 
-  describe('chat.create_personal', () => {
-    it('любой member', () => {
-      expect(canAccess('chat.create_personal', customer(true))).toBe(true);
-      expect(canAccess('chat.create_personal', foreman())).toBe(true);
-      expect(canAccess('chat.create_personal', master())).toBe(true);
-    });
-    it('не-участник — 403', () => {
-      expect(canAccess('chat.create_personal', { userId: 'x', systemRole: 'customer' })).toBe(
+  describe('chat.create_personal / chat.create_group (П1.6 — выкинуты из MVP)', () => {
+    it('личные чаты создавать никому нельзя', () => {
+      expect(canAccess('chat.create_personal', customer(true))).toBe(false);
+      expect(canAccess('chat.create_personal', foreman())).toBe(false);
+      expect(canAccess('chat.create_personal', master())).toBe(false);
+      expect(canAccess('chat.create_personal', representative({ canInviteMembers: true }))).toBe(
         false,
       );
     });
-  });
-
-  describe('chat.create_group', () => {
-    it('owner, rep.canInviteMembers, foreman — OK', () => {
-      expect(canAccess('chat.create_group', customer(true))).toBe(true);
-      expect(canAccess('chat.create_group', representative({ canInviteMembers: true }))).toBe(true);
-      expect(canAccess('chat.create_group', foreman())).toBe(true);
-    });
-    it('master — no', () => {
+    it('групповые чаты создавать никому нельзя', () => {
+      expect(canAccess('chat.create_group', customer(true))).toBe(false);
+      expect(canAccess('chat.create_group', foreman())).toBe(false);
       expect(canAccess('chat.create_group', master())).toBe(false);
-    });
-    it('rep без canInviteMembers — no', () => {
-      expect(canAccess('chat.create_group', representative())).toBe(false);
+      expect(canAccess('chat.create_group', representative({ canInviteMembers: true }))).toBe(
+        false,
+      );
     });
   });
 

@@ -99,7 +99,7 @@ export class AccessGuard implements CanActivate {
   private async hydrateProjectContext(acc: AccessContext, projectId: string): Promise<void> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+      select: { ownerId: true, memberships: { where: { userId: acc.userId, removedAt: null } } },
     });
     if (!project) return;
     acc.projectOwnerId = project.ownerId;
@@ -116,7 +116,11 @@ export class AccessGuard implements CanActivate {
       select: {
         foremanIds: true,
         project: {
-          select: { id: true, ownerId: true, memberships: { where: { userId: acc.userId } } },
+          select: {
+            id: true,
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
         },
       },
     });
@@ -139,7 +143,10 @@ export class AccessGuard implements CanActivate {
       select: {
         projectId: true,
         project: {
-          select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+          select: {
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
         },
       },
     });
@@ -158,7 +165,10 @@ export class AccessGuard implements CanActivate {
       select: {
         projectId: true,
         project: {
-          select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+          select: {
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
         },
       },
     });
@@ -181,7 +191,7 @@ export class AccessGuard implements CanActivate {
     if (iss.projectId) {
       const project = await this.prisma.project.findUnique({
         where: { id: iss.projectId },
-        select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+        select: { ownerId: true, memberships: { where: { userId: acc.userId, removedAt: null } } },
       });
       if (project) {
         acc.projectOwnerId = project.ownerId;
@@ -217,7 +227,7 @@ export class AccessGuard implements CanActivate {
     if (chat.projectId) {
       const project = await this.prisma.project.findUnique({
         where: { id: chat.projectId },
-        select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+        select: { ownerId: true, memberships: { where: { userId: acc.userId, removedAt: null } } },
       });
       if (project) {
         acc.projectOwnerId = project.ownerId;
@@ -246,7 +256,10 @@ export class AccessGuard implements CanActivate {
         projectId: true,
         uploadedById: true,
         project: {
-          select: { ownerId: true, memberships: { where: { userId: acc.userId } } },
+          select: {
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
         },
       },
     });
@@ -273,7 +286,7 @@ export class AccessGuard implements CanActivate {
               select: {
                 id: true,
                 ownerId: true,
-                memberships: { where: { userId: acc.userId } },
+                memberships: { where: { userId: acc.userId, removedAt: null } },
               },
             },
           },

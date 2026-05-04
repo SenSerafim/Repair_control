@@ -156,14 +156,27 @@ export class BudgetCalculator {
     );
     const materialsSpent = materialsFromRequests.plus(materialsFromSelfPurchases);
 
-    const workPlanned = project.stages.reduce(
+    // П1.3 / 5.1 — wizard создаёт проект с workBudget/materialsBudget на Project,
+    // но не заводит этапы автоматически. Если сумма по этапам = 0, делаем fallback
+    // на Project-level бюджет — иначе пользователь видит «бюджет не задан», хотя
+    // он его задавал в wizard'е.
+    const stagesWorkSum = project.stages.reduce(
       (acc, s) => acc.plus(Money.ofKopeks(s.workBudget)),
       Money.zero(),
     );
-    const materialsPlanned = project.stages.reduce(
+    const stagesMaterialsSum = project.stages.reduce(
       (acc, s) => acc.plus(Money.ofKopeks(s.materialsBudget)),
       Money.zero(),
     );
+    const projectWorkBigInt = project.workBudget != null ? BigInt(project.workBudget) : BigInt(0);
+    const projectMaterialsBigInt =
+      project.materialsBudget != null ? BigInt(project.materialsBudget) : BigInt(0);
+    const workPlanned =
+      stagesWorkSum.kopeks() === BigInt(0) ? Money.ofKopeks(projectWorkBigInt) : stagesWorkSum;
+    const materialsPlanned =
+      stagesMaterialsSum.kopeks() === BigInt(0)
+        ? Money.ofKopeks(projectMaterialsBigInt)
+        : stagesMaterialsSum;
 
     const stages: StageBudgetDTO[] = project.stages
       .filter((s) => this.stageVisibleTo(viewer, s.id, s.foremanIds))

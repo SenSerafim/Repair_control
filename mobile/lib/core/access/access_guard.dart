@@ -76,42 +76,25 @@ class AccessGuard {
       DomainAction.methodologyRead,
     },
 
-    // Представитель — действует от имени заказчика. По умолчанию имеет
-    // почти всё кроме необратимых действий (архивация проекта, удаление
-    // документов, окончательный resolve выплат) и редактирования бюджета.
-    // Эти полномочия делегируются явными флагами в representativeRights
-    // и проверяются через canInProjectProvider.
+    // Представитель (П7.3 / раунд 2026-05-03) — read-only по умолчанию + чат.
+    // Любое write-действие (создание этапа, согласование, аванс, инвайт и т.п.)
+    // выдаётся только через явные флаги в representativeRights (см.
+    // _representativeFlagToActions ниже + canInProjectProvider).
+    //
+    // Архивирование проекта представителю НЕ выдаётся ни при каких условиях
+    // (см. backend rbac.matrix.ts: project.archive — эксклюзив заказчика).
     SystemRole.representative: {
-      DomainAction.projectEdit,
-      // projectInviteMember для representative — только через делегированный
-      // флаг canInviteMembers (см. _representativeFlagToActions). Backend
-      // также проверяет именно его. В статическом сете не держим.
-      DomainAction.stageManage,
-      DomainAction.stageStart,
-      DomainAction.stagePause,
-      DomainAction.stepManage,
-      DomainAction.stepAddSubstep,
-      DomainAction.stepPhotoUpload,
+      // Чтения
       DomainAction.approvalList,
-      DomainAction.approvalRequest,
-      DomainAction.approvalDecide,
       DomainAction.financeBudgetView,
-      DomainAction.financePaymentCreate,
-      DomainAction.financePaymentConfirm,
-      DomainAction.financePaymentDispute,
-      DomainAction.materialsManage,
-      DomainAction.selfPurchaseConfirm,
-      DomainAction.toolsManage,
+      DomainAction.documentRead,
+      DomainAction.methodologyRead,
+      DomainAction.questionManage,
+      // Чат — write по умолчанию (П7.3, "может смотреть всё + писать в чат")
       DomainAction.chatRead,
       DomainAction.chatWrite,
-      DomainAction.chatCreatePersonal,
-      DomainAction.chatCreateGroup,
-      DomainAction.documentRead,
-      DomainAction.documentWrite,
-      DomainAction.feedExport,
+      // Заметки — read+create без права (modify в сервисе уже ограничен авторством)
       DomainAction.noteManage,
-      DomainAction.questionManage,
-      DomainAction.methodologyRead,
     },
 
     // Бригадир — управляет работой команды. Меньше прав, чем

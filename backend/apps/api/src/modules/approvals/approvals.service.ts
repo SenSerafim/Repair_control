@@ -153,11 +153,17 @@ export class ApprovalsService {
 
     const isProjectOwner =
       input.actorSystemRole === 'customer' && approval.project.ownerId === input.actorUserId;
-    // Подгружаем membership актёра для определения canApprove (у representative)
+    // Подгружаем активный membership актёра для определения canApprove (у representative).
+    // П2.16: soft-removed представители не могут принимать решения.
     let canApproveRight = false;
     if (input.actorSystemRole === 'representative') {
       const m = await this.prisma.membership.findFirst({
-        where: { projectId: approval.projectId, userId: input.actorUserId, role: 'representative' },
+        where: {
+          projectId: approval.projectId,
+          userId: input.actorUserId,
+          role: 'representative',
+          removedAt: null,
+        },
         select: { permissions: true },
       });
       const perms = (m?.permissions ?? {}) as Record<string, boolean | undefined>;
@@ -358,9 +364,14 @@ export class ApprovalsService {
 
     // Gaps §3.3: master не может запрашивать план / приёмку этапа мимо бригадира.
     // План и приёмку этапа всегда инициирует бригадир (или представитель с правом).
+    // П2.16: soft-removed участник не может ничего инициировать.
     if (input.scope === 'plan' || input.scope === 'stage_accept') {
       const requesterMembership = await client.membership.findFirst({
-        where: { projectId: input.projectId, userId: input.requestedById },
+        where: {
+          projectId: input.projectId,
+          userId: input.requestedById,
+          removedAt: null,
+        },
         select: { role: true, permissions: true },
       });
       if (requesterMembership?.role === 'master') {

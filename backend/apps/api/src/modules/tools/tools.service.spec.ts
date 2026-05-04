@@ -140,16 +140,20 @@ describe('ToolsService.createToolItem', () => {
     expect(t.issuedQty).toBe(0);
   });
 
-  it('не contractor → ForbiddenError', async () => {
+  it('не contractor — теперь тоже разрешено создавать (П2.14 / П8.1, раунд 2026-05-03)', async () => {
     const st = mkPrisma();
     st.users.set('customer1', {
       id: 'customer1',
       roles: [{ role: 'customer', isActive: true }],
     });
     const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    await expect(
-      svc.createToolItem({ ownerId: 'customer1', name: 'X', totalQty: 1 }),
-    ).rejects.toThrow(ForbiddenError);
+    const t = await svc.createToolItem({
+      ownerId: 'customer1',
+      name: 'X',
+      totalQty: 1,
+    });
+    expect(t.ownerId).toBe('customer1');
+    expect(t.name).toBe('X');
   });
 });
 

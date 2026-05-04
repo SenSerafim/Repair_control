@@ -117,17 +117,24 @@ export class ChatsService {
     projectId: string,
     client: Prisma.TransactionClient | PrismaService,
   ): Promise<void> {
+    // П2.10/П2.16 — добавляем в чат только активных (removedAt=null) участников.
+    // Расширяем сидинг до всех ролей (включая master), потому что по новому решению
+    // у проекта один чат на всех участников, без stage-fanout.
     const project = await (client as any).project.findUnique({
       where: { id: projectId },
-      select: { ownerId: true, memberships: { select: { userId: true, role: true } } },
+      select: {
+        ownerId: true,
+        memberships: {
+          where: { removedAt: null },
+          select: { userId: true, role: true },
+        },
+      },
     });
     if (!project) return;
     const ids = new Set<string>();
     ids.add(project.ownerId);
     for (const m of project.memberships) {
-      if (m.role === 'customer' || m.role === 'representative' || m.role === 'foreman') {
-        ids.add(m.userId);
-      }
+      ids.add(m.userId);
     }
     for (const uid of ids) {
       await (client as any).chatParticipant.upsert({
