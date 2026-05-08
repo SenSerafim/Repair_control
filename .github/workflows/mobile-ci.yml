@@ -49,9 +49,11 @@ jobs:
 
       - name: Analyze
         # `--fatal-warnings` строго блокирует merge при варнингах от
-        # very_good_analysis. Info-уровень (cascade_invocations и т.п.)
-        # не блокирует — только варнинги/ошибки.
-        run: flutter analyze --fatal-warnings
+        # very_good_analysis. `--no-fatal-infos` явно разрешает info-уровень
+        # (cascade_invocations, prefer_const_constructors и т.п.) — иначе
+        # на Linux runner'ах Flutter 3.41 трактует их как fatal вопреки
+        # имени флага.
+        run: flutter analyze --fatal-warnings --no-fatal-infos
 
       - name: Unit + widget tests
         run: flutter test --reporter expanded --coverage
