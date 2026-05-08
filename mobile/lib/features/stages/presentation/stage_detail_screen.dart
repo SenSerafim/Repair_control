@@ -14,6 +14,8 @@ import '../../approvals/application/approvals_controller.dart';
 import '../../approvals/domain/approval.dart';
 import '../../approvals/presentation/_widgets/reject_sheet.dart';
 import '../../projects/application/project_controller.dart';
+import '../../projects/domain/membership.dart';
+import '../../team/application/team_controller.dart';
 import '../../steps/application/steps_controller.dart';
 import '../../steps/domain/step.dart';
 import '../../steps/presentation/extra_work_sheet.dart';
@@ -383,34 +385,108 @@ class _AssignMemberSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Используем foremen-endpoint для бригадира (П1.4) и project members для мастера.
+    // QA-баг #3 «Нет возможности назначить бригадира/мастера на этап»: до
+    // этого фикса sheet был stub'ом — текст + кнопка «Открыть команду».
+    // Теперь грузим список участников проекта и фильтруем по нужной
+    // membership-роли (foreman/master). Тап по члену → onAssign(userId).
     final title = kind == _AssignKind.foreman
         ? 'Выберите бригадира'
         : 'Выберите мастера';
+    final neededRole = kind == _AssignKind.foreman
+        ? MembershipRole.foreman
+        : MembershipRole.master;
+    final teamAsync = ref.watch(teamControllerProvider(projectId));
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppBottomSheetHeader(title: title),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Text(
-            'Выберите участника проекта из списка ниже.\n'
-            'Полный picker подгружается с экрана команды.',
-            style: TextStyle(fontSize: 13, color: Color(0xFF656b7a)),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: AppButton(
-            label: 'Открыть команду',
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.push('/projects/$projectId/team');
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: teamAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: AppLoadingState(),
+            ),
+            error: (_, __) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: AppErrorState(
+                title: 'Не удалось загрузить команду',
+                onRetry: () =>
+                    ref.invalidate(teamControllerProvider(projectId)),
+              ),
+            ),
+            data: (team) {
+              final candidates = team.members
+                  .where((m) => m.role == neededRole)
+                  .toList();
+              if (candidates.isEmpty) {
+                return _AssignEmptyState(
+                  kind: kind,
+                  onOpenTeam: () {
+                    Navigator.of(context).pop();
+                    context.push('/projects/$projectId/team');
+                  },
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: candidates.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 4),
+                itemBuilder: (context, i) {
+                  final m = candidates[i];
+                  final user = m.user;
+                  final fullName = user == null
+                      ? m.userId
+                      : '${user.firstName} ${user.lastName}'.trim();
+                  return ListTile(
+                    leading: AppAvatar(
+                      seed: m.userId,
+                      name: fullName.isEmpty ? null : fullName,
+                      imageUrl: user?.avatarUrl,
+                    ),
+                    title: Text(fullName.isEmpty ? 'Без имени' : fullName),
+                    subtitle: Text(m.role.displayName),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onAssign(m.userId);
+                    },
+                  );
+                },
+              );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AssignEmptyState extends StatelessWidget {
+  const _AssignEmptyState({required this.kind, required this.onOpenTeam});
+  final _AssignKind kind;
+  final VoidCallback onOpenTeam;
+
+  @override
+  Widget build(BuildContext context) {
+    final roleLabel =
+        kind == _AssignKind.foreman ? 'бригадиры' : 'мастера';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'В команде проекта нет участников с ролью «$roleLabel». '
+            'Сначала добавьте подходящего человека.',
+            style: const TextStyle(fontSize: 14, color: Color(0xFF656b7a)),
+          ),
+          const SizedBox(height: 16),
+          AppButton(label: 'Открыть команду', onPressed: onOpenTeam),
+        ],
+      ),
     );
   }
 }
@@ -462,6 +538,17 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
 
   Future<void> _tryStart() async {
     if (_busy) return;
+    // QA баг #1: запуск этапа без бригадира должен быть запрещён.
+    // Бэк теперь кидает stages.no_foreman, но даём мгновенный фидбек на
+    // фронте — без сетевого round-trip и с понятным CTA.
+    if (widget.stage.foremanIds.isEmpty) {
+      AppToast.show(
+        context,
+        message: 'Назначьте бригадира на этап перед запуском',
+        kind: AppToastKind.error,
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       await ref.read(stagesRepositoryProvider).start(
