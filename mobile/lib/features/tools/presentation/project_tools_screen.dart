@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -53,13 +55,28 @@ class ProjectToolsScreen extends ConsumerWidget {
                     icon: Icons.handyman_outlined,
                   ),
                   const SizedBox(height: AppSpacing.x16),
-                  if (canManageTools)
+                  if (canManageTools) ...[
                     AppButton(
                       label: 'Добавить из моих',
                       icon: PhosphorIconsBold.plus,
                       onPressed: () =>
                           _showAddFromMy(context, ref, projectId: projectId),
                     ),
+                    const SizedBox(height: AppSpacing.x8),
+                    // QA-баг #8: альтернативный путь — создать новый
+                    // инструмент сразу с привязкой к этому проекту.
+                    // Раньше юзер мог вернуться на «Мои инструменты»,
+                    // создать там без projectId и потом увидеть, что
+                    // в реестре проекта пусто.
+                    AppButton(
+                      label: 'Создать новый',
+                      icon: PhosphorIconsBold.wrench,
+                      variant: AppButtonVariant.ghost,
+                      onPressed: () => context.push(
+                        '${AppRoutes.profileToolAdd}?projectId=$projectId',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );

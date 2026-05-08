@@ -8,8 +8,17 @@ import '../../../shared/widgets/widgets.dart';
 import '../application/tools_controller.dart';
 
 /// s-tool-add — форма добавления инструмента (Название/Кол-во/Описание).
+///
+/// Если открыт из контекста проекта (через `?projectId=...`) — новый
+/// инструмент сразу привязывается к проекту и виден на «Инструменты
+/// проекта». Без projectId — попадает только в «Мои инструменты»
+/// (профильный flow, по умолчанию). QA-баг #8.
 class AddToolScreen extends ConsumerStatefulWidget {
-  const AddToolScreen({super.key});
+  const AddToolScreen({this.projectId, super.key});
+
+  /// Опциональный контекст проекта. Передаётся через GoRouter
+  /// query-param (см. AppRoutes.profileToolAdd).
+  final String? projectId;
 
   @override
   ConsumerState<AddToolScreen> createState() => _AddToolScreenState();
@@ -47,10 +56,19 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
           name: name,
           totalQty: qty,
           serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),
+          projectId: widget.projectId,
         );
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure == null) {
+      // QA-баг #8: если инструмент создан в контексте проекта,
+      // принудительно обновляем registry — иначе экран
+      // «Инструменты проекта» отрисовывает stale empty-state и юзер
+      // считает, что новый инструмент «не отображается».
+      final projectId = widget.projectId;
+      if (projectId != null && projectId.isNotEmpty) {
+        ref.invalidate(projectToolRegistryProvider(projectId));
+      }
       AppToast.show(context, message: 'Добавлено', kind: AppToastKind.success);
       context.pop();
     } else {

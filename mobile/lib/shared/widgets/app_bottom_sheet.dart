@@ -28,9 +28,21 @@ class _AppBottomSheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
+    // QA-баг #4: до этого фикса bottom-sheet с TextField'ом (создание
+    // заметки, ввод комментария к паузе, поиск участника и т.д.) не
+    // поднимался над клавиатурой — поле ввода оказывалось под ней.
+    // showModalBottomSheet с isScrollControlled=true позволяет sheet'у
+    // расти, но мы должны явно компенсировать viewInsets.bottom (высота
+    // системной клавиатуры). AnimatedPadding даёт плавный апскейл вместе
+    // с анимацией клавиатуры.
+    final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: viewInsetsBottom),
+      child: SafeArea(
+        top: false,
+        child: Container(
         decoration: const BoxDecoration(
           color: AppColors.n0,
           borderRadius: BorderRadius.only(
@@ -62,6 +74,7 @@ class _AppBottomSheetBody extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
