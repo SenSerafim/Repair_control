@@ -91,6 +91,12 @@ class ActiveProjectsController extends AsyncNotifier<List<Project>> {
       current.map((x) => x.id == p.id ? p : x).toList(),
     );
   }
+
+  /// Сброс state до AsyncLoading() без previous (см.
+  /// [userScopedInvalidationProvider]).
+  void resetForLogout() {
+    state = const AsyncValue.loading();
+  }
 }
 
 /// Архивные проекты.
@@ -133,6 +139,12 @@ class ArchivedProjectsController extends AsyncNotifier<List<Project>> {
       state = AsyncData(current);
       return e.failure;
     }
+  }
+
+  /// Сброс state до AsyncLoading() без previous (см.
+  /// [userScopedInvalidationProvider]).
+  void resetForLogout() {
+    state = const AsyncValue.loading();
   }
 }
 

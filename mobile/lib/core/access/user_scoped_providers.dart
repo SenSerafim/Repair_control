@@ -97,7 +97,17 @@ final userScopedProviders = <ProviderOrFamily>[
 
 /// Подписывается на `authControllerProvider` и при переходе в
 /// `unauthenticated` (как обычный logout, так и `onSessionExpired` после
-/// провала refresh) инвалидирует все провайдеры из `providers`.
+/// провала refresh) инвалидирует все провайдеры из `providers` и
+/// дополнительно сбрасывает state ключевых top-level AsyncNotifier'ов до
+/// `AsyncLoading()` без previous-value.
+///
+/// Зачем второй шаг: `ref.invalidate()` запускает ребилд, но Riverpod
+/// сохраняет предыдущий value — `AsyncLoading.previous(stale)`. Виджеты
+/// через `async.when(data: ...)` ВСЁ ЕЩЁ получают stale в data-колбэк
+/// до прихода свежего ответа от API. Это даёт мерцание чужих данных
+/// (~300-800мс), которое QA воспроизвели как часть багов #11/#12.
+/// Сбрасывая state в `AsyncLoading<T>()` без previous, мы заставляем
+/// `.when()` показать loading callback (AppLoadingState) до новой data.
 ///
 /// Отдельно вынесено в функцию, чтобы её можно было дёргать из теста с
 /// произвольным списком провайдеров без привязки к продакшн-списку.
@@ -109,7 +119,25 @@ void watchAuthAndInvalidate(Ref ref, List<ProviderOrFamily> providers) {
     for (final p in providers) {
       ref.invalidate(p);
     }
+    _hardResetTopLevelAsyncNotifiers(ref);
   });
+}
+
+/// Сброс state ключевых top-level AsyncNotifier'ов до AsyncLoading() без
+/// previous. Family-провайдеры здесь не перечисляем: их инстансы хранят
+/// state per-arg и обычно теряют listener'ов при переходе на login screen,
+/// после чего invalidate приводит к dispose.
+///
+/// Каждый контроллер выставляет `resetForLogout()` — публичный метод,
+/// который изнутри Notifier'а делает `state = const AsyncValue.loading()`.
+/// Так мы не нарушаем `@protected` контракт `state`-сеттера и при этом
+/// гарантируем отсутствие previous-value.
+void _hardResetTopLevelAsyncNotifiers(Ref ref) {
+  ref.read(myToolsProvider.notifier).resetForLogout();
+  ref.read(activeProjectsProvider.notifier).resetForLogout();
+  ref.read(archivedProjectsProvider.notifier).resetForLogout();
+  ref.read(profileControllerProvider.notifier).resetForLogout();
+  ref.read(notificationSettingsProvider.notifier).resetForLogout();
 }
 
 /// Корневой listener-провайдер. Подключается в `app.dart` через

@@ -42,4 +42,10 @@ class NotificationSettingsController
       state = AsyncData(current);
     }
   }
+
+  /// Сброс state до AsyncLoading() без previous (см.
+  /// [userScopedInvalidationProvider]).
+  void resetForLogout() {
+    state = const AsyncValue.loading();
+  }
 }

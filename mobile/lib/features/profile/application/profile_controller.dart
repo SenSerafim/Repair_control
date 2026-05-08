@@ -135,4 +135,10 @@ class ProfileController extends AsyncNotifier<UserProfile> {
       state = AsyncError(e, st);
     }
   }
+
+  /// Сброс state до AsyncLoading() без previous (см.
+  /// [userScopedInvalidationProvider]).
+  void resetForLogout() {
+    state = const AsyncValue.loading();
+  }
 }

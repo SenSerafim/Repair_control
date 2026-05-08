@@ -15,6 +15,14 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     return ref.read(toolsRepositoryProvider).myTools();
   }
 
+  /// Сброс state до AsyncLoading() без previous. Вызывается при logout
+  /// (см. [userScopedInvalidationProvider]). Без этого .when(data:) в
+  /// my_tools_screen рендерит кеш предыдущей сессии до прихода свежего
+  /// API-ответа — это и есть мерцание чужих инструментов из QA-доки.
+  void resetForLogout() {
+    state = const AsyncValue.loading();
+  }
+
   ToolsRepository get _repo => ref.read(toolsRepositoryProvider);
 
   void _upsert(ToolItem t) {
