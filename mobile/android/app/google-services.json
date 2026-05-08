@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "912221133495",
+    "project_id": "repaircontrol-22bd3",
+    "storage_bucket": "repaircontrol-22bd3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:912221133495:android:7f2dbfef22d1e6b03acb32",
+        "android_client_info": {
+          "package_name": "com.repaircontrol.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBILtlZxscKsxLKGcRSCoUGzVc40-qeWS4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -78,6 +78,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         message: 'Добро пожаловать!',
         kind: AppToastKind.success,
       );
+    } else if (failure != null &&
+        failure != AuthFailure.invalidCredentials &&
+        mounted) {
+      // invalidCredentials рисуется inline-ошибкой под полем пароля.
+      // Все остальные (network/server/rateLimited/forbidden/banned/...)
+      // раньше молча проглатывались — пользователь видел только бамп
+      // кнопки и не мог понять, что именно сломалось. Показываем тост,
+      // чтобы причина была видна сразу.
+      AppToast.show(
+        context,
+        message: failure.userMessage,
+        kind: AppToastKind.error,
+      );
     }
   }
 

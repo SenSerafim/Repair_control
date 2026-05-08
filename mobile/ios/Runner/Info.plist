@@ -55,6 +55,15 @@
 	<string>Main</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<!-- Staging API живёт на голом IP без TLS. До поднятия HTTPS-домена
+		     разрешаем все cleartext-загрузки. NSAllowsArbitraryLoads сработает
+		     даже там, где NSExceptionDomains с IP-литералом игнорируется
+		     (старые версии iOS, рандомные устройства). Сужаем до domain-config
+		     когда поднимем prod TLS. -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
 			<key>193.181.209.219</key>

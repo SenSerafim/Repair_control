@@ -10,8 +10,8 @@ import 'core/config/app_env.dart';
 import 'core/config/app_providers.dart';
 import 'features/auth/application/auth_controller.dart';
 
-/// Единая точка старта для трёх flavor'ов (dev/staging/prod).
-/// Вызывается из main_dev.dart / main_staging.dart / main_prod.dart.
+/// Единая точка старта для двух flavor'ов (dev/staging).
+/// Вызывается из main.dart / main_staging.dart.
 Future<void> bootstrap(AppFlavor flavor) async {
   await runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();

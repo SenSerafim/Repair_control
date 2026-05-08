@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-enum AppFlavor { dev, staging, prod }
+enum AppFlavor { dev, staging }
 
 /// Конфиг приложения, загружается из assets/env/.env.<flavor> на старте.
 class AppEnv {

@@ -1,0 +1,33 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'update_project_dto.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+UpdateProjectDto _$UpdateProjectDtoFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('UpdateProjectDto', json, ($checkedConvert) {
+      final val = UpdateProjectDto(
+        title: $checkedConvert('title', (v) => v as String?),
+        address: $checkedConvert('address', (v) => v as String?),
+        plannedStart: $checkedConvert('plannedStart', (v) => v as String?),
+        plannedEnd: $checkedConvert('plannedEnd', (v) => v as String?),
+        workBudget: $checkedConvert('workBudget', (v) => (v as num?)?.toInt()),
+        materialsBudget: $checkedConvert(
+          'materialsBudget',
+          (v) => (v as num?)?.toInt(),
+        ),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$UpdateProjectDtoToJson(UpdateProjectDto instance) =>
+    <String, dynamic>{
+      if (instance.title case final value?) 'title': value,
+      if (instance.address case final value?) 'address': value,
+      if (instance.plannedStart case final value?) 'plannedStart': value,
+      if (instance.plannedEnd case final value?) 'plannedEnd': value,
+      if (instance.workBudget case final value?) 'workBudget': value,
+      if (instance.materialsBudget case final value?) 'materialsBudget': value,
+    };

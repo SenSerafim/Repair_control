@@ -1,70 +1,40 @@
+# OS / IDE
 .DS_Store
+**/.DS_Store
 .claude/
+.idea/
+**/.idea/
+*.iml
 *.log
 
-# Local env files — committed .env.example only
-.env
-.env.dev
-.env.prod
-.env.local
-.env.test
-.env.staging
-
-# mobile/assets/env/.env.* содержат только публичные values (API URL,
-# VAPID public key, flavor). Коммитим для воспроизводимости dev-сборки.
-!mobile/assets/env/.env.dev
-!mobile/assets/env/.env.staging
-!mobile/assets/env/.env.prod
-
-# Secrets — Firebase Admin SDK key, APNs .p8, etc.
-backend/secrets/
-*-firebase-adminsdk-*.json
-*.p8
-
-# Node / build artefacts
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Build artifacts
 dist/
-build/
+**/dist/
+**/build/
+**/.dart_tool/
+**/.gradle/
+**/.pub-cache/
+**/.pub/
+**/coverage/
+**/Pods/
+**/.symlinks/
+**/Flutter/ephemeral/
+**/Flutter.framework
+**/xcuserdata/
 
-# Flutter / Mobile
-mobile/.dart_tool/
-mobile/.flutter-plugins
-mobile/.flutter-plugins-dependencies
-mobile/.packages
-mobile/.pub-cache/
-mobile/.pub/
+# Mobile build outputs
 mobile/build/
-mobile/coverage/
-mobile/ios/Pods/
-mobile/ios/.symlinks/
-mobile/ios/Flutter/ephemeral/
-mobile/ios/Flutter/Flutter.framework
-mobile/ios/Flutter/Flutter.podspec
-mobile/ios/Runner.xcworkspace/xcuserdata/
-mobile/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
-mobile/ios/Runner.xcodeproj/xcuserdata/
-mobile/ios/GoogleService-Info.plist
+mobile/android/build/
 mobile/android/.gradle/
-mobile/android/.idea/
-mobile/android/local.properties
-mobile/android/key.properties
-mobile/android/app/google-services.json
 mobile/android/app/debug/
-mobile/android/app/release/
 mobile/android/app/profile/
+mobile/android/app/release/
 mobile/macos/Flutter/ephemeral/
-mobile/*.iml
-mobile/.idea/
-mobile/lib/api/
-mobile/lib/core/l10n/gen/
-mobile/**/*.g.dart
-mobile/**/*.freezed.dart
-mobile/**/*.mocks.dart
 
-# Локальная документация (ТЗ, расшифровки созвонов) — не коммитить
-docs/*
-# Но design-spec'и команды — трекаются
-!docs/specs/
-
-# Сводное ТЗ — локальный рабочий документ, не в git
-Сводное_ТЗ_и_Спринты.md
+# Backend build
+backend/dist/
+backend/coverage/

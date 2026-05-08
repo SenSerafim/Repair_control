@@ -27,14 +27,14 @@ lib/
 ## Запуск
 
 ```bash
-# dev — backend на localhost:3000
+# dev — staging-сервер http://193.181.209.219 (default target)
 flutter run -t lib/main.dart
 
-# staging — backend на docker-compose staging
+# staging — тот же сервер, но flavor=staging для логов/Sentry-env
 flutter run -t lib/main_staging.dart
 
-# prod
-flutter run -t lib/main_prod.dart --release
+# prod-таргет удалён до момента, когда домен api.repair-control.app будет
+# реально развёрнут. Для раздачи тестировщикам собирать на dev/staging.
 ```
 
 Через корневой скрипт: `../dev.sh mobile`.

@@ -96,6 +96,12 @@ class AuthController extends Notifier<AuthState> {
       return null;
     } on AuthException catch (e) {
       return e.failure;
+    } catch (_) {
+      // PlatformException из flutter_secure_storage (BadPaddingException на
+      // некоторых Android keystore), любой другой неожиданный сбой — отдаём
+      // unknown, чтобы UI показал тост вместо молчаливого «ничего не
+      // произошло». Без этого ловится только DioException через _call().
+      return AuthFailure.unknown;
     }
   }
 

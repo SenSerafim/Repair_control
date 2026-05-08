@@ -36,7 +36,7 @@
       Camera, Photo Library, Microphone, Notifications
 - [ ] TestFlight Internal build поднят из CI / Fastlane
 - [ ] ≥ 5 тестовых пользователей добавлены в TestFlight Internal
-- [ ] `flutter build ipa --flavor prod` отработал локально
+- [ ] `flutter build ipa -t lib/main_staging.dart` отработал локально
 
 ### Android
 - [ ] Keystore (`repair_control.jks`) сохранён в менеджере паролей команды
@@ -44,7 +44,7 @@
       (файл в `.gitignore`)
 - [ ] `applicationId`: `com.repaircontrol.app`
 - [ ] `versionCode` / `versionName` синхронизированы с iOS
-- [ ] `flutter build appbundle --flavor prod` отработал локально
+- [ ] `flutter build appbundle -t lib/main_staging.dart` отработал локально
 - [ ] Google Play Console — Internal testing trek открыт
 - [ ] ≥ 5 тестовых пользователей в Internal Testing
 
@@ -114,18 +114,22 @@
 ## Команды
 
 ```bash
-# Локальный запуск dev на симуляторе
+# Локальный запуск dev на симуляторе/девайсе
 cd mobile
 flutter pub get
-flutter run --flavor dev -t lib/main.dart
+flutter run -t lib/main.dart
 
 # Staging на локальном backend
 cd backend && docker compose -f docker-compose.yml \
   -f docker-compose.staging.yml --env-file .env.staging up -d
 cd mobile
-flutter run --flavor staging -t lib/main_staging.dart
+flutter run -t lib/main_staging.dart
 
-# Production билды
-flutter build ipa --flavor prod -t lib/main_prod.dart
-flutter build appbundle --flavor prod -t lib/main_prod.dart
+# Сборка APK для физ.девайсов (тестировщикам).
+# Prod-таргет удалён до момента, когда домен api.repair-control.app будет
+# реально развёрнут. Сейчас оба билда идут на staging-сервер.
+flutter clean && flutter pub get
+flutter build apk --release -t lib/main.dart            # dev-flavor
+flutter build apk --release -t lib/main_staging.dart    # staging-flavor
+# артефакт: build/app/outputs/flutter-apk/app-release.apk
 ```

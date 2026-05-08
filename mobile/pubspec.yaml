@@ -115,7 +115,6 @@ flutter:
   assets:
     - assets/env/.env.dev
     - assets/env/.env.staging
-    - assets/env/.env.prod
     - assets/images/
     - assets/lottie/
 
