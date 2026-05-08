@@ -109,15 +109,26 @@ class FeedEvent with _$FeedEvent {
 
 /// Технические FeedEventKind, которые UI не должен показывать в ленте проекта.
 /// Бэк их пишет в feed для админки/аудита, но в потребительском списке это
-/// шум: создание чата, изменение видимости, ротация участников чата и т.п.
-/// QA-баг #10: «Отображаются дополнительные события в ленте по типу
-/// chat_created». Сюда же добавлены другие явно технические kind'ы из той
-/// же группы — список расширяемый, при сомнении лучше скрыть, чем шуметь.
+/// шум: создание чата, изменение видимости, ротация участников чата,
+/// каждое отправленное сообщение и т.п.
+///
+/// QA-баги #9 и #10: ранее в ленте мелькали `chat_created`,
+/// `chat_message_sent` как сырые технические идентификаторы (FeedEventX
+/// .summary fallback'ом возвращает kind, если в `labels` нет ключа), что
+/// QA воспринял как «поехала вёрстка» — на фоне нормальных «Новый этап /
+/// Создан проект» это выглядит сломанным. Решение: вообще не показывать
+/// эти kind'ы в потребительской ленте.
 const _hiddenFeedKinds = <String>{
   'chat_created',
+  'chat_message_sent',
+  'chat_message_edited',
+  'chat_message_deleted',
   'chat_participant_added',
   'chat_participant_removed',
   'chat_visibility_toggled',
+  'message_sent',
+  'message_edited',
+  'message_deleted',
 };
 
 extension FeedEventX on FeedEvent {
@@ -217,6 +228,13 @@ extension FeedEventX on FeedEvent {
       'extra_work_requested': 'Запрос доп.работы',
       'budget_updated': 'Обновлён бюджет',
     };
-    return labels[kind] ?? kind;
+    final hit = labels[kind];
+    if (hit != null) return hit;
+    // Defensive fallback: на новый kind с бэка, для которого ещё нет
+    // явного перевода, не показываем сырой technical id (это и было
+    // частью QA-бага #9 — `chat_message_sent` светился в ленте). Берём
+    // префикс категории как читаемый заголовок: «Этап», «Шаг»,
+    // «Финансы» и т.д.
+    return category.displayName;
   }
 }
