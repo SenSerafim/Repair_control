@@ -367,20 +367,30 @@ class _MemberRow extends ConsumerWidget {
     required String name,
     required bool canManage,
   }) async {
+    // QA-баг #6 «не открывается карточка участника»: до этого фикса
+    // _showCard молча выходил, если бэк по какой-то причине не вернул
+    // вложенный user (deleted-аккаунт, частичный ответ, кеш race).
+    // Теперь падаем в графу best-effort: используем member.userId и то,
+    // что есть в name/role, а недостающее показываем как «—».
     final user = member.user;
-    if (user == null) return;
-    final commonProjects = await _loadCommonProjects(ref, user.id);
+    final userIdForCommon = user?.id ?? member.userId;
+    final commonProjects = await _loadCommonProjects(ref, userIdForCommon);
     if (!context.mounted) return;
+    final parts = name.trim().split(RegExp(r'\s+'));
+    final fallbackFirstName = user?.firstName ??
+        (parts.isNotEmpty ? parts.first : 'Участник');
+    final fallbackLastName = user?.lastName ??
+        (parts.length > 1 ? parts.sublist(1).join(' ') : '');
     await showMemberCardSheet(
       context,
       data: MemberCardData(
-        userId: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        userId: userIdForCommon,
+        firstName: fallbackFirstName,
+        lastName: fallbackLastName,
         roleInCurrentProject: member.role.displayName,
         currentProjectTitle: '', // не показываем — экран уже в контексте проекта
-        phone: user.phone,
-        avatarUrl: user.avatarUrl,
+        phone: user?.phone ?? '',
+        avatarUrl: user?.avatarUrl,
         commonProjects: commonProjects,
       ),
       onOpenProject: (id) => context.go('/projects/$id'),

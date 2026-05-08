@@ -49,9 +49,15 @@ class FeedState {
         filter: clearFilter ? null : (filter ?? this.filter),
       );
 
-  /// Отфильтрованный список (по category) — applied после сортировки.
-  List<FeedEvent> get visible =>
-      filter == null ? items : items.where((e) => e.category == filter).toList();
+  /// Отфильтрованный список:
+  /// 1. Скрываем технические kind'ы (см. `FeedEventX.isUiVisible` —
+  ///    QA-баг #10 о chat_created и других «служебных» kind'ах).
+  /// 2. Применяем активный категорийный фильтр, если он есть.
+  List<FeedEvent> get visible {
+    final visible = items.where((e) => e.isUiVisible);
+    if (filter == null) return visible.toList();
+    return visible.where((e) => e.category == filter).toList();
+  }
 }
 
 /// Семейство контроллеров на projectId.

@@ -107,8 +107,25 @@ class FeedEvent with _$FeedEvent {
       );
 }
 
+/// Технические FeedEventKind, которые UI не должен показывать в ленте проекта.
+/// Бэк их пишет в feed для админки/аудита, но в потребительском списке это
+/// шум: создание чата, изменение видимости, ротация участников чата и т.п.
+/// QA-баг #10: «Отображаются дополнительные события в ленте по типу
+/// chat_created». Сюда же добавлены другие явно технические kind'ы из той
+/// же группы — список расширяемый, при сомнении лучше скрыть, чем шуметь.
+const _hiddenFeedKinds = <String>{
+  'chat_created',
+  'chat_participant_added',
+  'chat_participant_removed',
+  'chat_visibility_toggled',
+};
+
 extension FeedEventX on FeedEvent {
   FeedCategory get category => FeedCategory.fromKind(kind);
+
+  /// Должно ли событие отображаться в потребительской ленте проекта.
+  /// `false` — событие записано в БД (для аудита/админки), но UI его прячет.
+  bool get isUiVisible => !_hiddenFeedKinds.contains(kind);
 
   /// Тон цветной точки для feed-row (`Кластер F` — `f-feed`).
   AppFeedDotTone get dotTone {
