@@ -122,34 +122,47 @@ class StageChecklistTab extends ConsumerWidget {
                 ),
             if (canAddStep) ...[
               const SizedBox(height: AppSpacing.x8),
+              // QA-баг #7: AppDashedBorder по умолчанию height=160 +
+              // padding=16, но контент-стрипа высотой ~50px не
+              // растягивался на всю рамку — тап работал только по
+              // узкой полосе сверху. Передаём height=null + вручную
+              // выравниваем padding, чтобы рамка shrink-wrap'илась под
+              // содержимое и вся видимая область была clickable.
               AppDashedBorder(
                 borderRadius: AppRadius.r16,
                 color: AppColors.brand,
-                child: InkWell(
+                height: null,
+                padding: EdgeInsets.zero,
+                child: Material(
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.r16),
-                  onTap: locked ? null : onAddStep,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.x14,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.add_rounded,
-                          color: locked ? AppColors.n300 : AppColors.brand,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Добавить шаг',
-                          style: AppTextStyles.subtitle.copyWith(
-                            fontSize: 13,
-                            color:
-                                locked ? AppColors.n300 : AppColors.brand,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.r16),
+                    onTap: locked ? null : onAddStep,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.x16,
+                        vertical: AppSpacing.x14,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_rounded,
+                            color: locked ? AppColors.n300 : AppColors.brand,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            'Добавить шаг',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 13,
+                              color:
+                                  locked ? AppColors.n300 : AppColors.brand,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

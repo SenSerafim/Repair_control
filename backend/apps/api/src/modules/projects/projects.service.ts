@@ -11,6 +11,7 @@ import {
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
 import { ChatsService } from '../chats/chats.service';
+import { ProgressCalculator } from '../stages/progress-calculator';
 
 export interface CreateProjectInput {
   ownerId: string;
@@ -40,6 +41,7 @@ export class ProjectsService {
     private readonly feed: FeedService,
     private readonly clock: Clock,
     private readonly chats: ChatsService,
+    private readonly calculator: ProgressCalculator,
   ) {}
 
   async create(input: CreateProjectInput) {
@@ -405,7 +407,17 @@ export class ProjectsService {
     });
     // П2.10 — копия проекта тоже сразу получает общий чат с владельцем-customer.
     await this.chats.ensureProjectChat(copy.id, source.ownerId);
-    return this.serialize(copy);
+    // QA-баг #13 «При копировании проекта на главном экране отображается
+    // неверный статус». Без пересчёта project.semaphoreCache остаётся в
+    // дефолтном 'green' и не зависит от состояния скопированных стадий.
+    // recalcProject пересчитывает progressCache + semaphoreCache по
+    // фактическим plannedStart/plannedEnd/status стадий — это и есть
+    // «правильный» цвет светофора для скопированного проекта.
+    await this.calculator.recalcProject(copy.id);
+    const refreshed = await this.prisma.project.findUnique({
+      where: { id: copy.id },
+    });
+    return this.serialize(refreshed ?? copy);
   }
 
   private validateDateRange(start?: string, end?: string): void {
