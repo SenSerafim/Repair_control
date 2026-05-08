@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/tools/presentation/_widgets/tool_status_tabs.dart';
 
 void main() {
-  testWidgets('ToolStatusTabs показывает counts в каждой вкладке',
-      (tester) async {
+  testWidgets('ToolStatusTabs показывает counts в каждой вкладке', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

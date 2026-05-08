@@ -112,9 +112,7 @@ class SelfpurchaseListCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       sp.comment!,
-                      style: AppTextStyles.tiny.copyWith(
-                        color: AppColors.n500,
-                      ),
+                      style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),

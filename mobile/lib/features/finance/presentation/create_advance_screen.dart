@@ -21,8 +21,7 @@ class CreateAdvanceScreen extends ConsumerStatefulWidget {
       _CreateAdvanceScreenState();
 }
 
-class _CreateAdvanceScreenState
-    extends ConsumerState<CreateAdvanceScreen> {
+class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
   final _amount = TextEditingController();
   final _comment = TextEditingController();
   String? _toUserId;
@@ -55,8 +54,7 @@ class _CreateAdvanceScreenState
         .createAdvance(
           toUserId: _toUserId!,
           amount: amountKop,
-          comment:
-              _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+          comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -101,8 +99,7 @@ class _CreateAdvanceScreenState
             ),
             error: (e, _) => Text(
               'Не удалось загрузить команду',
-              style:
-                  AppTextStyles.caption.copyWith(color: AppColors.redDot),
+              style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
             ),
             data: (team) {
               final foremen = team.members
@@ -117,8 +114,9 @@ class _CreateAdvanceScreenState
                   ),
                   child: Text(
                     'В проекте нет бригадира. Пригласите его в команде.',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.yellowText),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.yellowText,
+                    ),
                   ),
                 );
               }
@@ -158,8 +156,7 @@ class _CreateAdvanceScreenState
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
             ),
           ),
@@ -219,8 +216,7 @@ class _RecipientTile extends StatelessWidget {
               backgroundColor: AppColors.brandLight,
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: AppTextStyles.subtitle
-                    .copyWith(color: AppColors.brand),
+                style: AppTextStyles.subtitle.copyWith(color: AppColors.brand),
               ),
             ),
             const SizedBox(width: AppSpacing.x12),
@@ -229,8 +225,7 @@ class _RecipientTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(name, style: AppTextStyles.subtitle),
-                  if (phone != null)
-                    Text(phone!, style: AppTextStyles.caption),
+                  if (phone != null) Text(phone!, style: AppTextStyles.caption),
                 ],
               ),
             ),

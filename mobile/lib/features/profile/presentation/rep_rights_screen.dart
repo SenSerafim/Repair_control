@@ -24,10 +24,7 @@ class RepRightsScreen extends StatelessWidget {
       DomainAction.stepManage,
       DomainAction.stepAddSubstep,
     ],
-    'Согласования': [
-      DomainAction.approvalRequest,
-      DomainAction.approvalDecide,
-    ],
+    'Согласования': [DomainAction.approvalRequest, DomainAction.approvalDecide],
     'Финансы': [
       DomainAction.financeBudgetView,
       DomainAction.financePaymentCreate,
@@ -70,8 +67,9 @@ class RepRightsScreen extends StatelessWidget {
                     'Конкретные права представителя настраиваются в '
                     'каждом проекте отдельно (экран «Команда» в консоли '
                     'проекта). Здесь — справочный список доступных действий.',
-                    style: AppTextStyles.body
-                        .copyWith(color: AppColors.brandDark),
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.brandDark,
+                    ),
                   ),
                 ),
               ],
@@ -101,8 +99,7 @@ class RepRightsScreen extends StatelessWidget {
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.x16,
                         ),
-                        child:
-                            Divider(height: 1, color: AppColors.n100),
+                        child: Divider(height: 1, color: AppColors.n100),
                       ),
                   ],
                 ],
@@ -145,16 +142,12 @@ class _ActionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label?.title ?? action.value,
-                  style: AppTextStyles.body,
-                ),
+                Text(label?.title ?? action.value, style: AppTextStyles.body),
                 if (label != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     label.description,
-                    style:
-                        AppTextStyles.micro.copyWith(color: AppColors.n400),
+                    style: AppTextStyles.micro.copyWith(color: AppColors.n400),
                   ),
                 ],
               ],

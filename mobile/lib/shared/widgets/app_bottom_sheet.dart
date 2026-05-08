@@ -43,38 +43,38 @@ class _AppBottomSheetBody extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.n0,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.r28),
-            topRight: Radius.circular(AppRadius.r28),
+          decoration: const BoxDecoration(
+            color: AppColors.n0,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppRadius.r28),
+              topRight: Radius.circular(AppRadius.r28),
+            ),
           ),
-        ),
-        padding: AppSpacing.bottomSheet,
-        // ConstrainedBox + Column[Flexible] позволяет content'у sheet'а
-        // ужиматься без RenderFlex overflow когда содержимое больше экрана
-        // (например, длинный invite-form со списком прав).
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.92,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.x16),
-                decoration: BoxDecoration(
-                  color: AppColors.n200,
-                  borderRadius: BorderRadius.circular(2),
+          padding: AppSpacing.bottomSheet,
+          // ConstrainedBox + Column[Flexible] позволяет content'у sheet'а
+          // ужиматься без RenderFlex overflow когда содержимое больше экрана
+          // (например, длинный invite-form со списком прав).
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.92,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x16),
+                  decoration: BoxDecoration(
+                    color: AppColors.n200,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Flexible(child: child),
-            ],
+                Flexible(child: child),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -100,8 +100,9 @@ class AppBottomSheetHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final align = centered ? TextAlign.center : TextAlign.start;
     return Column(
-      crossAxisAlignment:
-          centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         Text(title, style: AppTextStyles.h1, textAlign: align),
         if (subtitle != null) ...[

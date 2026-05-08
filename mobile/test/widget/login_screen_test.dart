@@ -5,8 +5,9 @@ import 'package:repair_control/features/auth/presentation/login_screen.dart';
 import '../helpers/provider_harness.dart';
 
 void main() {
-  testWidgets('LoginScreen рисует форму, ссылку на recovery и кнопку Войти',
-      (tester) async {
+  testWidgets('LoginScreen рисует форму, ссылку на recovery и кнопку Войти', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       wrapForProviders(const MaterialApp(home: LoginScreen())),
     );

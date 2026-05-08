@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/tools/presentation/_widgets/tool_filter_bar.dart';
 
 void main() {
-  testWidgets('ToolFilterBar показывает all + persons + green-dot для recent',
-      (tester) async {
+  testWidgets('ToolFilterBar показывает all + persons + green-dot для recent', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

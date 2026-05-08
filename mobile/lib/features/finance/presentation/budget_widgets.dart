@@ -23,8 +23,7 @@ class BudgetBucketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overSpent = bucket.overSpent;
-    final progressColor =
-        overSpent ? AppColors.redDot : accentColor;
+    final progressColor = overSpent ? AppColors.redDot : accentColor;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
@@ -51,11 +50,8 @@ class BudgetBucketCard extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.x10),
               ],
-              Expanded(
-                child: Text(title, style: AppTextStyles.subtitle),
-              ),
-              if (overSpent)
-                const _OverBadge(),
+              Expanded(child: Text(title, style: AppTextStyles.subtitle)),
+              if (overSpent) const _OverBadge(),
             ],
           ),
           const SizedBox(height: AppSpacing.x12),
@@ -173,10 +169,7 @@ class StageBudgetRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Text(
-                  Money.format(total.spent),
-                  style: AppTextStyles.subtitle,
-                ),
+                Text(Money.format(total.spent), style: AppTextStyles.subtitle),
               ],
             ),
             const SizedBox(height: 2),
@@ -196,9 +189,7 @@ class StageBudgetRow extends StatelessWidget {
                 widthFactor: total.progress,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: total.overSpent
-                        ? AppColors.redDot
-                        : AppColors.brand,
+                    color: total.overSpent ? AppColors.redDot : AppColors.brand,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

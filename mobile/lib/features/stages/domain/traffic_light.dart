@@ -26,33 +26,31 @@ enum TrafficLight {
   grey;
 
   Semaphore get semaphore => switch (this) {
-        TrafficLight.green => Semaphore.green,
-        TrafficLight.yellow => Semaphore.yellow,
-        TrafficLight.red => Semaphore.red,
-        TrafficLight.blue => Semaphore.blue,
-        TrafficLight.grey => Semaphore.plan,
-      };
+    TrafficLight.green => Semaphore.green,
+    TrafficLight.yellow => Semaphore.yellow,
+    TrafficLight.red => Semaphore.red,
+    TrafficLight.blue => Semaphore.blue,
+    TrafficLight.grey => Semaphore.plan,
+  };
 
   String get bannerTitle => switch (this) {
-        TrafficLight.green => 'По графику',
-        TrafficLight.yellow => 'Этап на паузе',
-        TrafficLight.red => 'Просрочен',
-        TrafficLight.blue => 'Ожидает приёмки',
-        TrafficLight.grey => 'В плане',
-      };
+    TrafficLight.green => 'По графику',
+    TrafficLight.yellow => 'Этап на паузе',
+    TrafficLight.red => 'Просрочен',
+    TrafficLight.blue => 'Ожидает приёмки',
+    TrafficLight.grey => 'В плане',
+  };
 
   String get bannerSubtitle => switch (this) {
-        TrafficLight.green =>
-          'Темп нормальный — продолжайте работу по плану.',
-        TrafficLight.yellow =>
-          'Дедлайн сдвинется на длительность паузы автоматически.',
-        TrafficLight.red =>
-          'Дедлайн прошёл. Запросите перенос или ускорьте темп.',
-        TrafficLight.blue =>
-          'Заказчик увидит этап в согласованиях и подтвердит/отклонит приёмку.',
-        TrafficLight.grey =>
-          'Этап ещё не запущен. Бригадир нажмёт «Запустить» когда придёт время.',
-      };
+    TrafficLight.green => 'Темп нормальный — продолжайте работу по плану.',
+    TrafficLight.yellow =>
+      'Дедлайн сдвинется на длительность паузы автоматически.',
+    TrafficLight.red => 'Дедлайн прошёл. Запросите перенос или ускорьте темп.',
+    TrafficLight.blue =>
+      'Заказчик увидит этап в согласованиях и подтвердит/отклонит приёмку.',
+    TrafficLight.grey =>
+      'Этап ещё не запущен. Бригадир нажмёт «Запустить» когда придёт время.',
+  };
 }
 
 /// Полная формула из ТЗ §2.4 + Gaps §2 (lateStart, корректировка после паузы).

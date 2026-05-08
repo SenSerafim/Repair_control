@@ -38,15 +38,15 @@ class OfflineAction {
   });
 
   factory OfflineAction.fromJson(Map<String, dynamic> j) => OfflineAction(
-        id: j['id'] as String,
-        kind: OfflineActionKind.values.firstWhere(
-          (k) => k.name == j['kind'],
-          orElse: () => OfflineActionKind.stepToggle,
-        ),
-        payload: Map<String, dynamic>.from(j['payload'] as Map),
-        createdAt: DateTime.parse(j['createdAt'] as String),
-        attempts: (j['attempts'] as num?)?.toInt() ?? 0,
-      );
+    id: j['id'] as String,
+    kind: OfflineActionKind.values.firstWhere(
+      (k) => k.name == j['kind'],
+      orElse: () => OfflineActionKind.stepToggle,
+    ),
+    payload: Map<String, dynamic>.from(j['payload'] as Map),
+    createdAt: DateTime.parse(j['createdAt'] as String),
+    attempts: (j['attempts'] as num?)?.toInt() ?? 0,
+  );
 
   final String id;
   final OfflineActionKind kind;
@@ -55,20 +55,20 @@ class OfflineAction {
   final int attempts;
 
   OfflineAction copyWith({int? attempts}) => OfflineAction(
-        id: id,
-        kind: kind,
-        payload: payload,
-        createdAt: createdAt,
-        attempts: attempts ?? this.attempts,
-      );
+    id: id,
+    kind: kind,
+    payload: payload,
+    createdAt: createdAt,
+    attempts: attempts ?? this.attempts,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'kind': kind.name,
-        'payload': payload,
-        'createdAt': createdAt.toIso8601String(),
-        'attempts': attempts,
-      };
+    'id': id,
+    'kind': kind.name,
+    'payload': payload,
+    'createdAt': createdAt.toIso8601String(),
+    'attempts': attempts,
+  };
 }
 
 typedef OfflineHandler = Future<void> Function(OfflineAction action);
@@ -120,8 +120,8 @@ bool _isStateConflict(Object e) {
 /// при появлении сети дропает очередь через зарегистрированные handlers.
 class OfflineQueue {
   OfflineQueue({required Logger logger, File? file})
-      : _logger = logger,
-        _file = file;
+    : _logger = logger,
+      _file = file;
 
   static const _uuid = Uuid();
   static const _fileName = 'offline_queue.json';

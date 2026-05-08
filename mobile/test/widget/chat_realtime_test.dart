@@ -11,17 +11,15 @@ void main() {
     bool visibleToCustomer = false,
     DateTime? lastMessageAt,
     DateTime? createdAt,
-  }) =>
-      Chat.parse({
-        'id': id,
-        'type': type.name,
-        'projectId': 'p-1',
-        'visibleToCustomer': visibleToCustomer,
-        'createdById': 'u-1',
-        'createdAt': (createdAt ?? DateTime.utc(2026, 4, 1)).toIso8601String(),
-        if (lastMessageAt != null)
-          'lastMessageAt': lastMessageAt.toIso8601String(),
-      });
+  }) => Chat.parse({
+    'id': id,
+    'type': type.name,
+    'projectId': 'p-1',
+    'visibleToCustomer': visibleToCustomer,
+    'createdById': 'u-1',
+    'createdAt': (createdAt ?? DateTime.utc(2026, 4, 1)).toIso8601String(),
+    if (lastMessageAt != null) 'lastMessageAt': lastMessageAt.toIso8601String(),
+  });
 
   Message message({
     String id = 'm-1',
@@ -31,16 +29,15 @@ void main() {
     DateTime? createdAt,
     DateTime? deletedAt,
     DateTime? editedAt,
-  }) =>
-      Message.parse({
-        'id': id,
-        'chatId': chatId,
-        'authorId': authorId,
-        if (text != null) 'text': text,
-        'createdAt': (createdAt ?? DateTime.utc(2026, 4, 1)).toIso8601String(),
-        if (editedAt != null) 'editedAt': editedAt.toIso8601String(),
-        if (deletedAt != null) 'deletedAt': deletedAt.toIso8601String(),
-      });
+  }) => Message.parse({
+    'id': id,
+    'chatId': chatId,
+    'authorId': authorId,
+    if (text != null) 'text': text,
+    'createdAt': (createdAt ?? DateTime.utc(2026, 4, 1)).toIso8601String(),
+    if (editedAt != null) 'editedAt': editedAt.toIso8601String(),
+    if (deletedAt != null) 'deletedAt': deletedAt.toIso8601String(),
+  });
 
   group('Chat sort: lastMessageAt DESC, fallback createdAt', () {
     int byLastMsgDesc(Chat a, Chat b) {
@@ -157,15 +154,10 @@ void main() {
   });
 
   group('Backend WS payload parsing', () {
-    test('message:edited не дёргает Message.parse — только messageId+text',
-        () {
+    test('message:edited не дёргает Message.parse — только messageId+text', () {
       // Контракт: backend шлёт {chatId, messageId, text} — payload НЕ
       // содержит полное Message. Mobile должен patch'ить локальный кеш.
-      final payload = {
-        'chatId': 'c-1',
-        'messageId': 'm-7',
-        'text': 'Поправил',
-      };
+      final payload = {'chatId': 'c-1', 'messageId': 'm-7', 'text': 'Поправил'};
       expect(payload['messageId'], 'm-7');
       expect(payload.containsKey('id'), isFalse);
       expect(payload.containsKey('createdAt'), isFalse);
@@ -178,11 +170,7 @@ void main() {
     });
 
     test('presence:typing содержит userId + typing', () {
-      final payload = {
-        'chatId': 'c-1',
-        'userId': 'u-2',
-        'typing': true,
-      };
+      final payload = {'chatId': 'c-1', 'userId': 'u-2', 'typing': true};
       expect(payload['typing'], isTrue);
       expect(payload['userId'], 'u-2');
     });

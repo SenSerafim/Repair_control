@@ -99,8 +99,8 @@ class StageStripeCard extends StatelessWidget {
                           : foremanName!,
                       colorOverride:
                           (foremanName == null || foremanName!.isEmpty)
-                              ? AppColors.redDot
-                              : null,
+                          ? AppColors.redDot
+                          : null,
                     ),
                     _MetaRow(
                       icon: Icons.check_box_outlined,
@@ -111,8 +111,9 @@ class StageStripeCard extends StatelessWidget {
                       label: questionsCount == 0
                           ? 'Вопросов нет'
                           : '$questionsCount вопроса',
-                      colorOverride:
-                          questionsCount > 0 ? AppColors.yellowText : null,
+                      colorOverride: questionsCount > 0
+                          ? AppColors.yellowText
+                          : null,
                     ),
                     _MetaRow(
                       icon: Icons.calendar_today_outlined,
@@ -185,11 +186,7 @@ class StageStripeCard extends StatelessWidget {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow({
-    required this.icon,
-    required this.label,
-    this.colorOverride,
-  });
+  const _MetaRow({required this.icon, required this.label, this.colorOverride});
 
   final IconData icon;
   final String label;

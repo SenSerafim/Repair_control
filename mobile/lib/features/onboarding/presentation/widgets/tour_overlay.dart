@@ -165,10 +165,7 @@ class _TourOverlayState extends ConsumerState<TourOverlay>
             : TweenAnimationBuilder<Rect?>(
                 duration: const Duration(milliseconds: 320),
                 curve: Curves.easeOutCubic,
-                tween: RectTween(
-                  begin: _previousRect ?? target,
-                  end: target,
-                ),
+                tween: RectTween(begin: _previousRect ?? target, end: target),
                 builder: (ctx, animatedRect, _) =>
                     _buildContent(step, animatedRect),
               ),
@@ -183,8 +180,7 @@ class _TourOverlayState extends ConsumerState<TourOverlay>
         CustomPaint(
           painter: _BackdropPainter(cutout: rect, glow: _glowCtrl),
         ),
-        if (rect != null)
-          _PulsingFinger(rect: rect, controller: _fingerCtrl),
+        if (rect != null) _PulsingFinger(rect: rect, controller: _fingerCtrl),
         _BubbleWithArrow(
           cutout: rect,
           child: widget.bubbleBuilder(context, step),
@@ -202,7 +198,7 @@ class _TourOverlayState extends ConsumerState<TourOverlay>
 
 class _BackdropPainter extends CustomPainter {
   _BackdropPainter({required this.cutout, required this.glow})
-      : super(repaint: glow);
+    : super(repaint: glow);
 
   final Rect? cutout;
   final Animation<double> glow;
@@ -284,8 +280,9 @@ class _PulsingFinger extends StatelessWidget {
                         offset: const Offset(0, 4),
                       ),
                       BoxShadow(
-                        color: const Color(0xFFF59E0B)
-                            .withValues(alpha: 0.5 * controller.value),
+                        color: const Color(
+                          0xFFF59E0B,
+                        ).withValues(alpha: 0.5 * controller.value),
                         blurRadius: 18,
                         spreadRadius: 4,
                       ),
@@ -360,16 +357,10 @@ class _BubbleWithArrow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (placeBelow)
-                _Arrow(
-                  pointDown: false,
-                  arrowCenterX: arrowCenterX - 16,
-                ),
+                _Arrow(pointDown: false, arrowCenterX: arrowCenterX - 16),
               child,
               if (!placeBelow)
-                _Arrow(
-                  pointDown: true,
-                  arrowCenterX: arrowCenterX - 16,
-                ),
+                _Arrow(pointDown: true, arrowCenterX: arrowCenterX - 16),
             ],
           ),
         ),
@@ -402,9 +393,7 @@ class _Arrow extends StatelessWidget {
         child: SizedBox(
           width: 22,
           height: 10,
-          child: CustomPaint(
-            painter: _ArrowPainter(pointDown: pointDown),
-          ),
+          child: CustomPaint(painter: _ArrowPainter(pointDown: pointDown)),
         ),
       ),
     );

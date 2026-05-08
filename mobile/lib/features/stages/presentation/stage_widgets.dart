@@ -19,26 +19,26 @@ enum StageDisplayStatus {
   lateStart; // computed: pending + plannedStart прошёл
 
   String get displayName => switch (this) {
-        StageDisplayStatus.pending => 'Ожидает',
-        StageDisplayStatus.active => 'В работе',
-        StageDisplayStatus.paused => 'На паузе',
-        StageDisplayStatus.review => 'На приёмке',
-        StageDisplayStatus.done => 'Завершён',
-        StageDisplayStatus.rejected => 'Отклонён',
-        StageDisplayStatus.overdue => 'Просрочен',
-        StageDisplayStatus.lateStart => 'Опоздал со стартом',
-      };
+    StageDisplayStatus.pending => 'Ожидает',
+    StageDisplayStatus.active => 'В работе',
+    StageDisplayStatus.paused => 'На паузе',
+    StageDisplayStatus.review => 'На приёмке',
+    StageDisplayStatus.done => 'Завершён',
+    StageDisplayStatus.rejected => 'Отклонён',
+    StageDisplayStatus.overdue => 'Просрочен',
+    StageDisplayStatus.lateStart => 'Опоздал со стартом',
+  };
 
   Semaphore get semaphore => switch (this) {
-        StageDisplayStatus.pending => Semaphore.plan,
-        StageDisplayStatus.active => Semaphore.green,
-        StageDisplayStatus.paused => Semaphore.yellow,
-        StageDisplayStatus.review => Semaphore.blue,
-        StageDisplayStatus.done => Semaphore.green,
-        StageDisplayStatus.rejected => Semaphore.red,
-        StageDisplayStatus.overdue => Semaphore.red,
-        StageDisplayStatus.lateStart => Semaphore.red,
-      };
+    StageDisplayStatus.pending => Semaphore.plan,
+    StageDisplayStatus.active => Semaphore.green,
+    StageDisplayStatus.paused => Semaphore.yellow,
+    StageDisplayStatus.review => Semaphore.blue,
+    StageDisplayStatus.done => Semaphore.green,
+    StageDisplayStatus.rejected => Semaphore.red,
+    StageDisplayStatus.overdue => Semaphore.red,
+    StageDisplayStatus.lateStart => Semaphore.red,
+  };
 
   /// Полная формула ТЗ §2.4: делегирует [computeTrafficLight] для
   /// определения «цветовой ветки» и докручивает её до конкретного
@@ -64,15 +64,15 @@ enum StageDisplayStatus {
 
   /// Цветовая ветка светофора по ТЗ §2.4 (для banner'ов и progress-bars).
   TrafficLight get trafficLight => switch (this) {
-        StageDisplayStatus.pending => TrafficLight.grey,
-        StageDisplayStatus.active => TrafficLight.green,
-        StageDisplayStatus.paused => TrafficLight.yellow,
-        StageDisplayStatus.review => TrafficLight.blue,
-        StageDisplayStatus.done => TrafficLight.green,
-        StageDisplayStatus.rejected => TrafficLight.red,
-        StageDisplayStatus.overdue => TrafficLight.red,
-        StageDisplayStatus.lateStart => TrafficLight.red,
-      };
+    StageDisplayStatus.pending => TrafficLight.grey,
+    StageDisplayStatus.active => TrafficLight.green,
+    StageDisplayStatus.paused => TrafficLight.yellow,
+    StageDisplayStatus.review => TrafficLight.blue,
+    StageDisplayStatus.done => TrafficLight.green,
+    StageDisplayStatus.rejected => TrafficLight.red,
+    StageDisplayStatus.overdue => TrafficLight.red,
+    StageDisplayStatus.lateStart => TrafficLight.red,
+  };
 }
 
 class StageStatusBadge extends StatelessWidget {
@@ -82,10 +82,7 @@ class StageStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusPill(
-      label: display.displayName,
-      semaphore: display.semaphore,
-    );
+    return StatusPill(label: display.displayName, semaphore: display.semaphore);
   }
 }
 
@@ -128,91 +125,91 @@ class StageCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-            Container(
-              height: 3,
-              decoration: BoxDecoration(
-                color: display.semaphore.dot,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadius.r16),
+                Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: display.semaphore.dot,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppRadius.r16),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (index != null) ...[
-                        _NumberBadge(
-                          index: index!,
-                          semaphore: display.semaphore,
-                        ),
-                        const SizedBox(width: AppSpacing.x10),
-                      ],
-                      Expanded(
-                        child: Text(
-                          stage.title,
-                          style: AppTextStyles.h2,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (showDragHandle)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 6),
-                          child: Icon(
-                            Icons.drag_handle_rounded,
-                            color: AppColors.n400,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (index != null) ...[
+                            _NumberBadge(
+                              index: index!,
+                              semaphore: display.semaphore,
+                            ),
+                            const SizedBox(width: AppSpacing.x10),
+                          ],
+                          Expanded(
+                            child: Text(
+                              stage.title,
+                              style: AppTextStyles.h2,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.x8),
-                  Row(
-                    children: [
-                      StageStatusBadge(display: display),
-                      const SizedBox(width: AppSpacing.x8),
-                      Expanded(
-                        child: Text(
-                          _dates(stage),
-                          style: AppTextStyles.caption,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          if (showDragHandle)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.drag_handle_rounded,
+                                color: AppColors.n400,
+                              ),
+                            ),
+                        ],
                       ),
-                      Text(
-                        '${stage.progressCache}%',
-                        style: AppTextStyles.caption.copyWith(
-                          color: display.semaphore.text,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      const SizedBox(height: AppSpacing.x8),
+                      Row(
+                        children: [
+                          StageStatusBadge(display: display),
+                          const SizedBox(width: AppSpacing.x8),
+                          Expanded(
+                            child: Text(
+                              _dates(stage),
+                              style: AppTextStyles.caption,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${stage.progressCache}%',
+                            style: AppTextStyles.caption.copyWith(
+                              color: display.semaphore.text,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.x8),
-                  Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.n100,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: progress,
-                      child: Container(
+                      const SizedBox(height: AppSpacing.x8),
+                      Container(
+                        height: 4,
                         decoration: BoxDecoration(
-                          color: display.semaphore.dot,
+                          color: AppColors.n100,
                           borderRadius: BorderRadius.circular(4),
                         ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: progress,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: display.semaphore.dot,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
               ],
             ),
           ),

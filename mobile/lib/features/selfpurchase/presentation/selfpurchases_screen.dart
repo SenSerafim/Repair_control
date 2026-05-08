@@ -21,14 +21,15 @@ enum _Filter {
   awaitingMyDecision;
 
   String get label => switch (this) {
-        _Filter.all => 'Все',
-        _Filter.mine => 'Мои',
-        _Filter.awaitingMyDecision => 'Ждут моего согласования',
-      };
+    _Filter.all => 'Все',
+    _Filter.mine => 'Мои',
+    _Filter.awaitingMyDecision => 'Ждут моего согласования',
+  };
 }
 
-final _filterProvider =
-    StateProvider.autoDispose<_Filter>((ref) => _Filter.all);
+final _filterProvider = StateProvider.autoDispose<_Filter>(
+  (ref) => _Filter.all,
+);
 
 class SelfpurchasesScreen extends ConsumerWidget {
   const SelfpurchasesScreen({required this.projectId, super.key});
@@ -38,8 +39,7 @@ class SelfpurchasesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(selfpurchasesControllerProvider(projectId));
-    final canCreate =
-        ref.watch(canProvider(DomainAction.selfPurchaseCreate));
+    final canCreate = ref.watch(canProvider(DomainAction.selfPurchaseCreate));
     final filter = ref.watch(_filterProvider);
     final me = ref.watch(authControllerProvider).userId;
 
@@ -78,12 +78,13 @@ class SelfpurchasesScreen extends ConsumerWidget {
             children: [
               _FilterBar(
                 selected: filter,
-                onChanged: (f) =>
-                    ref.read(_filterProvider.notifier).state = f,
+                onChanged: (f) => ref.read(_filterProvider.notifier).state = f,
                 pendingForMeCount: items
-                    .where((sp) =>
-                        sp.status == SelfPurchaseStatus.pending &&
-                        sp.addresseeId == me)
+                    .where(
+                      (sp) =>
+                          sp.status == SelfPurchaseStatus.pending &&
+                          sp.addresseeId == me,
+                    )
                     .length,
               ),
               Expanded(
@@ -92,18 +93,19 @@ class SelfpurchasesScreen extends ConsumerWidget {
                         title: filter == _Filter.awaitingMyDecision
                             ? 'Нет запросов на согласование'
                             : (filter == _Filter.mine
-                                ? 'Вы не отправляли самозакупов'
-                                : 'Самозакупов ещё нет'),
+                                  ? 'Вы не отправляли самозакупов'
+                                  : 'Самозакупов ещё нет'),
                         subtitle: canCreate && filter == _Filter.all
                             ? 'Мастер или бригадир купил сам — создайте отчёт.'
                             : null,
                         icon: Icons.shopping_bag_outlined,
-                        actionLabel:
-                            canCreate && filter == _Filter.all ? 'Создать' : null,
+                        actionLabel: canCreate && filter == _Filter.all
+                            ? 'Создать'
+                            : null,
                         onAction: canCreate && filter == _Filter.all
                             ? () => context.push(
-                                  '/projects/$projectId/selfpurchases/new',
-                                )
+                                '/projects/$projectId/selfpurchases/new',
+                              )
                             : null,
                       )
                     : RefreshIndicator(
@@ -139,11 +141,14 @@ class SelfpurchasesScreen extends ConsumerWidget {
     return switch (filter) {
       _Filter.all => items,
       _Filter.mine => items.where((sp) => sp.byUserId == meId).toList(),
-      _Filter.awaitingMyDecision => items
-          .where((sp) =>
-              sp.status == SelfPurchaseStatus.pending &&
-              sp.addresseeId == meId)
-          .toList(),
+      _Filter.awaitingMyDecision =>
+        items
+            .where(
+              (sp) =>
+                  sp.status == SelfPurchaseStatus.pending &&
+                  sp.addresseeId == meId,
+            )
+            .toList(),
     };
   }
 }
@@ -184,11 +189,7 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
+  const _Chip({required this.label, required this.active, required this.onTap});
 
   final String label;
   final bool active;

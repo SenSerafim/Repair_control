@@ -40,18 +40,22 @@ class _IssueToolScreenState extends ConsumerState<IssueToolScreen> {
   @override
   Widget build(BuildContext context) {
     final teamAsync = ref.watch(teamControllerProvider(widget.projectId));
-    final masters = teamAsync.value?.members
+    final masters =
+        teamAsync.value?.members
             .where((m) => m.role == MembershipRole.master)
             .toList() ??
         const <Membership>[];
     final toolsAsync = ref.watch(myToolsProvider);
     final tools = toolsAsync.value ?? const <ToolItem>[];
-    final filtered = tools
-        .where((t) =>
-            _search.isEmpty ||
-            t.name.toLowerCase().contains(_search.toLowerCase()))
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final filtered =
+        tools
+            .where(
+              (t) =>
+                  _search.isEmpty ||
+                  t.name.toLowerCase().contains(_search.toLowerCase()),
+            )
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
 
     final available = filtered.where((t) => t.availableQty > 0).length;
     final selectedCount = _selected.length;
@@ -73,8 +77,7 @@ class _IssueToolScreenState extends ConsumerState<IssueToolScreen> {
                     padding: const EdgeInsets.all(AppSpacing.x12),
                     decoration: BoxDecoration(
                       color: AppColors.yellowBg,
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.r12),
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
                     ),
                     child: Text(
                       'В команде нет мастеров. Сначала добавьте мастера в команду проекта.',
@@ -107,10 +110,8 @@ class _IssueToolScreenState extends ConsumerState<IssueToolScreen> {
                   alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
                     color: AppColors.n50,
-                    border:
-                        Border.all(color: AppColors.n200, width: 1.5),
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.r12),
+                    border: Border.all(color: AppColors.n200, width: 1.5),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Row(
                     children: [
@@ -182,8 +183,7 @@ class _IssueToolScreenState extends ConsumerState<IssueToolScreen> {
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
                     color: AppColors.brandLight,
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.r12),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

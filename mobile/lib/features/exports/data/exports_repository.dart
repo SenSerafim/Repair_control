@@ -17,18 +17,16 @@ class ExportsRepository {
   final Dio _dio;
 
   Future<List<ExportJob>> list(String projectId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/exports',
-        );
-        return r.data!
-            .map((e) => ExportJob.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/projects/$projectId/exports');
+    return r.data!
+        .map((e) => ExportJob.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<ExportJob> get(String id) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/exports/$id');
-        return ExportJob.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/exports/$id');
+    return ExportJob.parse(r.data!);
+  });
 
   Future<ExportJob> create({
     required String projectId,
@@ -37,20 +35,19 @@ class ExportsRepository {
     String? stageId,
     DateTime? dateFrom,
     DateTime? dateTo,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/exports',
-          data: {
-            'kind': kind.apiValue,
-            if (kinds != null && kinds.isNotEmpty) 'kinds': kinds,
-            if (stageId != null) 'stageId': stageId,
-            if (dateFrom != null) 'dateFrom': dateFrom.toIso8601String(),
-            if (dateTo != null) 'dateTo': dateTo.toIso8601String(),
-          },
-        );
-        return ExportJob.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/exports',
+      data: {
+        'kind': kind.apiValue,
+        if (kinds != null && kinds.isNotEmpty) 'kinds': kinds,
+        if (stageId != null) 'stageId': stageId,
+        if (dateFrom != null) 'dateFrom': dateFrom.toIso8601String(),
+        if (dateTo != null) 'dateTo': dateTo.toIso8601String(),
+      },
+    );
+    return ExportJob.parse(r.data!);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

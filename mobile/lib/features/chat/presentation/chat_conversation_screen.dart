@@ -127,10 +127,7 @@ class _ChatConversationScreenState
 
     return AppScaffold(
       showBack: true,
-      title: chatAsync.maybeWhen(
-        data: (title) => title,
-        orElse: () => 'Чат',
-      ),
+      title: chatAsync.maybeWhen(data: (title) => title, orElse: () => 'Чат'),
       padding: EdgeInsets.zero,
       body: Column(
         children: [
@@ -149,9 +146,9 @@ class _ChatConversationScreenState
                     icon: Icons.chat_bubble_outline_rounded,
                   );
                 }
-                final canWrite =
-                    ref.watch(canProvider(DomainAction.chatWrite));
-                final isGroupChat = chatAsync.asData != null &&
+                final canWrite = ref.watch(canProvider(DomainAction.chatWrite));
+                final isGroupChat =
+                    chatAsync.asData != null &&
                     _isGroupChatTitle(chatAsync.asData!.value);
                 return ListView.builder(
                   reverse: true,
@@ -161,7 +158,8 @@ class _ChatConversationScreenState
                     final msg = msgs[i];
                     final prev = i + 1 < msgs.length ? msgs[i + 1] : null;
                     final showDateSeparator =
-                        prev == null || !_sameDay(prev.createdAt, msg.createdAt);
+                        prev == null ||
+                        !_sameDay(prev.createdAt, msg.createdAt);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -182,14 +180,14 @@ class _ChatConversationScreenState
                         _Bubble(
                           message: msg,
                           isMine: msg.authorId == me,
-                          showSenderLabel:
-                              isGroupChat && msg.authorId != me,
+                          showSenderLabel: isGroupChat && msg.authorId != me,
                           onEdit: canWrite ? () => _promptEdit(msg) : null,
                           onDelete: canWrite
                               ? () => ref
-                                  .read(messagesProvider(widget.chatId)
-                                      .notifier)
-                                  .delete(msg.id)
+                                    .read(
+                                      messagesProvider(widget.chatId).notifier,
+                                    )
+                                    .delete(msg.id)
                               : null,
                           onTap: msg.authorId == me
                               ? null
@@ -204,11 +202,7 @@ class _ChatConversationScreenState
           ),
           _TypingBar(chatId: widget.chatId, meId: me),
           if (ref.watch(canProvider(DomainAction.chatWrite)))
-            _ComposeBar(
-              controller: _input,
-              sending: _sending,
-              onSend: _send,
-            ),
+            _ComposeBar(controller: _input, sending: _sending, onSend: _send),
         ],
       ),
     );
@@ -335,8 +329,10 @@ class _ChatConversationScreenState
   }
 }
 
-final _chatTitleProvider =
-    FutureProvider.family.autoDispose<String, String>((ref, chatId) async {
+final _chatTitleProvider = FutureProvider.family.autoDispose<String, String>((
+  ref,
+  chatId,
+) async {
   try {
     final c = await ref.read(chatsRepositoryProvider).get(chatId);
     return c.title ?? 'Чат';
@@ -367,9 +363,7 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final body = message.isDeleted
-        ? 'Сообщение удалено'
-        : (message.text ?? '');
+    final body = message.isDeleted ? 'Сообщение удалено' : (message.text ?? '');
     final time = DateFormat('HH:mm', 'ru').format(message.createdAt);
     final senderColor = _seedColor(message.authorId);
 
@@ -390,8 +384,9 @@ class _Bubble extends StatelessWidget {
             isMine: isMine,
             italic: message.isDeleted,
             dimmed: message.isDeleted,
-            senderLabel:
-                showSenderLabel ? _displaySenderName(message.authorId) : null,
+            senderLabel: showSenderLabel
+                ? _displaySenderName(message.authorId)
+                : null,
             senderColor: senderColor,
             time: time,
             editedMark: message.isEdited && !message.isDeleted,
@@ -399,8 +394,7 @@ class _Bubble extends StatelessWidget {
             forwardedLabel: null,
             // П1.4 — короткий тап на чужой бабл показывает карточку участника.
             onTap: onTap,
-            onLongPress:
-                message.isDeleted ? null : () => _showActions(context),
+            onLongPress: message.isDeleted ? null : () => _showActions(context),
           ),
         ),
       ],
@@ -550,18 +544,14 @@ class _ComposeBar extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                       border: InputBorder.none,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            _SendButton(
-              sending: sending,
-              onTap: sending ? null : onSend,
-            ),
+            _SendButton(sending: sending, onTap: sending ? null : onSend),
           ],
         ),
       ),
@@ -597,11 +587,7 @@ class _SendButton extends StatelessWidget {
                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.n0),
                 ),
               )
-            : const Icon(
-                Icons.send_rounded,
-                color: AppColors.n0,
-                size: 18,
-              ),
+            : const Icon(Icons.send_rounded, color: AppColors.n0, size: 18),
       ),
     );
   }

@@ -43,25 +43,24 @@ class Project with _$Project {
   }) = _Project;
 
   static Project parse(Map<String, dynamic> json) => Project(
-        id: json['id'] as String,
-        ownerId: json['ownerId'] as String,
-        title: json['title'] as String,
-        address: json['address'] as String?,
-        description: json['description'] as String?,
-        plannedStart: _date(json['plannedStart']),
-        plannedEnd: _date(json['plannedEnd']),
-        status: ProjectStatus.fromString(json['status'] as String?),
-        workBudget: (json['workBudget'] as num?)?.toInt() ?? 0,
-        materialsBudget: (json['materialsBudget'] as num?)?.toInt() ?? 0,
-        progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
-        semaphore: _semaphore(json['semaphoreCache'] as String?),
-        planApproved: json['planApproved'] as bool? ?? false,
-        requiresPlanApproval:
-            json['requiresPlanApproval'] as bool? ?? false,
-        archivedAt: _date(json['archivedAt']),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    ownerId: json['ownerId'] as String,
+    title: json['title'] as String,
+    address: json['address'] as String?,
+    description: json['description'] as String?,
+    plannedStart: _date(json['plannedStart']),
+    plannedEnd: _date(json['plannedEnd']),
+    status: ProjectStatus.fromString(json['status'] as String?),
+    workBudget: (json['workBudget'] as num?)?.toInt() ?? 0,
+    materialsBudget: (json['materialsBudget'] as num?)?.toInt() ?? 0,
+    progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
+    semaphore: _semaphore(json['semaphoreCache'] as String?),
+    planApproved: json['planApproved'] as bool? ?? false,
+    requiresPlanApproval: json['requiresPlanApproval'] as bool? ?? false,
+    archivedAt: _date(json['archivedAt']),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
 DateTime? _date(Object? raw) {
@@ -91,12 +90,12 @@ extension ProjectX on Project {
   bool get isArchived => status == ProjectStatus.archived;
 
   String get semaphoreLabel => switch (semaphore) {
-        Semaphore.green => 'По графику',
-        Semaphore.yellow => 'Отставание',
-        Semaphore.red => 'Просрочен',
-        Semaphore.blue => 'Согласования',
-        Semaphore.plan => 'В плане',
-      };
+    Semaphore.green => 'По графику',
+    Semaphore.yellow => 'Отставание',
+    Semaphore.red => 'Просрочен',
+    Semaphore.blue => 'Согласования',
+    Semaphore.plan => 'В плане',
+  };
 
   int get totalBudget => workBudget + materialsBudget;
 }

@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/selfpurchase/presentation/_widgets/approval_chain_strip.dart';
 
 void main() {
-  testWidgets('ApprovalChainStrip 2-step (foreman → customer) рендерится',
-      (tester) async {
+  testWidgets('ApprovalChainStrip 2-step (foreman → customer) рендерится', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -30,8 +31,9 @@ void main() {
     expect(find.text('Заказчик'), findsOneWidget);
   });
 
-  testWidgets('ApprovalChainStrip 3-step (master → foreman → customer)',
-      (tester) async {
+  testWidgets('ApprovalChainStrip 3-step (master → foreman → customer)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -61,7 +63,9 @@ void main() {
     expect(find.text('Мастер'), findsOneWidget);
     expect(find.text('Вы (бригадир)'), findsOneWidget);
     expect(find.text('Заказчик'), findsOneWidget);
-    expect(find.text('После вашего подтверждения уйдёт заказчику'),
-        findsOneWidget);
+    expect(
+      find.text('После вашего подтверждения уйдёт заказчику'),
+      findsOneWidget,
+    );
   });
 }

@@ -20,11 +20,11 @@ class TemplateStep with _$TemplateStep {
   }) = _TemplateStep;
 
   static TemplateStep parse(Map<String, dynamic> json) => TemplateStep(
-        id: json['id'] as String? ?? '',
-        title: json['title'] as String,
-        orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
-        price: (json['price'] as num?)?.toInt(),
-      );
+    id: json['id'] as String? ?? '',
+    title: json['title'] as String,
+    orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
+    price: (json['price'] as num?)?.toInt(),
+  );
 }
 
 @freezed
@@ -40,10 +40,11 @@ class StageTemplate with _$StageTemplate {
 
   static StageTemplate parse(Map<String, dynamic> json) {
     final rawSteps = json['steps'] as List<dynamic>? ?? const [];
-    final steps = rawSteps
-        .map((s) => TemplateStep.parse(s as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    final steps =
+        rawSteps
+            .map((s) => TemplateStep.parse(s as Map<String, dynamic>))
+            .toList()
+          ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
     return StageTemplate(
       id: json['id'] as String,
       kind: TemplateKind.fromString(json['kind'] as String?),

@@ -33,7 +33,8 @@ class TemplatesGallery extends ConsumerWidget {
         _Section(
           title: 'Мои шаблоны',
           async: user,
-          emptyLabel: 'Пока нет своих шаблонов. Сохраните этап как '
+          emptyLabel:
+              'Пока нет своих шаблонов. Сохраните этап как '
               'шаблон — он появится здесь.',
           onPick: onPick,
         ),
@@ -72,8 +73,7 @@ class _Section extends StatelessWidget {
           ),
           error: (e, _) => Text(
             'Не удалось загрузить',
-            style: AppTextStyles.caption
-                .copyWith(color: AppColors.redDot),
+            style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
           ),
           data: (items) {
             if (items.isEmpty) {
@@ -83,16 +83,14 @@ class _Section extends StatelessWidget {
                   color: AppColors.n100,
                   borderRadius: AppRadius.card,
                 ),
-                child:
-                    Text(emptyLabel, style: AppTextStyles.caption),
+                child: Text(emptyLabel, style: AppTextStyles.caption),
               );
             }
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: items.length,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
@@ -207,7 +205,9 @@ class _PreviewState extends ConsumerState<_Preview> {
       _error = null;
     });
     try {
-      await ref.read(stagesRepositoryProvider).applyTemplate(
+      await ref
+          .read(stagesRepositoryProvider)
+          .applyTemplate(
             templateId: widget.template.id,
             projectId: widget.projectId,
           );
@@ -240,8 +240,7 @@ class _PreviewState extends ConsumerState<_Preview> {
         children: [
           AppBottomSheetHeader(
             title: template.title,
-            subtitle:
-                template.description ?? '${template.steps.length} шагов',
+            subtitle: template.description ?? '${template.steps.length} шагов',
           ),
           if (_error != null) ...[
             Container(
@@ -252,8 +251,7 @@ class _PreviewState extends ConsumerState<_Preview> {
               ),
               child: Text(
                 _error!,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.redText),
+                style: AppTextStyles.body.copyWith(color: AppColors.redText),
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -283,13 +281,13 @@ class _PreviewState extends ConsumerState<_Preview> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: AppColors.brandLight,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.r8),
+                          borderRadius: BorderRadius.circular(AppRadius.r8),
                         ),
                         child: Text(
                           '${i + 1}',
-                          style: AppTextStyles.micro
-                              .copyWith(color: AppColors.brand),
+                          style: AppTextStyles.micro.copyWith(
+                            color: AppColors.brand,
+                          ),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.x10),

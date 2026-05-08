@@ -22,8 +22,9 @@ class AppMessageActions extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Row(
-        mainAxisAlignment:
-            alignToRight ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: alignToRight
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           _ActionBtn(
             icon: Icons.reply_outlined,

@@ -31,9 +31,12 @@ class StageApprovalsTab extends ConsumerWidget {
     // RBAC: только customer/foreman/representative.canApprove + admin
     // могут одобрять/отклонять. Master видит карточки, но без CTA —
     // backend всё равно отдаст 403 на approve/reject.
-    final canDecide = ref.watch(canInProjectProvider(
-      (action: DomainAction.approvalDecide, projectId: projectId),
-    ));
+    final canDecide = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalDecide,
+        projectId: projectId,
+      )),
+    );
     return async.when(
       loading: () => const AppLoadingState(),
       error: (e, _) => AppErrorState(
@@ -55,7 +58,8 @@ class StageApprovalsTab extends ConsumerWidget {
           return const Center(
             child: AppEmptyState(
               title: 'Согласований нет',
-              subtitle: 'Здесь появятся отправленные на согласование шаги, '
+              subtitle:
+                  'Здесь появятся отправленные на согласование шаги, '
                   'дополнительные работы и приёмка этапа.',
               icon: Icons.fact_check_outlined,
             ),
@@ -85,7 +89,8 @@ class StageApprovalsTab extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x12),
               for (var i = 0; i < history.length; i++)
                 ApprovalTimelineItem(
-                  title: '${history[i].scope.displayName} · ${_statusLabel(history[i].status)}',
+                  title:
+                      '${history[i].scope.displayName} · ${_statusLabel(history[i].status)}',
                   byline:
                       '${_actorByline(history[i])} · ${DateFormat('d MMM', 'ru').format(history[i].decidedAt ?? history[i].updatedAt)}',
                   comment: history[i].decisionComment,
@@ -128,11 +133,11 @@ class StageApprovalsTab extends ConsumerWidget {
   }
 
   String _statusLabel(ApprovalStatus s) => switch (s) {
-        ApprovalStatus.approved => 'согласован',
-        ApprovalStatus.rejected => 'отклонён',
-        ApprovalStatus.cancelled => 'отменён',
-        ApprovalStatus.pending => 'на рассмотрении',
-      };
+    ApprovalStatus.approved => 'согласован',
+    ApprovalStatus.rejected => 'отклонён',
+    ApprovalStatus.cancelled => 'отменён',
+    ApprovalStatus.pending => 'на рассмотрении',
+  };
 
   String _actorByline(Approval a) {
     if (a.status == ApprovalStatus.approved) return 'Заказчик одобрил';

@@ -14,8 +14,10 @@ class DemoStagesRepository extends StagesRepository {
   Future<List<Stage>> list(String projectId) async => DemoData.stages;
 
   @override
-  Future<Stage> get({required String projectId, required String stageId}) async =>
-      DemoData.stageById(stageId);
+  Future<Stage> get({
+    required String projectId,
+    required String stageId,
+  }) async => DemoData.stageById(stageId);
 
   @override
   Future<Stage> create({
@@ -27,8 +29,7 @@ class DemoStagesRepository extends StagesRepository {
     int? workBudget,
     int? materialsBudget,
     List<String>? foremanIds,
-  }) async =>
-      DemoData.stages.first;
+  }) async => DemoData.stages.first;
 
   @override
   Future<Stage> update({
@@ -40,8 +41,7 @@ class DemoStagesRepository extends StagesRepository {
     int? workBudget,
     int? materialsBudget,
     List<String>? foremanIds,
-  }) async =>
-      DemoData.stageById(stageId);
+  }) async => DemoData.stageById(stageId);
 
   @override
   Future<void> reorder({
@@ -53,8 +53,7 @@ class DemoStagesRepository extends StagesRepository {
   Future<Stage> start({
     required String projectId,
     required String stageId,
-  }) async =>
-      DemoData.stageById(stageId);
+  }) async => DemoData.stageById(stageId);
 
   @override
   Future<Stage> pause({
@@ -62,22 +61,19 @@ class DemoStagesRepository extends StagesRepository {
     required String stageId,
     required PauseReason reason,
     String? comment,
-  }) async =>
-      DemoData.stageById(stageId);
+  }) async => DemoData.stageById(stageId);
 
   @override
   Future<Stage> resume({
     required String projectId,
     required String stageId,
-  }) async =>
-      DemoData.stageById(stageId);
+  }) async => DemoData.stageById(stageId);
 
   @override
   Future<Stage> sendToReview({
     required String projectId,
     required String stageId,
-  }) async =>
-      DemoData.stageById(stageId);
+  }) async => DemoData.stageById(stageId);
 
   @override
   Future<List<StageTemplate>> listPlatformTemplates() async => const [];
@@ -96,10 +92,8 @@ class DemoStagesRepository extends StagesRepository {
     required String projectId,
     DateTime? plannedStart,
     DateTime? plannedEnd,
-  }) async =>
-      DemoData.stages.first;
+  }) async => DemoData.stages.first;
 
-  @override
   Future<StageTemplate> saveAsTemplate({
     required String stageId,
     required String title,

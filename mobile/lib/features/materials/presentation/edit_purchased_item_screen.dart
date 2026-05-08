@@ -46,12 +46,14 @@ class _EditPurchasedItemScreenState
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(materialsControllerProvider(widget.projectId));
-    final request = async.value
-        ?.cast<MaterialRequest?>()
-        .firstWhere((r) => r?.id == widget.requestId, orElse: () => null);
-    final item = request?.items
-        .cast<MaterialItem?>()
-        .firstWhere((i) => i?.id == widget.itemId, orElse: () => null);
+    final request = async.value?.cast<MaterialRequest?>().firstWhere(
+      (r) => r?.id == widget.requestId,
+      orElse: () => null,
+    );
+    final item = request?.items.cast<MaterialItem?>().firstWhere(
+      (i) => i?.id == widget.itemId,
+      orElse: () => null,
+    );
 
     if (item == null) {
       return const AppScaffold(
@@ -79,10 +81,7 @@ class _EditPurchasedItemScreenState
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x20),
               children: [
-                Text(
-                  item.name,
-                  style: AppTextStyles.h2.copyWith(fontSize: 16),
-                ),
+                Text(item.name, style: AppTextStyles.h2.copyWith(fontSize: 16)),
                 const SizedBox(height: AppSpacing.x16),
                 _Field(
                   label: 'Фактически куплено',
@@ -92,10 +91,8 @@ class _EditPurchasedItemScreenState
                     alignment: Alignment.centerLeft,
                     decoration: BoxDecoration(
                       color: AppColors.n50,
-                      border:
-                          Border.all(color: AppColors.brand, width: 1.5),
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.r12),
+                      border: Border.all(color: AppColors.brand, width: 1.5),
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
                     ),
                     child: Text(
                       '${_fmtQty(item.qty)} ${item.unit ?? ''}',
@@ -128,8 +125,7 @@ class _EditPurchasedItemScreenState
                       fillColor: AppColors.n50,
                       contentPadding: const EdgeInsets.all(12),
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.r12),
+                        borderRadius: BorderRadius.circular(AppRadius.r12),
                         borderSide: const BorderSide(
                           color: AppColors.n200,
                           width: 1.5,
@@ -158,8 +154,7 @@ class _EditPurchasedItemScreenState
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
                     color: AppColors.brandLight,
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.r12),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -38,9 +38,11 @@ class NotificationSettingsScreen extends ConsumerWidget {
           }
           // В дизайне 3 секции; «normal» сливаем с «low» как «Информационные».
           final critical =
-              byPriority[NotificationPriority.critical] ?? const <NotificationSetting>[];
+              byPriority[NotificationPriority.critical] ??
+              const <NotificationSetting>[];
           final important =
-              byPriority[NotificationPriority.high] ?? const <NotificationSetting>[];
+              byPriority[NotificationPriority.high] ??
+              const <NotificationSetting>[];
           final info = <NotificationSetting>[
             ...?byPriority[NotificationPriority.normal],
             ...?byPriority[NotificationPriority.low],
@@ -94,10 +96,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
     bool enabled,
   ) async {
     if (s.critical) {
-      AppToast.show(
-        context,
-        message: 'Эти уведомления нельзя отключить',
-      );
+      AppToast.show(context, message: 'Эти уведомления нельзя отключить');
       return;
     }
     await ref

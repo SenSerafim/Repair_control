@@ -58,10 +58,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _phoneError = null;
       _passwordEmptyError = null;
     });
-    final failure = await ref.read(authControllerProvider.notifier).login(
-          phone: phoneToE164(_phone.text),
-          password: _password.text,
-        );
+    final failure = await ref
+        .read(authControllerProvider.notifier)
+        .login(phone: phoneToE164(_phone.text), password: _password.text);
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -97,7 +96,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final hasError = _failure == AuthFailure.invalidCredentials;
-    final passwordError = _passwordEmptyError ??
+    final passwordError =
+        _passwordEmptyError ??
         (hasError
             ? 'Неверный пароль. Осталось $_remainingAttempts ${_pluralize(_remainingAttempts)}.'
             : null);
@@ -232,7 +232,8 @@ String _pluralize(int n) {
   final mod10 = n % 10;
   final mod100 = n % 100;
   if (mod10 == 1 && mod100 != 11) return 'попытка';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'попытки';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+    return 'попытки';
   return 'попыток';
 }
 

@@ -21,8 +21,7 @@ class LegalAcceptanceModal extends ConsumerStatefulWidget {
       _LegalAcceptanceModalState();
 }
 
-class _LegalAcceptanceModalState
-    extends ConsumerState<LegalAcceptanceModal> {
+class _LegalAcceptanceModalState extends ConsumerState<LegalAcceptanceModal> {
   LegalDocument? _doc;
   bool _loading = true;
   bool _error = false;
@@ -104,10 +103,7 @@ class _LegalAcceptanceModalState
         children: [
           Text(doc.title, style: AppTextStyles.h1),
           const SizedBox(height: AppSpacing.x4),
-          Text(
-            'Версия ${doc.version}',
-            style: AppTextStyles.caption,
-          ),
+          Text('Версия ${doc.version}', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.x16),
           Text(doc.bodyMd, style: AppTextStyles.body),
         ],

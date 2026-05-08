@@ -29,8 +29,7 @@ class DemoProjectsRepository extends ProjectsRepository {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
-  }) async =>
-      DemoData.project;
+  }) async => DemoData.project;
 
   @override
   Future<Project> update(
@@ -42,8 +41,7 @@ class DemoProjectsRepository extends ProjectsRepository {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
-  }) async =>
-      DemoData.project;
+  }) async => DemoData.project;
 
   @override
   Future<Project> archive(String projectId) async => DemoData.project;
@@ -63,8 +61,7 @@ class DemoProjectsRepository extends ProjectsRepository {
     String projectId, {
     String? phone,
     String? email,
-  }) async =>
-      null;
+  }) async => null;
 
   @override
   Future<void> invite({

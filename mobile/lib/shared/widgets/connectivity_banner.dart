@@ -17,8 +17,7 @@ class ConnectivityBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final conn = ref.watch(connectivityProvider);
-    final isOffline =
-        conn.value == ConnectivityStatus.offline && conn.hasValue;
+    final isOffline = conn.value == ConnectivityStatus.offline && conn.hasValue;
 
     // Initial pending — берём напрямую (StreamProvider начнёт пушить
     // только при первом enqueue/drain). Подписываемся для последующих.
@@ -35,10 +34,7 @@ class ConnectivityBanner extends ConsumerWidget {
             top: MediaQuery.of(context).padding.top + 4,
             left: 8,
             right: 8,
-            child: _StatusPill(
-              isOffline: isOffline,
-              pending: pending,
-            ),
+            child: _StatusPill(isOffline: isOffline, pending: pending),
           ),
       ],
     );

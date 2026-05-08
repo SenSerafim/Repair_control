@@ -130,7 +130,8 @@ class _AddRepresentativeScreenState
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
             child: _HintBox(
-              text: 'После добавления вы сможете настроить права '
+              text:
+                  'После добавления вы сможете настроить права '
                   'представителя: просмотр бюджета, принятие работ '
                   'и другие.',
             ),
@@ -174,11 +175,7 @@ class _HintBox extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            PhosphorIconsRegular.info,
-            size: 16,
-            color: AppColors.brand,
-          ),
+          Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.brand),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

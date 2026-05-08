@@ -51,13 +51,7 @@ class AppSystemMessage extends StatelessWidget {
   }
 }
 
-enum AppSystemMessageTone {
-  neutral,
-  success,
-  warning,
-  info,
-  payment,
-}
+enum AppSystemMessageTone { neutral, success, warning, info, payment }
 
 class _SysColors {
   const _SysColors(this.bg, this.fg);

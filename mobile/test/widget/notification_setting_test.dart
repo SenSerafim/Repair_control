@@ -16,10 +16,7 @@ void main() {
         NotificationPriority.fromString('normal'),
         NotificationPriority.normal,
       );
-      expect(
-        NotificationPriority.fromString('low'),
-        NotificationPriority.low,
-      );
+      expect(NotificationPriority.fromString('low'), NotificationPriority.low);
     });
 
     test('неизвестное → normal', () {

@@ -9,11 +9,7 @@ import '../../domain/template.dart';
 /// 40×40 цветная icon-tile (цвет/иконка маппится по канонической русской
 /// title-строке платформенного шаблона), title, «{N} шагов», chevron.
 class TemplateCard extends StatelessWidget {
-  const TemplateCard({
-    required this.template,
-    required this.onTap,
-    super.key,
-  });
+  const TemplateCard({required this.template, required this.onTap, super.key});
 
   final StageTemplate template;
   final VoidCallback onTap;
@@ -64,17 +60,12 @@ class TemplateCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${template.steps.length} ${_pluralSteps(template.steps.length)}',
-                      style: AppTextStyles.tiny.copyWith(
-                        color: AppColors.n400,
-                      ),
+                      style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.n300,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
             ],
           ),
         ),

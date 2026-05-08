@@ -31,38 +31,37 @@ class FeedRepository {
     String? actorId,
     DateTime? dateFrom,
     DateTime? dateTo,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<dynamic>(
-          '/api/projects/$projectId/feed',
-          queryParameters: {
-            if (cursor != null) 'cursor': cursor,
-            'limit': limit,
-            if (kinds != null && kinds.isNotEmpty) 'kind': kinds,
-            if (stageId != null) 'stageId': stageId,
-            if (actorId != null) 'actorId': actorId,
-            if (dateFrom != null) 'dateFrom': dateFrom.toIso8601String(),
-            if (dateTo != null) 'dateTo': dateTo.toIso8601String(),
-          },
-        );
-        final data = r.data;
-        if (data is Map<String, dynamic>) {
-          return FeedPage(
-            items: (data['items'] as List<dynamic>? ?? const [])
-                .map((e) => FeedEvent.parse(e as Map<String, dynamic>))
-                .toList(),
-            nextCursor: data['nextCursor'] as String?,
-          );
-        }
-        if (data is List) {
-          return FeedPage(
-            items: data
-                .map((e) => FeedEvent.parse(e as Map<String, dynamic>))
-                .toList(),
-          );
-        }
-        return const FeedPage(items: []);
-      });
+  }) => _call(() async {
+    final r = await _dio.get<dynamic>(
+      '/api/projects/$projectId/feed',
+      queryParameters: {
+        if (cursor != null) 'cursor': cursor,
+        'limit': limit,
+        if (kinds != null && kinds.isNotEmpty) 'kind': kinds,
+        if (stageId != null) 'stageId': stageId,
+        if (actorId != null) 'actorId': actorId,
+        if (dateFrom != null) 'dateFrom': dateFrom.toIso8601String(),
+        if (dateTo != null) 'dateTo': dateTo.toIso8601String(),
+      },
+    );
+    final data = r.data;
+    if (data is Map<String, dynamic>) {
+      return FeedPage(
+        items: (data['items'] as List<dynamic>? ?? const [])
+            .map((e) => FeedEvent.parse(e as Map<String, dynamic>))
+            .toList(),
+        nextCursor: data['nextCursor'] as String?,
+      );
+    }
+    if (data is List) {
+      return FeedPage(
+        items: data
+            .map((e) => FeedEvent.parse(e as Map<String, dynamic>))
+            .toList(),
+      );
+    }
+    return const FeedPage(items: []);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

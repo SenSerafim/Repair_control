@@ -114,9 +114,7 @@ Future<void> _archive(
     if (!context.mounted) return;
     AppToast.show(
       context,
-      message: failure == null
-          ? 'Проект архивирован'
-          : failure.userMessage,
+      message: failure == null ? 'Проект архивирован' : failure.userMessage,
       kind: failure == null ? AppToastKind.success : AppToastKind.error,
     );
   }
@@ -138,9 +136,7 @@ Future<void> _restore(
     if (!context.mounted) return;
     AppToast.show(
       context,
-      message: failure == null
-          ? 'Проект возвращён'
-          : failure.userMessage,
+      message: failure == null ? 'Проект возвращён' : failure.userMessage,
       kind: failure == null ? AppToastKind.success : AppToastKind.error,
     );
   }

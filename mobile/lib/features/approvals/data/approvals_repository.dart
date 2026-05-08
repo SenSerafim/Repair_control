@@ -22,26 +22,24 @@ class ApprovalsRepository {
     ApprovalScope? scope,
     ApprovalStatus? status,
     String? addresseeId,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/approvals',
-          queryParameters: {
-            if (scope != null) 'scope': scope.apiValue,
-            if (status != null) 'status': status.apiValue,
-            if (addresseeId != null) 'addresseeId': addresseeId,
-          },
-        );
-        return r.data!
-            .map((e) => Approval.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/projects/$projectId/approvals',
+      queryParameters: {
+        if (scope != null) 'scope': scope.apiValue,
+        if (status != null) 'status': status.apiValue,
+        if (addresseeId != null) 'addresseeId': addresseeId,
+      },
+    );
+    return r.data!
+        .map((e) => Approval.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<Approval> get(String id) => _call(() async {
-        final r =
-            await _dio.get<Map<String, dynamic>>('/api/approvals/$id');
-        return Approval.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/approvals/$id');
+    return Approval.parse(r.data!);
+  });
 
   Future<Approval> create({
     required String projectId,
@@ -51,29 +49,26 @@ class ApprovalsRepository {
     String? stepId,
     Map<String, dynamic>? payload,
     List<String>? attachmentKeys,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/approvals',
-          data: {
-            'scope': scope.apiValue,
-            'addresseeId': addresseeId,
-            if (stageId != null) 'stageId': stageId,
-            if (stepId != null) 'stepId': stepId,
-            if (payload != null) 'payload': payload,
-            if (attachmentKeys != null) 'attachmentKeys': attachmentKeys,
-          },
-        );
-        return Approval.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/approvals',
+      data: {
+        'scope': scope.apiValue,
+        'addresseeId': addresseeId,
+        if (stageId != null) 'stageId': stageId,
+        if (stepId != null) 'stepId': stepId,
+        if (payload != null) 'payload': payload,
+        if (attachmentKeys != null) 'attachmentKeys': attachmentKeys,
+      },
+    );
+    return Approval.parse(r.data!);
+  });
 
   Future<Approval> approve({required String id, String? comment}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/approvals/$id/approve',
-          data: {
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-          },
+          data: {if (comment != null && comment.isNotEmpty) 'comment': comment},
         );
         return Approval.parse(r.data!);
       });
@@ -91,23 +86,23 @@ class ApprovalsRepository {
     required String id,
     Map<String, dynamic>? payload,
     List<String>? attachmentKeys,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/approvals/$id/resubmit',
-          data: {
-            if (payload != null) 'payload': payload,
-            if (attachmentKeys != null) 'attachmentKeys': attachmentKeys,
-          },
-        );
-        return Approval.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/approvals/$id/resubmit',
+      data: {
+        if (payload != null) 'payload': payload,
+        if (attachmentKeys != null) 'attachmentKeys': attachmentKeys,
+      },
+    );
+    return Approval.parse(r.data!);
+  });
 
   Future<Approval> cancel(String id) => _call(() async {
-        final r = await _dio
-            .post<Map<String, dynamic>>('/api/approvals/$id/cancel');
-        return Approval.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/approvals/$id/cancel',
+    );
+    return Approval.parse(r.data!);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

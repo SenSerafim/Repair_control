@@ -43,17 +43,15 @@ class KnowledgeCategoryScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x16),
             ],
             if (detail.articles.isEmpty)
-              const AppEmptyState(
-                title: 'В категории пока нет статей',
-              )
+              const AppEmptyState(title: 'В категории пока нет статей')
             else
               AppMenuGroup(
                 children: [
                   for (final a in detail.articles)
                     AppMenuRow(
                       label: a.title,
-                      onTap: () => context
-                          .push(AppRoutes.knowledgeArticleWith(a.id)),
+                      onTap: () =>
+                          context.push(AppRoutes.knowledgeArticleWith(a.id)),
                     ),
                 ],
               ),

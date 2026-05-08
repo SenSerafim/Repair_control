@@ -56,20 +56,15 @@ class _ConfettiLayerState extends State<ConfettiLayer> {
   @override
   void initState() {
     super.initState();
-    _particles = List.generate(
-      widget.particleCount * widget.waves,
-      _spec,
-    );
+    _particles = List.generate(widget.particleCount * widget.waves, _spec);
 
-    final maxLife = widget.maxDurationMs +
+    final maxLife =
+        widget.maxDurationMs +
         (widget.waves - 1) * 800 +
         1200; // launch delay + duration
-    Future.delayed(
-      Duration(milliseconds: maxLife + 400),
-      () {
-        if (mounted) widget.onCompleted?.call();
-      },
-    );
+    Future.delayed(Duration(milliseconds: maxLife + 400), () {
+      if (mounted) widget.onCompleted?.call();
+    });
   }
 
   _ParticleSpec _spec(int i) {
@@ -81,7 +76,8 @@ class _ConfettiLayerState extends State<ConfettiLayer> {
       color: _palette[_rng.nextInt(_palette.length)],
       circle: _rng.nextBool(),
       delayMs: wavePhase + (_rng.nextDouble() * 1200).round(),
-      durationMs: widget.minDurationMs +
+      durationMs:
+          widget.minDurationMs +
           _rng.nextInt(widget.maxDurationMs - widget.minDurationMs),
       startRotation: _rng.nextDouble(),
     );

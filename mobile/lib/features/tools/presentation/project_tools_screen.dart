@@ -38,8 +38,7 @@ class ProjectToolsScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить реестр',
-          onRetry: () =>
-              ref.invalidate(projectToolRegistryProvider(projectId)),
+          onRetry: () => ref.invalidate(projectToolRegistryProvider(projectId)),
         ),
         data: (entries) {
           if (entries.isEmpty) {
@@ -89,8 +88,7 @@ class ProjectToolsScreen extends ConsumerWidget {
               AppSpacing.x32,
             ),
             itemCount: entries.length + (canManageTools ? 1 : 0),
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.x10),
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
             itemBuilder: (_, i) {
               if (canManageTools && i == entries.length) {
                 return Padding(
@@ -104,10 +102,7 @@ class ProjectToolsScreen extends ConsumerWidget {
                   ),
                 );
               }
-              return _RegistryRow(
-                projectId: projectId,
-                entry: entries[i],
-              );
+              return _RegistryRow(projectId: projectId, entry: entries[i]);
             },
           );
         },
@@ -184,8 +179,9 @@ class _RegistryRow extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         '№ ${entry.tool.serial}',
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.n500),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.n500,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 4),
@@ -195,8 +191,10 @@ class _RegistryRow extends ConsumerWidget {
               ),
               if (entry.hasActiveRequest)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.yellowBg,
                     borderRadius: BorderRadius.circular(8),
@@ -275,11 +273,9 @@ class _RegistryRow extends ConsumerWidget {
     );
     qtyController.dispose();
     if (qty == null || !context.mounted) return;
-    final failure =
-        await ref.read(projectToolRegistryProvider(projectId).notifier).requestTool(
-              toolItemId: entry.tool.id,
-              qty: qty,
-            );
+    final failure = await ref
+        .read(projectToolRegistryProvider(projectId).notifier)
+        .requestTool(toolItemId: entry.tool.id, qty: qty);
     if (!context.mounted) return;
     AppToast.show(
       context,
@@ -301,7 +297,8 @@ class _HolderTag extends ConsumerWidget {
     final teamAsync = entry.tool.projectId != null
         ? ref.watch(teamControllerProvider(entry.tool.projectId!))
         : null;
-    final holderName = teamAsync?.maybeWhen(
+    final holderName =
+        teamAsync?.maybeWhen(
           data: (team) {
             final m = team.members.firstWhere(
               (m) => m.userId == entry.currentHolderId,
@@ -374,8 +371,9 @@ class _AddFromMySheetState extends ConsumerState<_AddFromMySheet> {
               ),
               data: (tools) {
                 // Фильтруем те, что уже в этом проекте.
-                final available =
-                    tools.where((t) => t.projectId != widget.projectId).toList();
+                final available = tools
+                    .where((t) => t.projectId != widget.projectId)
+                    .toList();
                 if (available.isEmpty) {
                   return const AppEmptyState(
                     title: 'Все инструменты уже в проекте',
@@ -404,14 +402,10 @@ class _AddFromMySheetState extends ConsumerState<_AddFromMySheet> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: checked
-                              ? AppColors.brandLight
-                              : AppColors.n50,
+                          color: checked ? AppColors.brandLight : AppColors.n50,
                           borderRadius: BorderRadius.circular(AppRadius.r12),
                           border: Border.all(
-                            color: checked
-                                ? AppColors.brand
-                                : AppColors.n200,
+                            color: checked ? AppColors.brand : AppColors.n200,
                             width: 1.5,
                           ),
                         ),
@@ -431,16 +425,13 @@ class _AddFromMySheetState extends ConsumerState<_AddFromMySheet> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    t.name,
-                                    style: AppTextStyles.subtitle,
-                                  ),
-                                  if (t.serial != null &&
-                                      t.serial!.isNotEmpty)
+                                  Text(t.name, style: AppTextStyles.subtitle),
+                                  if (t.serial != null && t.serial!.isNotEmpty)
                                     Text(
                                       '№ ${t.serial} · ${t.totalQty} ${t.unit ?? ''}',
-                                      style: AppTextStyles.caption
-                                          .copyWith(color: AppColors.n500),
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.n500,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -479,9 +470,7 @@ class _AddFromMySheetState extends ConsumerState<_AddFromMySheet> {
     Navigator.of(context).pop();
     AppToast.show(
       context,
-      message: failure == null
-          ? 'Инструменты добавлены'
-          : failure.userMessage,
+      message: failure == null ? 'Инструменты добавлены' : failure.userMessage,
       kind: failure == null ? AppToastKind.success : AppToastKind.error,
     );
   }

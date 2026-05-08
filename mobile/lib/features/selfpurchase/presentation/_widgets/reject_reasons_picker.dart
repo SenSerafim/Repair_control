@@ -5,9 +5,17 @@ import '../../../../core/theme/tokens.dart';
 
 /// Стандартные причины отклонения самозакупа (e-selfpurchase-reject).
 enum RejectReason {
-  notAgreed('not_agreed', Icons.highlight_off_rounded, 'Не согласована закупка'),
+  notAgreed(
+    'not_agreed',
+    Icons.highlight_off_rounded,
+    'Не согласована закупка',
+  ),
   overpriced('overpriced', Icons.trending_up_rounded, 'Завышена цена'),
-  noReceipt('no_receipt', Icons.receipt_long_outlined, 'Нет чека / плохое фото'),
+  noReceipt(
+    'no_receipt',
+    Icons.receipt_long_outlined,
+    'Нет чека / плохое фото',
+  ),
   other('other', Icons.edit_outlined, 'Другая причина');
 
   const RejectReason(this.apiValue, this.icon, this.label);
@@ -34,11 +42,7 @@ class RejectReasonsPicker extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (final r in RejectReason.values) ...[
-          _Tile(
-            reason: r,
-            selected: selected == r,
-            onTap: () => onChanged(r),
-          ),
+          _Tile(reason: r, selected: selected == r, onTap: () => onChanged(r)),
           const SizedBox(height: AppSpacing.x8),
         ],
       ],

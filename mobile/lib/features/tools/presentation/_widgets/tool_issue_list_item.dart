@@ -71,8 +71,10 @@ class ToolIssueListItem extends StatelessWidget {
               ),
               if (!dim)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.greenLight,
                     borderRadius: BorderRadius.circular(AppRadius.r8),

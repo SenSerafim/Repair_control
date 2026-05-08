@@ -8,8 +8,8 @@ import 'projects_list_controller.dart';
 /// Кеш отдельного проекта. Family по projectId.
 final projectControllerProvider =
     AsyncNotifierProvider.family<ProjectController, Project, String>(
-  ProjectController.new,
-);
+      ProjectController.new,
+    );
 
 class ProjectController extends FamilyAsyncNotifier<Project, String> {
   @override
@@ -27,17 +27,18 @@ class ProjectController extends FamilyAsyncNotifier<Project, String> {
     int? materialsBudget,
   }) async {
     try {
-      final updated =
-          await ref.read(projectsRepositoryProvider).update(
-                arg,
-                title: title,
-                address: address,
-                description: description,
-                plannedStart: plannedStart,
-                plannedEnd: plannedEnd,
-                workBudget: workBudget,
-                materialsBudget: materialsBudget,
-              );
+      final updated = await ref
+          .read(projectsRepositoryProvider)
+          .update(
+            arg,
+            title: title,
+            address: address,
+            description: description,
+            plannedStart: plannedStart,
+            plannedEnd: plannedEnd,
+            workBudget: workBudget,
+            materialsBudget: materialsBudget,
+          );
       state = AsyncData(updated);
       ref.read(activeProjectsProvider.notifier).replaceUpdated(updated);
       return null;
@@ -90,7 +91,9 @@ class ProjectCreator {
     int? workBudget,
     int? materialsBudget,
   }) async {
-    final p = await _ref.read(projectsRepositoryProvider).create(
+    final p = await _ref
+        .read(projectsRepositoryProvider)
+        .create(
           title: title,
           address: address,
           description: description,

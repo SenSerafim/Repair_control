@@ -58,10 +58,11 @@ class _CopyBodyState extends ConsumerState<_CopyBody> {
       _error = null;
     });
     try {
-      final copy = await ref.read(projectCreatorProvider).copy(
+      final copy = await ref
+          .read(projectCreatorProvider)
+          .copy(
             widget.project.id,
-            newTitle:
-                _title.text.trim().isEmpty ? null : _title.text.trim(),
+            newTitle: _title.text.trim().isEmpty ? null : _title.text.trim(),
           );
       if (!mounted) return;
       Navigator.of(context).pop(copy);
@@ -193,9 +194,7 @@ class _CopyBodyState extends ConsumerState<_CopyBody> {
         AppButton(
           label: 'Отмена',
           variant: AppButtonVariant.secondary,
-          onPressed: _submitting
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
         ),
       ],
     );

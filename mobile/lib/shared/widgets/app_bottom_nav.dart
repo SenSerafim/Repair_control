@@ -60,11 +60,7 @@ class AppBottomNavItem {
 }
 
 class _Item extends StatelessWidget {
-  const _Item({
-    required this.item,
-    required this.active,
-    required this.onTap,
-  });
+  const _Item({required this.item, required this.active, required this.onTap});
 
   final AppBottomNavItem item;
   final bool active;

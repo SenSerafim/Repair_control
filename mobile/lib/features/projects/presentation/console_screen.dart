@@ -39,8 +39,7 @@ class ConsoleScreen extends ConsumerWidget {
         error: (e, _) => Center(
           child: AppErrorState(
             title: 'Не удалось загрузить проект',
-            onRetry: () =>
-                ref.invalidate(projectControllerProvider(projectId)),
+            onRetry: () => ref.invalidate(projectControllerProvider(projectId)),
           ),
         ),
         data: (project) => _Body(projectId: projectId, project: project),
@@ -79,32 +78,32 @@ class _BodyState extends ConsumerState<_Body> {
 
     // 1. Слушаем перевод этапов в done — bouncePulse++ запустит лёгкий
     //    bounce дома без полного WOW.
-    ref.listen<AsyncValue<List<Stage>>>(
-      stagesControllerProvider(projectId),
-      (prev, next) {
-        final oldDone = (prev?.value ?? const <Stage>[])
-            .where((s) => s.status == StageStatus.done)
-            .length;
-        final newDone = (next.value ?? const <Stage>[])
-            .where((s) => s.status == StageStatus.done)
-            .length;
-        if (prev != null && newDone > oldDone) {
-          setState(() => _bouncePulse++);
-        }
-      },
-    );
+    ref.listen<AsyncValue<List<Stage>>>(stagesControllerProvider(projectId), (
+      prev,
+      next,
+    ) {
+      final oldDone = (prev?.value ?? const <Stage>[])
+          .where((s) => s.status == StageStatus.done)
+          .length;
+      final newDone = (next.value ?? const <Stage>[])
+          .where((s) => s.status == StageStatus.done)
+          .length;
+      if (prev != null && newDone > oldDone) {
+        setState(() => _bouncePulse++);
+      }
+    });
 
     // 2. Слушаем переход progressCache <100 → 100 — запускает WOW-overlay.
-    ref.listen<AsyncValue<Project>>(
-      projectControllerProvider(projectId),
-      (prev, next) {
-        final oldP = prev?.value?.progressCache ?? 0;
-        final newP = next.value?.progressCache ?? 0;
-        if (oldP < 100 && newP >= 100) {
-          HouseCelebrationOverlay.show(context);
-        }
-      },
-    );
+    ref.listen<AsyncValue<Project>>(projectControllerProvider(projectId), (
+      prev,
+      next,
+    ) {
+      final oldP = prev?.value?.progressCache ?? 0;
+      final newP = next.value?.progressCache ?? 0;
+      if (oldP < 100 && newP >= 100) {
+        HouseCelebrationOverlay.show(context);
+      }
+    });
 
     final stagesAsync = ref.watch(stagesControllerProvider(projectId));
     final stages = stagesAsync.value ?? const <Stage>[];
@@ -114,8 +113,10 @@ class _BodyState extends ConsumerState<_Body> {
         projectId: projectId,
       )),
     );
-    final unread =
-        ref.watch(notificationsProvider).where((n) => !n.read).length;
+    final unread = ref
+        .watch(notificationsProvider)
+        .where((n) => !n.read)
+        .length;
 
     final effectiveSemaphore = stages.isEmpty
         ? project.semaphore
@@ -129,8 +130,7 @@ class _BodyState extends ConsumerState<_Body> {
     final doneStages = stages.where((s) => s.status == StageStatus.done);
     final activeStage = activeStages.isEmpty
         ? null
-        : activeStages.reduce((a, b) =>
-            a.orderIndex < b.orderIndex ? a : b);
+        : activeStages.reduce((a, b) => a.orderIndex < b.orderIndex ? a : b);
 
     return Column(
       children: [
@@ -166,11 +166,13 @@ class _BodyState extends ConsumerState<_Body> {
                 if (canSeeBudget) ...[
                   const SizedBox(height: AppSpacing.x12),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.x16,
+                    ),
                     child: AppBudgetCard(
                       totalLabel: 'Бюджет проекта',
-                      totalValue: '${_formatRubles(p.workBudget + p.materialsBudget)} ₽',
+                      totalValue:
+                          '${_formatRubles(p.workBudget + p.materialsBudget)} ₽',
                       workSpent: '0',
                       workTotal: _formatRubles(p.workBudget),
                       materialsSpent: '0',
@@ -183,8 +185,7 @@ class _BodyState extends ConsumerState<_Body> {
                 TourAnchor(
                   id: 'console.stages_tile',
                   child: _StagesCarouselHeader(
-                    onAllTap: () =>
-                        context.push('/projects/$projectId/stages'),
+                    onAllTap: () => context.push('/projects/$projectId/stages'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.x10),
@@ -207,7 +208,8 @@ class _BodyState extends ConsumerState<_Body> {
         child: AppConsoleBanner(
           semaphore: Semaphore.green,
           title: 'Проект завершён!',
-          subtitle: 'Все этапы закрыты. Можно отправить в архив или '
+          subtitle:
+              'Все этапы закрыты. Можно отправить в архив или '
               'скачать ZIP-сводку.',
         ),
       );
@@ -216,7 +218,8 @@ class _BodyState extends ConsumerState<_Body> {
       return AppConsoleBanner(
         semaphore: Semaphore.blue,
         title: 'План на согласовании',
-        subtitle: 'Заказчик ещё не одобрил план этапов. До одобрения '
+        subtitle:
+            'Заказчик ещё не одобрил план этапов. До одобрения '
             'старт работ заблокирован.',
         actionLabel: 'Показать план целиком',
         onAction: () {},
@@ -225,23 +228,25 @@ class _BodyState extends ConsumerState<_Body> {
     return switch (p.semaphore) {
       Semaphore.green => null,
       Semaphore.yellow => const AppConsoleBanner(
-          semaphore: Semaphore.yellow,
-          title: 'Есть отставание',
-          subtitle:
-              'Часть этапов идёт медленнее плана. Обратите внимание на сроки.',
-        ),
+        semaphore: Semaphore.yellow,
+        title: 'Есть отставание',
+        subtitle:
+            'Часть этапов идёт медленнее плана. Обратите внимание на сроки.',
+      ),
       Semaphore.red => const AppConsoleBanner(
-          semaphore: Semaphore.red,
-          title: 'Есть просрочки',
-          subtitle: 'Дедлайн пройден или критическое отставание. '
-              'Нужно срочное вмешательство.',
-        ),
+        semaphore: Semaphore.red,
+        title: 'Есть просрочки',
+        subtitle:
+            'Дедлайн пройден или критическое отставание. '
+            'Нужно срочное вмешательство.',
+      ),
       Semaphore.blue => const AppConsoleBanner(
-          semaphore: Semaphore.blue,
-          title: 'Ждёт действия',
-          subtitle: 'Этап на приёмке или ждёт согласования. '
-              'Видно, чьего хода ждём.',
-        ),
+        semaphore: Semaphore.blue,
+        title: 'Ждёт действия',
+        subtitle:
+            'Этап на приёмке или ждёт согласования. '
+            'Видно, чьего хода ждём.',
+      ),
       _ => null,
     };
   }
@@ -271,8 +276,7 @@ class _ConHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
         decoration: const BoxDecoration(
           color: AppColors.n0,
-          border:
-              Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
+          border: Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -302,8 +306,7 @@ class _ConHeader extends StatelessWidget {
                   children: [
                     _IconShellBtn(
                       icon: PhosphorIconsRegular.bell,
-                      onTap: () =>
-                          context.push(AppRoutes.notifications),
+                      onTap: () => context.push(AppRoutes.notifications),
                     ),
                     if (unreadNotifications > 0)
                       Positioned(
@@ -314,13 +317,11 @@ class _ConHeader extends StatelessWidget {
                             minWidth: 16,
                             minHeight: 16,
                           ),
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
                           decoration: BoxDecoration(
                             color: AppColors.redDot,
                             shape: BoxShape.circle,
-                            border:
-                                Border.all(color: AppColors.n0, width: 2),
+                            border: Border.all(color: AppColors.n0, width: 2),
                           ),
                           alignment: Alignment.center,
                           child: Text(
@@ -387,9 +388,7 @@ class _ConHeader extends StatelessWidget {
     final parts = <String>[];
     if ((p.address ?? '').isNotEmpty) parts.add(p.address!);
     if (p.plannedStart != null && p.plannedEnd != null) {
-      parts.add(
-        '${df.format(p.plannedStart!)} — ${df.format(p.plannedEnd!)}',
-      );
+      parts.add('${df.format(p.plannedStart!)} — ${df.format(p.plannedEnd!)}');
     }
     return parts.join(' · ');
   }
@@ -491,7 +490,9 @@ class _HouseSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = stages.length;
     final percent = project.progressCache.clamp(0, 100);
-    final stageNo = activeStage != null ? activeStage!.orderIndex + 1 : doneCount;
+    final stageNo = activeStage != null
+        ? activeStage!.orderIndex + 1
+        : doneCount;
     final statusLabel = switch (project.semaphore) {
       Semaphore.green => 'По графику',
       Semaphore.yellow => 'Отставание',
@@ -558,13 +559,13 @@ class _StatsRow extends StatelessWidget {
               value: daysToDeadline == null
                   ? '—'
                   : daysToDeadline >= 0
-                      ? '$daysToDeadline'
-                      : '${-daysToDeadline}',
+                  ? '$daysToDeadline'
+                  : '${-daysToDeadline}',
               subtext: daysToDeadline == null
                   ? 'не задан'
                   : daysToDeadline >= 0
-                      ? 'дней'
-                      : 'дн просрочено',
+                  ? 'дней'
+                  : 'дн просрочено',
               progress: 0.5,
               semaphore: daysToDeadline != null && daysToDeadline < 0
                   ? Semaphore.red
@@ -658,11 +659,7 @@ class _StagesCarousel extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                PhosphorIconsRegular.info,
-                size: 16,
-                color: AppColors.n400,
-              ),
+              Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.n400),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -693,9 +690,7 @@ class _StagesCarousel extends StatelessWidget {
             title: s.title,
             statusLabel: _statusLabel(s.status),
             statusKind: _statusKind(s.status),
-            assigneeName: s.foremanIds.isEmpty
-                ? 'Не назначен'
-                : 'Бригадир',
+            assigneeName: s.foremanIds.isEmpty ? 'Не назначен' : 'Бригадир',
             stepsLabel: '${s.progressCache}% шагов',
             questionsLabel: 'Вопросов нет',
             deadlineLabel: s.plannedEnd != null
@@ -713,22 +708,22 @@ class _StagesCarousel extends StatelessWidget {
   }
 
   static String _statusLabel(StageStatus s) => switch (s) {
-        StageStatus.pending => 'Не начат',
-        StageStatus.active => 'В работе',
-        StageStatus.paused => 'Пауза',
-        StageStatus.review => 'Приёмка',
-        StageStatus.done => 'Завершён',
-        StageStatus.rejected => 'Отклонён',
-      };
+    StageStatus.pending => 'Не начат',
+    StageStatus.active => 'В работе',
+    StageStatus.paused => 'Пауза',
+    StageStatus.review => 'Приёмка',
+    StageStatus.done => 'Завершён',
+    StageStatus.rejected => 'Отклонён',
+  };
 
   static AppStageMiniStatus _statusKind(StageStatus s) => switch (s) {
-        StageStatus.pending => AppStageMiniStatus.pending,
-        StageStatus.active => AppStageMiniStatus.active,
-        StageStatus.paused => AppStageMiniStatus.paused,
-        StageStatus.review => AppStageMiniStatus.review,
-        StageStatus.done => AppStageMiniStatus.done,
-        StageStatus.rejected => AppStageMiniStatus.rejected,
-      };
+    StageStatus.pending => AppStageMiniStatus.pending,
+    StageStatus.active => AppStageMiniStatus.active,
+    StageStatus.paused => AppStageMiniStatus.paused,
+    StageStatus.review => AppStageMiniStatus.review,
+    StageStatus.done => AppStageMiniStatus.done,
+    StageStatus.rejected => AppStageMiniStatus.rejected,
+  };
 }
 
 class _ConsoleSkeleton extends StatelessWidget {
@@ -798,34 +793,46 @@ class _NavSections extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canBudget = ref.watch(canInProjectProvider((
-      action: DomainAction.financeBudgetView,
-      projectId: projectId,
-    )));
-    final canMaterials = ref.watch(canInProjectProvider((
-      action: DomainAction.materialsManage,
-      projectId: projectId,
-    )));
-    final canSelfPurchase = ref.watch(canInProjectProvider((
-      action: DomainAction.selfPurchaseCreate,
-      projectId: projectId,
-    )));
+    final canBudget = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.financeBudgetView,
+        projectId: projectId,
+      )),
+    );
+    final canMaterials = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.materialsManage,
+        projectId: projectId,
+      )),
+    );
+    final canSelfPurchase = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.selfPurchaseCreate,
+        projectId: projectId,
+      )),
+    );
     // П2.15 — плитка «Инструмент» видна всем активным участникам проекта,
     // включая customer/representative (их инструменты тоже могут быть на
     // объекте). Write-действия (выдать/принять) внутри экрана уже гейтятся
     // отдельно через toolsIssue/toolsReturn.
-    final canTools = ref.watch(canInProjectProvider((
-      action: DomainAction.toolsViewProject,
-      projectId: projectId,
-    )));
-    final canApprovals = ref.watch(canInProjectProvider((
-      action: DomainAction.approvalList,
-      projectId: projectId,
-    )));
-    final canChat = ref.watch(canInProjectProvider((
-      action: DomainAction.chatRead,
-      projectId: projectId,
-    )));
+    final canTools = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.toolsViewProject,
+        projectId: projectId,
+      )),
+    );
+    final canApprovals = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalList,
+        projectId: projectId,
+      )),
+    );
+    final canChat = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.chatRead,
+        projectId: projectId,
+      )),
+    );
 
     final stagesAndWork = <AppNavTileSpec>[
       AppNavTileSpec(
@@ -879,8 +886,7 @@ class _NavSections extends ConsumerWidget {
           icon: PhosphorIconsFill.basket,
           iconColor: AppColors.brand,
           label: 'Самозакуп',
-          onTap: () =>
-              context.push('/projects/$projectId/selfpurchases'),
+          onTap: () => context.push('/projects/$projectId/selfpurchases'),
         ),
       if (canTools)
         AppNavTileSpec(

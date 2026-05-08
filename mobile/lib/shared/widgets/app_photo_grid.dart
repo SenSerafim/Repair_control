@@ -41,8 +41,7 @@ class AppPhotoGrid extends StatelessWidget {
         _PhotoCell(
           url: imageUrls[i],
           onTap: onTapPhoto == null ? null : () => onTapPhoto!(i),
-          onDelete:
-              onDeletePhoto == null ? null : () => onDeletePhoto!(i),
+          onDelete: onDeletePhoto == null ? null : () => onDeletePhoto!(i),
         ),
       if (onAdd != null) _AddCell(onTap: onAdd!),
     ];
@@ -133,11 +132,7 @@ class _AddCell extends StatelessWidget {
         child: Container(
           color: AppColors.n50,
           alignment: Alignment.center,
-          child: const Icon(
-            Icons.add_rounded,
-            size: 28,
-            color: AppColors.n400,
-          ),
+          child: const Icon(Icons.add_rounded, size: 28, color: AppColors.n400),
         ),
       ),
     );

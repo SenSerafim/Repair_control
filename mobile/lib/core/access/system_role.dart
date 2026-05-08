@@ -18,23 +18,21 @@ enum SystemRole {
 
   /// Отображаемое имя на русском (для UI).
   String get displayName => switch (this) {
-        SystemRole.admin => 'Администратор',
-        SystemRole.customer => 'Заказчик',
-        SystemRole.representative => 'Представитель',
-        SystemRole.contractor => 'Бригадир',
-        SystemRole.master => 'Мастер',
-      };
+    SystemRole.admin => 'Администратор',
+    SystemRole.customer => 'Заказчик',
+    SystemRole.representative => 'Представитель',
+    SystemRole.contractor => 'Бригадир',
+    SystemRole.master => 'Мастер',
+  };
 
   /// Краткое описание роли (для регистрации/добавления роли).
   String get description => switch (this) {
-        SystemRole.admin => 'Системный администратор',
-        SystemRole.customer => 'Создаёт проекты, управляет бюджетом',
-        SystemRole.representative =>
-          'Доверенное лицо заказчика или бригадира',
-        SystemRole.contractor =>
-          'Ведёт работы по этапам, нанимает мастеров',
-        SystemRole.master => 'Бригадир · выполняет шаги на этапах',
-      };
+    SystemRole.admin => 'Системный администратор',
+    SystemRole.customer => 'Создаёт проекты, управляет бюджетом',
+    SystemRole.representative => 'Доверенное лицо заказчика или бригадира',
+    SystemRole.contractor => 'Ведёт работы по этапам, нанимает мастеров',
+    SystemRole.master => 'Бригадир · выполняет шаги на этапах',
+  };
 
   /// Только роли, доступные при регистрации (без admin).
   ///

@@ -14,10 +14,7 @@ class StepStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusPill(
-      label: status.displayName,
-      semaphore: status.semaphore,
-    );
+    return StatusPill(label: status.displayName, semaphore: status.semaphore);
   }
 }
 
@@ -53,10 +50,7 @@ class StepRow extends StatelessWidget {
         child: Row(
           children: [
             if (canToggle && onToggleDone != null)
-              _CheckBubble(
-                isDone: step.isDone,
-                onTap: onToggleDone!,
-              )
+              _CheckBubble(isDone: step.isDone, onTap: onToggleDone!)
             else
               Container(
                 width: 24,
@@ -66,9 +60,7 @@ class StepRow extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  step.isDone
-                      ? Icons.check_rounded
-                      : Icons.pending_outlined,
+                  step.isDone ? Icons.check_rounded : Icons.pending_outlined,
                   size: 14,
                   color: step.status.semaphore.text,
                 ),
@@ -116,8 +108,7 @@ class StepRow extends StatelessWidget {
                         const SizedBox(width: AppSpacing.x8),
                         _MiniChip(
                           icon: Icons.checklist_rounded,
-                          label:
-                              '${step.substepsDone}/${step.substepsCount}',
+                          label: '${step.substepsDone}/${step.substepsCount}',
                         ),
                       ],
                       if (step.photosCount > 0) ...[
@@ -132,10 +123,7 @@ class StepRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.n300,
-            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
           ],
         ),
       ),

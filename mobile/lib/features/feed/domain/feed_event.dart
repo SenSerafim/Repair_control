@@ -18,28 +18,28 @@ enum FeedCategory {
   other;
 
   String get displayName => switch (this) {
-        FeedCategory.project => 'Проект',
-        FeedCategory.stage => 'Этапы',
-        FeedCategory.step => 'Шаги',
-        FeedCategory.approval => 'Согласования',
-        FeedCategory.finance => 'Финансы',
-        FeedCategory.materials => 'Материалы',
-        FeedCategory.chat => 'Чат',
-        FeedCategory.documents => 'Документы',
-        FeedCategory.other => 'Прочее',
-      };
+    FeedCategory.project => 'Проект',
+    FeedCategory.stage => 'Этапы',
+    FeedCategory.step => 'Шаги',
+    FeedCategory.approval => 'Согласования',
+    FeedCategory.finance => 'Финансы',
+    FeedCategory.materials => 'Материалы',
+    FeedCategory.chat => 'Чат',
+    FeedCategory.documents => 'Документы',
+    FeedCategory.other => 'Прочее',
+  };
 
   IconData get icon => switch (this) {
-        FeedCategory.project => Icons.folder_outlined,
-        FeedCategory.stage => Icons.dashboard_outlined,
-        FeedCategory.step => Icons.checklist_outlined,
-        FeedCategory.approval => Icons.rule_rounded,
-        FeedCategory.finance => Icons.account_balance_wallet_outlined,
-        FeedCategory.materials => Icons.inventory_2_outlined,
-        FeedCategory.chat => Icons.chat_bubble_outline_rounded,
-        FeedCategory.documents => Icons.insert_drive_file_outlined,
-        FeedCategory.other => Icons.bolt_outlined,
-      };
+    FeedCategory.project => Icons.folder_outlined,
+    FeedCategory.stage => Icons.dashboard_outlined,
+    FeedCategory.step => Icons.checklist_outlined,
+    FeedCategory.approval => Icons.rule_rounded,
+    FeedCategory.finance => Icons.account_balance_wallet_outlined,
+    FeedCategory.materials => Icons.inventory_2_outlined,
+    FeedCategory.chat => Icons.chat_bubble_outline_rounded,
+    FeedCategory.documents => Icons.insert_drive_file_outlined,
+    FeedCategory.other => Icons.bolt_outlined,
+  };
 
   /// Маппинг backend FeedEventKind → FeedCategory.
   /// Approval-события (включая stage_accepted/stage_rejected_by_customer)
@@ -95,16 +95,14 @@ class FeedEvent with _$FeedEvent {
   }) = _FeedEvent;
 
   static FeedEvent parse(Map<String, dynamic> json) => FeedEvent(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        kind: json['kind'] as String,
-        actorId: json['actorId'] as String? ?? '',
-        payload: Map<String, dynamic>.from(
-          json['payload'] as Map? ?? const {},
-        ),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    kind: json['kind'] as String,
+    actorId: json['actorId'] as String? ?? '',
+    payload: Map<String, dynamic>.from(json['payload'] as Map? ?? const {}),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 }
 
 /// Технические FeedEventKind, которые UI не должен показывать в ленте проекта.

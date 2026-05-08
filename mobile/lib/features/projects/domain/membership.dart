@@ -19,11 +19,11 @@ enum MembershipRole {
   }
 
   String get displayName => switch (this) {
-        MembershipRole.customer => 'Заказчик',
-        MembershipRole.representative => 'Представитель',
-        MembershipRole.foreman => 'Бригадир',
-        MembershipRole.master => 'Мастер',
-      };
+    MembershipRole.customer => 'Заказчик',
+    MembershipRole.representative => 'Представитель',
+    MembershipRole.foreman => 'Бригадир',
+    MembershipRole.master => 'Мастер',
+  };
 }
 
 @freezed

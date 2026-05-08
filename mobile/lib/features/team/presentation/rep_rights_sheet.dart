@@ -98,8 +98,7 @@ class _RightsBodyState extends ConsumerState<_RightsBody> {
               ),
               child: Text(
                 _error!,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.redText),
+                style: AppTextStyles.body.copyWith(color: AppColors.redText),
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -121,20 +120,15 @@ class _RightsBodyState extends ConsumerState<_RightsBody> {
                       label: action.label,
                       action: action.action,
                       enabled: _rights[action.action.value] ?? false,
-                      onChanged: (v) => setState(
-                        () => _rights[action.action.value] = v,
-                      ),
+                      onChanged: (v) =>
+                          setState(() => _rights[action.action.value] = v),
                     ),
                 ],
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.x16),
-          AppButton(
-            label: 'Сохранить',
-            isLoading: _saving,
-            onPressed: _save,
-          ),
+          AppButton(label: 'Сохранить', isLoading: _saving, onPressed: _save),
         ],
       ),
     );
@@ -211,18 +205,9 @@ const _groups = <_Group>[
         action: DomainAction.projectEdit,
         label: 'Редактировать проект',
       ),
-      _ActionDef(
-        action: DomainAction.stageManage,
-        label: 'Управлять этапами',
-      ),
-      _ActionDef(
-        action: DomainAction.stageStart,
-        label: 'Запускать этапы',
-      ),
-      _ActionDef(
-        action: DomainAction.stagePause,
-        label: 'Ставить на паузу',
-      ),
+      _ActionDef(action: DomainAction.stageManage, label: 'Управлять этапами'),
+      _ActionDef(action: DomainAction.stageStart, label: 'Запускать этапы'),
+      _ActionDef(action: DomainAction.stagePause, label: 'Ставить на паузу'),
     ],
   ),
   _Group(
@@ -262,10 +247,7 @@ const _groups = <_Group>[
         action: DomainAction.materialsManage,
         label: 'Управлять материалами',
       ),
-      _ActionDef(
-        action: DomainAction.toolsIssue,
-        label: 'Выдавать инструмент',
-      ),
+      _ActionDef(action: DomainAction.toolsIssue, label: 'Выдавать инструмент'),
     ],
   ),
 ];

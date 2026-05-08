@@ -16,16 +16,16 @@ enum LegalKind {
   dataProcessingConsent;
 
   String get apiValue => switch (this) {
-        LegalKind.privacyPolicy => 'privacy',
-        LegalKind.termsOfService => 'tos',
-        LegalKind.dataProcessingConsent => 'data_processing_consent',
-      };
+    LegalKind.privacyPolicy => 'privacy',
+    LegalKind.termsOfService => 'tos',
+    LegalKind.dataProcessingConsent => 'data_processing_consent',
+  };
 
   String get title => switch (this) {
-        LegalKind.privacyPolicy => 'Политика конфиденциальности',
-        LegalKind.termsOfService => 'Пользовательское соглашение',
-        LegalKind.dataProcessingConsent => 'Согласие на обработку ПДн',
-      };
+    LegalKind.privacyPolicy => 'Политика конфиденциальности',
+    LegalKind.termsOfService => 'Пользовательское соглашение',
+    LegalKind.dataProcessingConsent => 'Согласие на обработку ПДн',
+  };
 }
 
 @freezed

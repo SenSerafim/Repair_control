@@ -73,23 +73,20 @@ class TourBubble extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: onSkip,
-                  child: Text(MaterialLocalizations.of(context)
-                          .modalBarrierDismissLabel.isEmpty
-                      ? 'Пропустить'
-                      : 'Пропустить'),
+                  child: Text(
+                    MaterialLocalizations.of(
+                          context,
+                        ).modalBarrierDismissLabel.isEmpty
+                        ? 'Пропустить'
+                        : 'Пропустить',
+                  ),
                 ),
                 const Spacer(),
                 if (onBack != null)
-                  TextButton(
-                    onPressed: onBack,
-                    child: const Text('Назад'),
-                  ),
+                  TextButton(onPressed: onBack, child: const Text('Назад')),
                 const SizedBox(width: 8),
                 if (onNext != null)
-                  FilledButton(
-                    onPressed: onNext,
-                    child: const Text('Далее'),
-                  ),
+                  FilledButton(onPressed: onNext, child: const Text('Далее')),
               ],
             ),
             if (onCutoutTapHint != null) ...[

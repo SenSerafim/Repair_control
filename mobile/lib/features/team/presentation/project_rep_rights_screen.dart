@@ -44,20 +44,22 @@ class _ProjectRepRightsScreenState
   bool _busy = false;
 
   Map<String, bool> _permissions() => {
-        'canSeeProjectBudget': _viewBudgetProject,
-        'canSeeStageBudget': _viewBudgetStages,
-        'canSeeFinanceFeed': _viewFinanceFeed,
-        'canAddStages': _addStages,
-        'canAssignContractors': _assignContractors,
-        'canApproveWorks': _approveWorks,
-        'canAddSubsteps': _addSubsteps,
-      };
+    'canSeeProjectBudget': _viewBudgetProject,
+    'canSeeStageBudget': _viewBudgetStages,
+    'canSeeFinanceFeed': _viewFinanceFeed,
+    'canAddStages': _addStages,
+    'canAssignContractors': _assignContractors,
+    'canApproveWorks': _approveWorks,
+    'canAddSubsteps': _addSubsteps,
+  };
 
   Future<void> _save() async {
     setState(() => _busy = true);
     try {
       // Сначала добавляем как representative с правами.
-      await ref.read(teamRepositoryProvider).addMember(
+      await ref
+          .read(teamRepositoryProvider)
+          .addMember(
             projectId: widget.projectId,
             userId: widget.user.id,
             role: MembershipRole.representative,
@@ -83,8 +85,7 @@ class _ProjectRepRightsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final fullName =
-        '${widget.user.firstName} ${widget.user.lastName}'.trim();
+    final fullName = '${widget.user.firstName} ${widget.user.lastName}'.trim();
 
     return AppScaffold(
       showBack: true,
@@ -150,34 +151,28 @@ class _ProjectRepRightsScreenState
                   label: 'Бюджет проекта',
                   trailing: _Toggle(
                     value: _viewBudgetProject,
-                    onChanged: (v) =>
-                        setState(() => _viewBudgetProject = v),
+                    onChanged: (v) => setState(() => _viewBudgetProject = v),
                   ),
-                  onTap: () => setState(
-                    () => _viewBudgetProject = !_viewBudgetProject,
-                  ),
+                  onTap: () =>
+                      setState(() => _viewBudgetProject = !_viewBudgetProject),
                 ),
                 AppMenuRow(
                   label: 'Бюджет этапов',
                   trailing: _Toggle(
                     value: _viewBudgetStages,
-                    onChanged: (v) =>
-                        setState(() => _viewBudgetStages = v),
+                    onChanged: (v) => setState(() => _viewBudgetStages = v),
                   ),
-                  onTap: () => setState(
-                    () => _viewBudgetStages = !_viewBudgetStages,
-                  ),
+                  onTap: () =>
+                      setState(() => _viewBudgetStages = !_viewBudgetStages),
                 ),
                 AppMenuRow(
                   label: 'Лента событий (финансы)',
                   trailing: _Toggle(
                     value: _viewFinanceFeed,
-                    onChanged: (v) =>
-                        setState(() => _viewFinanceFeed = v),
+                    onChanged: (v) => setState(() => _viewFinanceFeed = v),
                   ),
-                  onTap: () => setState(
-                    () => _viewFinanceFeed = !_viewFinanceFeed,
-                  ),
+                  onTap: () =>
+                      setState(() => _viewFinanceFeed = !_viewFinanceFeed),
                 ),
               ],
             ),
@@ -201,22 +196,18 @@ class _ProjectRepRightsScreenState
                   label: 'Назначение бригадиров',
                   trailing: _Toggle(
                     value: _assignContractors,
-                    onChanged: (v) =>
-                        setState(() => _assignContractors = v),
+                    onChanged: (v) => setState(() => _assignContractors = v),
                   ),
-                  onTap: () => setState(
-                    () => _assignContractors = !_assignContractors,
-                  ),
+                  onTap: () =>
+                      setState(() => _assignContractors = !_assignContractors),
                 ),
                 AppMenuRow(
                   label: 'Принятие / отклонение работ',
                   trailing: _Toggle(
                     value: _approveWorks,
-                    onChanged: (v) =>
-                        setState(() => _approveWorks = v),
+                    onChanged: (v) => setState(() => _approveWorks = v),
                   ),
-                  onTap: () =>
-                      setState(() => _approveWorks = !_approveWorks),
+                  onTap: () => setState(() => _approveWorks = !_approveWorks),
                 ),
                 AppMenuRow(
                   label: 'Добавление подшагов',
@@ -224,8 +215,7 @@ class _ProjectRepRightsScreenState
                     value: _addSubsteps,
                     onChanged: (v) => setState(() => _addSubsteps = v),
                   ),
-                  onTap: () =>
-                      setState(() => _addSubsteps = !_addSubsteps),
+                  onTap: () => setState(() => _addSubsteps = !_addSubsteps),
                 ),
               ],
             ),
@@ -272,11 +262,7 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _Toggle extends StatelessWidget {
-  const _Toggle({
-    required this.value,
-    this.onChanged,
-    this.disabled = false,
-  });
+  const _Toggle({required this.value, this.onChanged, this.disabled = false});
 
   final bool value;
   final ValueChanged<bool>? onChanged;

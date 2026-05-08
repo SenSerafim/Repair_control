@@ -6,8 +6,8 @@ import '../domain/tool.dart';
 
 final myToolsProvider =
     AsyncNotifierProvider<MyToolsController, List<ToolItem>>(
-  MyToolsController.new,
-);
+      MyToolsController.new,
+    );
 
 class MyToolsController extends AsyncNotifier<List<ToolItem>> {
   @override
@@ -29,9 +29,7 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     final cur = state.value ?? const <ToolItem>[];
     final exists = cur.any((x) => x.id == t.id);
     state = AsyncData(
-      exists
-          ? cur.map((x) => x.id == t.id ? t : x).toList()
-          : [t, ...cur],
+      exists ? cur.map((x) => x.id == t.id ? t : x).toList() : [t, ...cur],
     );
   }
 
@@ -40,8 +38,10 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     required int totalQty,
     String? unit,
     String? photoKey,
+
     /// П2.14 — серийный номер.
     String? serial,
+
     /// П2.15 — сразу привязать к проекту (опц.).
     String? projectId,
   }) async {
@@ -98,17 +98,20 @@ final toolDetailProvider = FutureProvider.family<ToolItem, String>((ref, id) {
   return ref.read(toolsRepositoryProvider).getTool(id);
 });
 
-final toolIssuancesProvider = AsyncNotifierProvider.family<
-    ToolIssuancesController, List<ToolIssuance>, String>(
-  ToolIssuancesController.new,
-);
+final toolIssuancesProvider =
+    AsyncNotifierProvider.family<
+      ToolIssuancesController,
+      List<ToolIssuance>,
+      String
+    >(ToolIssuancesController.new);
 
 class ToolIssuancesController
     extends FamilyAsyncNotifier<List<ToolIssuance>, String> {
   @override
   Future<List<ToolIssuance>> build(String projectId) async {
-    final raw =
-        await ref.read(toolsRepositoryProvider).listIssuances(projectId);
+    final raw = await ref
+        .read(toolsRepositoryProvider)
+        .listIssuances(projectId);
     return [...raw]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
@@ -118,9 +121,7 @@ class ToolIssuancesController
     final cur = state.value ?? const <ToolIssuance>[];
     final exists = cur.any((x) => x.id == i.id);
     state = AsyncData(
-      exists
-          ? cur.map((x) => x.id == i.id ? i : x).toList()
-          : [i, ...cur],
+      exists ? cur.map((x) => x.id == i.id ? i : x).toList() : [i, ...cur],
     );
   }
 
@@ -151,8 +152,7 @@ class ToolIssuancesController
   Future<AuthFailure?> requestReturn({
     required String id,
     required int returnedQty,
-  }) =>
-      _run(() => _repo.requestReturn(id: id, returnedQty: returnedQty));
+  }) => _run(() => _repo.requestReturn(id: id, returnedQty: returnedQty));
 
   Future<AuthFailure?> returnConfirm(String id) async {
     final failure = await _run(() => _repo.returnConfirm(id));
@@ -187,17 +187,20 @@ class ProjectToolEntry {
   bool get isHeldByOwner => currentHolderId == tool.ownerId;
 }
 
-final projectToolRegistryProvider = AsyncNotifierProvider.family<
-    ProjectToolRegistryController, List<ProjectToolEntry>, String>(
-  ProjectToolRegistryController.new,
-);
+final projectToolRegistryProvider =
+    AsyncNotifierProvider.family<
+      ProjectToolRegistryController,
+      List<ProjectToolEntry>,
+      String
+    >(ProjectToolRegistryController.new);
 
 class ProjectToolRegistryController
     extends FamilyAsyncNotifier<List<ProjectToolEntry>, String> {
   @override
   Future<List<ProjectToolEntry>> build(String projectId) async {
-    final raw =
-        await ref.read(toolsRepositoryProvider).projectRegistry(projectId);
+    final raw = await ref
+        .read(toolsRepositoryProvider)
+        .projectRegistry(projectId);
     return raw.map((m) {
       return ProjectToolEntry(
         tool: ToolItem.parse(m),
@@ -239,7 +242,10 @@ class ProjectToolRegistryController
     }
   }
 
-  Future<AuthFailure?> rejectRequest(String issuanceId, {String? comment}) async {
+  Future<AuthFailure?> rejectRequest(
+    String issuanceId, {
+    String? comment,
+  }) async {
     try {
       await _repo.rejectRequest(issuanceId: issuanceId, comment: comment);
       ref.invalidateSelf();

@@ -43,16 +43,25 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
     final name = _name.text.trim();
     final qty = int.tryParse(_qty.text);
     if (name.isEmpty) {
-      AppToast.show(context, message: 'Введите название', kind: AppToastKind.error);
+      AppToast.show(
+        context,
+        message: 'Введите название',
+        kind: AppToastKind.error,
+      );
       return;
     }
     if (qty == null || qty <= 0) {
-      AppToast.show(context,
-          message: 'Количество — целое > 0', kind: AppToastKind.error);
+      AppToast.show(
+        context,
+        message: 'Количество — целое > 0',
+        kind: AppToastKind.error,
+      );
       return;
     }
     setState(() => _busy = true);
-    final failure = await ref.read(myToolsProvider.notifier).create(
+    final failure = await ref
+        .read(myToolsProvider.notifier)
+        .create(
           name: name,
           totalQty: qty,
           serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),

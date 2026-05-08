@@ -30,8 +30,7 @@ class ArticleScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить статью',
-          onRetry: () =>
-              ref.invalidate(methodologyArticleProvider(articleId)),
+          onRetry: () => ref.invalidate(methodologyArticleProvider(articleId)),
         ),
         data: (a) => RefreshIndicator(
           onRefresh: () async =>
@@ -97,16 +96,18 @@ List<Widget> _renderBody(String body) {
   void flushParagraph() {
     if (paragraph.isEmpty) return;
     blocks
-      ..add(Text(
-        paragraph.toString().trim(),
-        style: const TextStyle(
-          fontFamily: 'Manrope',
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.n700,
-          height: 1.7,
+      ..add(
+        Text(
+          paragraph.toString().trim(),
+          style: const TextStyle(
+            fontFamily: 'Manrope',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.n700,
+            height: 1.7,
+          ),
         ),
-      ))
+      )
       ..add(const SizedBox(height: AppSpacing.x16));
     paragraph.clear();
   }
@@ -120,13 +121,15 @@ List<Widget> _renderBody(String body) {
     if (line.startsWith('## ')) {
       flushParagraph();
       blocks
-        ..add(Text(
-          line.substring(3).trim(),
-          style: AppTextStyles.h2.copyWith(
-            fontSize: 17,
-            color: AppColors.n900,
+        ..add(
+          Text(
+            line.substring(3).trim(),
+            style: AppTextStyles.h2.copyWith(
+              fontSize: 17,
+              color: AppColors.n900,
+            ),
           ),
-        ))
+        )
         ..add(const SizedBox(height: AppSpacing.x10));
       continue;
     }

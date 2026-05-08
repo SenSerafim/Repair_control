@@ -69,9 +69,8 @@ class _ProjectGroup extends StatelessWidget {
         Material(
           color: AppColors.n50,
           child: InkWell(
-            onTap: () => context.push(
-              AppRoutes.projectTeamWith(group.projectId),
-            ),
+            onTap: () =>
+                context.push(AppRoutes.projectTeamWith(group.projectId)),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
@@ -106,10 +105,7 @@ class _ProjectGroup extends StatelessWidget {
           ),
         for (final m in group.members)
           if (m.user != null)
-            _MemberRow(
-              user: m.user!,
-              roleLabel: m.role.displayName,
-            ),
+            _MemberRow(user: m.user!, roleLabel: m.role.displayName),
       ],
     );
   }

@@ -60,12 +60,13 @@ class ApprovalDetailScreen extends ConsumerWidget {
                     children: [
                       Hero(
                         tag: 'approval-${approval.id}',
-                        flightShuttleBuilder:
-                            (_, __, dir, fromCtx, toCtx) {
-                          final hero = (dir == HeroFlightDirection.push
-                                  ? fromCtx
-                                  : toCtx)
-                              .widget as Hero;
+                        flightShuttleBuilder: (_, __, dir, fromCtx, toCtx) {
+                          final hero =
+                              (dir == HeroFlightDirection.push
+                                          ? fromCtx
+                                          : toCtx)
+                                      .widget
+                                  as Hero;
                           return hero.child;
                         },
                         child: const SizedBox(height: 1),
@@ -77,8 +78,7 @@ class ApprovalDetailScreen extends ConsumerWidget {
                       ],
                       const SizedBox(height: AppSpacing.x20),
                       _ScopeBody(approval: approval),
-                      if (approval.decisionComment?.isNotEmpty ??
-                          false) ...[
+                      if (approval.decisionComment?.isNotEmpty ?? false) ...[
                         const SizedBox(height: AppSpacing.x16),
                         _DecisionBlock(approval: approval),
                       ],
@@ -111,10 +111,9 @@ class _Header extends StatelessWidget {
     final tone = _toneFor(approval.scope);
     final df = DateFormat('d MMMM y', 'ru');
     final categoryRaw = approval.payload['category'];
-    final category =
-        categoryRaw is String && categoryRaw.trim().isNotEmpty
-            ? categoryRaw
-            : null;
+    final category = categoryRaw is String && categoryRaw.trim().isNotEmpty
+        ? categoryRaw
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,10 +136,7 @@ class _Header extends StatelessWidget {
         const SizedBox(height: AppSpacing.x10),
         Text(
           _titleFor(approval),
-          style: AppTextStyles.h1.copyWith(
-            fontSize: 20,
-            color: AppColors.n900,
-          ),
+          style: AppTextStyles.h1.copyWith(fontSize: 20, color: AppColors.n900),
         ),
         const SizedBox(height: 4),
         Text(
@@ -188,23 +184,22 @@ String _subtitleFor(Approval a) {
       'Бригадир запрашивает закупку. После approve сумма спишется из бюджета.',
     ApprovalScope.selfPurchase =>
       'Мастер просит возместить расходы на материалы.',
-    ApprovalScope.paymentDispute =>
-      'Получатель платежа открыл спор по сумме.',
+    ApprovalScope.paymentDispute => 'Получатель платежа открыл спор по сумме.',
   };
 }
 
 ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
-      ApprovalScope.step => ScopeBadgeTone.step,
-      ApprovalScope.extraWork => ScopeBadgeTone.extraWork,
-      ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
-      ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
-      ApprovalScope.plan => ScopeBadgeTone.plan,
-      // Новые scope (П2.2): группируем под близкие тона.
-      ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
-      ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
-      ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
-      ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
-    };
+  ApprovalScope.step => ScopeBadgeTone.step,
+  ApprovalScope.extraWork => ScopeBadgeTone.extraWork,
+  ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
+  ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
+  ApprovalScope.plan => ScopeBadgeTone.plan,
+  // Новые scope (П2.2): группируем под близкие тона.
+  ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
+  ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
+  ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
+  ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
+};
 
 class _DecisionBlock extends StatelessWidget {
   const _DecisionBlock({required this.approval});
@@ -218,10 +213,7 @@ class _DecisionBlock extends StatelessWidget {
     final fg = isApproved ? AppColors.greenDark : AppColors.redText;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: AppRadius.card,
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: AppRadius.card),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -322,10 +314,7 @@ class _CommentBox extends StatelessWidget {
 }
 
 class _DetailPhotoGrid extends StatelessWidget {
-  const _DetailPhotoGrid({
-    required this.attachments,
-    required this.columns,
-  });
+  const _DetailPhotoGrid({required this.attachments, required this.columns});
 
   final List<ApprovalAttachment> attachments;
   final int columns;
@@ -367,10 +356,7 @@ class _DetailPhotoGrid extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: url == null
               ? const Center(
-                  child: Icon(
-                    Icons.image_outlined,
-                    color: AppColors.n400,
-                  ),
+                  child: Icon(Icons.image_outlined, color: AppColors.n400),
                 )
               : CachedNetworkImage(
                   imageUrl: url,
@@ -533,7 +519,7 @@ class _PlanBody extends StatelessWidget {
                       stages.isEmpty
                           ? 'Согласуется план в целом'
                           : '${stages.length} ${_plural(stages.length, 'этап', 'этапа', 'этапов')}'
-                              '${totalDays != null ? ' · $totalDays дней' : ''}',
+                                '${totalDays != null ? ' · $totalDays дней' : ''}',
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.n0.withValues(alpha: 0.85),
                         fontSize: 12,
@@ -702,8 +688,7 @@ class _DeadlineBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final newEnd = approval.newEnd;
     final oldEndRaw = approval.payload['oldEnd'];
-    final oldEnd =
-        oldEndRaw is String ? DateTime.tryParse(oldEndRaw) : null;
+    final oldEnd = oldEndRaw is String ? DateTime.tryParse(oldEndRaw) : null;
     final reason = approval.payload['reason'] as String?;
     final df = DateFormat('d MMMM', 'ru');
     final delta = (oldEnd != null && newEnd != null)
@@ -724,10 +709,7 @@ class _DeadlineBody extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.x8),
-              child: Icon(
-                Icons.arrow_forward_rounded,
-                color: AppColors.n400,
-              ),
+              child: Icon(Icons.arrow_forward_rounded, color: AppColors.n400),
             ),
             Expanded(
               child: _DateChip(
@@ -797,10 +779,12 @@ class _DateChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg =
-        tone == _DateTone.danger ? AppColors.redBg : AppColors.greenLight;
-    final fg =
-        tone == _DateTone.danger ? AppColors.redText : AppColors.greenDark;
+    final bg = tone == _DateTone.danger
+        ? AppColors.redBg
+        : AppColors.greenLight;
+    final fg = tone == _DateTone.danger
+        ? AppColors.redText
+        : AppColors.greenDark;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x12),
       decoration: BoxDecoration(
@@ -812,10 +796,7 @@ class _DateChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.tiny.copyWith(
-              color: fg,
-              letterSpacing: 0.4,
-            ),
+            style: AppTextStyles.tiny.copyWith(color: fg, letterSpacing: 0.4),
           ),
           const SizedBox(height: 4),
           Text(
@@ -871,8 +852,9 @@ class _StageAcceptBody extends StatelessWidget {
                     children: [
                       Text(
                         'Прошлое отклонение',
-                        style: AppTextStyles.subtitle
-                            .copyWith(color: AppColors.redText),
+                        style: AppTextStyles.subtitle.copyWith(
+                          color: AppColors.redText,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -902,10 +884,13 @@ class _StageAcceptBody extends StatelessWidget {
 
   String? _previousRejection(Approval a) {
     if (a.attemptNumber <= 1) return null;
-    final rejected = a.attempts
-        .where((x) => x.action == 'rejected' && (x.comment ?? '').isNotEmpty)
-        .toList()
-      ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+    final rejected =
+        a.attempts
+            .where(
+              (x) => x.action == 'rejected' && (x.comment ?? '').isNotEmpty,
+            )
+            .toList()
+          ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
     return rejected.isEmpty ? null : rejected.first.comment;
   }
 }
@@ -926,8 +911,8 @@ class _StageCreateBody extends StatelessWidget {
     final start = _date(approval.payload['plannedStart']);
     final end = _date(approval.payload['plannedEnd']);
     final workBudget = (approval.payload['workBudget'] as num?)?.toInt();
-    final materialsBudget =
-        (approval.payload['materialsBudget'] as num?)?.toInt();
+    final materialsBudget = (approval.payload['materialsBudget'] as num?)
+        ?.toInt();
     final comment = approval.payload['comment'] as String?;
     final days = (start != null && end != null)
         ? end.difference(start).inDays
@@ -992,10 +977,7 @@ class _StageCreateBody extends StatelessWidget {
             children: [
               if (workBudget != null)
                 Expanded(
-                  child: _BudgetChip(
-                    label: 'Работа',
-                    amount: workBudget,
-                  ),
+                  child: _BudgetChip(label: 'Работа', amount: workBudget),
                 ),
               if (workBudget != null && materialsBudget != null)
                 const SizedBox(width: AppSpacing.x10),
@@ -1020,8 +1002,7 @@ class _StageCreateBody extends StatelessWidget {
   }
 }
 
-DateTime? _date(Object? raw) =>
-    raw is String ? DateTime.tryParse(raw) : null;
+DateTime? _date(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;
 
 class _BudgetChip extends StatelessWidget {
   const _BudgetChip({required this.label, required this.amount});
@@ -1039,7 +1020,10 @@ class _BudgetChip extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTextStyles.tiny.copyWith(color: AppColors.n500)),
+          Text(
+            label,
+            style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+          ),
           const SizedBox(height: 2),
           Text(
             Money.format(amount),
@@ -1226,9 +1210,7 @@ class _SelfPurchaseBody extends StatelessWidget {
                   byRole == 'master'
                       ? 'Заявка от мастера'
                       : 'Заявка от бригадира',
-                  style: AppTextStyles.subtitle.copyWith(
-                    color: AppColors.n700,
-                  ),
+                  style: AppTextStyles.subtitle.copyWith(color: AppColors.n700),
                 ),
               ],
             ),
@@ -1262,8 +1244,8 @@ class _PaymentDisputeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final originalAmount =
-        (approval.payload['originalAmount'] as num?)?.toInt();
+    final originalAmount = (approval.payload['originalAmount'] as num?)
+        ?.toInt();
     final claimedAmount = (approval.payload['claimedAmount'] as num?)?.toInt();
     final reason = approval.payload['reason'] as String?;
     final kind = approval.payload['kind'] as String?;
@@ -1284,10 +1266,7 @@ class _PaymentDisputeBody extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.x8),
-              child: Icon(
-                Icons.arrow_forward_rounded,
-                color: AppColors.n400,
-              ),
+              child: Icon(Icons.arrow_forward_rounded, color: AppColors.n400),
             ),
             Expanded(
               child: _AmountChip(
@@ -1353,10 +1332,12 @@ class _AmountChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg =
-        tone == _DateTone.danger ? AppColors.redBg : AppColors.greenLight;
-    final fg =
-        tone == _DateTone.danger ? AppColors.redText : AppColors.greenDark;
+    final bg = tone == _DateTone.danger
+        ? AppColors.redBg
+        : AppColors.greenLight;
+    final fg = tone == _DateTone.danger
+        ? AppColors.redText
+        : AppColors.greenDark;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x12),
       decoration: BoxDecoration(
@@ -1404,7 +1385,8 @@ class _BottomActions extends ConsumerWidget {
     if (actorRole == null) return true; // legacy fallback
     switch (actorRole) {
       case ApprovalActorRole.customer:
-        return activeRole == SystemRole.customer || activeRole == SystemRole.admin;
+        return activeRole == SystemRole.customer ||
+            activeRole == SystemRole.admin;
       case ApprovalActorRole.representative:
         return activeRole == SystemRole.representative ||
             activeRole == SystemRole.customer ||
@@ -1418,15 +1400,21 @@ class _BottomActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final baseCanDecide = ref.watch(canInProjectProvider(
-      (action: DomainAction.approvalDecide, projectId: approval.projectId),
-    ));
+    final baseCanDecide = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalDecide,
+        projectId: approval.projectId,
+      )),
+    );
     // П7.7 — фильтр по actorRole: если активная роль не совпадает с ожидаемой
     // ступенью, CTA скрываются. Read-only с плашкой «Ждёт согласования {role}».
     final canDecide = baseCanDecide && _matchesActorRole(ref);
-    final canRequest = ref.watch(canInProjectProvider(
-      (action: DomainAction.approvalRequest, projectId: approval.projectId),
-    ));
+    final canRequest = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalRequest,
+        projectId: approval.projectId,
+      )),
+    );
 
     switch (approval.status) {
       case ApprovalStatus.pending:
@@ -1561,8 +1549,9 @@ class _RequiresReassignBanner extends StatelessWidget {
               children: [
                 Text(
                   'Бригадир удалён со стадии',
-                  style: AppTextStyles.subtitle
-                      .copyWith(color: AppColors.redText),
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.redText,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(

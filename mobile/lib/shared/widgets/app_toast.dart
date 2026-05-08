@@ -59,17 +59,17 @@ class AppToast {
   static ({Color background, IconData icon}) _spec(AppToastKind kind) {
     return switch (kind) {
       AppToastKind.success => (
-          background: const Color(0xFF065F46),
-          icon: Icons.check_circle_outline_rounded,
-        ),
+        background: const Color(0xFF065F46),
+        icon: Icons.check_circle_outline_rounded,
+      ),
       AppToastKind.error => (
-          background: AppColors.redText,
-          icon: Icons.error_outline_rounded,
-        ),
+        background: AppColors.redText,
+        icon: Icons.error_outline_rounded,
+      ),
       AppToastKind.info => (
-          background: AppColors.n800,
-          icon: Icons.info_outline_rounded,
-        ),
+        background: AppColors.n800,
+        icon: Icons.info_outline_rounded,
+      ),
     };
   }
 }

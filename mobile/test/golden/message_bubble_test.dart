@@ -16,8 +16,7 @@ void main() {
         goldenScaffold(
           size: const Size(280, 120),
           child: Align(
-            alignment:
-                isMine ? Alignment.centerRight : Alignment.centerLeft,
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
             child: AppMessageBubble(
               text: 'Сообщение чата для пиксель-перфект теста',
               isMine: isMine,
@@ -36,8 +35,7 @@ void main() {
         goldenScaffold(
           size: const Size(280, 120),
           child: Align(
-            alignment:
-                isMine ? Alignment.centerRight : Alignment.centerLeft,
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
             child: AppMessageBubble(
               text: 'Удалено',
               isMine: isMine,
@@ -58,8 +56,7 @@ void main() {
         goldenScaffold(
           size: const Size(320, 260),
           child: Align(
-            alignment:
-                isMine ? Alignment.centerRight : Alignment.centerLeft,
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
             child: AppMessageBubble(
               text:
                   'Длинное сообщение, которое должно перенестись на несколько '

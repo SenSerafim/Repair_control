@@ -32,13 +32,12 @@ class StepDetailData {
     List<Substep>? substeps,
     List<StepPhoto>? photos,
     List<Question>? questions,
-  }) =>
-      StepDetailData(
-        step: step ?? this.step,
-        substeps: substeps ?? this.substeps,
-        photos: photos ?? this.photos,
-        questions: questions ?? this.questions,
-      );
+  }) => StepDetailData(
+    step: step ?? this.step,
+    substeps: substeps ?? this.substeps,
+    photos: photos ?? this.photos,
+    questions: questions ?? this.questions,
+  );
 }
 
 @immutable
@@ -65,10 +64,12 @@ class StepDetailKey {
   int get hashCode => Object.hash(projectId, stageId, stepId);
 }
 
-final stepDetailProvider = AsyncNotifierProvider.family<
-    StepDetailController, StepDetailData, StepDetailKey>(
-  StepDetailController.new,
-);
+final stepDetailProvider =
+    AsyncNotifierProvider.family<
+      StepDetailController,
+      StepDetailData,
+      StepDetailKey
+    >(StepDetailController.new);
 
 class StepDetailController
     extends FamilyAsyncNotifier<StepDetailData, StepDetailKey> {
@@ -121,7 +122,10 @@ class StepDetailController
       state = AsyncError(e, st);
     } on DioException catch (e, st) {
       final api = ApiError.fromDio(e);
-      state = AsyncError(StepsException(AuthFailure.fromApiError(api), api), st);
+      state = AsyncError(
+        StepsException(AuthFailure.fromApiError(api), api),
+        st,
+      );
     }
   }
 
@@ -170,8 +174,7 @@ class StepDetailController
       if (cur != null) {
         state = AsyncData(
           cur.copyWith(
-            substeps:
-                cur.substeps.where((s) => s.id != substepId).toList(),
+            substeps: cur.substeps.where((s) => s.id != substepId).toList(),
           ),
         );
       }
@@ -209,9 +212,7 @@ class StepDetailController
       );
       final cur = state.value;
       if (cur != null) {
-        state = AsyncData(
-          cur.copyWith(photos: [...cur.photos, photo]),
-        );
+        state = AsyncData(cur.copyWith(photos: [...cur.photos, photo]));
       }
       return null;
     } on StepsException catch (e) {
@@ -250,9 +251,7 @@ class StepDetailController
       );
       final cur = state.value;
       if (cur != null) {
-        state = AsyncData(
-          cur.copyWith(questions: [q, ...cur.questions]),
-        );
+        state = AsyncData(cur.copyWith(questions: [q, ...cur.questions]));
       }
       return null;
     } on StepsException catch (e) {
@@ -264,13 +263,15 @@ class StepDetailController
     required String questionId,
     required String answer,
   }) async {
-    final isOffline = ref.read(connectivityProvider).value ==
-        ConnectivityStatus.offline;
+    final isOffline =
+        ref.read(connectivityProvider).value == ConnectivityStatus.offline;
     if (isOffline) {
-      await ref.read(offlineQueueProvider).enqueue(
-        kind: OfflineActionKind.questionAnswer,
-        payload: {'questionId': questionId, 'answer': answer},
-      );
+      await ref
+          .read(offlineQueueProvider)
+          .enqueue(
+            kind: OfflineActionKind.questionAnswer,
+            payload: {'questionId': questionId, 'answer': answer},
+          );
       return null;
     }
     try {
@@ -282,8 +283,7 @@ class StepDetailController
       if (cur != null) {
         state = AsyncData(
           cur.copyWith(
-            questions:
-                cur.questions.map((x) => x.id == q.id ? q : x).toList(),
+            questions: cur.questions.map((x) => x.id == q.id ? q : x).toList(),
           ),
         );
       }
@@ -300,8 +300,7 @@ class StepDetailController
       if (cur != null) {
         state = AsyncData(
           cur.copyWith(
-            questions:
-                cur.questions.map((x) => x.id == q.id ? q : x).toList(),
+            questions: cur.questions.map((x) => x.id == q.id ? q : x).toList(),
           ),
         );
       }

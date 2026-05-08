@@ -28,47 +28,45 @@ class KnowledgeRepository {
   Future<List<KnowledgeCategory>> listCategories({
     KnowledgeCategoryScope? scope,
     String? moduleSlug,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/knowledge/categories',
-          queryParameters: {
-            if (scope != null)
-              'scope':
-                  scope == KnowledgeCategoryScope.global ? 'global' : 'project_module',
-            if (moduleSlug != null) 'moduleSlug': moduleSlug,
-          },
-        );
-        return r.data!
-            .map((e) => KnowledgeCategory.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/knowledge/categories',
+      queryParameters: {
+        if (scope != null)
+          'scope': scope == KnowledgeCategoryScope.global
+              ? 'global'
+              : 'project_module',
+        if (moduleSlug != null) 'moduleSlug': moduleSlug,
+      },
+    );
+    return r.data!
+        .map((e) => KnowledgeCategory.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<KnowledgeCategoryDetail> getCategory(String id) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/knowledge/categories/$id',
-        );
-        return KnowledgeCategoryDetail.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>(
+      '/api/knowledge/categories/$id',
+    );
+    return KnowledgeCategoryDetail.parse(r.data!);
+  });
 
   Future<KnowledgeArticle> getArticle(String id) => _call(() async {
-        final cached = _articleCache[id];
-        final r = await _dio.get<Map<String, dynamic>?>(
-          '/api/knowledge/articles/$id',
-          options: Options(
-            headers: {
-              if (cached != null) 'If-None-Match': '"${cached.etag}"',
-            },
-            validateStatus: (s) => s != null && s < 500 && s != 404,
-          ),
-        );
-        if (r.statusCode == 304 && cached != null) {
-          return cached;
-        }
-        final article = KnowledgeArticle.parse(r.data!);
-        _articleCache[id] = article;
-        return article;
-      });
+    final cached = _articleCache[id];
+    final r = await _dio.get<Map<String, dynamic>?>(
+      '/api/knowledge/articles/$id',
+      options: Options(
+        headers: {if (cached != null) 'If-None-Match': '"${cached.etag}"'},
+        validateStatus: (s) => s != null && s < 500 && s != 404,
+      ),
+    );
+    if (r.statusCode == 304 && cached != null) {
+      return cached;
+    }
+    final article = KnowledgeArticle.parse(r.data!);
+    _articleCache[id] = article;
+    return article;
+  });
 
   /// Presigned download URL для media-asset (видео streaming).
   Future<String> getAssetUrl(String articleId, String assetId) =>
@@ -84,24 +82,24 @@ class KnowledgeRepository {
     int limit = 20,
     KnowledgeCategoryScope? scope,
     String? moduleSlug,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/knowledge/search',
-          queryParameters: {
-            'q': query,
-            'limit': limit,
-            if (scope != null)
-              'scope':
-                  scope == KnowledgeCategoryScope.global ? 'global' : 'project_module',
-            if (moduleSlug != null) 'moduleSlug': moduleSlug,
-          },
-        );
-        final hits = (r.data?['hits'] as List<dynamic>? ?? const [])
-            .map((e) => KnowledgeSearchHit.parse(e as Map<String, dynamic>))
-            .toList();
-        return hits;
-      });
+  }) => _call(() async {
+    final r = await _dio.get<Map<String, dynamic>>(
+      '/api/knowledge/search',
+      queryParameters: {
+        'q': query,
+        'limit': limit,
+        if (scope != null)
+          'scope': scope == KnowledgeCategoryScope.global
+              ? 'global'
+              : 'project_module',
+        if (moduleSlug != null) 'moduleSlug': moduleSlug,
+      },
+    );
+    final hits = (r.data?['hits'] as List<dynamic>? ?? const [])
+        .map((e) => KnowledgeSearchHit.parse(e as Map<String, dynamic>))
+        .toList();
+    return hits;
+  });
 
   void invalidateCache() {
     _articleCache.clear();

@@ -20,13 +20,9 @@ class StagesRepository {
   final Dio _dio;
 
   Future<List<Stage>> list(String projectId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/stages',
-        );
-        return r.data!
-            .map((e) => Stage.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/projects/$projectId/stages');
+    return r.data!.map((e) => Stage.parse(e as Map<String, dynamic>)).toList();
+  });
 
   Future<Stage> get({required String projectId, required String stageId}) =>
       _call(() async {
@@ -45,23 +41,22 @@ class StagesRepository {
     int? workBudget,
     int? materialsBudget,
     List<String>? foremanIds,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/stages',
-          data: {
-            'title': title,
-            if (orderIndex != null) 'orderIndex': orderIndex,
-            if (plannedStart != null)
-              'plannedStart': plannedStart.toIso8601String(),
-            if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-            if (workBudget != null) 'workBudget': workBudget,
-            if (materialsBudget != null) 'materialsBudget': materialsBudget,
-            if (foremanIds != null) 'foremanIds': foremanIds,
-          },
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages',
+      data: {
+        'title': title,
+        if (orderIndex != null) 'orderIndex': orderIndex,
+        if (plannedStart != null)
+          'plannedStart': plannedStart.toIso8601String(),
+        if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+        if (workBudget != null) 'workBudget': workBudget,
+        if (materialsBudget != null) 'materialsBudget': materialsBudget,
+        if (foremanIds != null) 'foremanIds': foremanIds,
+      },
+    );
+    return Stage.parse(r.data!);
+  });
 
   Future<Stage> update({
     required String projectId,
@@ -72,43 +67,37 @@ class StagesRepository {
     int? workBudget,
     int? materialsBudget,
     List<String>? foremanIds,
-  }) =>
-      _call(() async {
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/projects/$projectId/stages/$stageId',
-          data: {
-            if (title != null) 'title': title,
-            if (plannedStart != null)
-              'plannedStart': plannedStart.toIso8601String(),
-            if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-            if (workBudget != null) 'workBudget': workBudget,
-            if (materialsBudget != null) 'materialsBudget': materialsBudget,
-            if (foremanIds != null) 'foremanIds': foremanIds,
-          },
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages/$stageId',
+      data: {
+        if (title != null) 'title': title,
+        if (plannedStart != null)
+          'plannedStart': plannedStart.toIso8601String(),
+        if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+        if (workBudget != null) 'workBudget': workBudget,
+        if (materialsBudget != null) 'materialsBudget': materialsBudget,
+        if (foremanIds != null) 'foremanIds': foremanIds,
+      },
+    );
+    return Stage.parse(r.data!);
+  });
 
   Future<void> reorder({
     required String projectId,
     required List<({String id, int orderIndex})> items,
-  }) =>
-      _call(() async {
-        await _dio.patch<dynamic>(
-          '/api/projects/$projectId/stages/reorder',
-          data: {
-            'items': [
-              for (final it in items)
-                {'id': it.id, 'orderIndex': it.orderIndex},
-            ],
-          },
-        );
-      });
+  }) => _call(() async {
+    await _dio.patch<dynamic>(
+      '/api/projects/$projectId/stages/reorder',
+      data: {
+        'items': [
+          for (final it in items) {'id': it.id, 'orderIndex': it.orderIndex},
+        ],
+      },
+    );
+  });
 
-  Future<Stage> start({
-    required String projectId,
-    required String stageId,
-  }) =>
+  Future<Stage> start({required String projectId, required String stageId}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/projects/$projectId/stages/$stageId/start',
@@ -121,22 +110,18 @@ class StagesRepository {
     required String stageId,
     required PauseReason reason,
     String? comment,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/stages/$stageId/pause',
-          data: {
-            'reason': reason.apiValue,
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-          },
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages/$stageId/pause',
+      data: {
+        'reason': reason.apiValue,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      },
+    );
+    return Stage.parse(r.data!);
+  });
 
-  Future<Stage> resume({
-    required String projectId,
-    required String stageId,
-  }) =>
+  Future<Stage> resume({required String projectId, required String stageId}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/projects/$projectId/stages/$stageId/resume',
@@ -147,49 +132,46 @@ class StagesRepository {
   Future<Stage> sendToReview({
     required String projectId,
     required String stageId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/stages/$stageId/send-to-review',
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages/$stageId/send-to-review',
+    );
+    return Stage.parse(r.data!);
+  });
 
   Future<List<StageTemplate>> listPlatformTemplates() => _call(() async {
-        final r = await _dio.get<List<dynamic>>('/api/templates/platform');
-        return r.data!
-            .map((e) => StageTemplate.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/templates/platform');
+    return r.data!
+        .map((e) => StageTemplate.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   /// П1.7 — пользовательские шаблоны убраны из MVP. Метод оставлен ради backward-compat,
   /// но теперь всегда возвращает пустой массив (на бекенде эндпоинт удалён).
   Future<List<StageTemplate>> listUserTemplates() async => const [];
 
   Future<StageTemplate> getTemplate(String id) => _call(() async {
-        final r =
-            await _dio.get<Map<String, dynamic>>('/api/templates/$id');
-        return StageTemplate.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/templates/$id');
+    return StageTemplate.parse(r.data!);
+  });
 
   Future<Stage> applyTemplate({
     required String templateId,
     required String projectId,
     DateTime? plannedStart,
     DateTime? plannedEnd,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/templates/$templateId/apply',
-          data: {
-            'projectId': projectId,
-            if (plannedStart != null)
-              'plannedStart': plannedStart.toIso8601String(),
-            if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-          },
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/templates/$templateId/apply',
+      data: {
+        'projectId': projectId,
+        if (plannedStart != null)
+          'plannedStart': plannedStart.toIso8601String(),
+        if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+      },
+    );
+    return Stage.parse(r.data!);
+  });
 
   // П1.7 / 4.6 — `saveAsTemplate()` удалён. UI кнопка «Сохранить как шаблон» убрана.
 
@@ -198,28 +180,26 @@ class StagesRepository {
     required String projectId,
     required String stageId,
     required String foremanUserId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/stages/$stageId/assign-foreman',
-          data: {'userId': foremanUserId},
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages/$stageId/assign-foreman',
+      data: {'userId': foremanUserId},
+    );
+    return Stage.parse(r.data!);
+  });
 
   /// П2.5 / 7.5 — назначить мастера на этап. Передать null для снятия назначения.
   Future<Stage> assignMaster({
     required String projectId,
     required String stageId,
     required String? masterUserId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/stages/$stageId/assign-master',
-          data: {if (masterUserId != null) 'userId': masterUserId},
-        );
-        return Stage.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages/$stageId/assign-master',
+      data: {if (masterUserId != null) 'userId': masterUserId},
+    );
+    return Stage.parse(r.data!);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

@@ -6,8 +6,10 @@ import '../../auth/domain/auth_failure.dart';
 import '../data/notes_repository.dart';
 import '../domain/note.dart';
 
-final notesControllerProvider = AsyncNotifierProvider.family<
-    NotesController, List<Note>, String>(NotesController.new);
+final notesControllerProvider =
+    AsyncNotifierProvider.family<NotesController, List<Note>, String>(
+      NotesController.new,
+    );
 
 class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
   @override
@@ -21,23 +23,27 @@ class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
     String? addresseeId,
     String? stageId,
   }) async {
-    final isOffline = ref.read(connectivityProvider).value ==
-        ConnectivityStatus.offline;
+    final isOffline =
+        ref.read(connectivityProvider).value == ConnectivityStatus.offline;
     if (isOffline) {
-      await ref.read(offlineQueueProvider).enqueue(
-        kind: OfflineActionKind.noteCreate,
-        payload: {
-          'projectId': arg,
-          'scope': scope.apiValue,
-          'text': text,
-          if (addresseeId != null) 'addresseeId': addresseeId,
-          if (stageId != null) 'stageId': stageId,
-        },
-      );
+      await ref
+          .read(offlineQueueProvider)
+          .enqueue(
+            kind: OfflineActionKind.noteCreate,
+            payload: {
+              'projectId': arg,
+              'scope': scope.apiValue,
+              'text': text,
+              if (addresseeId != null) 'addresseeId': addresseeId,
+              if (stageId != null) 'stageId': stageId,
+            },
+          );
       return null;
     }
     try {
-      final note = await ref.read(notesRepositoryProvider).create(
+      final note = await ref
+          .read(notesRepositoryProvider)
+          .create(
             projectId: arg,
             scope: scope,
             text: text,
@@ -57,12 +63,11 @@ class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
     required String text,
   }) async {
     try {
-      final updated =
-          await ref.read(notesRepositoryProvider).update(noteId: noteId, text: text);
+      final updated = await ref
+          .read(notesRepositoryProvider)
+          .update(noteId: noteId, text: text);
       final cur = state.value ?? const <Note>[];
-      state = AsyncData(
-        cur.map((n) => n.id == noteId ? updated : n).toList(),
-      );
+      state = AsyncData(cur.map((n) => n.id == noteId ? updated : n).toList());
       return null;
     } on NotesException catch (e) {
       return e.failure;

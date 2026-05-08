@@ -54,10 +54,8 @@ class _RejectSelfPurchaseScreenState
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
                     color: AppColors.redBg,
-                    border:
-                        Border.all(color: const Color(0xFFFECACA)),
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.r12),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,8 +113,7 @@ class _RejectSelfPurchaseScreenState
                     fillColor: AppColors.n50,
                     contentPadding: const EdgeInsets.all(12),
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.r12),
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
                       borderSide: const BorderSide(
                         color: AppColors.n200,
                         width: 1.5,
@@ -164,8 +161,9 @@ class _RejectSelfPurchaseScreenState
       );
       return;
     }
-    final fullComment =
-        extra.isEmpty ? _reason.label : '${_reason.label}. $extra';
+    final fullComment = extra.isEmpty
+        ? _reason.label
+        : '${_reason.label}. $extra';
     setState(() => _busy = true);
     final failure = await ref
         .read(selfpurchasesControllerProvider(widget.projectId).notifier)
@@ -180,11 +178,7 @@ class _RejectSelfPurchaseScreenState
       );
       return;
     }
-    AppToast.show(
-      context,
-      message: 'Отклонено',
-      kind: AppToastKind.success,
-    );
+    AppToast.show(context, message: 'Отклонено', kind: AppToastKind.success);
     context.pop();
   }
 }

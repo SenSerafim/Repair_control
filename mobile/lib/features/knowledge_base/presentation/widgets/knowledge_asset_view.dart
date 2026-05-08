@@ -35,7 +35,10 @@ class _KnowledgeAssetViewState extends ConsumerState<KnowledgeAssetView> {
   Future<void> _loadUrl() async {
     try {
       final repo = ref.read(knowledgeRepositoryProvider);
-      final url = await repo.getAssetUrl(widget.asset.articleId, widget.asset.id);
+      final url = await repo.getAssetUrl(
+        widget.asset.articleId,
+        widget.asset.id,
+      );
       if (!mounted) return;
       setState(() {
         _url = url;
@@ -66,19 +69,22 @@ class _KnowledgeAssetViewState extends ConsumerState<KnowledgeAssetView> {
 
     final url = _url!;
     final body = switch (widget.asset.kind) {
-      KnowledgeAssetKind.image => ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-          child: CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => const AspectRatio(
-              aspectRatio: 4 / 3,
-              child: ColoredBox(color: AppColors.n100),
-            ),
-            errorWidget: (_, __, ___) =>
-                const _ErrorBox(message: 'не удалось загрузить изображение'),
-          ),
-        ) as Widget,
+      KnowledgeAssetKind.image =>
+        ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => const AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: ColoredBox(color: AppColors.n100),
+                ),
+                errorWidget: (_, __, ___) => const _ErrorBox(
+                  message: 'не удалось загрузить изображение',
+                ),
+              ),
+            )
+            as Widget,
       KnowledgeAssetKind.video => KnowledgeVideoPlayer(url: url),
       KnowledgeAssetKind.file => _FileTile(asset: widget.asset, url: url),
     };
@@ -122,15 +128,19 @@ class _FileTileState extends ConsumerState<_FileTile> {
     setState(() => _busy = true);
     try {
       final dio = ref.read(dioProvider);
-      final tempPath = '/tmp/${widget.asset.id}_${widget.asset.fileKey.split('/').last}';
-      await dio.download(widget.url, tempPath,
-          options: dio_pkg.Options(receiveTimeout: const Duration(minutes: 2)));
+      final tempPath =
+          '/tmp/${widget.asset.id}_${widget.asset.fileKey.split('/').last}';
+      await dio.download(
+        widget.url,
+        tempPath,
+        options: dio_pkg.Options(receiveTimeout: const Duration(minutes: 2)),
+      );
       await OpenFilex.open(tempPath);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Не удалось открыть файл: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Не удалось открыть файл: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -150,14 +160,19 @@ class _FileTileState extends ConsumerState<_FileTile> {
         ),
         child: Row(
           children: [
-            const Icon(PhosphorIconsFill.filePdf, color: AppColors.brand, size: 26),
+            const Icon(
+              PhosphorIconsFill.filePdf,
+              color: AppColors.brand,
+              size: 26,
+            ),
             const SizedBox(width: AppSpacing.x10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.asset.caption ?? widget.asset.fileKey.split('/').last,
+                    widget.asset.caption ??
+                        widget.asset.fileKey.split('/').last,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -178,8 +193,11 @@ class _FileTileState extends ConsumerState<_FileTile> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else
-              const Icon(Icons.download_outlined,
-                  size: 22, color: AppColors.brand),
+              const Icon(
+                Icons.download_outlined,
+                size: 22,
+                color: AppColors.brand,
+              ),
           ],
         ),
       ),

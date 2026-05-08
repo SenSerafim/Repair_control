@@ -21,8 +21,7 @@ class CreateMaterialScreen extends ConsumerStatefulWidget {
       _CreateMaterialScreenState();
 }
 
-class _CreateMaterialScreenState
-    extends ConsumerState<CreateMaterialScreen> {
+class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _comment = TextEditingController();
@@ -54,14 +53,14 @@ class _CreateMaterialScreenState
         setState(() => _error = 'Заполните все позиции');
         return;
       }
-      items.add(MaterialItemInput(
-        name: name,
-        qty: qty,
-        unit: draft.unit.text.trim().isEmpty
-            ? null
-            : draft.unit.text.trim(),
-        pricePerUnit: MoneyInput.readKopecks(draft.price),
-      ));
+      items.add(
+        MaterialItemInput(
+          name: name,
+          qty: qty,
+          unit: draft.unit.text.trim().isEmpty ? null : draft.unit.text.trim(),
+          pricePerUnit: MoneyInput.readKopecks(draft.price),
+        ),
+      );
     }
     setState(() {
       _submitting = true;
@@ -74,8 +73,7 @@ class _CreateMaterialScreenState
           title: _title.text.trim(),
           items: items,
           stageId: _stageId,
-          comment:
-              _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+          comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -133,9 +131,8 @@ class _CreateMaterialScreenState
             const SizedBox(height: AppSpacing.x6),
             TextFormField(
               controller: _title,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Введите название'
-                  : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Введите название' : null,
               decoration: _dec('Например, «Электрика этап 3»'),
             ),
             const SizedBox(height: AppSpacing.x16),
@@ -159,7 +156,10 @@ class _CreateMaterialScreenState
               onPressed: () => setState(() => _items.add(_ItemDraft())),
             ),
             const SizedBox(height: AppSpacing.x16),
-            const Text('Комментарий (опционально)', style: AppTextStyles.caption),
+            const Text(
+              'Комментарий (опционально)',
+              style: AppTextStyles.caption,
+            ),
             const SizedBox(height: AppSpacing.x6),
             TextFormField(
               controller: _comment,
@@ -281,8 +281,7 @@ class _ItemCard extends StatelessWidget {
                 ),
                 child: Text(
                   '$index',
-                  style: AppTextStyles.micro
-                      .copyWith(color: AppColors.brand),
+                  style: AppTextStyles.micro.copyWith(color: AppColors.brand),
                 ),
               ),
               const SizedBox(width: AppSpacing.x10),
@@ -295,10 +294,7 @@ class _ItemCard extends StatelessWidget {
               if (canRemove)
                 IconButton(
                   onPressed: onRemove,
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: AppColors.n400,
-                  ),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.n400),
                 ),
             ],
           ),
@@ -336,30 +332,24 @@ class _ItemCard extends StatelessWidget {
 }
 
 InputDecoration _inlineDec(String label) => InputDecoration(
-      labelText: label,
-      labelStyle: AppTextStyles.caption,
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-    );
+  labelText: label,
+  labelStyle: AppTextStyles.caption,
+  isDense: true,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+);
 
 InputDecoration _dec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-    );
+  hintText: hint,
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  filled: true,
+  fillColor: AppColors.n0,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+);

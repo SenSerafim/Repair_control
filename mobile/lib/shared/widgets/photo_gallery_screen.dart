@@ -41,8 +41,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
             pageController: _pageCtrl,
             itemCount: widget.urls.length,
             onPageChanged: (i) => setState(() => _index = i),
-            backgroundDecoration:
-                const BoxDecoration(color: Colors.black),
+            backgroundDecoration: const BoxDecoration(color: Colors.black),
             builder: (context, index) {
               final url = widget.urls[index];
               return PhotoViewGalleryPageOptions(
@@ -60,8 +59,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                 height: 28,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.white70),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
                 ),
               ),
             ),
@@ -73,10 +71,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: IconButton(
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.white,
-                    ),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),

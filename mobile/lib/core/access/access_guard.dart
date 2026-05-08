@@ -190,32 +190,32 @@ final canProvider = Provider.family<bool, DomainAction>((ref, action) {
 /// = `DomainAction.value`). Парсится в `Membership.parse(...)` и кэшируется
 /// в `MembershipRights`. Здесь — конвертация из строк в `Set<DomainAction>`
 /// + автоинвалидация при перезагрузке team.
-final representativeRightsProvider =
-    Provider.autoDispose.family<Set<DomainAction>, String>((ref, projectId) {
-  final me = ref.watch(authControllerProvider).userId;
-  if (me == null) return const <DomainAction>{};
-  final teamAsync = ref.watch(teamControllerProvider(projectId));
-  return teamAsync.when(
-    data: (team) {
-      final mine = team.members.where(
-        (m) => m.userId == me && m.role == MembershipRole.representative,
+final representativeRightsProvider = Provider.autoDispose
+    .family<Set<DomainAction>, String>((ref, projectId) {
+      final me = ref.watch(authControllerProvider).userId;
+      if (me == null) return const <DomainAction>{};
+      final teamAsync = ref.watch(teamControllerProvider(projectId));
+      return teamAsync.when(
+        data: (team) {
+          final mine = team.members.where(
+            (m) => m.userId == me && m.role == MembershipRole.representative,
+          );
+          if (mine.isEmpty) return const <DomainAction>{};
+          final rights = mine.first.representativeRights;
+          final result = <DomainAction>{};
+          for (final raw in rights) {
+            // Поддержка обоих форматов: булевы флаги (`canApprove`) и старые
+            // имена `DomainAction.value`.
+            result.addAll(_expandFlag(raw));
+            final direct = _domainActionFromString(raw);
+            if (direct != null) result.add(direct);
+          }
+          return result;
+        },
+        loading: () => const <DomainAction>{},
+        error: (_, __) => const <DomainAction>{},
       );
-      if (mine.isEmpty) return const <DomainAction>{};
-      final rights = mine.first.representativeRights;
-      final result = <DomainAction>{};
-      for (final raw in rights) {
-        // Поддержка обоих форматов: булевы флаги (`canApprove`) и старые
-        // имена `DomainAction.value`.
-        result.addAll(_expandFlag(raw));
-        final direct = _domainActionFromString(raw);
-        if (direct != null) result.add(direct);
-      }
-      return result;
-    },
-    loading: () => const <DomainAction>{},
-    error: (_, __) => const <DomainAction>{},
-  );
-});
+    });
 
 /// Маппинг булевых флагов `RepresentativeRights` (бекенд) → набор
 /// `DomainAction`. Источник истины — `backend/libs/rbac/src/rbac.matrix.ts`.
@@ -230,14 +230,8 @@ const _representativeFlagToActions = <String, List<DomainAction>>{
     DomainAction.documentWrite,
     DomainAction.documentDelete,
   ],
-  'canApprove': [
-    DomainAction.approvalRequest,
-    DomainAction.approvalDecide,
-  ],
-  'canSeeBudget': [
-    DomainAction.financeBudgetView,
-    DomainAction.feedExport,
-  ],
+  'canApprove': [DomainAction.approvalRequest, DomainAction.approvalDecide],
+  'canSeeBudget': [DomainAction.financeBudgetView, DomainAction.feedExport],
   'canCreatePayments': [
     DomainAction.financePaymentCreate,
     DomainAction.financePaymentConfirm,
@@ -253,12 +247,8 @@ const _representativeFlagToActions = <String, List<DomainAction>>{
     DomainAction.toolsIssue,
     DomainAction.toolsReturn,
   ],
-  'canInviteMembers': [
-    DomainAction.projectInviteMember,
-  ],
-  'canAddRepresentative': [
-    DomainAction.projectInviteMember,
-  ],
+  'canInviteMembers': [DomainAction.projectInviteMember],
+  'canAddRepresentative': [DomainAction.projectInviteMember],
 };
 
 DomainAction? _domainActionFromString(String raw) {
@@ -280,8 +270,10 @@ Set<DomainAction> _expandFlag(String flag) {
 ///   (любые, любое количество — действует от имени заказчика);
 /// - contractor (бригадир): только мастер;
 /// - master: ничего пригласить не может.
-final invitableRolesProvider =
-    Provider.family<List<MembershipRole>, String>((ref, projectId) {
+final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
+  ref,
+  projectId,
+) {
   final role = ref.watch(activeRoleProvider);
   if (role == null) return const [];
   if (role == SystemRole.admin || role == SystemRole.customer) {
@@ -311,16 +303,18 @@ final invitableRolesProvider =
 /// проекта (approval-decide, finance-confirm, и т.д.) — там, где нужно
 /// honor RepresentativeRights для роли representative.
 final canInProjectProvider =
-    Provider.family<bool, ({DomainAction action, String projectId})>(
-  (ref, params) {
-    final role = ref.watch(activeRoleProvider);
-    if (AccessGuard.can(role, params.action)) return true;
-    if (role != SystemRole.representative) return false;
-    final delegated =
-        ref.watch(representativeRightsProvider(params.projectId));
-    return delegated.contains(params.action);
-  },
-);
+    Provider.family<bool, ({DomainAction action, String projectId})>((
+      ref,
+      params,
+    ) {
+      final role = ref.watch(activeRoleProvider);
+      if (AccessGuard.can(role, params.action)) return true;
+      if (role != SystemRole.representative) return false;
+      final delegated = ref.watch(
+        representativeRightsProvider(params.projectId),
+      );
+      return delegated.contains(params.action);
+    });
 
 /// Wrapper-виджет: показывает [child] только если у текущей роли есть
 /// право на [action]. Иначе — `SizedBox.shrink()` или [fallback].

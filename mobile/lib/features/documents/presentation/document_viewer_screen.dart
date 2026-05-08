@@ -30,8 +30,7 @@ class DocumentViewerScreen extends ConsumerStatefulWidget {
       _DocumentViewerScreenState();
 }
 
-class _DocumentViewerScreenState
-    extends ConsumerState<DocumentViewerScreen> {
+class _DocumentViewerScreenState extends ConsumerState<DocumentViewerScreen> {
   PdfController? _pdf;
   Document? _doc;
   String? _imageUrl;
@@ -51,7 +50,9 @@ class _DocumentViewerScreenState
     });
     try {
       final controller = ref.read(documentsControllerProvider);
-      final doc = await ref.read(documentByIdProvider(widget.documentId).future);
+      final doc = await ref.read(
+        documentByIdProvider(widget.documentId).future,
+      );
 
       if (doc.isPdf) {
         // Если бэкенд приложил presigned `url` — используем его, иначе
@@ -145,8 +146,7 @@ class _DocumentViewerScreenState
               errorBuilder: (_, __, ___) => Center(
                 child: Text(
                   'Не удалось загрузить изображение',
-                  style:
-                      AppTextStyles.caption.copyWith(color: Colors.white70),
+                  style: AppTextStyles.caption.copyWith(color: Colors.white70),
                 ),
               ),
             ),
@@ -164,13 +164,11 @@ class _DocumentViewerScreenState
           const SizedBox(height: AppSpacing.x4),
           Text(
             doc.mimeType,
-            style:
-                AppTextStyles.caption.copyWith(color: AppColors.n500),
+            style: AppTextStyles.caption.copyWith(color: AppColors.n500),
           ),
           const SizedBox(height: AppSpacing.x16),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
             child: AppButton(
               label: 'Открыть в системе',
               icon: Icons.open_in_new_rounded,
@@ -179,8 +177,7 @@ class _DocumentViewerScreenState
           ),
           const SizedBox(height: AppSpacing.x8),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
             child: AppButton(
               label: 'Скопировать ссылку',
               variant: AppButtonVariant.secondary,
@@ -195,13 +192,16 @@ class _DocumentViewerScreenState
 
   Future<void> _openExternal() async {
     try {
-      final url = _doc?.url ??
+      final url =
+          _doc?.url ??
           await ref
               .read(documentsControllerProvider)
               .downloadUrl(widget.documentId);
       final tmpDir = await getTemporaryDirectory();
-      final safeTitle = (_doc?.title ?? widget.documentId)
-          .replaceAll(RegExp(r'[^A-Za-z0-9._\-А-Яа-я ]'), '_');
+      final safeTitle = (_doc?.title ?? widget.documentId).replaceAll(
+        RegExp(r'[^A-Za-z0-9._\-А-Яа-я ]'),
+        '_',
+      );
       final filename = '${widget.documentId}__$safeTitle';
       final hasExt = p.extension(filename).isNotEmpty;
       final ext = hasExt ? '' : _extFromMime(_doc?.mimeType ?? '');

@@ -9,8 +9,10 @@ import '../domain/stage.dart';
 /// Список этапов одного проекта + мутации. Оптимистичный UI с откатом.
 /// После каждой мутации invalidate projectController, чтобы обновить
 /// project.semaphore и progressCache на консоли.
-final stagesControllerProvider = AsyncNotifierProvider.family<
-    StagesController, List<Stage>, String>(StagesController.new);
+final stagesControllerProvider =
+    AsyncNotifierProvider.family<StagesController, List<Stage>, String>(
+      StagesController.new,
+    );
 
 class StagesController extends FamilyAsyncNotifier<List<Stage>, String> {
   @override
@@ -120,23 +122,20 @@ class StagesController extends FamilyAsyncNotifier<List<Stage>, String> {
     required String stageId,
     required PauseReason reason,
     String? comment,
-  }) =>
-      _transition(
-        () => _repo.pause(
-          projectId: arg,
-          stageId: stageId,
-          reason: reason,
-          comment: comment,
-        ),
-      );
+  }) => _transition(
+    () => _repo.pause(
+      projectId: arg,
+      stageId: stageId,
+      reason: reason,
+      comment: comment,
+    ),
+  );
 
-  Future<AuthFailure?> resume(String stageId) => _transition(
-        () => _repo.resume(projectId: arg, stageId: stageId),
-      );
+  Future<AuthFailure?> resume(String stageId) =>
+      _transition(() => _repo.resume(projectId: arg, stageId: stageId));
 
-  Future<AuthFailure?> sendToReview(String stageId) => _transition(
-        () => _repo.sendToReview(projectId: arg, stageId: stageId),
-      );
+  Future<AuthFailure?> sendToReview(String stageId) =>
+      _transition(() => _repo.sendToReview(projectId: arg, stageId: stageId));
 
   Future<AuthFailure?> _transition(Future<Stage> Function() action) async {
     try {

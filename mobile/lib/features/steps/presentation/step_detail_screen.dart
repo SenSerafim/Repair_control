@@ -18,7 +18,6 @@ import '../domain/question.dart';
 import '../domain/step.dart';
 import '../domain/step_photo.dart';
 import '../domain/substep.dart';
-import '../../approvals/data/approvals_repository.dart';
 import '../../stages/application/stages_controller.dart';
 import 'add_photo_sheet.dart';
 import 'add_substep_sheet.dart';
@@ -42,19 +41,16 @@ class StepDetailScreen extends ConsumerWidget {
   final String stageId;
   final String stepId;
 
-  StepDetailKey get _key => StepDetailKey(
-        projectId: projectId,
-        stageId: stageId,
-        stepId: stepId,
-      );
+  StepDetailKey get _key =>
+      StepDetailKey(projectId: projectId, stageId: stageId, stepId: stepId);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(stepDetailProvider(_key));
     final stagesAsync = ref.watch(stagesControllerProvider(projectId));
-    final stepsAsync = ref.watch(stepsControllerProvider(
-      StepsKey(projectId: projectId, stageId: stageId),
-    ));
+    final stepsAsync = ref.watch(
+      stepsControllerProvider(StepsKey(projectId: projectId, stageId: stageId)),
+    );
     final stage = stagesAsync.maybeWhen(
       data: (list) {
         for (final s in list) {
@@ -66,7 +62,7 @@ class StepDetailScreen extends ConsumerWidget {
     );
     final allSteps = stepsAsync.maybeWhen(
       data: (s) => s,
-      orElse: () => const [],
+      orElse: () => const <Step>[],
     );
 
     return AppScaffold(
@@ -84,8 +80,7 @@ class StepDetailScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить шаг',
-          onRetry: () =>
-              ref.read(stepDetailProvider(_key).notifier).refresh(),
+          onRetry: () => ref.read(stepDetailProvider(_key).notifier).refresh(),
         ),
         data: (data) {
           final stepIdx = allSteps.indexWhere((s) => s.id == stepId);
@@ -104,21 +99,21 @@ class StepDetailScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x12),
                 _Header(step: data.step),
                 const SizedBox(height: AppSpacing.x20),
-              // П4.1 / П2.8 — отчёт о шаге: «что делал» / «как делал» + фото.
-              // Substep-чеклист и questions-thread скрыты (вопросы переехали в чат проекта).
-              _ReportSection(detailKey: _key, step: data.step),
-              const SizedBox(height: AppSpacing.x20),
-              _PhotosSection(detailKey: _key, photos: data.photos),
-              const SizedBox(height: AppSpacing.x24),
-              _ActionCtas(
-                projectId: projectId,
-                stageId: stageId,
-                step: data.step,
-              ),
-              const SizedBox(height: AppSpacing.x16),
-            ],
-          ),
-        );
+                // П4.1 / П2.8 — отчёт о шаге: «что делал» / «как делал» + фото.
+                // Substep-чеклист и questions-thread скрыты (вопросы переехали в чат проекта).
+                _ReportSection(detailKey: _key, step: data.step),
+                const SizedBox(height: AppSpacing.x20),
+                _PhotosSection(detailKey: _key, photos: data.photos),
+                const SizedBox(height: AppSpacing.x24),
+                _ActionCtas(
+                  projectId: projectId,
+                  stageId: stageId,
+                  step: data.step,
+                ),
+                const SizedBox(height: AppSpacing.x16),
+              ],
+            ),
+          );
         },
       ),
     );
@@ -128,21 +123,10 @@ class StepDetailScreen extends ConsumerWidget {
     await showAppBottomSheet<void>(
       context: context,
       child: StepMiniMenu(
-        onAddSubstep: () => showAddSubstepSheet(
-          context,
-          ref,
-          key: _key,
-        ),
-        onAddPhoto: () => showAddPhotoSheet(
-          context,
-          ref,
-          key: _key,
-        ),
-        onAskQuestion: () => showAskQuestionSheet(
-          context,
-          ref,
-          detailKey: _key,
-        ),
+        onAddSubstep: () => showAddSubstepSheet(context, ref, key: _key),
+        onAddPhoto: () => showAddPhotoSheet(context, ref, key: _key),
+        onAskQuestion: () =>
+            showAskQuestionSheet(context, ref, detailKey: _key),
         onSendForApproval: () => _sendForApproval(context, ref),
         onExtraWork: () => showExtraWorkSheet(
           context,
@@ -199,8 +183,7 @@ class _Header extends StatelessWidget {
                   ),
                   child: Text(
                     'ДОП.РАБОТА',
-                    style: AppTextStyles.tiny
-                        .copyWith(color: AppColors.purple),
+                    style: AppTextStyles.tiny.copyWith(color: AppColors.purple),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x8),
@@ -210,8 +193,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.x10),
           Text(step.title, style: AppTextStyles.h1, maxLines: 3),
-          if (step.description != null &&
-              step.description!.isNotEmpty) ...[
+          if (step.description != null && step.description!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
             Text(step.description!, style: AppTextStyles.body),
           ],
@@ -227,8 +209,9 @@ class _Header extends StatelessWidget {
                 const SizedBox(width: AppSpacing.x6),
                 Text(
                   'Цена: ${Money.format(step.price!)}',
-                  style: AppTextStyles.subtitle
-                      .copyWith(color: AppColors.purple),
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.purple,
+                  ),
                 ),
               ],
             ),
@@ -251,9 +234,7 @@ class _MethodologyLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.push(
-        AppRoutes.methodologyArticleWith(articleId),
-      ),
+      onTap: () => context.push(AppRoutes.methodologyArticleWith(articleId)),
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.x12),
@@ -263,22 +244,12 @@ class _MethodologyLink extends StatelessWidget {
         ),
         child: const Row(
           children: [
-            Icon(
-              Icons.menu_book_outlined,
-              color: AppColors.brand,
-              size: 20,
-            ),
+            Icon(Icons.menu_book_outlined, color: AppColors.brand, size: 20),
             SizedBox(width: AppSpacing.x10),
             Expanded(
-              child: Text(
-                'Открыть методичку',
-                style: AppTextStyles.subtitle,
-              ),
+              child: Text('Открыть методичку', style: AppTextStyles.subtitle),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.brand,
-            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.brand),
           ],
         ),
       ),
@@ -286,11 +257,9 @@ class _MethodologyLink extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _SubstepsSection extends ConsumerWidget {
-  const _SubstepsSection({
-    required this.detailKey,
-    required this.substeps,
-  });
+  const _SubstepsSection({required this.detailKey, required this.substeps});
 
   final StepDetailKey detailKey;
   final List<Substep> substeps;
@@ -303,16 +272,10 @@ class _SubstepsSection extends ConsumerWidget {
       children: [
         Row(
           children: [
-            const Text(
-              'Подшаги',
-              style: AppTextStyles.h2,
-            ),
+            const Text('Подшаги', style: AppTextStyles.h2),
             const SizedBox(width: AppSpacing.x8),
             if (substeps.isNotEmpty)
-              Text(
-                '$done из ${substeps.length}',
-                style: AppTextStyles.caption,
-              ),
+              Text('$done из ${substeps.length}', style: AppTextStyles.caption),
             const Spacer(),
             TextButton.icon(
               onPressed: () =>
@@ -355,11 +318,7 @@ class _SubstepsSection extends ConsumerWidget {
                         .deleteSubstep(substeps[i].id),
                   ),
                   if (i < substeps.length - 1)
-                    const Divider(
-                      height: 1,
-                      color: AppColors.n100,
-                      indent: 56,
-                    ),
+                    const Divider(height: 1, color: AppColors.n100, indent: 56),
                 ],
               ],
             ),
@@ -442,8 +401,7 @@ class _PhotosSection extends ConsumerWidget {
               Text('${photos.length}', style: AppTextStyles.caption),
             const Spacer(),
             TextButton.icon(
-              onPressed: () =>
-                  showAddPhotoSheet(context, ref, key: detailKey),
+              onPressed: () => showAddPhotoSheet(context, ref, key: detailKey),
               icon: const Icon(Icons.photo_camera_outlined, size: 18),
               label: const Text('Добавить'),
             ),
@@ -505,10 +463,7 @@ class _PhotoThumb extends StatelessWidget {
           child: url == null
               ? const ColoredBox(
                   color: AppColors.n100,
-                  child: Icon(
-                    Icons.image_outlined,
-                    color: AppColors.n400,
-                  ),
+                  child: Icon(Icons.image_outlined, color: AppColors.n400),
                 )
               : Image.network(
                   url,
@@ -546,11 +501,9 @@ class _PhotoThumb extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _QuestionsSection extends ConsumerWidget {
-  const _QuestionsSection({
-    required this.detailKey,
-    required this.questions,
-  });
+  const _QuestionsSection({required this.detailKey, required this.questions});
 
   final StepDetailKey detailKey;
   final List<Question> questions;
@@ -571,11 +524,8 @@ class _QuestionsSection extends ConsumerWidget {
               ),
             const Spacer(),
             TextButton.icon(
-              onPressed: () => showAskQuestionSheet(
-                context,
-                ref,
-                detailKey: detailKey,
-              ),
+              onPressed: () =>
+                  showAskQuestionSheet(context, ref, detailKey: detailKey),
               icon: const Icon(Icons.help_outline_rounded, size: 18),
               label: const Text('Задать'),
             ),
@@ -632,8 +582,7 @@ class _QuestionCard extends StatelessWidget {
             children: [
               _StatusChip(status: question.status),
               const Spacer(),
-              Text(df.format(question.createdAt),
-                  style: AppTextStyles.tiny),
+              Text(df.format(question.createdAt), style: AppTextStyles.tiny),
             ],
           ),
           const SizedBox(height: AppSpacing.x8),
@@ -649,11 +598,7 @@ class _QuestionCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.reply,
-                    size: 16,
-                    color: AppColors.greenDark,
-                  ),
+                  const Icon(Icons.reply, size: 16, color: AppColors.greenDark),
                   const SizedBox(width: AppSpacing.x8),
                   Expanded(
                     child: Text(
@@ -767,9 +712,7 @@ class _ActionCtas extends ConsumerWidget {
         AppToast.show(
           context,
           message: failure == null ? successMsg : failure.userMessage,
-          kind: failure == null
-              ? AppToastKind.success
-              : AppToastKind.error,
+          kind: failure == null ? AppToastKind.success : AppToastKind.error,
         );
         // На успехе закрываем экран шага — пользователь возвращается
         // на экран этапа со списком шагов, где видит обновлённый статус.
@@ -888,10 +831,7 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Отчёт',
-            style: AppTextStyles.h2,
-          ),
+          Text('Отчёт', style: AppTextStyles.h2),
           const SizedBox(height: 4),
           Text(
             'Опционально опишите ход работы. Поля можно оставить пустыми.',

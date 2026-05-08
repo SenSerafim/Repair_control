@@ -6,11 +6,11 @@ enum StageTab { checklist, approvals, docs, chat }
 
 extension StageTabX on StageTab {
   String get label => switch (this) {
-        StageTab.checklist => 'Чек-лист',
-        StageTab.approvals => 'Согл.',
-        StageTab.docs => 'Докум.',
-        StageTab.chat => 'Чат',
-      };
+    StageTab.checklist => 'Чек-лист',
+    StageTab.approvals => 'Согл.',
+    StageTab.docs => 'Докум.',
+    StageTab.chat => 'Чат',
+  };
 }
 
 /// 4-таб панель в детали этапа.

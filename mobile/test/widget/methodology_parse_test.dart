@@ -34,10 +34,11 @@ void main() {
           },
         ],
       });
-      expect(
-        s.articles.map((a) => a.title).toList(),
-        ['Первая', 'Вторая', 'Третья'],
-      );
+      expect(s.articles.map((a) => a.title).toList(), [
+        'Первая',
+        'Вторая',
+        'Третья',
+      ]);
     });
   });
 

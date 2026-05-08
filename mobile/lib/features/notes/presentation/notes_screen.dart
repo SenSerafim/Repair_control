@@ -49,9 +49,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               loading: () => const AppLoadingState(),
               error: (e, _) => AppErrorState(
                 title: 'Не удалось загрузить заметки',
-                onRetry: () => ref.invalidate(
-                  notesControllerProvider(widget.projectId),
-                ),
+                onRetry: () =>
+                    ref.invalidate(notesControllerProvider(widget.projectId)),
               ),
               data: (notes) {
                 final filtered = _filter == null
@@ -59,11 +58,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     : notes.where((n) => n.scope == _filter).toList();
                 if (filtered.isEmpty) {
                   return AppEmptyState(
-                    title:
-                        _filter == null ? 'Нет заметок' : 'Ничего не найдено',
+                    title: _filter == null
+                        ? 'Нет заметок'
+                        : 'Ничего не найдено',
                     subtitle: _filter == null
                         ? 'Создайте заметку — личную для себя или общую для '
-                            'всей команды'
+                              'всей команды'
                         : null,
                     icon: Icons.sticky_note_2_outlined,
                     actionLabel: 'Создать заметку',
@@ -71,9 +71,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   );
                 }
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(
-                    notesControllerProvider(widget.projectId),
-                  ),
+                  onRefresh: () async =>
+                      ref.invalidate(notesControllerProvider(widget.projectId)),
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                     itemCount: filtered.length,
@@ -286,6 +285,7 @@ class _CreateNoteBody extends ConsumerStatefulWidget {
 
 class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
   late NoteScope _scope = widget.initialScope ?? NoteScope.personal;
+
   /// QA-баг #5: при scope=forMe нужен явный addressee. Заполняется picker'ом
   /// из участников проекта; кнопка submit disabled, пока null.
   String? _addresseeId;
@@ -330,16 +330,14 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
   }
 
   Future<void> _pickAddressee() async {
-    final teamAsync =
-        ref.read(teamControllerProvider(widget.projectId));
+    final teamAsync = ref.read(teamControllerProvider(widget.projectId));
     final team = teamAsync.value;
     if (team == null) {
       setState(() => _error = 'Команда ещё загружается, попробуйте ещё раз');
       return;
     }
     if (team.members.isEmpty) {
-      setState(() =>
-          _error = 'В команде проекта пока нет других участников');
+      setState(() => _error = 'В команде проекта пока нет других участников');
       return;
     }
     final selected = await showAppBottomSheet<({String id, String name})>(
@@ -367,8 +365,7 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
                     name: fullName.isEmpty ? null : fullName,
                     imageUrl: user?.avatarUrl,
                   ),
-                  title:
-                      Text(fullName.isEmpty ? 'Без имени' : fullName),
+                  title: Text(fullName.isEmpty ? 'Без имени' : fullName),
                   subtitle: Text(m.role.displayName),
                   onTap: () => Navigator.of(context).pop((
                     id: m.userId,
@@ -474,8 +471,10 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.person_outline_rounded,
-                        color: AppColors.n400),
+                    const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColors.n400,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -488,8 +487,10 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
                         ),
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded,
-                        color: AppColors.n400),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.n400,
+                    ),
                   ],
                 ),
               ),
@@ -520,18 +521,15 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
             contentPadding: const EdgeInsets.all(14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.brand, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
             ),
           ),
         ),
@@ -558,11 +556,11 @@ class _ScopeOption extends StatelessWidget {
   final VoidCallback onTap;
 
   IconData get _icon => switch (scope) {
-        NoteScope.personal => Icons.lock_outline_rounded,
-        NoteScope.forMe => Icons.person_outline_rounded,
-        NoteScope.stage => Icons.groups_outlined,
-        NoteScope.teamBroadcast => Icons.campaign_outlined,
-      };
+    NoteScope.personal => Icons.lock_outline_rounded,
+    NoteScope.forMe => Icons.person_outline_rounded,
+    NoteScope.stage => Icons.groups_outlined,
+    NoteScope.teamBroadcast => Icons.campaign_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {

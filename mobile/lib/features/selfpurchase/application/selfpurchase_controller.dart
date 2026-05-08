@@ -5,10 +5,12 @@ import '../../finance/application/budget_controller.dart';
 import '../data/selfpurchase_repository.dart';
 import '../domain/self_purchase.dart';
 
-final selfpurchasesControllerProvider = AsyncNotifierProvider.family<
-    SelfpurchasesController, List<SelfPurchase>, String>(
-  SelfpurchasesController.new,
-);
+final selfpurchasesControllerProvider =
+    AsyncNotifierProvider.family<
+      SelfpurchasesController,
+      List<SelfPurchase>,
+      String
+    >(SelfpurchasesController.new);
 
 class SelfpurchasesController
     extends FamilyAsyncNotifier<List<SelfPurchase>, String> {
@@ -20,16 +22,13 @@ class SelfpurchasesController
     return [...raw]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  SelfPurchaseRepository get _repo =>
-      ref.read(selfPurchaseRepositoryProvider);
+  SelfPurchaseRepository get _repo => ref.read(selfPurchaseRepositoryProvider);
 
   void _upsert(SelfPurchase r) {
     final cur = state.value ?? const <SelfPurchase>[];
     final exists = cur.any((x) => x.id == r.id);
     state = AsyncData(
-      exists
-          ? cur.map((x) => x.id == r.id ? r : x).toList()
-          : [r, ...cur],
+      exists ? cur.map((x) => x.id == r.id ? r : x).toList() : [r, ...cur],
     );
   }
 
@@ -61,18 +60,17 @@ class SelfpurchasesController
     required String id,
     String? comment,
     bool forwardOnApprove = false,
-  }) =>
-      _run(
-        () => _repo.approve(
-          id: id,
-          comment: comment,
-          forwardOnApprove: forwardOnApprove,
-        ),
-        // Forward не попадает в budget на approve бригадиром — там лишь
-        // создаётся pending для заказчика. Поэтому invalidate бюджета
-        // только когда status=approved у foreman→customer записи.
-        forwardedFromMaster: forwardOnApprove,
-      );
+  }) => _run(
+    () => _repo.approve(
+      id: id,
+      comment: comment,
+      forwardOnApprove: forwardOnApprove,
+    ),
+    // Forward не попадает в budget на approve бригадиром — там лишь
+    // создаётся pending для заказчика. Поэтому invalidate бюджета
+    // только когда status=approved у foreman→customer записи.
+    forwardedFromMaster: forwardOnApprove,
+  );
 
   Future<AuthFailure?> reject({required String id, String? comment}) =>
       _run(() => _repo.reject(id: id, comment: comment));

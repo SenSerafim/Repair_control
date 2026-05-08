@@ -18,11 +18,11 @@ enum NotificationPriority {
   }
 
   String get displayName => switch (this) {
-        NotificationPriority.critical => 'Критичные',
-        NotificationPriority.high => 'Важные',
-        NotificationPriority.normal => 'Обычные',
-        NotificationPriority.low => 'Информационные',
-      };
+    NotificationPriority.critical => 'Критичные',
+    NotificationPriority.high => 'Важные',
+    NotificationPriority.normal => 'Обычные',
+    NotificationPriority.low => 'Информационные',
+  };
 }
 
 /// Настройка уведомления: ответ GET /api/me/notification-settings.

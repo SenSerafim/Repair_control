@@ -8,18 +8,19 @@ enum MaterialRecipient {
   foreman,
   customer;
 
-  static MaterialRecipient fromString(String? raw) =>
-      raw == 'customer' ? MaterialRecipient.customer : MaterialRecipient.foreman;
+  static MaterialRecipient fromString(String? raw) => raw == 'customer'
+      ? MaterialRecipient.customer
+      : MaterialRecipient.foreman;
 
   String get apiValue => switch (this) {
-        MaterialRecipient.foreman => 'foreman',
-        MaterialRecipient.customer => 'customer',
-      };
+    MaterialRecipient.foreman => 'foreman',
+    MaterialRecipient.customer => 'customer',
+  };
 
   String get displayName => switch (this) {
-        MaterialRecipient.foreman => 'Бригадир покупает',
-        MaterialRecipient.customer => 'Заказчик покупает',
-      };
+    MaterialRecipient.foreman => 'Бригадир покупает',
+    MaterialRecipient.customer => 'Заказчик покупает',
+  };
 }
 
 enum MaterialRequestStatus {
@@ -55,37 +56,37 @@ enum MaterialRequestStatus {
   }
 
   String get apiValue => switch (this) {
-        MaterialRequestStatus.draft => 'draft',
-        MaterialRequestStatus.open => 'open',
-        MaterialRequestStatus.partiallyBought => 'partially_bought',
-        MaterialRequestStatus.bought => 'bought',
-        MaterialRequestStatus.delivered => 'delivered',
-        MaterialRequestStatus.disputed => 'disputed',
-        MaterialRequestStatus.resolved => 'resolved',
-        MaterialRequestStatus.cancelled => 'cancelled',
-      };
+    MaterialRequestStatus.draft => 'draft',
+    MaterialRequestStatus.open => 'open',
+    MaterialRequestStatus.partiallyBought => 'partially_bought',
+    MaterialRequestStatus.bought => 'bought',
+    MaterialRequestStatus.delivered => 'delivered',
+    MaterialRequestStatus.disputed => 'disputed',
+    MaterialRequestStatus.resolved => 'resolved',
+    MaterialRequestStatus.cancelled => 'cancelled',
+  };
 
   String get displayName => switch (this) {
-        MaterialRequestStatus.draft => 'Черновик',
-        MaterialRequestStatus.open => 'Отправлено',
-        MaterialRequestStatus.partiallyBought => 'Частично куплено',
-        MaterialRequestStatus.bought => 'Куплено',
-        MaterialRequestStatus.delivered => 'Доставлено',
-        MaterialRequestStatus.disputed => 'Спор',
-        MaterialRequestStatus.resolved => 'Решено',
-        MaterialRequestStatus.cancelled => 'Отменено',
-      };
+    MaterialRequestStatus.draft => 'Черновик',
+    MaterialRequestStatus.open => 'Отправлено',
+    MaterialRequestStatus.partiallyBought => 'Частично куплено',
+    MaterialRequestStatus.bought => 'Куплено',
+    MaterialRequestStatus.delivered => 'Доставлено',
+    MaterialRequestStatus.disputed => 'Спор',
+    MaterialRequestStatus.resolved => 'Решено',
+    MaterialRequestStatus.cancelled => 'Отменено',
+  };
 
   Semaphore get semaphore => switch (this) {
-        MaterialRequestStatus.draft => Semaphore.plan,
-        MaterialRequestStatus.open => Semaphore.blue,
-        MaterialRequestStatus.partiallyBought => Semaphore.yellow,
-        MaterialRequestStatus.bought => Semaphore.green,
-        MaterialRequestStatus.delivered => Semaphore.green,
-        MaterialRequestStatus.disputed => Semaphore.red,
-        MaterialRequestStatus.resolved => Semaphore.plan,
-        MaterialRequestStatus.cancelled => Semaphore.plan,
-      };
+    MaterialRequestStatus.draft => Semaphore.plan,
+    MaterialRequestStatus.open => Semaphore.blue,
+    MaterialRequestStatus.partiallyBought => Semaphore.yellow,
+    MaterialRequestStatus.bought => Semaphore.green,
+    MaterialRequestStatus.delivered => Semaphore.green,
+    MaterialRequestStatus.disputed => Semaphore.red,
+    MaterialRequestStatus.resolved => Semaphore.plan,
+    MaterialRequestStatus.cancelled => Semaphore.plan,
+  };
 
   bool get isTerminal =>
       this == MaterialRequestStatus.resolved ||
@@ -111,19 +112,19 @@ class MaterialItem with _$MaterialItem {
   }) = _MaterialItem;
 
   static MaterialItem parse(Map<String, dynamic> json) => MaterialItem(
-        id: json['id'] as String,
-        requestId: json['requestId'] as String,
-        name: json['name'] as String,
-        qty: _toDouble(json['qty']) ?? 0,
-        unit: json['unit'] as String?,
-        note: json['note'] as String?,
-        pricePerUnit: (json['pricePerUnit'] as num?)?.toInt(),
-        totalPrice: (json['totalPrice'] as num?)?.toInt(),
-        isBought: json['isBought'] as bool? ?? false,
-        boughtAt: _d(json['boughtAt']),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    requestId: json['requestId'] as String,
+    name: json['name'] as String,
+    qty: _toDouble(json['qty']) ?? 0,
+    unit: json['unit'] as String?,
+    note: json['note'] as String?,
+    pricePerUnit: (json['pricePerUnit'] as num?)?.toInt(),
+    totalPrice: (json['totalPrice'] as num?)?.toInt(),
+    isBought: json['isBought'] as bool? ?? false,
+    boughtAt: _d(json['boughtAt']),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
 @freezed
@@ -141,16 +142,16 @@ class MaterialDispute with _$MaterialDispute {
   }) = _MaterialDispute;
 
   static MaterialDispute parse(Map<String, dynamic> json) => MaterialDispute(
-        id: json['id'] as String,
-        requestId: json['requestId'] as String,
-        openedById: json['openedById'] as String? ?? '',
-        reason: json['reason'] as String? ?? '',
-        status: json['status'] as String? ?? 'open',
-        resolution: json['resolution'] as String?,
-        resolvedAt: _d(json['resolvedAt']),
-        resolvedBy: json['resolvedBy'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    requestId: json['requestId'] as String,
+    openedById: json['openedById'] as String? ?? '',
+    reason: json['reason'] as String? ?? '',
+    status: json['status'] as String? ?? 'open',
+    resolution: json['resolution'] as String?,
+    resolvedAt: _d(json['resolvedAt']),
+    resolvedBy: json['resolvedBy'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 }
 
 @freezed
@@ -174,27 +175,26 @@ class MaterialRequest with _$MaterialRequest {
   }) = _MaterialRequest;
 
   static MaterialRequest parse(Map<String, dynamic> json) => MaterialRequest(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        createdById: json['createdById'] as String? ?? '',
-        recipient:
-            MaterialRecipient.fromString(json['recipient'] as String?),
-        title: json['title'] as String,
-        comment: json['comment'] as String?,
-        status: MaterialRequestStatus.fromString(json['status'] as String?),
-        finalizedAt: _d(json['finalizedAt']),
-        deliveredAt: _d(json['deliveredAt']),
-        deliveredById: json['deliveredById'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        items: (json['items'] as List<dynamic>? ?? const [])
-            .map((e) => MaterialItem.parse(e as Map<String, dynamic>))
-            .toList(),
-        disputes: (json['disputes'] as List<dynamic>? ?? const [])
-            .map((e) => MaterialDispute.parse(e as Map<String, dynamic>))
-            .toList(),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    createdById: json['createdById'] as String? ?? '',
+    recipient: MaterialRecipient.fromString(json['recipient'] as String?),
+    title: json['title'] as String,
+    comment: json['comment'] as String?,
+    status: MaterialRequestStatus.fromString(json['status'] as String?),
+    finalizedAt: _d(json['finalizedAt']),
+    deliveredAt: _d(json['deliveredAt']),
+    deliveredById: json['deliveredById'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .map((e) => MaterialItem.parse(e as Map<String, dynamic>))
+        .toList(),
+    disputes: (json['disputes'] as List<dynamic>? ?? const [])
+        .map((e) => MaterialDispute.parse(e as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;
@@ -212,8 +212,7 @@ extension MaterialRequestX on MaterialRequest {
       .where((i) => i.isBought && i.totalPrice != null)
       .fold<int>(0, (acc, i) => acc + (i.totalPrice ?? 0));
 
-  bool get allItemsBought =>
-      items.isNotEmpty && items.every((i) => i.isBought);
+  bool get allItemsBought => items.isNotEmpty && items.every((i) => i.isBought);
 
   bool get isFinalized => finalizedAt != null;
 }

@@ -6,11 +6,10 @@ import '../domain/template.dart';
 /// Платформенные шаблоны — статичны, но на всякий случай через AsyncNotifier.
 final platformTemplatesProvider =
     AsyncNotifierProvider<PlatformTemplatesController, List<StageTemplate>>(
-  PlatformTemplatesController.new,
-);
+      PlatformTemplatesController.new,
+    );
 
-class PlatformTemplatesController
-    extends AsyncNotifier<List<StageTemplate>> {
+class PlatformTemplatesController extends AsyncNotifier<List<StageTemplate>> {
   @override
   Future<List<StageTemplate>> build() async {
     return ref.read(stagesRepositoryProvider).listPlatformTemplates();
@@ -19,8 +18,8 @@ class PlatformTemplatesController
 
 final userTemplatesProvider =
     AsyncNotifierProvider<UserTemplatesController, List<StageTemplate>>(
-  UserTemplatesController.new,
-);
+      UserTemplatesController.new,
+    );
 
 class UserTemplatesController extends AsyncNotifier<List<StageTemplate>> {
   @override
@@ -40,10 +39,12 @@ class UserTemplatesController extends AsyncNotifier<List<StageTemplate>> {
   }
 }
 
-final templateDetailProvider = AsyncNotifierProvider.family<
-    TemplateDetailController, StageTemplate, String>(
-  TemplateDetailController.new,
-);
+final templateDetailProvider =
+    AsyncNotifierProvider.family<
+      TemplateDetailController,
+      StageTemplate,
+      String
+    >(TemplateDetailController.new);
 
 class TemplateDetailController
     extends FamilyAsyncNotifier<StageTemplate, String> {

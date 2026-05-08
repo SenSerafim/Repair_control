@@ -61,8 +61,7 @@ class _CreateSelfPurchaseScreenState
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
                     color: AppColors.brandLight,
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.r12),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,8 +106,9 @@ class _CreateSelfPurchaseScreenState
                   ),
                   error: (_, __) => Text(
                     'Не удалось загрузить этапы',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.redDot),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.redDot,
+                    ),
                   ),
                   data: (stages) {
                     // Master может создать самозакуп только на этапах
@@ -121,8 +121,9 @@ class _CreateSelfPurchaseScreenState
                       return Text(
                         'На ваших этапах ещё нет бригадира — '
                         'самозакуп пока невозможен.',
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.redDot),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.redDot,
+                        ),
                       );
                     }
                     return Wrap(
@@ -133,15 +134,13 @@ class _CreateSelfPurchaseScreenState
                           ChoiceChip(
                             label: const Text('Без этапа'),
                             selected: _stageId == null,
-                            onSelected: (_) =>
-                                setState(() => _stageId = null),
+                            onSelected: (_) => setState(() => _stageId = null),
                           ),
                         for (final s in visible)
                           ChoiceChip(
                             label: Text(s.title),
                             selected: _stageId == s.id,
-                            onSelected: (_) =>
-                                setState(() => _stageId = s.id),
+                            onSelected: (_) => setState(() => _stageId = s.id),
                           ),
                       ],
                     );
@@ -164,8 +163,7 @@ class _CreateSelfPurchaseScreenState
                     fillColor: AppColors.n50,
                     contentPadding: const EdgeInsets.all(12),
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.r12),
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
                       borderSide: const BorderSide(
                         color: AppColors.n200,
                         width: 1.5,
@@ -178,8 +176,7 @@ class _CreateSelfPurchaseScreenState
                   padding: const EdgeInsets.all(AppSpacing.x14),
                   decoration: BoxDecoration(
                     color: AppColors.brandLight,
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.r12),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Row(
                     children: [
@@ -200,8 +197,7 @@ class _CreateSelfPurchaseScreenState
                             Text(
                               'Дата: сегодня (зафиксируется)',
                               style: AppTextStyles.tiny.copyWith(
-                                color: AppColors.brand
-                                    .withValues(alpha: 0.7),
+                                color: AppColors.brand.withValues(alpha: 0.7),
                                 fontSize: 10,
                               ),
                             ),
@@ -311,18 +307,12 @@ class _CreateSelfPurchaseScreenState
         .create(
           amount: kop,
           stageId: _stageId,
-          comment: _comment.text.trim().isEmpty
-              ? null
-              : _comment.text.trim(),
+          comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure == null) {
-      AppToast.show(
-        context,
-        message: 'Отправлено',
-        kind: AppToastKind.success,
-      );
+      AppToast.show(context, message: 'Отправлено', kind: AppToastKind.success);
       context.pop();
     } else {
       setState(() => _error = failure.userMessage);

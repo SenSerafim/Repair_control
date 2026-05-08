@@ -52,18 +52,18 @@ class PaymentAmountHero extends StatelessWidget {
   }
 
   Color _amountColor(PaymentStatus s) => switch (s) {
-        PaymentStatus.pending => AppColors.n900,
-        PaymentStatus.confirmed => AppColors.greenDark,
-        PaymentStatus.disputed => AppColors.redDot,
-        PaymentStatus.resolved => AppColors.n800,
-        PaymentStatus.cancelled => AppColors.n400,
-      };
+    PaymentStatus.pending => AppColors.n900,
+    PaymentStatus.confirmed => AppColors.greenDark,
+    PaymentStatus.disputed => AppColors.redDot,
+    PaymentStatus.resolved => AppColors.n800,
+    PaymentStatus.cancelled => AppColors.n400,
+  };
 
   String _subtitle(PaymentStatus s) => switch (s) {
-        PaymentStatus.pending => 'Ожидает подтверждения бригадира',
-        PaymentStatus.confirmed => 'Обе стороны подтвердили',
-        PaymentStatus.disputed => 'Выплата оспорена',
-        PaymentStatus.resolved => 'Спор разрешён',
-        PaymentStatus.cancelled => 'Отменено',
-      };
+    PaymentStatus.pending => 'Ожидает подтверждения бригадира',
+    PaymentStatus.confirmed => 'Обе стороны подтвердили',
+    PaymentStatus.disputed => 'Выплата оспорена',
+    PaymentStatus.resolved => 'Спор разрешён',
+    PaymentStatus.cancelled => 'Отменено',
+  };
 }

@@ -43,14 +43,14 @@ class SelfPurchaseAmountHero extends StatelessWidget {
   }
 
   Color _amountColor(SelfPurchaseStatus s) => switch (s) {
-        SelfPurchaseStatus.pending => AppColors.n900,
-        SelfPurchaseStatus.approved => AppColors.greenDark,
-        SelfPurchaseStatus.rejected => AppColors.redDot,
-      };
+    SelfPurchaseStatus.pending => AppColors.n900,
+    SelfPurchaseStatus.approved => AppColors.greenDark,
+    SelfPurchaseStatus.rejected => AppColors.redDot,
+  };
 
   String _subtitle(SelfPurchaseStatus s) => switch (s) {
-        SelfPurchaseStatus.pending => 'Ожидает подтверждения',
-        SelfPurchaseStatus.approved => 'Самозакуп подтверждён',
-        SelfPurchaseStatus.rejected => 'Самозакуп отклонён',
-      };
+    SelfPurchaseStatus.pending => 'Ожидает подтверждения',
+    SelfPurchaseStatus.approved => 'Самозакуп подтверждён',
+    SelfPurchaseStatus.rejected => 'Самозакуп отклонён',
+  };
 }

@@ -81,9 +81,7 @@ class _Chip extends StatelessWidget {
               border: Border.all(
                 color: active
                     ? Colors.transparent
-                    : (recent
-                        ? const Color(0xFFA7F3D0)
-                        : AppColors.n200),
+                    : (recent ? const Color(0xFFA7F3D0) : AppColors.n200),
                 width: 1.5,
               ),
               borderRadius: BorderRadius.circular(AppRadius.pill),

@@ -404,12 +404,7 @@ class HouseFacade extends StatelessWidget {
               ),
 
               // Door body.
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _Door(),
-              ),
+              Positioned(bottom: 0, left: 0, right: 0, child: _Door()),
 
               // Door lintel.
               Positioned(
@@ -487,11 +482,7 @@ class _Door extends StatelessWidget {
                 right: 2,
                 child: _DoorPanel(width: 9, height: 13),
               ),
-              Positioned(
-                right: 4,
-                top: 19,
-                child: _DoorKnob(),
-              ),
+              Positioned(right: 4, top: 19, child: _DoorKnob()),
             ],
           ),
         ),
@@ -662,10 +653,7 @@ class _Window extends StatelessWidget {
                     Color(0xFF90A8BE),
                   ],
                 ),
-                border: Border.all(
-                  color: const Color(0xFF969DAA),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xFF969DAA), width: 1.5),
               ),
             ),
             // Vertical mullion.
@@ -856,35 +844,33 @@ class _SmokeParticle extends StatelessWidget {
       child: SizedBox(
         width: 16,
         height: 26,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: const BoxDecoration(
-            color: Color(0x0A000000),
-            shape: BoxShape.circle,
-          ),
-        )
-            .animate(
-              onPlay: (c) => c.repeat(),
-              delay: delay,
-            )
-            .fadeIn(duration: const Duration(milliseconds: 100))
-            .move(
-              begin: Offset.zero,
-              end: const Offset(-5, -24),
-              duration: duration,
-              curve: Curves.linear,
-            )
-            .scale(
-              begin: const Offset(0.4, 0.4),
-              end: const Offset(1.1, 1.1),
-              duration: duration,
-            )
-            .fadeOut(
-              begin: 0.5,
-              delay: duration ~/ 2,
-              duration: duration ~/ 2,
-            ),
+        child:
+            Container(
+                  width: size,
+                  height: size,
+                  decoration: const BoxDecoration(
+                    color: Color(0x0A000000),
+                    shape: BoxShape.circle,
+                  ),
+                )
+                .animate(onPlay: (c) => c.repeat(), delay: delay)
+                .fadeIn(duration: const Duration(milliseconds: 100))
+                .move(
+                  begin: Offset.zero,
+                  end: const Offset(-5, -24),
+                  duration: duration,
+                  curve: Curves.linear,
+                )
+                .scale(
+                  begin: const Offset(0.4, 0.4),
+                  end: const Offset(1.1, 1.1),
+                  duration: duration,
+                )
+                .fadeOut(
+                  begin: 0.5,
+                  delay: duration ~/ 2,
+                  duration: duration ~/ 2,
+                ),
       ),
     );
   }
@@ -993,29 +979,27 @@ class _Sparkle extends StatelessWidget {
       child: SizedBox(
         width: maxRadius * 2,
         height: maxRadius * 2,
-        child: const DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0x66FFFFFF),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x66FFFFFF),
-                blurRadius: 3,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-        )
-            .animate(
-              onPlay: (c) => c.repeat(reverse: true),
-              delay: delay,
-            )
-            .scale(
-              begin: Offset(baseRadius / maxRadius, baseRadius / maxRadius),
-              end: const Offset(1, 1),
-              duration: duration,
-              curve: Curves.easeInOut,
-            ),
+        child:
+            const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0x66FFFFFF),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x66FFFFFF),
+                        blurRadius: 3,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                )
+                .animate(onPlay: (c) => c.repeat(reverse: true), delay: delay)
+                .scale(
+                  begin: Offset(baseRadius / maxRadius, baseRadius / maxRadius),
+                  end: const Offset(1, 1),
+                  duration: duration,
+                  curve: Curves.easeInOut,
+                ),
       ),
     );
   }

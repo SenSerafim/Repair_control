@@ -143,12 +143,12 @@ class AppNavTileGrid extends StatelessWidget {
   }
 
   Widget _buildTile(AppNavTileSpec t) => AppNavTile(
-        icon: t.icon,
-        label: t.label,
-        onTap: t.onTap,
-        iconColor: t.iconColor,
-        badge: t.badge,
-      );
+    icon: t.icon,
+    label: t.label,
+    onTap: t.onTap,
+    iconColor: t.iconColor,
+    badge: t.badge,
+  );
 }
 
 /// Спецификация одной плитки для AppNavTileGrid.

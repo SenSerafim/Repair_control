@@ -47,12 +47,8 @@ class ChatsRepository {
     final existing = _listProjectInFlight[projectId];
     if (existing != null) return existing;
     final future = _call(() async {
-      final r = await _dio.get<List<dynamic>>(
-        '/api/projects/$projectId/chats',
-      );
-      return r.data!
-          .map((e) => Chat.parse(e as Map<String, dynamic>))
-          .toList();
+      final r = await _dio.get<List<dynamic>>('/api/projects/$projectId/chats');
+      return r.data!.map((e) => Chat.parse(e as Map<String, dynamic>)).toList();
     });
     _listProjectInFlight[projectId] = future;
     future.whenComplete(() => _listProjectInFlight.remove(projectId));
@@ -60,134 +56,122 @@ class ChatsRepository {
   }
 
   Future<Chat> get(String chatId) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/chats/$chatId');
-        return Chat.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/chats/$chatId');
+    return Chat.parse(r.data!);
+  });
 
   /// Все чаты текущего пользователя через все его активные проекты.
   /// Используется на mobile-табе «Чаты» (agg-inbox).
   Future<List<MyChatItem>> listMine() => _call(() async {
-        final r = await _dio.get<List<dynamic>>('/api/me/chats');
-        return r.data!.map((e) {
-          final m = e as Map<String, dynamic>;
-          final chat = Chat.parse(m);
-          final project = m['project'] as Map<String, dynamic>?;
-          return MyChatItem(
-            chat: chat,
-            projectId: project?['id'] as String? ?? chat.projectId ?? '',
-            projectTitle: project?['title'] as String? ?? '',
-          );
-        }).toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/me/chats');
+    return r.data!.map((e) {
+      final m = e as Map<String, dynamic>;
+      final chat = Chat.parse(m);
+      final project = m['project'] as Map<String, dynamic>?;
+      return MyChatItem(
+        chat: chat,
+        projectId: project?['id'] as String? ?? chat.projectId ?? '',
+        projectTitle: project?['title'] as String? ?? '',
+      );
+    }).toList();
+  });
 
   Future<Chat> createPersonal({
     required String projectId,
     required String withUserId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/chats/personal',
-          data: {'withUserId': withUserId},
-        );
-        return Chat.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/chats/personal',
+      data: {'withUserId': withUserId},
+    );
+    return Chat.parse(r.data!);
+  });
 
   Future<Chat> createGroup({
     required String projectId,
     required String title,
     required List<String> participantUserIds,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/chats/group',
-          data: {'title': title, 'participantUserIds': participantUserIds},
-        );
-        return Chat.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/chats/group',
+      data: {'title': title, 'participantUserIds': participantUserIds},
+    );
+    return Chat.parse(r.data!);
+  });
 
   Future<Chat> patch({
     required String chatId,
     String? title,
     bool? visibleToCustomer,
-  }) =>
-      _call(() async {
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/chats/$chatId',
-          data: {
-            if (title != null) 'title': title,
-            if (visibleToCustomer != null)
-              'visibleToCustomer': visibleToCustomer,
-          },
-        );
-        return Chat.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/chats/$chatId',
+      data: {
+        if (title != null) 'title': title,
+        if (visibleToCustomer != null) 'visibleToCustomer': visibleToCustomer,
+      },
+    );
+    return Chat.parse(r.data!);
+  });
 
   Future<Chat> addParticipant({
     required String chatId,
     required String userId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/chats/$chatId/participants',
-          data: {'userId': userId},
-        );
-        return Chat.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/chats/$chatId/participants',
+      data: {'userId': userId},
+    );
+    return Chat.parse(r.data!);
+  });
 
   Future<void> removeParticipant({
     required String chatId,
     required String userId,
-  }) =>
-      _call(() async {
-        await _dio.delete<void>(
-          '/api/chats/$chatId/participants/$userId',
-        );
-      });
+  }) => _call(() async {
+    await _dio.delete<void>('/api/chats/$chatId/participants/$userId');
+  });
 
   Future<MessagesPage> listMessages({
     required String chatId,
     String? cursor,
     int limit = 50,
-  }) =>
-      _call(() async {
-        // Workaround: бекенд DTO до версии 1.0.1 валидирует `limit` через
-        // `@IsInt()` без `@Type(() => Number)` и падает 400 на query-string.
-        // Default на бэке = 50, поэтому если не передавать `limit` явно,
-        // получаем тот же результат и обходим баг до релиза 1.0.1.
-        final useDefaultLimit = limit == 50;
-        final r = await _dio.get<dynamic>(
-          '/api/chats/$chatId/messages',
-          queryParameters: {
-            if (cursor != null) 'cursor': cursor,
-            if (!useDefaultLimit) 'limit': limit,
-          },
-        );
-        final data = r.data;
-        if (data is Map<String, dynamic>) {
-          final items = (data['items'] as List<dynamic>? ?? const [])
-              .map((e) => Message.parse(e as Map<String, dynamic>))
-              .toList();
-          return MessagesPage(
-            items: items,
-            nextCursor: data['nextCursor'] as String?,
-          );
-        }
-        if (data is List) {
-          return MessagesPage(
-            items: data
-                .map((e) => Message.parse(e as Map<String, dynamic>))
-                .toList(),
-          );
-        }
-        return const MessagesPage(items: []);
-      });
+  }) => _call(() async {
+    // Workaround: бекенд DTO до версии 1.0.1 валидирует `limit` через
+    // `@IsInt()` без `@Type(() => Number)` и падает 400 на query-string.
+    // Default на бэке = 50, поэтому если не передавать `limit` явно,
+    // получаем тот же результат и обходим баг до релиза 1.0.1.
+    final useDefaultLimit = limit == 50;
+    final r = await _dio.get<dynamic>(
+      '/api/chats/$chatId/messages',
+      queryParameters: {
+        if (cursor != null) 'cursor': cursor,
+        if (!useDefaultLimit) 'limit': limit,
+      },
+    );
+    final data = r.data;
+    if (data is Map<String, dynamic>) {
+      final items = (data['items'] as List<dynamic>? ?? const [])
+          .map((e) => Message.parse(e as Map<String, dynamic>))
+          .toList();
+      return MessagesPage(
+        items: items,
+        nextCursor: data['nextCursor'] as String?,
+      );
+    }
+    if (data is List) {
+      return MessagesPage(
+        items: data
+            .map((e) => Message.parse(e as Map<String, dynamic>))
+            .toList(),
+      );
+    }
+    return const MessagesPage(items: []);
+  });
 
   /// П1.1 — отправка только текста. Параметр attachmentKeys убран; даже если
   /// клиент его передаст, бекенд вернёт 400 (см. messages.service.ts).
-  Future<Message> sendMessage({
-    required String chatId,
-    required String text,
-  }) =>
+  Future<Message> sendMessage({required String chatId, required String text}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/chats/$chatId/messages',
@@ -200,31 +184,26 @@ class ChatsRepository {
     required String chatId,
     required String messageId,
     required String text,
-  }) =>
-      _call(() async {
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/chats/$chatId/messages/$messageId',
-          data: {'text': text},
-        );
-        return Message.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/chats/$chatId/messages/$messageId',
+      data: {'text': text},
+    );
+    return Message.parse(r.data!);
+  });
 
   Future<void> deleteMessage({
     required String chatId,
     required String messageId,
-  }) =>
-      _call(() async {
-        await _dio.delete<void>('/api/chats/$chatId/messages/$messageId');
-      });
+  }) => _call(() async {
+    await _dio.delete<void>('/api/chats/$chatId/messages/$messageId');
+  });
 
   // П1.2 — `forwardMessage` удалён из публичного API клиента. Серверный endpoint
   // `POST /chats/:chatId/messages/:messageId/forward` остаётся (для возможного
   // возврата фичи), но из mobile к нему не обращаемся.
 
-  Future<void> markRead({
-    required String chatId,
-    required String messageId,
-  }) =>
+  Future<void> markRead({required String chatId, required String messageId}) =>
       _call(() async {
         await _dio.post<void>(
           '/api/chats/$chatId/read',

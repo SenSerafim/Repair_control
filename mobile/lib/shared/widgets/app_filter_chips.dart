@@ -26,8 +26,10 @@ class AppFilterChips extends StatelessWidget {
     required this.chips,
     required this.activeId,
     required this.onSelect,
-    this.padding =
-        const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: 8),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.x16,
+      vertical: 8,
+    ),
     super.key,
   });
 
@@ -58,11 +60,7 @@ class AppFilterChips extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.spec,
-    required this.active,
-    required this.onTap,
-  });
+  const _Chip({required this.spec, required this.active, required this.onTap});
 
   final AppFilterChipSpec spec;
   final bool active;
@@ -80,10 +78,7 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.pill),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: bg,
             gradient: active ? AppGradients.brandButton : null,

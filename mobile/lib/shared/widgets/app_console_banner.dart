@@ -114,10 +114,10 @@ class AppConsoleBanner extends StatelessWidget {
   }
 
   static IconData _defaultIcon(Semaphore s) => switch (s) {
-        Semaphore.green => PhosphorIconsFill.checkCircle,
-        Semaphore.yellow => PhosphorIconsFill.warning,
-        Semaphore.red => PhosphorIconsFill.warningOctagon,
-        Semaphore.blue => PhosphorIconsFill.clock,
-        _ => PhosphorIconsFill.info,
-      };
+    Semaphore.green => PhosphorIconsFill.checkCircle,
+    Semaphore.yellow => PhosphorIconsFill.warning,
+    Semaphore.red => PhosphorIconsFill.warningOctagon,
+    Semaphore.blue => PhosphorIconsFill.clock,
+    _ => PhosphorIconsFill.info,
+  };
 }

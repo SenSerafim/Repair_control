@@ -14,8 +14,7 @@ class RightLabel {
 const Map<DomainAction, RightLabel> kRightsRu = {
   DomainAction.projectCreate: RightLabel(
     title: 'Создавать проекты',
-    description:
-        'Может создавать новые ремонтные проекты от имени заказчика.',
+    description: 'Может создавать новые ремонтные проекты от имени заказчика.',
   ),
   DomainAction.projectEdit: RightLabel(
     title: 'Редактировать проект',
@@ -27,8 +26,7 @@ const Map<DomainAction, RightLabel> kRightsRu = {
   ),
   DomainAction.projectInviteMember: RightLabel(
     title: 'Приглашать участников',
-    description:
-        'Добавлять в проект бригадира, мастеров, представителей.',
+    description: 'Добавлять в проект бригадира, мастеров, представителей.',
   ),
   DomainAction.stageManage: RightLabel(
     title: 'Управлять этапами',
@@ -60,8 +58,7 @@ const Map<DomainAction, RightLabel> kRightsRu = {
   ),
   DomainAction.approvalRequest: RightLabel(
     title: 'Запрашивать согласование',
-    description:
-        'Отправлять заказчику план, шаг или приёмку на одобрение.',
+    description: 'Отправлять заказчику план, шаг или приёмку на одобрение.',
   ),
   DomainAction.approvalDecide: RightLabel(
     title: 'Принимать решения по согласованиям',
@@ -193,10 +190,7 @@ const Map<String, List<DomainAction>> kRightsGrouped = {
     DomainAction.stagePause,
     DomainAction.stepManage,
   ],
-  'Согласования': [
-    DomainAction.approvalRequest,
-    DomainAction.approvalDecide,
-  ],
+  'Согласования': [DomainAction.approvalRequest, DomainAction.approvalDecide],
   'Финансы': [
     DomainAction.financeBudgetView,
     DomainAction.financePaymentCreate,

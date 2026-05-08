@@ -5,10 +5,7 @@ import 'package:repair_control/features/team/domain/invitation.dart';
 void main() {
   group('InvitationStatus.fromString', () {
     test('все значения', () {
-      expect(
-        InvitationStatus.fromString('pending'),
-        InvitationStatus.pending,
-      );
+      expect(InvitationStatus.fromString('pending'), InvitationStatus.pending);
       expect(
         InvitationStatus.fromString('accepted'),
         InvitationStatus.accepted,
@@ -17,10 +14,7 @@ void main() {
         InvitationStatus.fromString('cancelled'),
         InvitationStatus.cancelled,
       );
-      expect(
-        InvitationStatus.fromString('expired'),
-        InvitationStatus.expired,
-      );
+      expect(InvitationStatus.fromString('expired'), InvitationStatus.expired);
     });
     test('unknown → pending', () {
       expect(InvitationStatus.fromString('?'), InvitationStatus.pending);

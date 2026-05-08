@@ -36,8 +36,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _onScroll() {
-    if (_scroll.position.pixels >=
-        _scroll.position.maxScrollExtent - 300) {
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 300) {
       ref.read(feedControllerProvider(widget.projectId).notifier).loadMore();
     }
   }
@@ -90,9 +89,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           if (id == '__all__') {
             onChanged(null);
           } else {
-            onChanged(
-              FeedCategory.values.firstWhere((c) => c.name == id),
-            );
+            onChanged(FeedCategory.values.firstWhere((c) => c.name == id));
           }
         },
       ),
@@ -115,7 +112,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         title: state.filter == null ? 'Нет событий' : 'Нет событий в категории',
         subtitle: state.filter == null
             ? 'Лента наполняется автоматически при работе с проектом. '
-                'Все действия фиксируются здесь'
+                  'Все действия фиксируются здесь'
             : 'Попробуйте сменить фильтр',
         icon: Icons.stream_outlined,
       );
@@ -126,11 +123,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         controller: _scroll,
         padding: EdgeInsets.zero,
         itemCount: filtered.length + (state.isLoadingMore ? 1 : 0),
-        separatorBuilder: (_, __) => const Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.n100,
-        ),
+        separatorBuilder: (_, __) =>
+            const Divider(height: 1, thickness: 1, color: AppColors.n100),
         itemBuilder: (_, i) {
           if (i == filtered.length) {
             return const Padding(
@@ -160,8 +154,10 @@ class _FeedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final stageTitle = event.payload['stageTitle'] as String?;
     final reason = event.payload['reason'] as String?;
-    final timeStr =
-        DateFormat('dd.MM.yyyy, HH:mm', 'ru').format(event.createdAt);
+    final timeStr = DateFormat(
+      'dd.MM.yyyy, HH:mm',
+      'ru',
+    ).format(event.createdAt);
     final subtitleParts = <String>[
       timeStr,
       if (stageTitle != null && stageTitle.isNotEmpty) stageTitle,

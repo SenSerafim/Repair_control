@@ -18,34 +18,32 @@ enum AppRoleKind {
   master;
 
   String get displayName => switch (this) {
-        AppRoleKind.customer => 'Заказчик',
-        AppRoleKind.representative => 'Представитель',
-        AppRoleKind.foreman => 'Бригадир',
-        AppRoleKind.master => 'Мастер',
-      };
+    AppRoleKind.customer => 'Заказчик',
+    AppRoleKind.representative => 'Представитель',
+    AppRoleKind.foreman => 'Бригадир',
+    AppRoleKind.master => 'Мастер',
+  };
 
   String get description => switch (this) {
-        AppRoleKind.customer => 'Создаёт проекты, управляет бюджетом',
-        AppRoleKind.representative =>
-          'Доверенное лицо заказчика или бригадира',
-        AppRoleKind.foreman =>
-          'Ведёт работы по этапам, нанимает мастеров',
-        AppRoleKind.master => 'Бригадир · выполняет шаги на этапах',
-      };
+    AppRoleKind.customer => 'Создаёт проекты, управляет бюджетом',
+    AppRoleKind.representative => 'Доверенное лицо заказчика или бригадира',
+    AppRoleKind.foreman => 'Ведёт работы по этапам, нанимает мастеров',
+    AppRoleKind.master => 'Бригадир · выполняет шаги на этапах',
+  };
 
   IconData get icon => switch (this) {
-        AppRoleKind.customer => PhosphorIconsFill.user,
-        AppRoleKind.representative => PhosphorIconsFill.usersThree,
-        AppRoleKind.foreman => PhosphorIconsFill.wrench,
-        AppRoleKind.master => PhosphorIconsFill.hardHat,
-      };
+    AppRoleKind.customer => PhosphorIconsFill.user,
+    AppRoleKind.representative => PhosphorIconsFill.usersThree,
+    AppRoleKind.foreman => PhosphorIconsFill.wrench,
+    AppRoleKind.master => PhosphorIconsFill.hardHat,
+  };
 
   LinearGradient get gradient => switch (this) {
-        AppRoleKind.customer => AppGradients.avatarBlue,
-        AppRoleKind.representative => AppGradients.avatarPurple,
-        AppRoleKind.foreman => AppGradients.avatarGreen,
-        AppRoleKind.master => AppGradients.avatarYellow,
-      };
+    AppRoleKind.customer => AppGradients.avatarBlue,
+    AppRoleKind.representative => AppGradients.avatarPurple,
+    AppRoleKind.foreman => AppGradients.avatarGreen,
+    AppRoleKind.master => AppGradients.avatarYellow,
+  };
 }
 
 /// Карточка-выбор роли.
@@ -74,15 +72,15 @@ class AppRoleCard extends StatelessWidget {
     VoidCallback? onTap,
     Key? key,
   }) : this(
-          key: key,
-          title: kind.displayName,
-          subtitle: kind.description,
-          icon: kind.icon,
-          gradient: kind.gradient,
-          selected: selected,
-          compact: compact,
-          onTap: onTap,
-        );
+         key: key,
+         title: kind.displayName,
+         subtitle: kind.description,
+         icon: kind.icon,
+         gradient: kind.gradient,
+         selected: selected,
+         compact: compact,
+         onTap: onTap,
+       );
 
   final String title;
   final String? subtitle;
@@ -196,7 +194,11 @@ class AppRoleCard extends StatelessWidget {
           ),
         ),
         if (onTap != null && !selected)
-          Icon(PhosphorIconsRegular.caretRight, size: 18, color: AppColors.n300),
+          Icon(
+            PhosphorIconsRegular.caretRight,
+            size: 18,
+            color: AppColors.n300,
+          ),
         if (selected)
           Container(
             width: 22,

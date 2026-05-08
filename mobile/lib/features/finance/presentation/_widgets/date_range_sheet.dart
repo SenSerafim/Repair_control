@@ -134,8 +134,7 @@ class _DateRangeBodyState extends State<_DateRangeBody> {
               child: AppButton(
                 label: 'Сбросить',
                 variant: AppButtonVariant.ghost,
-                onPressed: () =>
-                    Navigator.of(context).pop(const DateRange()),
+                onPressed: () => Navigator.of(context).pop(const DateRange()),
               ),
             ),
             const SizedBox(width: AppSpacing.x10),
@@ -160,10 +159,7 @@ class _DateRangeBodyState extends State<_DateRangeBody> {
 
   DateRange _thisMonth() {
     final now = DateTime.now();
-    return DateRange(
-      from: DateTime(now.year, now.month, 1),
-      to: now,
-    );
+    return DateRange(from: DateTime(now.year, now.month, 1), to: now);
   }
 
   DateRange _thisYear() {

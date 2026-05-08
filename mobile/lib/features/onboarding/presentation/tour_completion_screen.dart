@@ -42,17 +42,17 @@ class TourCompletionScreen extends StatelessWidget {
               Text(
                 'Отлично!',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: AppColors.n0,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: AppColors.n0,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Теперь вы знаете, как работает приложение',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.n0.withValues(alpha: 0.85),
-                    ),
+                  color: AppColors.n0.withValues(alpha: 0.85),
+                ),
               ),
             ],
           ),

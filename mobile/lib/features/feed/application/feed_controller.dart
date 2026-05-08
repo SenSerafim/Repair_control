@@ -38,16 +38,15 @@ class FeedState {
     bool clearError = false,
     FeedCategory? filter,
     bool clearFilter = false,
-  }) =>
-      FeedState(
-        items: items ?? this.items,
-        cursor: clearCursor ? null : (cursor ?? this.cursor),
-        isLoading: isLoading ?? this.isLoading,
-        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-        hasMore: hasMore ?? this.hasMore,
-        error: clearError ? null : (error ?? this.error),
-        filter: clearFilter ? null : (filter ?? this.filter),
-      );
+  }) => FeedState(
+    items: items ?? this.items,
+    cursor: clearCursor ? null : (cursor ?? this.cursor),
+    isLoading: isLoading ?? this.isLoading,
+    isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    hasMore: hasMore ?? this.hasMore,
+    error: clearError ? null : (error ?? this.error),
+    filter: clearFilter ? null : (filter ?? this.filter),
+  );
 
   /// Отфильтрованный список:
   /// 1. Скрываем технические kind'ы (см. `FeedEventX.isUiVisible` —
@@ -86,10 +85,7 @@ class FeedController extends AutoDisposeFamilyNotifier<FeedState, String> {
       clearCursor: true,
     );
     try {
-      final page = await _repo.list(
-        projectId: _projectId,
-        limit: _pageSize,
-      );
+      final page = await _repo.list(projectId: _projectId, limit: _pageSize);
       state = FeedState(
         items: _sortByPriority(page.items),
         cursor: page.nextCursor,
@@ -126,33 +122,29 @@ class FeedController extends AutoDisposeFamilyNotifier<FeedState, String> {
 
   void setFilter(FeedCategory? category) {
     if (category == state.filter) return;
-    state = state.copyWith(
-      filter: category,
-      clearFilter: category == null,
-    );
+    state = state.copyWith(filter: category, clearFilter: category == null);
   }
 
   /// Приоритет approval над stage_*: ТЗ §5.2 / §10. Сортировка стабильная,
   /// сначала по приоритету категории, затем по дате (DESC).
   List<FeedEvent> _sortByPriority(List<FeedEvent> input) {
-    return [...input]
-      ..sort((a, b) {
-        final ap = _priority(a.category);
-        final bp = _priority(b.category);
-        if (ap != bp) return ap.compareTo(bp);
-        return b.createdAt.compareTo(a.createdAt);
-      });
+    return [...input]..sort((a, b) {
+      final ap = _priority(a.category);
+      final bp = _priority(b.category);
+      if (ap != bp) return ap.compareTo(bp);
+      return b.createdAt.compareTo(a.createdAt);
+    });
   }
 
   static int _priority(FeedCategory c) => switch (c) {
-        FeedCategory.approval => 0,
-        FeedCategory.finance => 1,
-        FeedCategory.stage => 2,
-        FeedCategory.step => 3,
-        FeedCategory.materials => 4,
-        FeedCategory.documents => 5,
-        FeedCategory.chat => 6,
-        FeedCategory.project => 7,
-        FeedCategory.other => 8,
-      };
+    FeedCategory.approval => 0,
+    FeedCategory.finance => 1,
+    FeedCategory.stage => 2,
+    FeedCategory.step => 3,
+    FeedCategory.materials => 4,
+    FeedCategory.documents => 5,
+    FeedCategory.chat => 6,
+    FeedCategory.project => 7,
+    FeedCategory.other => 8,
+  };
 }

@@ -575,30 +575,54 @@ class DemoData {
           stageId: stageDemoId,
           title: 'Демонтаж',
           work: BudgetBucket(planned: 90000_00, spent: 90000_00, remaining: 0),
-          materials:
-              BudgetBucket(planned: 15000_00, spent: 14200_00, remaining: 800_00),
+          materials: BudgetBucket(
+            planned: 15000_00,
+            spent: 14200_00,
+            remaining: 800_00,
+          ),
           total: BudgetBucket(
-              planned: 105000_00, spent: 104200_00, remaining: 800_00),
+            planned: 105000_00,
+            spent: 104200_00,
+            remaining: 800_00,
+          ),
         ),
         StageBudget(
           stageId: stageElectricsId,
           title: 'Электрика',
-          work:
-              BudgetBucket(planned: 180000_00, spent: 143000_00, remaining: 37000_00),
-          materials:
-              BudgetBucket(planned: 95000_00, spent: 78500_00, remaining: 16500_00),
+          work: BudgetBucket(
+            planned: 180000_00,
+            spent: 143000_00,
+            remaining: 37000_00,
+          ),
+          materials: BudgetBucket(
+            planned: 95000_00,
+            spent: 78500_00,
+            remaining: 16500_00,
+          ),
           total: BudgetBucket(
-              planned: 275000_00, spent: 221500_00, remaining: 53500_00),
+            planned: 275000_00,
+            spent: 221500_00,
+            remaining: 53500_00,
+          ),
         ),
         StageBudget(
           stageId: stagePlumbingId,
           title: 'Сантехника',
           work: BudgetBucket(
-              planned: 130000_00, spent: 52000_00, remaining: 78000_00),
+            planned: 130000_00,
+            spent: 52000_00,
+            remaining: 78000_00,
+          ),
           materials: BudgetBucket(
-              planned: 110000_00, spent: 0, remaining: 110000_00),
+            planned: 110000_00,
+            spent: 0,
+            remaining: 110000_00,
+          ),
           total: BudgetBucket(
-              planned: 240000_00, spent: 52000_00, remaining: 188000_00),
+            planned: 240000_00,
+            spent: 52000_00,
+            remaining: 188000_00,
+          ),
         ),
       ],
     );
@@ -711,10 +735,7 @@ class DemoData {
           userId: userForemanId,
           joinedAt: _projectStart.subtract(const Duration(days: 1)),
         ),
-        ChatParticipant(
-          userId: userMasterId,
-          joinedAt: _projectStart,
-        ),
+        ChatParticipant(userId: userMasterId, joinedAt: _projectStart),
       ],
       unreadCount: 2,
       lastMessagePreview: 'Завтра привезут материалы. Принимать будете?',
@@ -807,10 +828,7 @@ class DemoData {
       kind: 'approval_requested',
       title: 'Новое согласование',
       body: 'Бригадир просит одобрить доп. работы — 22 000 ₽',
-      data: const {
-        'approvalId': approvalExtraWorkId,
-        'projectId': projectId,
-      },
+      data: const {'approvalId': approvalExtraWorkId, 'projectId': projectId},
       receivedAt: _now.subtract(const Duration(hours: 5)),
       read: false,
     ),
@@ -819,10 +837,7 @@ class DemoData {
       kind: 'step_completed',
       title: 'Шаг готов',
       body: 'Установка подрозетников отмечена как готовая',
-      data: const {
-        'stepId': stepElectricsSocketsId,
-        'projectId': projectId,
-      },
+      data: const {'stepId': stepElectricsSocketsId, 'projectId': projectId},
       receivedAt: _now.subtract(const Duration(hours: 3)),
       read: false,
     ),
@@ -831,10 +846,7 @@ class DemoData {
       kind: 'payment_confirmed',
       title: 'Платёж подтверждён',
       body: 'Аванс 200 000 ₽ зачислен',
-      data: const {
-        'paymentId': paymentAdvanceId,
-        'projectId': projectId,
-      },
+      data: const {'paymentId': paymentAdvanceId, 'projectId': projectId},
       receivedAt: _now.subtract(const Duration(days: 6)),
       read: true,
     ),
@@ -843,10 +855,7 @@ class DemoData {
       kind: 'message_new',
       title: 'Новое сообщение',
       body: 'Бригадир: «Завтра привезут материалы. Принимать будете?»',
-      data: const {
-        'chatId': chatProjectId,
-        'projectId': projectId,
-      },
+      data: const {'chatId': chatProjectId, 'projectId': projectId},
       receivedAt: _now.subtract(const Duration(hours: 1)),
       read: false,
     ),
@@ -855,10 +864,7 @@ class DemoData {
       kind: 'stage_started',
       title: 'Этап запущен',
       body: 'Электрика — старт работ',
-      data: const {
-        'stageId': stageElectricsId,
-        'projectId': projectId,
-      },
+      data: const {'stageId': stageElectricsId, 'projectId': projectId},
       receivedAt: _now.subtract(const Duration(days: 22)),
       read: true,
     ),

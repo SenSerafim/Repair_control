@@ -43,10 +43,7 @@ class AppAnimatedSendButton extends StatelessWidget {
 /// Полоса прогресса загрузки с анимированным shimmer при активном
 /// значении (определённый/неопределённый).
 class AppUploadProgressBar extends StatelessWidget {
-  const AppUploadProgressBar({
-    required this.progress,
-    super.key,
-  });
+  const AppUploadProgressBar({required this.progress, super.key});
 
   /// Значение 0.0–1.0 или null (неопределённый progress).
   final double? progress;
@@ -54,17 +51,19 @@ class AppUploadProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 6,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(3),
-        child: LinearProgressIndicator(
-          value: progress,
-          minHeight: 6,
-          backgroundColor: AppColors.n100,
-          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.brand),
-        ),
-      ),
-    ).animate(onPlay: (c) => progress == null ? c.repeat() : null).shimmer(
+          height: 6,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: AppColors.n100,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.brand),
+            ),
+          ),
+        )
+        .animate(onPlay: (c) => progress == null ? c.repeat() : null)
+        .shimmer(
           duration: 1200.ms,
           color: AppColors.brand.withValues(alpha: 0.15),
         );

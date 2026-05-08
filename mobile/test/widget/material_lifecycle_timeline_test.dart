@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/materials/presentation/_widgets/material_lifecycle_timeline.dart';
 
 void main() {
-  testWidgets('MaterialLifecycleTimeline рендерит шаги с разным состоянием',
-      (tester) async {
+  testWidgets('MaterialLifecycleTimeline рендерит шаги с разным состоянием', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

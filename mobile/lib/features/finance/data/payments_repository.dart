@@ -19,11 +19,11 @@ class PaymentsRepository {
   final Dio _dio;
 
   Future<ProjectBudget> projectBudget(String projectId) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/projects/$projectId/budget',
-        );
-        return ProjectBudget.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>(
+      '/api/projects/$projectId/budget',
+    );
+    return ProjectBudget.parse(r.data!);
+  });
 
   /// P1.5: «Движение средств» — для customer / representative.canSeeBudget.
   /// Опциональный date-range (ISO 8601) для табы «Материалы» в e-budget.
@@ -31,50 +31,48 @@ class PaymentsRepository {
     String projectId, {
     DateTime? from,
     DateTime? to,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/projects/$projectId/money-flow',
-          queryParameters: {
-            if (from != null) 'from': from.toIso8601String(),
-            if (to != null) 'to': to.toIso8601String(),
-          },
-        );
-        return MoneyFlow.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.get<Map<String, dynamic>>(
+      '/api/projects/$projectId/money-flow',
+      queryParameters: {
+        if (from != null) 'from': from.toIso8601String(),
+        if (to != null) 'to': to.toIso8601String(),
+      },
+    );
+    return MoneyFlow.parse(r.data!);
+  });
 
   Future<StageBudget?> stageBudget(String stageId) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>?>(
-          '/api/stages/$stageId/budget',
-        );
-        if (r.data == null) return null;
-        return StageBudget.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>?>(
+      '/api/stages/$stageId/budget',
+    );
+    if (r.data == null) return null;
+    return StageBudget.parse(r.data!);
+  });
 
   Future<List<Payment>> list({
     required String projectId,
     PaymentStatus? status,
     PaymentKind? kind,
     String? userId,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/payments',
-          queryParameters: {
-            if (status != null) 'status': status.apiValue,
-            if (kind != null) 'kind': kind.apiValue,
-            if (userId != null) 'userId': userId,
-          },
-        );
-        return r.data!
-            .map((e) => Payment.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/projects/$projectId/payments',
+      queryParameters: {
+        if (status != null) 'status': status.apiValue,
+        if (kind != null) 'kind': kind.apiValue,
+        if (userId != null) 'userId': userId,
+      },
+    );
+    return r.data!
+        .map((e) => Payment.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<Payment> get(String id) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/payments/$id');
-        return Payment.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/payments/$id');
+    return Payment.parse(r.data!);
+  });
 
   Future<Payment> createAdvance({
     required String projectId,
@@ -83,20 +81,19 @@ class PaymentsRepository {
     String? stageId,
     String? comment,
     String? photoKey,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/payments',
-          data: {
-            'toUserId': toUserId,
-            'amount': amount,
-            if (stageId != null) 'stageId': stageId,
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-            if (photoKey != null) 'photoKey': photoKey,
-          },
-        );
-        return Payment.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/payments',
+      data: {
+        'toUserId': toUserId,
+        'amount': amount,
+        if (stageId != null) 'stageId': stageId,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (photoKey != null) 'photoKey': photoKey,
+      },
+    );
+    return Payment.parse(r.data!);
+  });
 
   Future<Payment> distribute({
     required String parentPaymentId,
@@ -105,65 +102,61 @@ class PaymentsRepository {
     String? stageId,
     String? comment,
     String? photoKey,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/payments/$parentPaymentId/distribute',
-          data: {
-            'toUserId': toUserId,
-            'amount': amount,
-            if (stageId != null) 'stageId': stageId,
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-            if (photoKey != null) 'photoKey': photoKey,
-          },
-        );
-        return Payment.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/payments/$parentPaymentId/distribute',
+      data: {
+        'toUserId': toUserId,
+        'amount': amount,
+        if (stageId != null) 'stageId': stageId,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (photoKey != null) 'photoKey': photoKey,
+      },
+    );
+    return Payment.parse(r.data!);
+  });
 
   Future<Payment> confirm(String id) => _call(() async {
-        final r = await _dio
-            .post<Map<String, dynamic>>('/api/payments/$id/confirm');
-        return Payment.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/payments/$id/confirm',
+    );
+    return Payment.parse(r.data!);
+  });
 
   Future<Payment> cancel(String id) => _call(() async {
-        final r = await _dio
-            .post<Map<String, dynamic>>('/api/payments/$id/cancel');
-        return Payment.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>('/api/payments/$id/cancel');
+    return Payment.parse(r.data!);
+  });
 
   Future<Payment> dispute({
     required String id,
     required String reason,
     List<String>? photoKeys,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/payments/$id/dispute',
-          data: {
-            'reason': reason,
-            if (photoKeys != null && photoKeys.isNotEmpty)
-              'photoKeys': photoKeys,
-          },
-        );
-        return Payment.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/payments/$id/dispute',
+      data: {
+        'reason': reason,
+        if (photoKeys != null && photoKeys.isNotEmpty) 'photoKeys': photoKeys,
+      },
+    );
+    return Payment.parse(r.data!);
+  });
 
   Future<Payment> resolve({
     required String id,
     required String resolution,
     int? adjustAmount,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/payments/$id/resolve',
-          data: {
-            'resolution': resolution,
-            if (adjustAmount != null) 'adjustAmount': adjustAmount,
-          },
-        );
-        return Payment.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/payments/$id/resolve',
+      data: {
+        'resolution': resolution,
+        if (adjustAmount != null) 'adjustAmount': adjustAmount,
+      },
+    );
+    return Payment.parse(r.data!);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

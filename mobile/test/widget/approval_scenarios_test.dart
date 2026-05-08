@@ -13,20 +13,19 @@ void main() {
     int attemptNumber = 1,
     bool requiresReassign = false,
     List<Map<String, dynamic>> stages = const [],
-  }) =>
-      Approval.parse({
-        'id': 'a-plan',
-        'scope': 'plan',
-        'projectId': 'p-1',
-        'status': 'pending',
-        'requestedById': 'foreman',
-        'addresseeId': 'customer',
-        'attemptNumber': attemptNumber,
-        'requiresReassign': requiresReassign,
-        'payload': {'stages': stages},
-        'createdAt': '2026-04-01T10:00:00Z',
-        'updatedAt': '2026-04-01T10:00:00Z',
-      });
+  }) => Approval.parse({
+    'id': 'a-plan',
+    'scope': 'plan',
+    'projectId': 'p-1',
+    'status': 'pending',
+    'requestedById': 'foreman',
+    'addresseeId': 'customer',
+    'attemptNumber': attemptNumber,
+    'requiresReassign': requiresReassign,
+    'payload': {'stages': stages},
+    'createdAt': '2026-04-01T10:00:00Z',
+    'updatedAt': '2026-04-01T10:00:00Z',
+  });
 
   test('plan-pending: scope=plan + attemptNumber=1 + planStages пуст', () {
     final a = planPending();
@@ -37,25 +36,27 @@ void main() {
     expect(a.requiresReassign, isFalse);
   });
 
-  test('approve flow: status flips to approved + decisionComment сохраняется',
-      () {
-    final approved = Approval.parse({
-      'id': 'a-1',
-      'scope': 'plan',
-      'projectId': 'p-1',
-      'status': 'approved',
-      'requestedById': 'foreman',
-      'addresseeId': 'customer',
-      'attemptNumber': 1,
-      'decisionComment': 'Все ок, можно стартовать',
-      'decidedAt': '2026-04-02T12:00:00Z',
-      'createdAt': '2026-04-01T10:00:00Z',
-      'updatedAt': '2026-04-02T12:00:00Z',
-    });
-    expect(approved.status, ApprovalStatus.approved);
-    expect(approved.decisionComment, isNotNull);
-    expect(approved.decidedAt, isNotNull);
-  });
+  test(
+    'approve flow: status flips to approved + decisionComment сохраняется',
+    () {
+      final approved = Approval.parse({
+        'id': 'a-1',
+        'scope': 'plan',
+        'projectId': 'p-1',
+        'status': 'approved',
+        'requestedById': 'foreman',
+        'addresseeId': 'customer',
+        'attemptNumber': 1,
+        'decisionComment': 'Все ок, можно стартовать',
+        'decidedAt': '2026-04-02T12:00:00Z',
+        'createdAt': '2026-04-01T10:00:00Z',
+        'updatedAt': '2026-04-02T12:00:00Z',
+      });
+      expect(approved.status, ApprovalStatus.approved);
+      expect(approved.decisionComment, isNotNull);
+      expect(approved.decidedAt, isNotNull);
+    },
+  );
 
   test('request-correction (reject): status=rejected + comment обязателен', () {
     final rejected = Approval.parse({
@@ -76,22 +77,24 @@ void main() {
     expect(rejected.decisionComment!.length, greaterThan(10));
   });
 
-  test('resubmit flow: attemptNumber инкрементируется, status снова pending',
-      () {
-    final resubmitted = Approval.parse({
-      'id': 'a-1',
-      'scope': 'plan',
-      'projectId': 'p-1',
-      'status': 'pending',
-      'requestedById': 'foreman',
-      'addresseeId': 'customer',
-      'attemptNumber': 2,
-      'createdAt': '2026-04-01T10:00:00Z',
-      'updatedAt': '2026-04-03T09:00:00Z',
-    });
-    expect(resubmitted.status, ApprovalStatus.pending);
-    expect(resubmitted.attemptNumber, 2);
-  });
+  test(
+    'resubmit flow: attemptNumber инкрементируется, status снова pending',
+    () {
+      final resubmitted = Approval.parse({
+        'id': 'a-1',
+        'scope': 'plan',
+        'projectId': 'p-1',
+        'status': 'pending',
+        'requestedById': 'foreman',
+        'addresseeId': 'customer',
+        'attemptNumber': 2,
+        'createdAt': '2026-04-01T10:00:00Z',
+        'updatedAt': '2026-04-03T09:00:00Z',
+      });
+      expect(resubmitted.status, ApprovalStatus.pending);
+      expect(resubmitted.attemptNumber, 2);
+    },
+  );
 
   test('requires-reassign flag прокидывается из API', () {
     final stuck = planPending(requiresReassign: true);

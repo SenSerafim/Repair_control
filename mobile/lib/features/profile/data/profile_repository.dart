@@ -25,11 +25,10 @@ class ProfileRepository {
 
   final Dio _dio;
 
-  Future<UserProfile> getMe() =>
-      _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/me');
-        return UserProfile.parse(r.data!);
-      });
+  Future<UserProfile> getMe() => _call(() async {
+    final r = await _dio.get<Map<String, dynamic>>('/api/me');
+    return UserProfile.parse(r.data!);
+  });
 
   Future<UserProfile> updateMe({
     String? firstName,
@@ -37,120 +36,101 @@ class ProfileRepository {
     String? avatarUrl,
     String? language,
     String? email,
-  }) =>
-      _call(() async {
-        final body = <String, dynamic>{
-          if (firstName != null) 'firstName': firstName,
-          if (lastName != null) 'lastName': lastName,
-          if (avatarUrl != null) 'avatarUrl': avatarUrl,
-          if (language != null) 'language': language,
-          if (email != null) 'email': email,
-        };
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/me',
-          data: body,
-        );
-        return UserProfile.parse(r.data!);
-      });
+  }) => _call(() async {
+    final body = <String, dynamic>{
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
+      if (avatarUrl != null) 'avatarUrl': avatarUrl,
+      if (language != null) 'language': language,
+      if (email != null) 'email': email,
+    };
+    final r = await _dio.patch<Map<String, dynamic>>('/api/me', data: body);
+    return UserProfile.parse(r.data!);
+  });
 
-  Future<List<UserRoleEntry>> listRoles() =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>('/api/me/roles');
-        return r.data!
-            .map((e) => UserRoleEntry.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  Future<List<UserRoleEntry>> listRoles() => _call(() async {
+    final r = await _dio.get<List<dynamic>>('/api/me/roles');
+    return r.data!
+        .map((e) => UserRoleEntry.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
-  Future<List<UserRoleEntry>> addRole(SystemRole role) =>
-      _call(() async {
-        final r = await _dio.post<List<dynamic>>(
-          '/api/me/roles',
-          data: {'role': role.name},
-        );
-        return r.data!
-            .map((e) => UserRoleEntry.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  Future<List<UserRoleEntry>> addRole(SystemRole role) => _call(() async {
+    final r = await _dio.post<List<dynamic>>(
+      '/api/me/roles',
+      data: {'role': role.name},
+    );
+    return r.data!
+        .map((e) => UserRoleEntry.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
-  Future<List<UserRoleEntry>> removeRole(SystemRole role) =>
-      _call(() async {
-        final r =
-            await _dio.delete<List<dynamic>>('/api/me/roles/${role.name}');
-        return r.data!
-            .map((e) => UserRoleEntry.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  Future<List<UserRoleEntry>> removeRole(SystemRole role) => _call(() async {
+    final r = await _dio.delete<List<dynamic>>('/api/me/roles/${role.name}');
+    return r.data!
+        .map((e) => UserRoleEntry.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
-  Future<void> setActiveRole(SystemRole role) =>
-      _call(() async {
-        await _dio.put<void>(
-          '/api/me/active-role',
-          data: {'role': role.name},
-        );
-      });
+  Future<void> setActiveRole(SystemRole role) => _call(() async {
+    await _dio.put<void>('/api/me/active-role', data: {'role': role.name});
+  });
 
-  Future<List<NotificationSetting>> listNotificationSettings() =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/me/notification-settings',
-        );
-        return r.data!
-            .map(
-              (e) => NotificationSetting.parse(e as Map<String, dynamic>),
-            )
-            .toList();
-      });
+  Future<List<NotificationSetting>> listNotificationSettings() => _call(
+    () async {
+      final r = await _dio.get<List<dynamic>>('/api/me/notification-settings');
+      return r.data!
+          .map((e) => NotificationSetting.parse(e as Map<String, dynamic>))
+          .toList();
+    },
+  );
 
   Future<void> patchNotificationSetting({
     required String kind,
     required bool pushEnabled,
-  }) =>
-      _call(() async {
-        await _dio.patch<void>(
-          '/api/me/notification-settings',
-          data: {'kind': kind, 'pushEnabled': pushEnabled},
-        );
-      });
+  }) => _call(() async {
+    await _dio.patch<void>(
+      '/api/me/notification-settings',
+      data: {'kind': kind, 'pushEnabled': pushEnabled},
+    );
+  });
 
-  Future<Map<String, String>> getAppSettings() =>
-      _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/me/app-settings');
-        return r.data!.map((k, v) => MapEntry(k, v?.toString() ?? ''));
-      });
+  Future<Map<String, String>> getAppSettings() => _call(() async {
+    final r = await _dio.get<Map<String, dynamic>>('/api/me/app-settings');
+    return r.data!.map((k, v) => MapEntry(k, v?.toString() ?? ''));
+  });
 
-  Future<List<FaqSection>> listFaq() =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>('/api/faq');
-        return r.data!
-            .map((e) => FaqSection.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  Future<List<FaqSection>> listFaq() => _call(() async {
+    final r = await _dio.get<List<dynamic>>('/api/faq');
+    return r.data!
+        .map((e) => FaqSection.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<void> submitFeedback({
     required String text,
     List<String> attachmentKeys = const [],
-  }) =>
-      _call(() async {
-        await _dio.post<void>(
-          '/api/feedback',
-          data: {
-            'text': text,
-            if (attachmentKeys.isNotEmpty) 'attachmentKeys': attachmentKeys,
-          },
-        );
-      });
+  }) => _call(() async {
+    await _dio.post<void>(
+      '/api/feedback',
+      data: {
+        'text': text,
+        if (attachmentKeys.isNotEmpty) 'attachmentKeys': attachmentKeys,
+      },
+    );
+  });
 
   /// Soft-delete текущего аккаунта (Cluster A: «Удалить аккаунт»).
   /// После 204 клиент должен сделать logout и очистить локальный кеш.
   Future<void> deleteAccount() => _call(() async {
-        await _dio.delete<void>('/api/me');
-      });
+    await _dio.delete<void>('/api/me');
+  });
 
   /// Получить одну статью FAQ.
   Future<FaqItem> getFaqItem(String id) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/faq/$id');
-        return FaqItem.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/faq/$id');
+    return FaqItem.parse(r.data!);
+  });
 
   /// Presigned upload ответ: { key, url, method, headers, expiresIn }.
   /// Используется для загрузки аватара и вложений.
@@ -159,19 +139,18 @@ class ProfileRepository {
     required String mimeType,
     required int sizeBytes,
     required String scope,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/files/presign-upload',
-          data: {
-            'originalName': originalName,
-            'mimeType': mimeType,
-            'sizeBytes': sizeBytes,
-            'scope': scope,
-          },
-        );
-        return PresignedUpload.fromJson(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/files/presign-upload',
+      data: {
+        'originalName': originalName,
+        'mimeType': mimeType,
+        'sizeBytes': sizeBytes,
+        'scope': scope,
+      },
+    );
+    return PresignedUpload.fromJson(r.data!);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {
@@ -197,8 +176,9 @@ class PresignedUpload {
         key: (json['key'] ?? json['fileKey']) as String,
         url: (json['url'] ?? json['uploadUrl']) as String,
         method: json['method'] as String? ?? 'PUT',
-        headers: (json['headers'] as Map<String, dynamic>? ?? {})
-            .map((k, v) => MapEntry(k, v.toString())),
+        headers: (json['headers'] as Map<String, dynamic>? ?? {}).map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
         expiresIn: (json['expiresIn'] as num?)?.toInt() ?? 300,
       );
 

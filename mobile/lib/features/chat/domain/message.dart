@@ -20,18 +20,18 @@ class Message with _$Message {
   }) = _Message;
 
   static Message parse(Map<String, dynamic> json) => Message(
-        id: json['id'] as String,
-        chatId: json['chatId'] as String,
-        authorId: json['authorId'] as String? ?? '',
-        text: json['text'] as String?,
-        attachmentKeys: (json['attachmentKeys'] as List<dynamic>? ?? const [])
-            .map((e) => e.toString())
-            .toList(),
-        forwardedFromId: json['forwardedFromId'] as String?,
-        editedAt: _d(json['editedAt']),
-        deletedAt: _d(json['deletedAt']),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    chatId: json['chatId'] as String,
+    authorId: json['authorId'] as String? ?? '',
+    text: json['text'] as String?,
+    attachmentKeys: (json['attachmentKeys'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toList(),
+    forwardedFromId: json['forwardedFromId'] as String?,
+    editedAt: _d(json['editedAt']),
+    deletedAt: _d(json['deletedAt']),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

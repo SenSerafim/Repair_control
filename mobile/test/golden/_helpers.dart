@@ -22,10 +22,7 @@ Widget goldenScaffold({
       body: Center(
         child: SizedBox.fromSize(
           size: size,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: child,
-          ),
+          child: Padding(padding: const EdgeInsets.all(8), child: child),
         ),
       ),
     ),

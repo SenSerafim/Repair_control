@@ -10,17 +10,17 @@ import 'package:repair_control/features/selfpurchase/domain/self_purchase.dart';
 /// «Ждут моего согласования» по addresseeId == meId.
 void main() {
   SelfPurchase parse(Map<String, dynamic> json) => SelfPurchase.parse({
-        'id': 'sp-1',
-        'projectId': 'p-1',
-        'byUserId': 'u-1',
-        'byRole': 'foreman',
-        'addresseeId': 'customer-1',
-        'amount': 5000,
-        'status': 'pending',
-        'createdAt': '2026-04-01T10:00:00Z',
-        'updatedAt': '2026-04-01T10:00:00Z',
-        ...json,
-      });
+    'id': 'sp-1',
+    'projectId': 'p-1',
+    'byUserId': 'u-1',
+    'byRole': 'foreman',
+    'addresseeId': 'customer-1',
+    'amount': 5000,
+    'status': 'pending',
+    'createdAt': '2026-04-01T10:00:00Z',
+    'updatedAt': '2026-04-01T10:00:00Z',
+    ...json,
+  });
 
   group('SelfPurchase.parse — иерархия', () {
     test('foreman → customer как addressee', () {

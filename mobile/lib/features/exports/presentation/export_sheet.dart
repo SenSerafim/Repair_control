@@ -41,7 +41,9 @@ class _BodyState extends ConsumerState<_Body> {
       _error = null;
     });
     try {
-      final job = await ref.read(exportsRepositoryProvider).create(
+      final job = await ref
+          .read(exportsRepositoryProvider)
+          .create(
             projectId: widget.projectId,
             kind: _kind,
             dateFrom: _from,

@@ -33,9 +33,9 @@ class MaterialDetailScreen extends ConsumerWidget {
       materialsControllerProvider(projectId).select(
         (v) => v.whenData(
           (list) => list.cast<MaterialRequest?>().firstWhere(
-                (r) => r?.id == requestId,
-                orElse: () => null,
-              ),
+            (r) => r?.id == requestId,
+            orElse: () => null,
+          ),
         ),
       ),
     );
@@ -48,8 +48,7 @@ class MaterialDetailScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Ошибка',
-          onRetry: () =>
-              ref.invalidate(materialsControllerProvider(projectId)),
+          onRetry: () => ref.invalidate(materialsControllerProvider(projectId)),
         ),
         data: (request) {
           if (request == null) {
@@ -62,8 +61,8 @@ class MaterialDetailScreen extends ConsumerWidget {
             children: [
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () async => ref
-                      .invalidate(materialsControllerProvider(projectId)),
+                  onRefresh: () async =>
+                      ref.invalidate(materialsControllerProvider(projectId)),
                   child: ListView(
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     children: [
@@ -85,8 +84,8 @@ class MaterialDetailScreen extends ConsumerWidget {
                           state: _itemState(request, item),
                           onEdit: _canEdit(request, item)
                               ? () => context.push(
-                                    '/projects/$projectId/materials/$requestId/items/${item.id}/edit',
-                                  )
+                                  '/projects/$projectId/materials/$requestId/items/${item.id}/edit',
+                                )
                               : null,
                         ),
                         const SizedBox(height: AppSpacing.x8),
@@ -154,13 +153,13 @@ class MaterialDetailScreen extends ConsumerWidget {
       state: switch (r.status) {
         MaterialRequestStatus.bought ||
         MaterialRequestStatus.delivered ||
-        MaterialRequestStatus.resolved =>
-          LifecycleStepState.done,
+        MaterialRequestStatus.resolved => LifecycleStepState.done,
         MaterialRequestStatus.partiallyBought => LifecycleStepState.active,
         _ => LifecycleStepState.pending,
       },
       dateLabel: r.finalizedAt == null ? '—' : _fmtDate(r.finalizedAt!),
-      immutable: r.status == MaterialRequestStatus.bought ||
+      immutable:
+          r.status == MaterialRequestStatus.bought ||
           r.status == MaterialRequestStatus.delivered,
     );
     final delivered = LifecycleStep(
@@ -183,22 +182,10 @@ class MaterialDetailScreen extends ConsumerWidget {
 
   List<MaterialMetaRow> _metaRows(MaterialRequest r) {
     return [
-      MaterialMetaRow(
-        'Получатель покупает',
-        r.recipient.displayName,
-      ),
-      MaterialMetaRow(
-        'Этап',
-        r.stageId == null ? 'Без этапа' : 'Привязан',
-      ),
-      MaterialMetaRow(
-        'Создал',
-        _shorten(r.createdById),
-      ),
-      MaterialMetaRow(
-        'Создано',
-        _fmtDate(r.createdAt),
-      ),
+      MaterialMetaRow('Получатель покупает', r.recipient.displayName),
+      MaterialMetaRow('Этап', r.stageId == null ? 'Без этапа' : 'Привязан'),
+      MaterialMetaRow('Создал', _shorten(r.createdById)),
+      MaterialMetaRow('Создано', _fmtDate(r.createdAt)),
       if (r.finalizedAt != null)
         MaterialMetaRow(
           'Финализировано',
@@ -311,60 +298,70 @@ class _Actions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final buttons = <Widget>[];
     final ctrl = ref.read(materialsControllerProvider(projectId).notifier);
-    final canManage =
-        ref.watch(canProvider(DomainAction.materialsManage));
-    final canFinalize =
-        ref.watch(canProvider(DomainAction.materialFinalize));
+    final canManage = ref.watch(canProvider(DomainAction.materialsManage));
+    final canFinalize = ref.watch(canProvider(DomainAction.materialFinalize));
 
     switch (request.status) {
       case MaterialRequestStatus.draft:
         if (canManage) {
-          buttons.add(AppButton(
-            label: 'Отправить заказчику/бригадиру',
-            onPressed: () => ctrl.send(request.id),
-          ));
+          buttons.add(
+            AppButton(
+              label: 'Отправить заказчику/бригадиру',
+              onPressed: () => ctrl.send(request.id),
+            ),
+          );
         }
       case MaterialRequestStatus.partiallyBought:
       case MaterialRequestStatus.bought:
         if (request.allItemsBought && canFinalize) {
-          buttons.add(AppButton(
-            label: 'Финализировать (в бюджет)',
-            variant: AppButtonVariant.success,
-            onPressed: () => ctrl.finalizeRequest(request.id),
-          ));
+          buttons.add(
+            AppButton(
+              label: 'Финализировать (в бюджет)',
+              variant: AppButtonVariant.success,
+              onPressed: () => ctrl.finalizeRequest(request.id),
+            ),
+          );
         }
         if (canManage) {
           if (buttons.isNotEmpty) {
             buttons.add(const SizedBox(height: AppSpacing.x8));
           }
-          buttons.add(AppButton(
-            label: 'Открыть спор',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => _dispute(context, ref),
-          ));
+          buttons.add(
+            AppButton(
+              label: 'Открыть спор',
+              variant: AppButtonVariant.destructive,
+              onPressed: () => _dispute(context, ref),
+            ),
+          );
         }
       case MaterialRequestStatus.delivered:
         if (canManage) {
-          buttons.add(AppButton(
-            label: 'Подтвердить доставку',
-            variant: AppButtonVariant.success,
-            onPressed: () => ctrl.confirmDelivery(request.id),
-          ));
+          buttons.add(
+            AppButton(
+              label: 'Подтвердить доставку',
+              variant: AppButtonVariant.success,
+              onPressed: () => ctrl.confirmDelivery(request.id),
+            ),
+          );
         }
       case MaterialRequestStatus.disputed:
         if (canManage) {
-          buttons.add(AppButton(
-            label: 'Разрешить спор',
-            onPressed: () => _resolve(context, ref),
-          ));
+          buttons.add(
+            AppButton(
+              label: 'Разрешить спор',
+              onPressed: () => _resolve(context, ref),
+            ),
+          );
         }
       case MaterialRequestStatus.open:
         if (canManage) {
-          buttons.add(AppButton(
-            label: 'Открыть спор',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => _dispute(context, ref),
-          ));
+          buttons.add(
+            AppButton(
+              label: 'Открыть спор',
+              variant: AppButtonVariant.destructive,
+              onPressed: () => _dispute(context, ref),
+            ),
+          );
         }
       case MaterialRequestStatus.resolved:
       case MaterialRequestStatus.cancelled:
@@ -449,8 +446,7 @@ class _Actions extends ConsumerWidget {
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
             ),
           ),
@@ -542,8 +538,9 @@ class _ResolveSheetState extends State<_ResolveSheet> {
   Future<void> _submit() async {
     if (_busy) return;
     final text = _comment.text.trim();
-    final resolution =
-        text.isEmpty ? _selected.title : '${_selected.title}. $text';
+    final resolution = text.isEmpty
+        ? _selected.title
+        : '${_selected.title}. $text';
     setState(() => _busy = true);
     try {
       await widget.onSubmit(resolution);
@@ -586,8 +583,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
             contentPadding: const EdgeInsets.all(12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
           ),
         ),

@@ -6,9 +6,7 @@ void main() {
   testWidgets('AppInlineError показывает иконку и сообщение', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: AppInlineError(message: 'Что-то пошло не так'),
-        ),
+        home: Scaffold(body: AppInlineError(message: 'Что-то пошло не так')),
       ),
     );
     await tester.pump(const Duration(milliseconds: 250));

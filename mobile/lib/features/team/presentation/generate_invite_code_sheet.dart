@@ -124,7 +124,8 @@ class _Form extends ConsumerWidget {
           children: [
             AppBottomSheetHeader(
               title: 'Недостаточно прав',
-              subtitle: 'Только заказчик и бригадир (с правом приглашать) '
+              subtitle:
+                  'Только заказчик и бригадир (с правом приглашать) '
                   'могут создавать коды приглашения.',
             ),
           ],
@@ -144,7 +145,8 @@ class _Form extends ConsumerWidget {
       children: [
         const AppBottomSheetHeader(
           title: 'Пригласить в проект',
-          subtitle: 'Сгенерируйте 6-значный код. Получатель введёт его '
+          subtitle:
+              'Сгенерируйте 6-значный код. Получатель введёт его '
               'в своём приложении и сразу увидит проект.',
         ),
         Flexible(
@@ -186,8 +188,9 @@ class _Form extends ConsumerWidget {
                         subtitle: kRightsRu[action] != null
                             ? Text(
                                 kRightsRu[action]!.description,
-                                style: AppTextStyles.micro
-                                    .copyWith(color: AppColors.n400),
+                                style: AppTextStyles.micro.copyWith(
+                                  color: AppColors.n400,
+                                ),
                               )
                             : null,
                         activeColor: AppColors.brand,
@@ -207,8 +210,7 @@ class _Form extends ConsumerWidget {
                   Text(
                     'Если ничего не выбрать — бригадир получит доступ '
                     'ко всем этапам проекта.',
-                    style: AppTextStyles.micro
-                        .copyWith(color: AppColors.n400),
+                    style: AppTextStyles.micro.copyWith(color: AppColors.n400),
                   ),
                   const SizedBox(height: AppSpacing.x10),
                   _StagePicker(
@@ -324,9 +326,7 @@ class _RoleCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: selected
-                      ? AppColors.brand
-                      : AppColors.n100,
+                  color: selected ? AppColors.brand : AppColors.n100,
                   borderRadius: BorderRadius.circular(AppRadius.r12),
                 ),
                 child: Icon(
@@ -344,8 +344,9 @@ class _RoleCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       _shortDescriptionFor(role),
-                      style: AppTextStyles.micro
-                          .copyWith(color: AppColors.n400),
+                      style: AppTextStyles.micro.copyWith(
+                        color: AppColors.n400,
+                      ),
                     ),
                   ],
                 ),
@@ -364,23 +365,18 @@ class _RoleCard extends StatelessWidget {
   }
 
   static IconData _iconFor(MembershipRole r) => switch (r) {
-        MembershipRole.customer => Icons.person_outline,
-        MembershipRole.representative =>
-          Icons.assignment_ind_outlined,
-        MembershipRole.foreman => Icons.engineering_outlined,
-        MembershipRole.master => Icons.handyman_outlined,
-      };
+    MembershipRole.customer => Icons.person_outline,
+    MembershipRole.representative => Icons.assignment_ind_outlined,
+    MembershipRole.foreman => Icons.engineering_outlined,
+    MembershipRole.master => Icons.handyman_outlined,
+  };
 
   static String _shortDescriptionFor(MembershipRole r) => switch (r) {
-        MembershipRole.customer =>
-          'Владелец проекта (один на проект).',
-        MembershipRole.representative =>
-          'Действует от имени заказчика.',
-        MembershipRole.foreman =>
-          'Ведёт работы и приглашает мастеров.',
-        MembershipRole.master =>
-          'Выполняет шаги: фото, отметки, замечания.',
-      };
+    MembershipRole.customer => 'Владелец проекта (один на проект).',
+    MembershipRole.representative => 'Действует от имени заказчика.',
+    MembershipRole.foreman => 'Ведёт работы и приглашает мастеров.',
+    MembershipRole.master => 'Выполняет шаги: фото, отметки, замечания.',
+  };
 }
 
 class _RoleHint extends StatelessWidget {
@@ -409,8 +405,7 @@ class _RoleHint extends StatelessWidget {
           Expanded(
             child: Text(
               _hintFor(role!),
-              style:
-                  AppTextStyles.micro.copyWith(color: AppColors.n500),
+              style: AppTextStyles.micro.copyWith(color: AppColors.n500),
             ),
           ),
         ],
@@ -419,17 +414,17 @@ class _RoleHint extends StatelessWidget {
   }
 
   static String _hintFor(MembershipRole r) => switch (r) {
-        MembershipRole.customer =>
-          'Заказчик добавляется только при создании проекта.',
-        MembershipRole.representative =>
-          'Ниже выберите, какие действия может делать представитель — '
-              'согласовывать, видеть бюджет, приглашать.',
-        MembershipRole.foreman =>
-          'По умолчанию бригадир видит весь проект. '
-              'Можно ограничить отдельными этапами.',
-        MembershipRole.master =>
-          'Мастер увидит проект и сможет вести шаги после входа.',
-      };
+    MembershipRole.customer =>
+      'Заказчик добавляется только при создании проекта.',
+    MembershipRole.representative =>
+      'Ниже выберите, какие действия может делать представитель — '
+          'согласовывать, видеть бюджет, приглашать.',
+    MembershipRole.foreman =>
+      'По умолчанию бригадир видит весь проект. '
+          'Можно ограничить отдельными этапами.',
+    MembershipRole.master =>
+      'Мастер увидит проект и сможет вести шаги после входа.',
+  };
 }
 
 class _StagePicker extends ConsumerWidget {
@@ -523,8 +518,9 @@ class _Result extends ConsumerWidget {
       RegExp(r'(\d{3})(\d{3})'),
       (m) => '${m.group(1)} ${m.group(2)}',
     );
-    final projectAsync =
-        ref.watch(projectControllerProvider(state.widget.projectId));
+    final projectAsync = ref.watch(
+      projectControllerProvider(state.widget.projectId),
+    );
     final projectTitle = projectAsync.maybeWhen(
       data: (p) => p.title,
       orElse: () => 'проект',
@@ -574,13 +570,15 @@ class _Result extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.x6),
                       Text(
                         'Роль: ${code.role.displayName}',
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.brandDark),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.brandDark,
+                        ),
                       ),
                       Text(
                         'Действителен до ${_formatDate(code.expiresAt)}',
-                        style: AppTextStyles.micro
-                            .copyWith(color: AppColors.brandDark),
+                        style: AppTextStyles.micro.copyWith(
+                          color: AppColors.brandDark,
+                        ),
                       ),
                     ],
                   ),
@@ -590,7 +588,8 @@ class _Result extends ConsumerWidget {
                 if (code.stageIds.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.x12),
                   _ScopeNote(
-                    text: 'Доступ только к выбранным этапам '
+                    text:
+                        'Доступ только к выбранным этапам '
                         '(${code.stageIds.length}).',
                   ),
                 ],
@@ -619,8 +618,7 @@ class _Result extends ConsumerWidget {
               child: AppButton(
                 label: 'Копировать текст',
                 variant: AppButtonVariant.secondary,
-                onPressed: () =>
-                    _copy(context, shareMessage, 'Сообщение'),
+                onPressed: () => _copy(context, shareMessage, 'Сообщение'),
               ),
             ),
           ],
@@ -668,7 +666,8 @@ class _Result extends ConsumerWidget {
     final greeting =
         'Здравствуйте! Приглашаю вас в проект «$projectTitle» '
         'в Repair Control как ${role.displayName.toLowerCase()}.';
-    const howTo = 'Откройте приложение, нажмите «Присоединиться по коду» '
+    const howTo =
+        'Откройте приложение, нажмите «Присоединиться по коду» '
         'и введите этот код.';
     return [
       greeting,
@@ -709,16 +708,11 @@ class _ShareMessagePreview extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.send_outlined,
-                size: 16,
-                color: AppColors.brand,
-              ),
+              const Icon(Icons.send_outlined, size: 16, color: AppColors.brand),
               const SizedBox(width: AppSpacing.x6),
               Text(
                 'Готовое сообщение',
-                style: AppTextStyles.caption
-                    .copyWith(color: AppColors.brand),
+                style: AppTextStyles.caption.copyWith(color: AppColors.brand),
               ),
             ],
           ),
@@ -754,8 +748,9 @@ class _ScopeNote extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: AppTextStyles.caption
-                  .copyWith(color: AppColors.yellowText),
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.yellowText,
+              ),
             ),
           ),
         ],

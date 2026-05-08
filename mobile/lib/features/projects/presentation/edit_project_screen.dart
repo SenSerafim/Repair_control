@@ -74,7 +74,8 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
 
   void _onChanged() {
     if (!_initialized || _initial == null) return;
-    final newDirty = _title.text.trim() != _initial!.title ||
+    final newDirty =
+        _title.text.trim() != _initial!.title ||
         _address.text.trim() != (_initial!.address ?? '') ||
         _description.text.trim() != (_initial!.description ?? '') ||
         MoneyInput.readKopecks(_workBudget) != _initial!.workBudget ||
@@ -352,8 +353,9 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted =
-        value == null ? 'Выберите' : DateFormat('d MMM y', 'ru').format(value!);
+    final formatted = value == null
+        ? 'Выберите'
+        : DateFormat('d MMM y', 'ru').format(value!);
     final filled = value != null;
     return GestureDetector(
       onTap: () async {

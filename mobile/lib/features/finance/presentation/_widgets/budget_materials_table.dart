@@ -7,10 +7,7 @@ import '../../../../shared/utils/money.dart';
 /// 3-колоночная таблица материалов в бюджете (e-budget-materials):
 /// [Материал] [Кол-во] [Сумма], header в n50, footer-итого.
 class BudgetMaterialsTable extends StatelessWidget {
-  const BudgetMaterialsTable({
-    required this.rows,
-    super.key,
-  });
+  const BudgetMaterialsTable({required this.rows, super.key});
 
   final List<BudgetMaterialsRow> rows;
 

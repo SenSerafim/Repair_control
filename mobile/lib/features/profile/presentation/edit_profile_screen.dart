@@ -52,12 +52,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _saving = true;
       _error = null;
     });
-    final failure =
-        await ref.read(profileControllerProvider.notifier).updateProfile(
-              firstName: _firstName.text.trim(),
-              lastName: _lastName.text.trim(),
-              email: _email.text.trim().isEmpty ? null : _email.text.trim(),
-            );
+    final failure = await ref
+        .read(profileControllerProvider.notifier)
+        .updateProfile(
+          firstName: _firstName.text.trim(),
+          lastName: _lastName.text.trim(),
+          email: _email.text.trim().isEmpty ? null : _email.text.trim(),
+        );
     if (!mounted) return;
     setState(() => _saving = false);
     if (failure != null) {
@@ -103,8 +104,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       final repo = ref.read(profileRepositoryProvider);
       final size = await file.length();
-      final mime =
-          name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      final mime = name.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : 'image/jpeg';
       final presigned = await repo.presignUpload(
         originalName: name,
         mimeType: mime,
@@ -116,9 +118,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       await raw.put<void>(
         presigned.url,
         data: bytes,
-        options: Options(
-          headers: {...presigned.headers, 'Content-Type': mime},
-        ),
+        options: Options(headers: {...presigned.headers, 'Content-Type': mime}),
       );
       await _updateAvatar(presigned.key);
     } catch (_) {
@@ -131,10 +131,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _updateAvatar(String? avatarKey) async {
-    final failure =
-        await ref.read(profileControllerProvider.notifier).updateProfile(
-              avatarUrl: avatarKey,
-            );
+    final failure = await ref
+        .read(profileControllerProvider.notifier)
+        .updateProfile(avatarUrl: avatarKey);
     if (!mounted) return;
     if (failure == null) {
       AppToast.show(
@@ -223,11 +222,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             AppInlineError(message: _error!),
             const SizedBox(height: AppSpacing.x12),
           ],
-          AppInput(
-            controller: _firstName,
-            label: 'Имя',
-            placeholder: 'Имя',
-          ),
+          AppInput(controller: _firstName, label: 'Имя', placeholder: 'Имя'),
           const SizedBox(height: AppSpacing.x12),
           AppInput(
             controller: _lastName,
@@ -250,11 +245,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             helperText: 'Телефон нельзя изменить — это ваш логин',
           ),
           const SizedBox(height: AppSpacing.x32),
-          AppButton(
-            label: 'Сохранить',
-            isLoading: _saving,
-            onPressed: _save,
-          ),
+          AppButton(label: 'Сохранить', isLoading: _saving, onPressed: _save),
           const SizedBox(height: AppSpacing.x24),
         ],
       ),

@@ -9,11 +9,7 @@ import '../../core/theme/tokens.dart';
 /// Скелет для списочных экранов (ProjectsScreen, StagesScreen, etc.).
 /// Рисует 6 плейсхолдер-карточек одинаковой высоты.
 class AppListSkeleton extends StatelessWidget {
-  const AppListSkeleton({
-    this.itemHeight = 88,
-    this.itemCount = 6,
-    super.key,
-  });
+  const AppListSkeleton({this.itemHeight = 88, this.itemCount = 6, super.key});
 
   final double itemHeight;
   final int itemCount;

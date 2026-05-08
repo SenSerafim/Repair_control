@@ -18,8 +18,7 @@ void main() {
 
     test('разные seed дают распределение по разным палитрам', () {
       final palettes = <AvatarPalette>{
-        for (var i = 0; i < 50; i++)
-          AvatarPalette.fromSeed('user-${i * 7}'),
+        for (var i = 0; i < 50; i++) AvatarPalette.fromSeed('user-${i * 7}'),
       };
       // Хотя бы 2 разных палитры (распределение работает).
       expect(palettes.length, greaterThanOrEqualTo(2));
@@ -41,16 +40,15 @@ void main() {
   testWidgets('AppAvatar — fallback "?" для пустого seed', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: AppAvatar(seed: ''),
-        ),
+        home: Scaffold(body: AppAvatar(seed: '')),
       ),
     );
     expect(find.text('?'), findsOneWidget);
   });
 
-  testWidgets('AppAvatar — explicit palette переопределяет hash',
-      (tester) async {
+  testWidgets('AppAvatar — explicit palette переопределяет hash', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

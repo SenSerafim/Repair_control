@@ -56,7 +56,8 @@ class AppRoutes {
       '/projects/:projectId/team/representative/add';
   static String projectAddRepresentativeWith(String projectId) =>
       '/projects/$projectId/team/representative/add';
-  static const projectRepRights = '/projects/:projectId/team/representative/rights';
+  static const projectRepRights =
+      '/projects/:projectId/team/representative/rights';
   static String projectRepRightsWith(String projectId) =>
       '/projects/$projectId/team/representative/rights';
 
@@ -101,8 +102,7 @@ class AppRoutes {
     String projectId,
     String approvalId,
     String status,
-  ) =>
-      '/projects/$projectId/approvals/$approvalId/result?status=$status';
+  ) => '/projects/$projectId/approvals/$approvalId/result?status=$status';
 
   /// Список экспортов проекта (открывается из FeedScreen, DocumentsScreen,
   /// push-уведомлений `kind=export_*`).
@@ -117,14 +117,12 @@ class AppRoutes {
   static String stageDetailWith({
     required String projectId,
     required String stageId,
-  }) =>
-      '/projects/$projectId/stages/$stageId';
+  }) => '/projects/$projectId/stages/$stageId';
   static String stepDetailWith({
     required String projectId,
     required String stageId,
     required String stepId,
-  }) =>
-      '/projects/$projectId/stages/$stageId/steps/$stepId';
+  }) => '/projects/$projectId/stages/$stageId/steps/$stepId';
 
   /// Полноэкранный ответ на вопрос — `d-question-reply`. Открывается из
   /// карточки вопроса в StepDetailScreen.
@@ -147,14 +145,12 @@ class AppRoutes {
   static String stagesTemplatePreviewWith({
     required String projectId,
     required String templateId,
-  }) =>
-      '/projects/$projectId/stages/templates/$templateId/preview';
+  }) => '/projects/$projectId/stages/templates/$templateId/preview';
   static const stageCreated = '/projects/:projectId/stages/created';
   static String stageCreatedWith({
     required String projectId,
     required String stageId,
-  }) =>
-      '/projects/$projectId/stages/created?stageId=$stageId';
+  }) => '/projects/$projectId/stages/created?stageId=$stageId';
 
   // Cluster E — финансы/материалы/самозакупы/инструмент.
   static const materialEditPos =
@@ -163,29 +159,24 @@ class AppRoutes {
     required String projectId,
     required String requestId,
     required String itemId,
-  }) =>
-      '/projects/$projectId/materials/$requestId/items/$itemId/edit';
+  }) => '/projects/$projectId/materials/$requestId/items/$itemId/edit';
 
-  static const selfpurchaseCreate =
-      '/projects/:projectId/selfpurchases/new';
+  static const selfpurchaseCreate = '/projects/:projectId/selfpurchases/new';
   static String selfpurchaseCreateWith(String projectId) =>
       '/projects/$projectId/selfpurchases/new';
 
-  static const selfpurchaseDetail =
-      '/projects/:projectId/selfpurchases/:id';
+  static const selfpurchaseDetail = '/projects/:projectId/selfpurchases/:id';
   static String selfpurchaseDetailWith({
     required String projectId,
     required String id,
-  }) =>
-      '/projects/$projectId/selfpurchases/$id';
+  }) => '/projects/$projectId/selfpurchases/$id';
 
   static const selfpurchaseReject =
       '/projects/:projectId/selfpurchases/:id/reject';
   static String selfpurchaseRejectWith({
     required String projectId,
     required String id,
-  }) =>
-      '/projects/$projectId/selfpurchases/$id/reject';
+  }) => '/projects/$projectId/selfpurchases/$id/reject';
 
   static const toolIssue = '/projects/:projectId/tools/new';
   static String toolIssueWith(String projectId) =>
@@ -199,8 +190,7 @@ class AppRoutes {
   // Payments / Documents / Notifications / Methodology — root-level
   // экраны, вызываемые из FCM-deep-link и из projectDetail-меню.
   static const paymentDetail = '/payments/:paymentId';
-  static String paymentDetailWith(String paymentId) =>
-      '/payments/$paymentId';
+  static String paymentDetailWith(String paymentId) => '/payments/$paymentId';
 
   static const documentDetail = '/documents/:documentId';
   static const documentView = '/documents/:documentId/view';

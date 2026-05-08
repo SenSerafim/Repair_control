@@ -14,27 +14,27 @@ sealed class StageBannerData {
     final now = DateTime.now();
     return switch (display) {
       StageDisplayStatus.active => ActiveTimerBanner(
-          startedAt: stage.startedAt ?? stage.updatedAt,
-          plannedEnd: stage.plannedEnd,
-        ),
+        startedAt: stage.startedAt ?? stage.updatedAt,
+        plannedEnd: stage.plannedEnd,
+      ),
       StageDisplayStatus.paused => PausedDeadlineShiftBanner(
-          originalEnd: stage.originalEnd,
-          newEnd: stage.plannedEnd,
-        ),
+        originalEnd: stage.originalEnd,
+        newEnd: stage.plannedEnd,
+      ),
       StageDisplayStatus.review => const ReviewBanner(),
       StageDisplayStatus.overdue => OverdueBanner(
-          daysLate: stage.plannedEnd == null
-              ? 0
-              : now.difference(stage.plannedEnd!).inDays,
-        ),
+        daysLate: stage.plannedEnd == null
+            ? 0
+            : now.difference(stage.plannedEnd!).inDays,
+      ),
       StageDisplayStatus.lateStart => LateStartBanner(
-          startedDue: stage.plannedStart,
-        ),
+        startedDue: stage.plannedStart,
+      ),
       StageDisplayStatus.rejected => const RejectedBanner(
-          reasonText: '',
-          actorName: '',
-          attempt: 1,
-        ),
+        reasonText: '',
+        actorName: '',
+        attempt: 1,
+      ),
       StageDisplayStatus.pending =>
         stage.foremanIds.isEmpty ? const WaitingNoContractorBanner() : null,
       StageDisplayStatus.done => const DoneBanner(),

@@ -149,11 +149,7 @@ class AppStageMiniCard extends StatelessWidget {
           AppColors.greenDark,
         );
       case AppStageMiniStatus.active:
-        return (
-          AppColors.brand,
-          AppColors.brandLight,
-          AppColors.blueText,
-        );
+        return (AppColors.brand, AppColors.brandLight, AppColors.blueText);
       case AppStageMiniStatus.paused:
         return (
           AppColors.yellowDot,
@@ -170,13 +166,13 @@ class AppStageMiniCard extends StatelessWidget {
   }
 
   static Color _progressColor(AppStageMiniStatus s) => switch (s) {
-        AppStageMiniStatus.done => AppColors.greenDot,
-        AppStageMiniStatus.active => AppColors.brand,
-        AppStageMiniStatus.paused => AppColors.yellowDot,
-        AppStageMiniStatus.review => AppColors.brand,
-        AppStageMiniStatus.rejected => AppColors.redDot,
-        AppStageMiniStatus.pending => AppColors.n200,
-      };
+    AppStageMiniStatus.done => AppColors.greenDot,
+    AppStageMiniStatus.active => AppColors.brand,
+    AppStageMiniStatus.paused => AppColors.yellowDot,
+    AppStageMiniStatus.review => AppColors.brand,
+    AppStageMiniStatus.rejected => AppColors.redDot,
+    AppStageMiniStatus.pending => AppColors.n200,
+  };
 }
 
 enum AppStageMiniStatus { done, active, paused, review, rejected, pending }

@@ -15,17 +15,17 @@ enum HeroPalette {
   profile;
 
   List<Color> get colors => switch (this) {
-        HeroPalette.console => const [
-            Color(0xFF0D1840),
-            Color(0xFF1E2F6B),
-            Color(0xFF2A3A7A),
-          ],
-        HeroPalette.profile => const [
-            Color(0xFF0F172A),
-            Color(0xFF1A2D5A),
-            Color(0xFF2A3F7E),
-          ],
-      };
+    HeroPalette.console => const [
+      Color(0xFF0D1840),
+      Color(0xFF1E2F6B),
+      Color(0xFF2A3A7A),
+    ],
+    HeroPalette.profile => const [
+      Color(0xFF0F172A),
+      Color(0xFF1A2D5A),
+      Color(0xFF2A3F7E),
+    ],
+  };
 
   List<double> get stops => const [0.0, 0.6, 1.0];
 }

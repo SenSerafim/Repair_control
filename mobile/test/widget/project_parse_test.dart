@@ -87,10 +87,7 @@ void main() {
 
     test('ok матчит только green', () {
       expect(ProjectsFilter.ok.matches(_minimal(semaphore: 'green')), isTrue);
-      expect(
-        ProjectsFilter.ok.matches(_minimal(semaphore: 'yellow')),
-        isFalse,
-      );
+      expect(ProjectsFilter.ok.matches(_minimal(semaphore: 'yellow')), isFalse);
     });
 
     test('late_ матчит только red', () {
@@ -111,16 +108,16 @@ void main() {
 }
 
 Project _minimal({required String semaphore}) => Project.parse({
-      'id': 'x',
-      'ownerId': 'u',
-      'title': 'x',
-      'status': 'active',
-      'workBudget': 0,
-      'materialsBudget': 0,
-      'progressCache': 0,
-      'semaphoreCache': semaphore,
-      'planApproved': false,
-      'requiresPlanApproval': false,
-      'createdAt': '2026-04-22T10:00:00Z',
-      'updatedAt': '2026-04-22T10:00:00Z',
-    });
+  'id': 'x',
+  'ownerId': 'u',
+  'title': 'x',
+  'status': 'active',
+  'workBudget': 0,
+  'materialsBudget': 0,
+  'progressCache': 0,
+  'semaphoreCache': semaphore,
+  'planApproved': false,
+  'requiresPlanApproval': false,
+  'createdAt': '2026-04-22T10:00:00Z',
+  'updatedAt': '2026-04-22T10:00:00Z',
+});

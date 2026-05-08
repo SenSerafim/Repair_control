@@ -24,15 +24,14 @@ class AppNotification with _$AppNotification {
     required String title,
     required String body,
     Map<String, dynamic>? data,
-  }) =>
-      AppNotification(
-        id: id,
-        kind: kind,
-        title: title,
-        body: body,
-        data: Map<String, dynamic>.from(data ?? const {}),
-        receivedAt: DateTime.now(),
-      );
+  }) => AppNotification(
+    id: id,
+    kind: kind,
+    title: title,
+    body: body,
+    data: Map<String, dynamic>.from(data ?? const {}),
+    receivedAt: DateTime.now(),
+  );
 }
 
 extension AppNotificationX on AppNotification {

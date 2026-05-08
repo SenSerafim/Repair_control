@@ -73,10 +73,7 @@ void main() {
     });
 
     test('POST на не-финансовый endpoint — не добавляет', () {
-      final opts = RequestOptions(
-        method: 'POST',
-        path: '/api/auth/login',
-      );
+      final opts = RequestOptions(method: 'POST', path: '/api/auth/login');
       expect(runRequest(opts), isNull);
     });
 

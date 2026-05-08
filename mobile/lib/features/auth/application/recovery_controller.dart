@@ -56,8 +56,8 @@ class RecoveryState {
 
 final recoveryControllerProvider =
     NotifierProvider.autoDispose<RecoveryController, RecoveryState>(
-  RecoveryController.new,
-);
+      RecoveryController.new,
+    );
 
 class RecoveryController extends AutoDisposeNotifier<RecoveryState> {
   /// Пауза между запросами кода — должна совпадать с
@@ -84,20 +84,13 @@ class RecoveryController extends AutoDisposeNotifier<RecoveryState> {
       );
       return true;
     } on AuthException catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        lastFailure: e.failure,
-      );
+      state = state.copyWith(isSubmitting: false, lastFailure: e.failure);
       return false;
     }
   }
 
   Future<bool> verifyCode(String code) async {
-    state = state.copyWith(
-      isSubmitting: true,
-      clearFailure: true,
-      code: code,
-    );
+    state = state.copyWith(isSubmitting: true, clearFailure: true, code: code);
     try {
       await _repo.recoveryVerify(phone: state.phone, code: code);
       state = state.copyWith(
@@ -106,10 +99,7 @@ class RecoveryController extends AutoDisposeNotifier<RecoveryState> {
       );
       return true;
     } on AuthException catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        lastFailure: e.failure,
-      );
+      state = state.copyWith(isSubmitting: false, lastFailure: e.failure);
       return false;
     }
   }
@@ -125,10 +115,7 @@ class RecoveryController extends AutoDisposeNotifier<RecoveryState> {
       state = state.copyWith(step: RecoveryStep.done, isSubmitting: false);
       return true;
     } on AuthException catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        lastFailure: e.failure,
-      );
+      state = state.copyWith(isSubmitting: false, lastFailure: e.failure);
       return false;
     }
   }

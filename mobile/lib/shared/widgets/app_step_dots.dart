@@ -7,11 +7,7 @@ import '../../core/theme/tokens.dart';
 /// Дизайн `Кластер A` (s-recovery-phone / s-recovery / s-recovery-newpass):
 /// — высота 4, gap 6, radius 2; неактивная n200, активная brand 28pt, done brand 24pt.
 class AppStepDots extends StatelessWidget {
-  const AppStepDots({
-    required this.total,
-    required this.current,
-    super.key,
-  });
+  const AppStepDots({required this.total, required this.current, super.key});
 
   /// Сколько всего шагов (обычно 3).
   final int total;

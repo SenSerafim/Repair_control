@@ -23,8 +23,7 @@ class ProjectsFilterChips extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
         itemCount: ProjectsFilter.values.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(width: AppSpacing.x8),
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x8),
         itemBuilder: (_, i) {
           final filter = ProjectsFilter.values[i];
           final isActive = filter == selected;

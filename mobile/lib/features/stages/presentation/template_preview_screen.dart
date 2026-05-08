@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_routes.dart';
-import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/stages_controller.dart';
 import '../application/templates_controller.dart';
@@ -26,18 +25,18 @@ class TemplatePreviewScreen extends ConsumerStatefulWidget {
       _TemplatePreviewScreenState();
 }
 
-class _TemplatePreviewScreenState
-    extends ConsumerState<TemplatePreviewScreen> {
+class _TemplatePreviewScreenState extends ConsumerState<TemplatePreviewScreen> {
   bool _applying = false;
 
   Future<void> _apply() async {
     setState(() => _applying = true);
     try {
-      final stage =
-          await ref.read(stagesRepositoryProvider).applyTemplate(
-                templateId: widget.templateId,
-                projectId: widget.projectId,
-              );
+      final stage = await ref
+          .read(stagesRepositoryProvider)
+          .applyTemplate(
+            templateId: widget.templateId,
+            projectId: widget.projectId,
+          );
       ref.invalidate(stagesControllerProvider(widget.projectId));
       if (!mounted) return;
       context.go(

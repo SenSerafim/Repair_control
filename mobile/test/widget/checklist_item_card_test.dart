@@ -25,7 +25,10 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ChecklistItemCard(
-            item: _item(isBought: true, boughtAt: DateTime(2025, 2, 10, 14, 32)),
+            item: _item(
+              isBought: true,
+              boughtAt: DateTime(2025, 2, 10, 14, 32),
+            ),
             state: ChecklistItemState.bought,
           ),
         ),
@@ -49,8 +52,9 @@ void main() {
     expect(find.text('Ожидает'), findsOneWidget);
   });
 
-  testWidgets('onEdit-callback срабатывает по тапу на edit-icon',
-      (tester) async {
+  testWidgets('onEdit-callback срабатывает по тапу на edit-icon', (
+    tester,
+  ) async {
     var tapped = false;
     await tester.pumpWidget(
       MaterialApp(

@@ -23,8 +23,9 @@ Payment _payment({
 }
 
 void main() {
-  testWidgets('PaymentRowCard рендерит сумму, имя получателя и статус',
-      (tester) async {
+  testWidgets('PaymentRowCard рендерит сумму, имя получателя и статус', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -41,8 +42,9 @@ void main() {
     expect(find.textContaining('Петров С.'), findsOneWidget);
   });
 
-  testWidgets('PaymentRowCard в pending — иконка часы, цвет статуса жёлтый',
-      (tester) async {
+  testWidgets('PaymentRowCard в pending — иконка часы, цвет статуса жёлтый', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

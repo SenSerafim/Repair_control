@@ -145,7 +145,8 @@ class _MemberCardSheet extends StatelessWidget {
               iconFg: AppColors.brand,
               title: data.email!,
               subtitle: 'Скопировать',
-              onTap: () => _copyToClipboard(context, data.email!, 'Email скопирован'),
+              onTap: () =>
+                  _copyToClipboard(context, data.email!, 'Email скопирован'),
             ),
             const SizedBox(height: 8),
           ],
@@ -280,7 +281,11 @@ class _MemberCardSheet extends StatelessWidget {
   ) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (context.mounted) {
-      AppToast.show(context, message: successMessage, kind: AppToastKind.success);
+      AppToast.show(
+        context,
+        message: successMessage,
+        kind: AppToastKind.success,
+      );
     }
   }
 }

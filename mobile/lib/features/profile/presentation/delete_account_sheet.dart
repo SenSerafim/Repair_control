@@ -29,8 +29,7 @@ class _DeleteAccountSheet extends ConsumerStatefulWidget {
       _DeleteAccountSheetState();
 }
 
-class _DeleteAccountSheetState
-    extends ConsumerState<_DeleteAccountSheet> {
+class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
   static const _confirmWord = 'УДАЛИТЬ';
 
   final _ctrl = TextEditingController();

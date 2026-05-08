@@ -49,8 +49,7 @@ class StageDetailScreen extends ConsumerStatefulWidget {
   final String stageId;
 
   @override
-  ConsumerState<StageDetailScreen> createState() =>
-      _StageDetailScreenState();
+  ConsumerState<StageDetailScreen> createState() => _StageDetailScreenState();
 }
 
 class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
@@ -58,12 +57,11 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final stagesAsync =
-        ref.watch(stagesControllerProvider(widget.projectId));
-    final projectAsync =
-        ref.watch(projectControllerProvider(widget.projectId));
-    final approvalsAsync =
-        ref.watch(approvalsControllerProvider(widget.projectId));
+    final stagesAsync = ref.watch(stagesControllerProvider(widget.projectId));
+    final projectAsync = ref.watch(projectControllerProvider(widget.projectId));
+    final approvalsAsync = ref.watch(
+      approvalsControllerProvider(widget.projectId),
+    );
 
     return AppScaffold(
       showBack: true,
@@ -78,9 +76,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
         ),
         data: (stages) {
           final stage = stages.cast<Stage?>().firstWhere(
-                (s) => s?.id == widget.stageId,
-                orElse: () => null,
-              );
+            (s) => s?.id == widget.stageId,
+            orElse: () => null,
+          );
           if (stage == null) {
             return const AppEmptyState(
               title: 'Этап не найден',
@@ -93,8 +91,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               (project?.planApproved ?? false) || stage.planApproved;
           final display = StageDisplayStatus.of(stage);
           final pendingForStage = approvalsAsync.maybeWhen(
-            data: (b) =>
-                b.pending.where((a) => a.stageId == stage.id).length,
+            data: (b) => b.pending.where((a) => a.stageId == stage.id).length,
             orElse: () => 0,
           );
           final stepsAsync = ref.watch(
@@ -107,8 +104,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             orElse: () => 0,
           );
           final stepsDone = stepsAsync.maybeWhen(
-            data: (s) =>
-                s.where((x) => x.status == StepStatus.done).length,
+            data: (s) => s.where((x) => x.status == StepStatus.done).length,
             orElse: () => 0,
           );
           final photosTotal = stepsAsync.maybeWhen(
@@ -204,8 +200,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
   Future<void> _toggleStep(Stage stage, Step step) async {
     final key = StepsKey(projectId: widget.projectId, stageId: stage.id);
     final c = ref.read(stepsControllerProvider(key).notifier);
-    final failure =
-        step.isDone ? await c.uncomplete(step.id) : await c.complete(step.id);
+    final failure = step.isDone
+        ? await c.uncomplete(step.id)
+        : await c.complete(step.id);
     if (mounted && failure != null) {
       AppToast.show(
         context,
@@ -222,8 +219,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
       child: const _CreateRegularStepBody(),
     );
     if (title == null || title.isEmpty) return;
-    final key =
-        StepsKey(projectId: widget.projectId, stageId: stage.id);
+    final key = StepsKey(projectId: widget.projectId, stageId: stage.id);
     final failure = await ref
         .read(stepsControllerProvider(key).notifier)
         .createRegular(title: title);
@@ -295,8 +291,10 @@ class _StageHeader extends ConsumerWidget {
           const AppBottomSheetHeader(title: 'Действия'),
           if (canManageStages) ...[
             ListTile(
-              leading: const Icon(Icons.engineering_outlined,
-                  color: AppColors.brand),
+              leading: const Icon(
+                Icons.engineering_outlined,
+                color: AppColors.brand,
+              ),
               title: const Text('Назначить бригадира'),
               subtitle: const Text('Один бригадир на этап'),
               onTap: () {
@@ -305,11 +303,14 @@ class _StageHeader extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.handyman_outlined,
-                  color: AppColors.brand),
+              leading: const Icon(
+                Icons.handyman_outlined,
+                color: AppColors.brand,
+              ),
               title: const Text('Назначить мастера'),
               subtitle: const Text(
-                  'Если мастер не назначен — этап ведёт сам бригадир'),
+                'Если мастер не назначен — этап ведёт сам бригадир',
+              ),
               onTap: () {
                 Navigator.of(context).pop();
                 _showAssignSheet(context, ref, kind: _AssignKind.master);
@@ -470,8 +471,7 @@ class _AssignEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roleLabel =
-        kind == _AssignKind.foreman ? 'бригадиры' : 'мастера';
+    final roleLabel = kind == _AssignKind.foreman ? 'бригадиры' : 'мастера';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
@@ -517,7 +517,10 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
   StagesController get _controller =>
       ref.read(stagesControllerProvider(widget.projectId).notifier);
 
-  Future<void> _wrap(Future<dynamic> Function() action, String successMsg) async {
+  Future<void> _wrap(
+    Future<dynamic> Function() action,
+    String successMsg,
+  ) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -551,10 +554,9 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(stagesRepositoryProvider).start(
-            projectId: widget.projectId,
-            stageId: widget.stage.id,
-          );
+      await ref
+          .read(stagesRepositoryProvider)
+          .start(projectId: widget.projectId, stageId: widget.stage.id);
       ref.invalidate(stagesControllerProvider(widget.projectId));
       if (!mounted) return;
       AppToast.show(
@@ -643,8 +645,8 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
                 onPressed: _busy
                     ? null
                     : (widget.planAllowsStart
-                        ? _tryStart
-                        : () => context.push(
+                          ? _tryStart
+                          : () => context.push(
                               AppRoutes.projectPlanApprovalWith(
                                 widget.projectId,
                               ),
@@ -678,12 +680,12 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
                 onPressed: _busy
                     ? null
                     : () => showPauseSheet(
-                          context,
-                          ref,
-                          projectId: widget.projectId,
-                          stageId: widget.stage.id,
-                          stageTitle: widget.stage.title,
-                        ),
+                        context,
+                        ref,
+                        projectId: widget.projectId,
+                        stageId: widget.stage.id,
+                        stageTitle: widget.stage.title,
+                      ),
               ),
             ),
           );
@@ -697,15 +699,13 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
             Expanded(
               flex: 2,
               child: AppButton(
-                label: canSendToReview
-                    ? 'На проверку'
-                    : 'Завершите все шаги',
+                label: canSendToReview ? 'На проверку' : 'Завершите все шаги',
                 isLoading: _busy,
                 onPressed: canSendToReview
                     ? () => _wrap(
-                          () => _controller.sendToReview(widget.stage.id),
-                          'Этап отправлен на приёмку',
-                        )
+                        () => _controller.sendToReview(widget.stage.id),
+                        'Этап отправлен на приёмку',
+                      )
                     : null,
               ),
             ),
@@ -804,8 +804,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         .maybeWhen(data: (b) => b.pending, orElse: () => <Approval>[]);
     final stageAccept = pending.firstWhere(
       (a) =>
-          a.scope == ApprovalScope.stageAccept &&
-          a.stageId == widget.stage.id,
+          a.scope == ApprovalScope.stageAccept && a.stageId == widget.stage.id,
       orElse: () => Approval(
         id: '',
         scope: ApprovalScope.stageAccept,
@@ -846,8 +845,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         .maybeWhen(data: (b) => b.pending, orElse: () => <Approval>[]);
     final stageAccept = pending.firstWhere(
       (a) =>
-          a.scope == ApprovalScope.stageAccept &&
-          a.stageId == widget.stage.id,
+          a.scope == ApprovalScope.stageAccept && a.stageId == widget.stage.id,
       orElse: () => Approval(
         id: '',
         scope: ApprovalScope.stageAccept,
@@ -888,8 +886,7 @@ class _CreateRegularStepBody extends StatefulWidget {
   const _CreateRegularStepBody();
 
   @override
-  State<_CreateRegularStepBody> createState() =>
-      _CreateRegularStepBodyState();
+  State<_CreateRegularStepBody> createState() => _CreateRegularStepBodyState();
 }
 
 class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
@@ -949,18 +946,18 @@ class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.brand, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppColors.brand,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -972,10 +969,7 @@ class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
             ),
           ],
           const SizedBox(height: AppSpacing.x16),
-          AppButton(
-            label: 'Добавить шаг',
-            onPressed: _submit,
-          ),
+          AppButton(label: 'Добавить шаг', onPressed: _submit),
         ],
       ),
     );

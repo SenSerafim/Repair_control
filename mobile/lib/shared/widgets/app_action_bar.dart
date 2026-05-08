@@ -16,9 +16,9 @@ class AppActionBar extends StatelessWidget {
     this.stacked = false,
     super.key,
   }) : assert(
-          flexes == null || flexes.length == children.length,
-          'flexes must match children length',
-        );
+         flexes == null || flexes.length == children.length,
+         'flexes must match children length',
+       );
 
   final List<Widget> children;
   final List<int>? flexes;

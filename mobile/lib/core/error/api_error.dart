@@ -37,8 +37,7 @@ class ApiError implements Exception {
     final kind = switch (e.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        ApiErrorKind.timeout,
+      DioExceptionType.receiveTimeout => ApiErrorKind.timeout,
       DioExceptionType.connectionError => ApiErrorKind.network,
       DioExceptionType.cancel => ApiErrorKind.cancelled,
       _ => _kindForStatus(status),

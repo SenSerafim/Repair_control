@@ -111,20 +111,21 @@ class PaymentRowCard extends StatelessWidget {
   }
 
   String _title() => switch (payment.kind) {
-        PaymentKind.advance => 'Аванс${payment.comment == null ? '' : ': ${payment.comment}'}',
-        PaymentKind.distribution =>
-          'Распределение${payment.comment == null ? '' : ': ${payment.comment}'}',
-        PaymentKind.correction =>
-          'Корректировка${payment.comment == null ? '' : ': ${payment.comment}'}',
-      };
+    PaymentKind.advance =>
+      'Аванс${payment.comment == null ? '' : ': ${payment.comment}'}',
+    PaymentKind.distribution =>
+      'Распределение${payment.comment == null ? '' : ': ${payment.comment}'}',
+    PaymentKind.correction =>
+      'Корректировка${payment.comment == null ? '' : ': ${payment.comment}'}',
+  };
 
   IconData _iconForStatus(PaymentStatus s) => switch (s) {
-        PaymentStatus.pending => Icons.schedule_rounded,
-        PaymentStatus.confirmed => Icons.check_rounded,
-        PaymentStatus.disputed => Icons.error_outline_rounded,
-        PaymentStatus.resolved => Icons.gavel_rounded,
-        PaymentStatus.cancelled => Icons.close_rounded,
-      };
+    PaymentStatus.pending => Icons.schedule_rounded,
+    PaymentStatus.confirmed => Icons.check_rounded,
+    PaymentStatus.disputed => Icons.error_outline_rounded,
+    PaymentStatus.resolved => Icons.gavel_rounded,
+    PaymentStatus.cancelled => Icons.close_rounded,
+  };
 
   String _fmtDate(DateTime d) {
     final dd = d.day.toString().padLeft(2, '0');

@@ -25,16 +25,15 @@ class AppEnv {
     String sentryEnv = 'test',
     String logLevel = 'error',
     String vapidKey = '',
-  }) =>
-      AppEnv._(
-        flavor: flavor,
-        apiBaseUrl: apiBaseUrl,
-        wsUrl: wsUrl,
-        sentryDsn: sentryDsn,
-        sentryEnv: sentryEnv,
-        logLevel: logLevel,
-        vapidKey: vapidKey,
-      );
+  }) => AppEnv._(
+    flavor: flavor,
+    apiBaseUrl: apiBaseUrl,
+    wsUrl: wsUrl,
+    sentryDsn: sentryDsn,
+    sentryEnv: sentryEnv,
+    logLevel: logLevel,
+    vapidKey: vapidKey,
+  );
 
   final AppFlavor flavor;
   final String apiBaseUrl;

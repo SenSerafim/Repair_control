@@ -15,32 +15,33 @@ enum ProjectsFilter {
   delay;
 
   String get label => switch (this) {
-        ProjectsFilter.all => 'Все',
-        ProjectsFilter.ok => 'По графику',
-        ProjectsFilter.approval => 'Согласования',
-        ProjectsFilter.late_ => 'Просрочен',
-        ProjectsFilter.delay => 'Отставание',
-      };
+    ProjectsFilter.all => 'Все',
+    ProjectsFilter.ok => 'По графику',
+    ProjectsFilter.approval => 'Согласования',
+    ProjectsFilter.late_ => 'Просрочен',
+    ProjectsFilter.delay => 'Отставание',
+  };
 
   bool matches(Project p) => switch (this) {
-        ProjectsFilter.all => true,
-        ProjectsFilter.ok => p.semaphore == Semaphore.green,
-        ProjectsFilter.approval => p.semaphore == Semaphore.blue,
-        ProjectsFilter.late_ => p.semaphore == Semaphore.red,
-        ProjectsFilter.delay => p.semaphore == Semaphore.yellow,
-      };
+    ProjectsFilter.all => true,
+    ProjectsFilter.ok => p.semaphore == Semaphore.green,
+    ProjectsFilter.approval => p.semaphore == Semaphore.blue,
+    ProjectsFilter.late_ => p.semaphore == Semaphore.red,
+    ProjectsFilter.delay => p.semaphore == Semaphore.yellow,
+  };
 }
 
-final projectsFilterProvider =
-    StateProvider<ProjectsFilter>((ref) => ProjectsFilter.all);
+final projectsFilterProvider = StateProvider<ProjectsFilter>(
+  (ref) => ProjectsFilter.all,
+);
 
 final projectsSearchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Активные проекты.
 final activeProjectsProvider =
     AsyncNotifierProvider<ActiveProjectsController, List<Project>>(
-  ActiveProjectsController.new,
-);
+      ActiveProjectsController.new,
+    );
 
 class ActiveProjectsController extends AsyncNotifier<List<Project>> {
   @override
@@ -87,9 +88,7 @@ class ActiveProjectsController extends AsyncNotifier<List<Project>> {
 
   void replaceUpdated(Project p) {
     final current = state.value ?? [];
-    state = AsyncData(
-      current.map((x) => x.id == p.id ? p : x).toList(),
-    );
+    state = AsyncData(current.map((x) => x.id == p.id ? p : x).toList());
   }
 
   /// Сброс state до AsyncLoading() без previous (см.
@@ -102,8 +101,8 @@ class ActiveProjectsController extends AsyncNotifier<List<Project>> {
 /// Архивные проекты.
 final archivedProjectsProvider =
     AsyncNotifierProvider<ArchivedProjectsController, List<Project>>(
-  ArchivedProjectsController.new,
-);
+      ArchivedProjectsController.new,
+    );
 
 class ArchivedProjectsController extends AsyncNotifier<List<Project>> {
   @override
@@ -150,19 +149,19 @@ class ArchivedProjectsController extends AsyncNotifier<List<Project>> {
 
 /// Отфильтрованный + поиск-отлайн список активных. Читает активные +
 /// projectsFilterProvider + projectsSearchQueryProvider.
-final filteredActiveProjectsProvider = Provider<AsyncValue<List<Project>>>(
-  (ref) {
-    final async = ref.watch(activeProjectsProvider);
-    final filter = ref.watch(projectsFilterProvider);
-    final query = ref.watch(projectsSearchQueryProvider).toLowerCase().trim();
+final filteredActiveProjectsProvider = Provider<AsyncValue<List<Project>>>((
+  ref,
+) {
+  final async = ref.watch(activeProjectsProvider);
+  final filter = ref.watch(projectsFilterProvider);
+  final query = ref.watch(projectsSearchQueryProvider).toLowerCase().trim();
 
-    return async.whenData((items) {
-      return items.where((p) {
-        if (!filter.matches(p)) return false;
-        if (query.isEmpty) return true;
-        return p.title.toLowerCase().contains(query) ||
-            (p.address?.toLowerCase().contains(query) ?? false);
-      }).toList();
-    });
-  },
-);
+  return async.whenData((items) {
+    return items.where((p) {
+      if (!filter.matches(p)) return false;
+      if (query.isEmpty) return true;
+      return p.title.toLowerCase().contains(query) ||
+          (p.address?.toLowerCase().contains(query) ?? false);
+    }).toList();
+  });
+});

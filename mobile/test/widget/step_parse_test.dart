@@ -22,10 +22,7 @@ void main() {
         domain.StepStatus.fromString('in_progress'),
         domain.StepStatus.inProgress,
       );
-      expect(
-        domain.StepStatus.fromString('done'),
-        domain.StepStatus.done,
-      );
+      expect(domain.StepStatus.fromString('done'), domain.StepStatus.done);
       expect(
         domain.StepStatus.fromString('pending_approval'),
         domain.StepStatus.pendingApproval,
@@ -43,26 +40,11 @@ void main() {
     });
 
     test('semaphore mapping', () {
-      expect(
-        domain.StepStatus.pending.semaphore,
-        Semaphore.plan,
-      );
-      expect(
-        domain.StepStatus.inProgress.semaphore,
-        Semaphore.green,
-      );
-      expect(
-        domain.StepStatus.done.semaphore,
-        Semaphore.green,
-      );
-      expect(
-        domain.StepStatus.pendingApproval.semaphore,
-        Semaphore.blue,
-      );
-      expect(
-        domain.StepStatus.rejected.semaphore,
-        Semaphore.red,
-      );
+      expect(domain.StepStatus.pending.semaphore, Semaphore.plan);
+      expect(domain.StepStatus.inProgress.semaphore, Semaphore.green);
+      expect(domain.StepStatus.done.semaphore, Semaphore.green);
+      expect(domain.StepStatus.pendingApproval.semaphore, Semaphore.blue);
+      expect(domain.StepStatus.rejected.semaphore, Semaphore.red);
     });
   });
 

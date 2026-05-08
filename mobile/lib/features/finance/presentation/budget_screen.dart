@@ -26,12 +26,14 @@ import '_widgets/money_summary_chip.dart';
 import '_widgets/payment_row_card.dart';
 
 /// Активный таб бюджета — хранится в ProviderScope `_budgetTabProvider`.
-final _budgetTabProvider =
-    StateProvider.autoDispose<BudgetTab>((ref) => BudgetTab.payments);
+final _budgetTabProvider = StateProvider.autoDispose<BudgetTab>(
+  (ref) => BudgetTab.payments,
+);
 
 /// Активный date-range для таба «Материалы». Пустой = «Весь проект».
-final _materialsRangeProvider =
-    StateProvider.autoDispose<DateRange>((ref) => const DateRange());
+final _materialsRangeProvider = StateProvider.autoDispose<DateRange>(
+  (ref) => const DateRange(),
+);
 
 /// e-budget — главный экран бюджета: hero + 3 таба.
 class BudgetScreen extends ConsumerWidget {
@@ -50,15 +52,24 @@ class BudgetScreen extends ConsumerWidget {
     //  · есть `view`, нет `edit`  → bare-read: hero + табы, без кнопки
     //    «Открыть проект» в empty-state и без «Новая выплата» в footer;
     //  · есть `view` + `paymentCreate` → отображается «Новая выплата».
-    final canViewBudget = ref.watch(canInProjectProvider(
-      (action: DomainAction.financeBudgetView, projectId: projectId),
-    ));
-    final canCreatePayment = ref.watch(canInProjectProvider(
-      (action: DomainAction.financePaymentCreate, projectId: projectId),
-    ));
-    final canEditBudget = ref.watch(canInProjectProvider(
-      (action: DomainAction.financeBudgetEdit, projectId: projectId),
-    ));
+    final canViewBudget = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.financeBudgetView,
+        projectId: projectId,
+      )),
+    );
+    final canCreatePayment = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.financePaymentCreate,
+        projectId: projectId,
+      )),
+    );
+    final canEditBudget = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.financeBudgetEdit,
+        projectId: projectId,
+      )),
+    );
 
     if (!canViewBudget) {
       return const AppScaffold(
@@ -67,7 +78,8 @@ class BudgetScreen extends ConsumerWidget {
         body: Center(
           child: AppEmptyState(
             title: 'Бюджет недоступен',
-            subtitle: 'У вас нет прав на просмотр бюджета этого проекта. '
+            subtitle:
+                'У вас нет прав на просмотр бюджета этого проекта. '
                 'Обратитесь к заказчику.',
             icon: Icons.lock_outline_rounded,
           ),
@@ -86,9 +98,8 @@ class BudgetScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(projectBudgetProvider(projectId)),
         ),
         data: (b) {
-          final isEmpty = b.total.planned == 0 &&
-              b.total.spent == 0 &&
-              b.stages.isEmpty;
+          final isEmpty =
+              b.total.planned == 0 && b.total.spent == 0 && b.stages.isEmpty;
           if (isEmpty) {
             return AppEmptyState(
               title: 'Бюджет не задан',
@@ -118,9 +129,9 @@ class BudgetScreen extends ConsumerWidget {
                   child: switch (tab) {
                     BudgetTab.payments => _PaymentsTab(projectId: projectId),
                     BudgetTab.stages => _StagesTab(
-                        projectId: projectId,
-                        stages: b.stages,
-                      ),
+                      projectId: projectId,
+                      stages: b.stages,
+                    ),
                     BudgetTab.materials => _MaterialsTab(projectId: projectId),
                   },
                 ),
@@ -144,8 +155,8 @@ class BudgetScreen extends ConsumerWidget {
                     child: AppButton(
                       label: 'Новая выплата',
                       icon: Icons.add_rounded,
-                      onPressed: () => context
-                          .push('/projects/$projectId/payments/new'),
+                      onPressed: () =>
+                          context.push('/projects/$projectId/payments/new'),
                     ),
                   ),
                 ),
@@ -193,8 +204,7 @@ class _PaymentsTab extends ConsumerWidget {
       loading: () => const AppLoadingState(skeleton: AppListSkeleton()),
       error: (e, _) => AppErrorState(
         title: 'Не удалось загрузить выплаты',
-        onRetry: () =>
-            ref.invalidate(paymentsControllerProvider(projectId)),
+        onRetry: () => ref.invalidate(paymentsControllerProvider(projectId)),
       ),
       data: (payments) {
         final confirmed = payments
@@ -206,7 +216,8 @@ class _PaymentsTab extends ConsumerWidget {
         final total = payments.fold<int>(0, (a, p) => a + p.effectiveAmount);
 
         // Pending-extras (доп.работы) уведомление.
-        final pendingExtras = approvalsAsync.value?.pending
+        final pendingExtras =
+            approvalsAsync.value?.pending
                 .where((a) => a.scope == ApprovalScope.extraWork)
                 .toList() ??
             const <Approval>[];
@@ -230,8 +241,7 @@ class _PaymentsTab extends ConsumerWidget {
             if (pendingExtras.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x10),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
                 child: _PendingExtrasBanner(
                   count: pendingExtras.length,
                   total: extrasTotal,
@@ -305,8 +315,9 @@ class _PendingExtrasBanner extends StatelessWidget {
               children: [
                 Text(
                   'Доп.работы ожидают одобрения',
-                  style: AppTextStyles.subtitle
-                      .copyWith(color: AppColors.yellowText),
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.yellowText,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -347,10 +358,7 @@ class _StagesTab extends ConsumerWidget {
       0,
       (acc, s) => acc + s.work.spent + s.materials.spent,
     );
-    final totalPlanned = stages.fold<int>(
-      0,
-      (acc, s) => acc + s.total.planned,
-    );
+    final totalPlanned = stages.fold<int>(0, (acc, s) => acc + s.total.planned);
     final totalRemaining = stages.fold<int>(
       0,
       (acc, s) => acc + s.total.remaining,
@@ -445,13 +453,13 @@ class _StagesTab extends ConsumerWidget {
   }
 
   StageStatusBadge _badgeForStatus(Stage s) => switch (s.status) {
-        StageStatus.done => StageStatusBadge.done,
-        StageStatus.active => StageStatusBadge.active,
-        StageStatus.paused => StageStatusBadge.paused,
-        StageStatus.review => StageStatusBadge.review,
-        StageStatus.pending => StageStatusBadge.pending,
-        StageStatus.rejected => StageStatusBadge.pending,
-      };
+    StageStatus.done => StageStatusBadge.done,
+    StageStatus.active => StageStatusBadge.active,
+    StageStatus.paused => StageStatusBadge.paused,
+    StageStatus.review => StageStatusBadge.review,
+    StageStatus.pending => StageStatusBadge.pending,
+    StageStatus.rejected => StageStatusBadge.pending,
+  };
 }
 
 /// Таб «Материалы»: search + filter chips + date-range chip + table.
@@ -505,10 +513,12 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
             )
             .toList();
         final rows = [...allRows, ...spRows]
-            .where((r) =>
-                _search.isEmpty ||
-                r.title.toLowerCase().contains(_search.toLowerCase()) ||
-                r.subtitle.toLowerCase().contains(_search.toLowerCase()))
+            .where(
+              (r) =>
+                  _search.isEmpty ||
+                  r.title.toLowerCase().contains(_search.toLowerCase()) ||
+                  r.subtitle.toLowerCase().contains(_search.toLowerCase()),
+            )
             .toList();
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
@@ -557,8 +567,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                       initial: range,
                     );
                     if (picked != null) {
-                      ref.read(_materialsRangeProvider.notifier).state =
-                          picked;
+                      ref.read(_materialsRangeProvider.notifier).state = picked;
                     }
                   },
                   child: Container(
@@ -568,10 +577,8 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.n0,
-                      border:
-                          Border.all(color: AppColors.n200, width: 1.5),
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.pill),
+                      border: Border.all(color: AppColors.n200, width: 1.5),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: Row(
                       children: [

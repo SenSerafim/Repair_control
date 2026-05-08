@@ -4,9 +4,7 @@ import 'package:repair_control/core/push/deep_link_router.dart';
 void main() {
   group('DeepLinkRouter.routeFor — push deep-links (ТЗ §15.2)', () {
     test('admin_announcement без deepLink → /notifications', () {
-      final route = DeepLinkRouter.routeFor({
-        'kind': 'admin_announcement',
-      });
+      final route = DeepLinkRouter.routeFor({'kind': 'admin_announcement'});
       expect(route, '/notifications');
     });
 
@@ -138,10 +136,7 @@ void main() {
     });
 
     test('chat_* → chat', () {
-      expect(
-        DeepLinkRouter.categoryOf('chat_message'),
-        NotificationRoute.chat,
-      );
+      expect(DeepLinkRouter.categoryOf('chat_message'), NotificationRoute.chat);
     });
 
     test('stage_/step_ → stage', () {

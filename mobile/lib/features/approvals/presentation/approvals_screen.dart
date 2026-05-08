@@ -72,7 +72,8 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                       projectId: widget.projectId,
                       items: _filter(buckets.pending),
                       emptyTitle: 'Нет согласований',
-                      emptyHint: 'Согласования появятся когда бригадир '
+                      emptyHint:
+                          'Согласования появятся когда бригадир '
                           'отправит шаг или этап на проверку.',
                       withTourAnchor: true,
                     ),
@@ -80,7 +81,8 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                       projectId: widget.projectId,
                       items: _filter(buckets.history),
                       emptyTitle: 'История пуста',
-                      emptyHint: 'Решённые и отклонённые согласования '
+                      emptyHint:
+                          'Решённые и отклонённые согласования '
                           'сохранятся здесь.',
                     ),
                   ],
@@ -111,8 +113,7 @@ class _Tabs extends StatelessWidget {
       color: AppColors.n0,
       child: TabBar(
         controller: controller,
-        labelStyle:
-            AppTextStyles.caption.copyWith(fontWeight: FontWeight.w800),
+        labelStyle: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w800),
         labelColor: AppColors.brand,
         unselectedLabelColor: AppColors.n400,
         indicatorColor: AppColors.brand,
@@ -230,9 +231,8 @@ class _ListBody extends StatelessWidget {
       itemBuilder: (_, i) {
         final card = ApprovalCard(
           approval: items[i],
-          onTap: () => context.push(
-            '/projects/$projectId/approvals/${items[i].id}',
-          ),
+          onTap: () =>
+              context.push('/projects/$projectId/approvals/${items[i].id}'),
         );
         return (i == 0 && withTourAnchor)
             ? TourAnchor(id: 'approvals.first_approval', child: card)

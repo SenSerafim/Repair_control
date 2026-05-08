@@ -45,11 +45,7 @@ class SuccessScreen extends StatelessWidget {
             color: isError ? AppColors.redDot : AppColors.greenDot,
           ),
           const SizedBox(height: AppSpacing.x20),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.h1,
-          ),
+          Text(title, textAlign: TextAlign.center, style: AppTextStyles.h1),
           if (subtitle != null) ...[
             const SizedBox(height: AppSpacing.x8),
             Text(

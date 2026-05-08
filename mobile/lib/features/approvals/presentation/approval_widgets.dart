@@ -15,11 +15,7 @@ import '../domain/approval.dart';
 /// при наличии attachments — photo-row 32×32 + «+N». Снизу chevron.
 /// `stageAccept`-карточка выделяется синей рамкой 1.5px.
 class ApprovalCard extends StatelessWidget {
-  const ApprovalCard({
-    required this.approval,
-    required this.onTap,
-    super.key,
-  });
+  const ApprovalCard({required this.approval, required this.onTap, super.key});
 
   final Approval approval;
   final VoidCallback onTap;
@@ -58,10 +54,7 @@ class ApprovalCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(child: _Body(approval: approval)),
                 const SizedBox(width: AppSpacing.x6),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.n300,
-                ),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
               ],
             ),
           ),
@@ -79,8 +72,7 @@ class _Thumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = approval.attachments.isNotEmpty
-        ? approval.attachments.first.thumbUrl ??
-            approval.attachments.first.url
+        ? approval.attachments.first.thumbUrl ?? approval.attachments.first.url
         : null;
 
     return Container(
@@ -110,11 +102,7 @@ class _IconFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Icon(
-        approval.scope.icon,
-        color: AppColors.n400,
-        size: 22,
-      ),
+      child: Icon(approval.scope.icon, color: AppColors.n400, size: 22),
     );
   }
 }
@@ -141,46 +129,46 @@ class _Body extends StatelessWidget {
     // Flutter роняет debug assert. Визуально — те же миллисекунды flight.
     return ClipRect(
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            ScopeBadge(label: approval.scope.displayName, tone: tone),
-            AttemptBadge(attemptNumber: approval.attemptNumber),
-            if (approval.status != ApprovalStatus.pending)
-              ScopeBadge(
-                label: approval.status.displayName,
-                tone: _statusTone(approval.status),
-              ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _title,
-          style: AppTextStyles.subtitle.copyWith(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: AppColors.n900,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ScopeBadge(label: approval.scope.displayName, tone: tone),
+              AttemptBadge(attemptNumber: approval.attemptNumber),
+              if (approval.status != ApprovalStatus.pending)
+                ScopeBadge(
+                  label: approval.status.displayName,
+                  tone: _statusTone(approval.status),
+                ),
+            ],
           ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _meta(approval, df),
-          style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        if (approval.attachments.length > 1) ...[
-          const SizedBox(height: 8),
-          _PhotoRow(attachments: approval.attachments),
+          const SizedBox(height: 6),
+          Text(
+            _title,
+            style: AppTextStyles.subtitle.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _meta(approval, df),
+            style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (approval.attachments.length > 1) ...[
+            const SizedBox(height: 8),
+            _PhotoRow(attachments: approval.attachments),
+          ],
         ],
-      ],
       ),
     );
   }
@@ -244,11 +232,7 @@ class _PhotoThumb extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: url == null
-          ? const Icon(
-              Icons.image_outlined,
-              size: 16,
-              color: AppColors.n400,
-            )
+          ? const Icon(Icons.image_outlined, size: 16, color: AppColors.n400)
           : CachedNetworkImage(
               imageUrl: url!,
               fit: BoxFit.cover,
@@ -263,24 +247,24 @@ class _PhotoThumb extends StatelessWidget {
 }
 
 ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
-      ApprovalScope.step => ScopeBadgeTone.step,
-      ApprovalScope.extraWork => ScopeBadgeTone.extraWork,
-      ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
-      ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
-      ApprovalScope.plan => ScopeBadgeTone.plan,
-      // П2.2 — новые scope.
-      ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
-      ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
-      ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
-      ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
-    };
+  ApprovalScope.step => ScopeBadgeTone.step,
+  ApprovalScope.extraWork => ScopeBadgeTone.extraWork,
+  ApprovalScope.deadlineChange => ScopeBadgeTone.deadline,
+  ApprovalScope.stageAccept => ScopeBadgeTone.stageAccept,
+  ApprovalScope.plan => ScopeBadgeTone.plan,
+  // П2.2 — новые scope.
+  ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
+  ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
+  ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
+  ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
+};
 
 ScopeBadgeTone _statusTone(ApprovalStatus s) => switch (s) {
-      ApprovalStatus.approved => ScopeBadgeTone.success,
-      ApprovalStatus.rejected => ScopeBadgeTone.danger,
-      ApprovalStatus.cancelled => ScopeBadgeTone.category,
-      ApprovalStatus.pending => ScopeBadgeTone.plan,
-    };
+  ApprovalStatus.approved => ScopeBadgeTone.success,
+  ApprovalStatus.rejected => ScopeBadgeTone.danger,
+  ApprovalStatus.cancelled => ScopeBadgeTone.category,
+  ApprovalStatus.pending => ScopeBadgeTone.plan,
+};
 
 String _subtitleFor(Approval a) {
   switch (a.scope) {
@@ -288,9 +272,7 @@ String _subtitleFor(Approval a) {
       final count = a.planStages.length;
       return count > 0 ? 'План из $count этапов' : 'Согласование плана';
     case ApprovalScope.step:
-      return a.decisionComment?.isNotEmpty ?? false
-          ? a.decisionComment!
-          : '';
+      return a.decisionComment?.isNotEmpty ?? false ? a.decisionComment! : '';
     case ApprovalScope.extraWork:
       final price = a.extraPrice;
       return price == null ? 'Доп.работа' : Money.format(price);
@@ -372,31 +354,15 @@ class _AttemptRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color, label) = switch (attempt.action) {
-      'created' => (
-          Icons.hourglass_top_outlined,
-          AppColors.brand,
-          'Создан',
-        ),
-      'approved' => (
-          Icons.check_rounded,
-          AppColors.greenDark,
-          'Одобрен',
-        ),
-      'rejected' => (
-          Icons.close_rounded,
-          AppColors.redDot,
-          'Отклонён',
-        ),
+      'created' => (Icons.hourglass_top_outlined, AppColors.brand, 'Создан'),
+      'approved' => (Icons.check_rounded, AppColors.greenDark, 'Одобрен'),
+      'rejected' => (Icons.close_rounded, AppColors.redDot, 'Отклонён'),
       'resubmitted' => (
-          Icons.refresh_rounded,
-          AppColors.brand,
-          'Повторно отправлен',
-        ),
-      'cancelled' => (
-          Icons.do_disturb_alt_outlined,
-          AppColors.n400,
-          'Отменён',
-        ),
+        Icons.refresh_rounded,
+        AppColors.brand,
+        'Повторно отправлен',
+      ),
+      'cancelled' => (Icons.do_disturb_alt_outlined, AppColors.n400, 'Отменён'),
       _ => (Icons.history_rounded, AppColors.n500, attempt.action),
     };
     return Container(
@@ -439,12 +405,10 @@ class _AttemptRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  DateFormat('d MMM y · HH:mm', 'ru')
-                      .format(attempt.createdAt),
+                  DateFormat('d MMM y · HH:mm', 'ru').format(attempt.createdAt),
                   style: AppTextStyles.caption,
                 ),
-                if (attempt.comment != null &&
-                    attempt.comment!.isNotEmpty) ...[
+                if (attempt.comment != null && attempt.comment!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(attempt.comment!, style: AppTextStyles.body),
                 ],

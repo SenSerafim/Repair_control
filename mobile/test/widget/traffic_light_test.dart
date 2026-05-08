@@ -8,26 +8,24 @@ void main() {
     DateTime? plannedStart,
     DateTime? plannedEnd,
     DateTime? startedAt,
-  }) =>
-      Stage.parse({
-        'id': 'x',
-        'projectId': 'p',
-        'title': 't',
-        'orderIndex': 0,
-        'status': status.name,
-        'pauseDurationMs': 0,
-        'workBudget': 0,
-        'materialsBudget': 0,
-        'foremanIds': <String>[],
-        'progressCache': 0,
-        'planApproved': false,
-        if (plannedStart != null)
-          'plannedStart': plannedStart.toIso8601String(),
-        if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-        if (startedAt != null) 'startedAt': startedAt.toIso8601String(),
-        'createdAt': '2026-04-01T00:00:00Z',
-        'updatedAt': '2026-04-01T00:00:00Z',
-      });
+  }) => Stage.parse({
+    'id': 'x',
+    'projectId': 'p',
+    'title': 't',
+    'orderIndex': 0,
+    'status': status.name,
+    'pauseDurationMs': 0,
+    'workBudget': 0,
+    'materialsBudget': 0,
+    'foremanIds': <String>[],
+    'progressCache': 0,
+    'planApproved': false,
+    if (plannedStart != null) 'plannedStart': plannedStart.toIso8601String(),
+    if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+    if (startedAt != null) 'startedAt': startedAt.toIso8601String(),
+    'createdAt': '2026-04-01T00:00:00Z',
+    'updatedAt': '2026-04-01T00:00:00Z',
+  });
 
   final now = DateTime.utc(2026, 4, 22);
   final past = DateTime.utc(2026, 3, 1);
@@ -35,10 +33,7 @@ void main() {
 
   group('computeTrafficLight — 5 веток ТЗ §2.4', () {
     test('done → green (даже если дедлайн прошёл)', () {
-      final s = stageOf(
-        status: StageStatus.done,
-        plannedEnd: past,
-      );
+      final s = stageOf(status: StageStatus.done, plannedEnd: past);
       expect(computeTrafficLight(s, now: now), TrafficLight.green);
     });
 

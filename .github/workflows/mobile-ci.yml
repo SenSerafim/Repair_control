@@ -35,7 +35,17 @@ jobs:
         run: flutter pub get
 
       - name: Format check
-        run: dart format --output=none --set-exit-if-changed lib test
+        # Исключаем lib/api/ — это auto-generated openapi-generator output,
+        # форматировать его руками бессмысленно (regen всё перезапишет).
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            lib/app.dart \
+            lib/bootstrap.dart \
+            lib/main.dart \
+            lib/main_staging.dart \
+            lib/firebase_options.dart \
+            lib/core lib/features lib/shared \
+            test
 
       - name: Analyze
         # `--fatal-warnings` строго блокирует merge при варнингах от

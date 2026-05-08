@@ -28,9 +28,7 @@ void main() {
     setUp(() {
       storage = _FakeSecureStorage();
       container = ProviderContainer(
-        overrides: [
-          secureStorageProvider.overrideWithValue(storage),
-        ],
+        overrides: [secureStorageProvider.overrideWithValue(storage)],
       );
       addTearDown(container.dispose);
     });
@@ -129,5 +127,3 @@ void main() {
     });
   });
 }
-
-

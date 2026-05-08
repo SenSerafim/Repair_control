@@ -11,10 +11,13 @@ enum AppButtonVariant {
   ghost,
   destructive,
   success,
+
   /// Белая на тёмном фоне (Welcome): brand-цвет текста.
   white,
+
   /// Прозрачная с белой обводкой (Welcome secondary).
   outlineWhite,
+
   /// Ghost-кнопка с красной обводкой (Tool Detail «Удалить инструмент»).
   ghostDanger,
 }
@@ -62,8 +65,7 @@ class _AppButtonState extends State<AppButton> {
 
   static const _syncDebounce = Duration(milliseconds: 350);
 
-  bool get _enabled =>
-      widget.onPressed != null && !widget.isLoading && !_busy;
+  bool get _enabled => widget.onPressed != null && !widget.isLoading && !_busy;
 
   @override
   Widget build(BuildContext context) {
@@ -124,8 +126,7 @@ class _AppButtonState extends State<AppButton> {
     return GestureDetector(
       onTapDown: _enabled ? (_) => setState(() => _pressed = true) : null,
       onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
-      onTapCancel:
-          _enabled ? () => setState(() => _pressed = false) : null,
+      onTapCancel: _enabled ? () => setState(() => _pressed = false) : null,
       onTap: _enabled ? _handleTap : null,
       child: AnimatedOpacity(
         opacity: opacity,

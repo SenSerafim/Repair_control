@@ -54,32 +54,30 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
   Widget build(BuildContext context) {
     return switch (_step) {
       _Step.pickType => _TypePicker(
-          onPersonal: () => setState(() => _step = _Step.personal),
-          onGroup: () => setState(() => _step = _Step.group),
-          // Group-чат может создать только owner / rep.canInviteMembers /
-          // foreman (rbac.matrix.ts:210). Master нажмёт и получит 403 —
-          // прячем опцию заранее.
-          canCreateGroup: ref.watch(
-            canProvider(DomainAction.chatCreateGroup),
-          ),
-        ),
+        onPersonal: () => setState(() => _step = _Step.personal),
+        onGroup: () => setState(() => _step = _Step.group),
+        // Group-чат может создать только owner / rep.canInviteMembers /
+        // foreman (rbac.matrix.ts:210). Master нажмёт и получит 403 —
+        // прячем опцию заранее.
+        canCreateGroup: ref.watch(canProvider(DomainAction.chatCreateGroup)),
+      ),
       _Step.personal => _PersonalPicker(
-          projectId: widget.projectId,
-          onPick: _createPersonal,
-          error: _error,
-          busy: _submitting,
-        ),
+        projectId: widget.projectId,
+        onPick: _createPersonal,
+        error: _error,
+        busy: _submitting,
+      ),
       _Step.group => _GroupPicker(
-          projectId: widget.projectId,
-          selected: _selected,
-          title: _title,
-          onToggle: (id) => setState(() {
-            if (!_selected.remove(id)) _selected.add(id);
-          }),
-          onCreate: _createGroup,
-          error: _error,
-          busy: _submitting,
-        ),
+        projectId: widget.projectId,
+        selected: _selected,
+        title: _title,
+        onToggle: (id) => setState(() {
+          if (!_selected.remove(id)) _selected.add(id);
+        }),
+        onCreate: _createGroup,
+        error: _error,
+        busy: _submitting,
+      ),
     };
   }
 
@@ -89,10 +87,9 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
       _error = null;
     });
     try {
-      final chat = await ref.read(chatsRepositoryProvider).createPersonal(
-            projectId: widget.projectId,
-            withUserId: userId,
-          );
+      final chat = await ref
+          .read(chatsRepositoryProvider)
+          .createPersonal(projectId: widget.projectId, withUserId: userId);
       if (!mounted) return;
       Navigator.of(context).pop();
       unawaited(context.push(AppRoutes.chatDetailWith(chat.id)));
@@ -119,7 +116,9 @@ class _NewChatBodyState extends ConsumerState<_NewChatBody> {
       _error = null;
     });
     try {
-      final chat = await ref.read(chatsRepositoryProvider).createGroup(
+      final chat = await ref
+          .read(chatsRepositoryProvider)
+          .createGroup(
             projectId: widget.projectId,
             title: title,
             participantUserIds: _selected.toList(),
@@ -234,9 +233,8 @@ class _PersonalPicker extends ConsumerWidget {
             padding: EdgeInsets.all(AppSpacing.x16),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (e, _) => const AppInlineError(
-            message: 'Не удалось загрузить команду',
-          ),
+          error: (e, _) =>
+              const AppInlineError(message: 'Не удалось загрузить команду'),
           data: (state) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -299,9 +297,8 @@ class _GroupPicker extends ConsumerWidget {
             padding: EdgeInsets.all(AppSpacing.x16),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (_, __) => const AppInlineError(
-            message: 'Не удалось загрузить команду',
-          ),
+          error: (_, __) =>
+              const AppInlineError(message: 'Не удалось загрузить команду'),
           data: (state) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -327,11 +324,7 @@ class _GroupPicker extends ConsumerWidget {
 }
 
 class _MemberTile extends StatelessWidget {
-  const _MemberTile({
-    required this.member,
-    this.selected = false,
-    this.onTap,
-  });
+  const _MemberTile({required this.member, this.selected = false, this.onTap});
 
   final Membership member;
   final bool selected;
@@ -368,8 +361,7 @@ class _MemberTile extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: AppTextStyles.subtitle
-                    .copyWith(color: AppColors.brand),
+                style: AppTextStyles.subtitle.copyWith(color: AppColors.brand),
               ),
             ),
             const SizedBox(width: AppSpacing.x12),
@@ -380,17 +372,13 @@ class _MemberTile extends StatelessWidget {
                   Text(name, style: AppTextStyles.subtitle),
                   Text(
                     member.role.displayName,
-                    style:
-                        AppTextStyles.tiny.copyWith(color: AppColors.n500),
+                    style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
                   ),
                 ],
               ),
             ),
             if (selected)
-              const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.brand,
-              ),
+              const Icon(Icons.check_circle_rounded, color: AppColors.brand),
           ],
         ),
       ),

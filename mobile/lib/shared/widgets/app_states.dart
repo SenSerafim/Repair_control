@@ -66,18 +66,18 @@ class _BrandSpinner extends StatelessWidget {
             ),
           ),
           Container(
-            width: 28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: AppColors.brandLight,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.home_rounded,
-              size: 16,
-              color: AppColors.brand,
-            ),
-          )
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: AppColors.brandLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.home_rounded,
+                  size: 16,
+                  color: AppColors.brand,
+                ),
+              )
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .scale(
                 begin: const Offset(0.85, 0.85),
@@ -115,14 +115,14 @@ class AppEmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.n100,
-              borderRadius: BorderRadius.circular(AppRadius.r24),
-            ),
-            child: Icon(icon, size: 32, color: AppColors.n400),
-          )
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.n100,
+                  borderRadius: BorderRadius.circular(AppRadius.r24),
+                ),
+                child: Icon(icon, size: 32, color: AppColors.n400),
+              )
               .animate()
               .fadeIn(duration: 260.ms)
               .scale(
@@ -197,11 +197,11 @@ class AppErrorState extends StatelessWidget {
               color: AppColors.redDot,
             ),
           ).animate().shake(
-                delay: 80.ms,
-                hz: 3,
-                offset: const Offset(4, 0),
-                duration: 420.ms,
-              ),
+            delay: 80.ms,
+            hz: 3,
+            offset: const Offset(4, 0),
+            duration: 420.ms,
+          ),
           const SizedBox(height: AppSpacing.x16),
           Text(
             title,
@@ -244,37 +244,35 @@ class AppInlineError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: AppColors.redBg,
-        border: Border.all(color: const Color(0xFFFECACA)),
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 16,
-            color: AppColors.redDot,
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          decoration: BoxDecoration(
+            color: AppColors.redBg,
+            border: Border.all(color: const Color(0xFFFECACA)),
+            borderRadius: BorderRadius.circular(AppRadius.r12),
           ),
-          const SizedBox(width: AppSpacing.x8),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.redText,
-                fontWeight: FontWeight.w700,
+          child: Row(
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 16,
+                color: AppColors.redDot,
               ),
-            ),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.redText,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 180.ms).slideY(
-          begin: -0.2,
-          end: 0,
-          duration: 220.ms,
-          curve: Curves.easeOut,
-        );
+        )
+        .animate()
+        .fadeIn(duration: 180.ms)
+        .slideY(begin: -0.2, end: 0, duration: 220.ms, curve: Curves.easeOut);
   }
 }
 
@@ -299,11 +297,11 @@ class AppSuccessBurst extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Container(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-          )
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+              )
               .animate(onPlay: (c) => c.repeat())
               .scaleXY(
                 begin: 0.6,
@@ -315,21 +313,18 @@ class AppSuccessBurst extends StatelessWidget {
           Container(
             width: size * 0.62,
             height: size * 0.62,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: const Icon(
               Icons.check_rounded,
               color: AppColors.n0,
               size: 28,
             ),
           ).animate().scale(
-                begin: const Offset(0.5, 0.5),
-                end: const Offset(1, 1),
-                duration: 400.ms,
-                curve: Curves.easeOutBack,
-              ),
+            begin: const Offset(0.5, 0.5),
+            end: const Offset(1, 1),
+            duration: 400.ms,
+            curve: Curves.easeOutBack,
+          ),
         ],
       ),
     );

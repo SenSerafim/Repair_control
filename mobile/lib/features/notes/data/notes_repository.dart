@@ -21,20 +21,17 @@ class NotesRepository {
     NoteScope? scope,
     String? stageId,
     String? search,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/notes',
-          queryParameters: {
-            if (scope != null) 'scope': scope.apiValue,
-            if (stageId != null) 'stageId': stageId,
-            if (search != null && search.isNotEmpty) 'search': search,
-          },
-        );
-        return r.data!
-            .map((e) => Note.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/projects/$projectId/notes',
+      queryParameters: {
+        if (scope != null) 'scope': scope.apiValue,
+        if (stageId != null) 'stageId': stageId,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+    return r.data!.map((e) => Note.parse(e as Map<String, dynamic>)).toList();
+  });
 
   Future<Note> create({
     required String projectId,
@@ -42,24 +39,20 @@ class NotesRepository {
     required String text,
     String? addresseeId,
     String? stageId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/notes',
-          data: {
-            'scope': scope.apiValue,
-            'text': text,
-            if (addresseeId != null) 'addresseeId': addresseeId,
-            if (stageId != null) 'stageId': stageId,
-          },
-        );
-        return Note.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/notes',
+      data: {
+        'scope': scope.apiValue,
+        'text': text,
+        if (addresseeId != null) 'addresseeId': addresseeId,
+        if (stageId != null) 'stageId': stageId,
+      },
+    );
+    return Note.parse(r.data!);
+  });
 
-  Future<Note> update({
-    required String noteId,
-    required String text,
-  }) =>
+  Future<Note> update({required String noteId, required String text}) =>
       _call(() async {
         final r = await _dio.patch<Map<String, dynamic>>(
           '/api/notes/$noteId',
@@ -69,8 +62,8 @@ class NotesRepository {
       });
 
   Future<void> delete(String noteId) => _call(() async {
-        await _dio.delete<void>('/api/notes/$noteId');
-      });
+    await _dio.delete<void>('/api/notes/$noteId');
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

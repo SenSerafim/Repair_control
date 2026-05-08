@@ -11,8 +11,11 @@ void main() {
   group('AccessGuard.can — null role', () {
     test('null role → всё запрещено', () {
       for (final action in DomainAction.values) {
-        expect(AccessGuard.can(null, action), isFalse,
-            reason: 'null role не должен иметь $action');
+        expect(
+          AccessGuard.can(null, action),
+          isFalse,
+          reason: 'null role не должен иметь $action',
+        );
       }
     });
   });
@@ -20,8 +23,11 @@ void main() {
   group('AccessGuard — admin', () {
     test('admin может всё', () {
       for (final action in DomainAction.values) {
-        expect(AccessGuard.can(SystemRole.admin, action), isTrue,
-            reason: 'admin не имеет $action');
+        expect(
+          AccessGuard.can(SystemRole.admin, action),
+          isTrue,
+          reason: 'admin не имеет $action',
+        );
       }
     });
   });
@@ -42,8 +48,11 @@ void main() {
         DomainAction.documentRead,
         DomainAction.documentWrite,
       ]) {
-        expect(AccessGuard.can(SystemRole.customer, a), isTrue,
-            reason: 'customer должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.customer, a),
+          isTrue,
+          reason: 'customer должен иметь $a',
+        );
       }
     });
 
@@ -61,8 +70,11 @@ void main() {
         DomainAction.materialFinalize,
         DomainAction.documentDelete,
       ]) {
-        expect(AccessGuard.can(SystemRole.customer, a), isTrue,
-            reason: 'customer должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.customer, a),
+          isTrue,
+          reason: 'customer должен иметь $a',
+        );
       }
     });
 
@@ -73,8 +85,11 @@ void main() {
         DomainAction.toolsReturn,
         DomainAction.selfPurchaseCreate,
       ]) {
-        expect(AccessGuard.can(SystemRole.customer, a), isFalse,
-            reason: 'customer не должен иметь $a (бекенд вернёт 403)');
+        expect(
+          AccessGuard.can(SystemRole.customer, a),
+          isFalse,
+          reason: 'customer не должен иметь $a (бекенд вернёт 403)',
+        );
       }
     });
   });
@@ -103,8 +118,11 @@ void main() {
         DomainAction.documentWrite,
         DomainAction.projectInviteMember, // приглашает мастеров
       ]) {
-        expect(AccessGuard.can(SystemRole.contractor, a), isTrue,
-            reason: 'contractor должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.contractor, a),
+          isTrue,
+          reason: 'contractor должен иметь $a',
+        );
       }
     });
 
@@ -118,8 +136,11 @@ void main() {
         DomainAction.financeBudgetEdit,
         DomainAction.documentDelete,
       ]) {
-        expect(AccessGuard.can(SystemRole.contractor, a), isFalse,
-            reason: 'contractor не должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.contractor, a),
+          isFalse,
+          reason: 'contractor не должен иметь $a',
+        );
       }
     });
   });
@@ -138,8 +159,11 @@ void main() {
         DomainAction.chatWrite,
         DomainAction.documentRead,
       ]) {
-        expect(AccessGuard.can(SystemRole.master, a), isTrue,
-            reason: 'master должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.master, a),
+          isTrue,
+          reason: 'master должен иметь $a',
+        );
       }
     });
 
@@ -158,8 +182,11 @@ void main() {
         DomainAction.documentDelete,
         DomainAction.projectInviteMember,
       ]) {
-        expect(AccessGuard.can(SystemRole.master, a), isFalse,
-            reason: 'master не должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.master, a),
+          isFalse,
+          reason: 'master не должен иметь $a',
+        );
       }
     });
   });
@@ -178,8 +205,11 @@ void main() {
         DomainAction.noteManage,
         DomainAction.methodologyRead,
       ]) {
-        expect(AccessGuard.can(SystemRole.representative, a), isTrue,
-            reason: 'representative должен иметь $a (read-only baseline)');
+        expect(
+          AccessGuard.can(SystemRole.representative, a),
+          isTrue,
+          reason: 'representative должен иметь $a (read-only baseline)',
+        );
       }
     });
 
@@ -200,8 +230,11 @@ void main() {
         DomainAction.documentDelete,
         DomainAction.approvalDecide,
       ]) {
-        expect(AccessGuard.can(SystemRole.representative, a), isFalse,
-            reason: 'representative без делегирования не должен иметь $a');
+        expect(
+          AccessGuard.can(SystemRole.representative, a),
+          isFalse,
+          reason: 'representative без делегирования не должен иметь $a',
+        );
       }
     });
   });
@@ -209,7 +242,10 @@ void main() {
   group('Кросс-роль: финансы', () {
     test('financePaymentResolve — только customer + admin', () {
       expect(
-        AccessGuard.can(SystemRole.customer, DomainAction.financePaymentResolve),
+        AccessGuard.can(
+          SystemRole.customer,
+          DomainAction.financePaymentResolve,
+        ),
         isTrue,
       );
       expect(
@@ -218,7 +254,9 @@ void main() {
       );
       expect(
         AccessGuard.can(
-            SystemRole.contractor, DomainAction.financePaymentResolve),
+          SystemRole.contractor,
+          DomainAction.financePaymentResolve,
+        ),
         isFalse,
       );
       expect(
@@ -227,29 +265,43 @@ void main() {
       );
       expect(
         AccessGuard.can(
-            SystemRole.representative, DomainAction.financePaymentResolve),
+          SystemRole.representative,
+          DomainAction.financePaymentResolve,
+        ),
         isFalse,
       );
     });
 
-    test('approvalDecide — customer/contractor/admin; representative — только с canApprove',
-        () {
-      expect(AccessGuard.can(SystemRole.customer, DomainAction.approvalDecide),
-          isTrue);
-      expect(
+    test(
+      'approvalDecide — customer/contractor/admin; representative — только с canApprove',
+      () {
+        expect(
+          AccessGuard.can(SystemRole.customer, DomainAction.approvalDecide),
+          isTrue,
+        );
+        expect(
           AccessGuard.can(SystemRole.contractor, DomainAction.approvalDecide),
-          isTrue);
-      // П7.3 — представитель без делегированного canApprove не имеет approvalDecide.
-      // Тест проверяет именно baseline-матрицу. Делегированные права проверяются
-      // через canInProjectProvider (см. отдельные unit-тесты на providers).
-      expect(
-        AccessGuard.can(SystemRole.representative, DomainAction.approvalDecide),
-        isFalse,
-      );
-      expect(AccessGuard.can(SystemRole.admin, DomainAction.approvalDecide),
-          isTrue);
-      expect(AccessGuard.can(SystemRole.master, DomainAction.approvalDecide),
-          isFalse);
-    });
+          isTrue,
+        );
+        // П7.3 — представитель без делегированного canApprove не имеет approvalDecide.
+        // Тест проверяет именно baseline-матрицу. Делегированные права проверяются
+        // через canInProjectProvider (см. отдельные unit-тесты на providers).
+        expect(
+          AccessGuard.can(
+            SystemRole.representative,
+            DomainAction.approvalDecide,
+          ),
+          isFalse,
+        );
+        expect(
+          AccessGuard.can(SystemRole.admin, DomainAction.approvalDecide),
+          isTrue,
+        );
+        expect(
+          AccessGuard.can(SystemRole.master, DomainAction.approvalDecide),
+          isFalse,
+        );
+      },
+    );
   });
 }

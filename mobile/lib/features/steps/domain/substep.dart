@@ -17,17 +17,16 @@ class Substep with _$Substep {
   }) = _Substep;
 
   static Substep parse(Map<String, dynamic> json) => Substep(
-        id: json['id'] as String,
-        stepId: json['stepId'] as String,
-        text: json['text'] as String,
-        authorId: json['authorId'] as String? ?? '',
-        isDone: json['isDone'] as bool? ?? false,
-        doneAt: _date(json['doneAt']),
-        doneById: json['doneById'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    stepId: json['stepId'] as String,
+    text: json['text'] as String,
+    authorId: json['authorId'] as String? ?? '',
+    isDone: json['isDone'] as bool? ?? false,
+    doneAt: _date(json['doneAt']),
+    doneById: json['doneById'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
-DateTime? _date(Object? raw) =>
-    raw is String ? DateTime.tryParse(raw) : null;
+DateTime? _date(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

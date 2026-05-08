@@ -12,8 +12,8 @@ import 'export_sheet.dart';
 
 final _exportsListProvider = FutureProvider.autoDispose
     .family<List<ExportJob>, String>((ref, projectId) async {
-  return ref.read(exportsRepositoryProvider).list(projectId);
-});
+      return ref.read(exportsRepositoryProvider).list(projectId);
+    });
 
 /// Список экспортов проекта (PDF ленты + ZIP проекта). Открывается из
 /// FeedScreen/DocumentsScreen и push-deep-link для kind=export_*.
@@ -35,8 +35,11 @@ class ExportsListScreen extends ConsumerWidget {
           icon: const Icon(Icons.add_circle_outline_rounded),
           tooltip: 'Новый экспорт',
           onPressed: () async {
-            final created =
-                await showExportSheet(context, ref, projectId: projectId);
+            final created = await showExportSheet(
+              context,
+              ref,
+              projectId: projectId,
+            );
             if (created != null) {
               ref.invalidate(_exportsListProvider(projectId));
             }
@@ -129,8 +132,7 @@ class _ExportCard extends StatelessWidget {
                     Text(job.kind.displayName, style: AppTextStyles.subtitle),
                     const SizedBox(height: 2),
                     Text(
-                      DateFormat('d MMM y · HH:mm', 'ru')
-                          .format(job.createdAt),
+                      DateFormat('d MMM y · HH:mm', 'ru').format(job.createdAt),
                       style: AppTextStyles.caption,
                     ),
                   ],
@@ -153,9 +155,7 @@ class _ExportCard extends StatelessWidget {
               ),
               child: Text(
                 job.failureReason!,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.redText,
-                ),
+                style: AppTextStyles.caption.copyWith(color: AppColors.redText),
               ),
             ),
           ],

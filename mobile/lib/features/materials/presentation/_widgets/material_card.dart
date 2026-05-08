@@ -9,11 +9,7 @@ import '../../domain/material_request.dart';
 /// Карточка заявки в списке материалов (e-materials):
 /// иконка-bg по статусу + title + meta + status-badge + сумма.
 class MaterialCard extends StatelessWidget {
-  const MaterialCard({
-    required this.request,
-    required this.onTap,
-    super.key,
-  });
+  const MaterialCard({required this.request, required this.onTap, super.key});
 
   final MaterialRequest request;
   final VoidCallback onTap;

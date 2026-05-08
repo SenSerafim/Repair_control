@@ -74,10 +74,9 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
       _createdInvitation = null;
     });
     try {
-      final user = await ref.read(teamRepositoryProvider).searchUser(
-            projectId: widget.projectId,
-            phone: raw,
-          );
+      final user = await ref
+          .read(teamRepositoryProvider)
+          .searchUser(projectId: widget.projectId, phone: raw);
       if (!mounted) return;
       setState(() {
         _searching = false;
@@ -132,12 +131,9 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
       _error = null;
     });
     try {
-      final invitation =
-          await ref.read(teamRepositoryProvider).invite(
-                projectId: widget.projectId,
-                phone: result.phone,
-                role: role,
-              );
+      final invitation = await ref
+          .read(teamRepositoryProvider)
+          .invite(projectId: widget.projectId, phone: result.phone, role: role);
       if (!mounted) return;
       setState(() {
         _submitting = false;
@@ -224,8 +220,9 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
           const SizedBox(height: AppSpacing.x16),
           Consumer(
             builder: (context, ref, _) {
-              final allowed =
-                  ref.watch(invitableRolesProvider(widget.projectId));
+              final allowed = ref.watch(
+                invitableRolesProvider(widget.projectId),
+              );
               if (allowed.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(AppSpacing.x12),
@@ -235,8 +232,9 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
                   ),
                   child: Text(
                     'У вашей роли нет права приглашать в этот проект.',
-                    style: AppTextStyles.body
-                        .copyWith(color: AppColors.yellowText),
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.yellowText,
+                    ),
                   ),
                 );
               }
@@ -249,8 +247,7 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Роль в проекте',
-                      style: AppTextStyles.caption),
+                  const Text('Роль в проекте', style: AppTextStyles.caption),
                   const SizedBox(height: AppSpacing.x6),
                   _RolePicker(
                     roles: allowed,
@@ -260,8 +257,7 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
                   const SizedBox(height: AppSpacing.x6),
                   Text(
                     _hintFor(_role),
-                    style: AppTextStyles.micro
-                        .copyWith(color: AppColors.n400),
+                    style: AppTextStyles.micro.copyWith(color: AppColors.n400),
                   ),
                   const SizedBox(height: AppSpacing.x16),
                   if (_result!.user != null)
@@ -319,8 +315,9 @@ class _ResultBlock extends StatelessWidget {
                 children: [
                   Text(
                     '${u.firstName} ${u.lastName}'.trim(),
-                    style: AppTextStyles.subtitle
-                        .copyWith(color: AppColors.greenDark),
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: AppColors.greenDark,
+                    ),
                   ),
                   Text(u.phone, style: AppTextStyles.caption),
                 ],
@@ -339,16 +336,16 @@ class _ResultBlock extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.person_search_outlined,
-              color: AppColors.yellowDot),
+          const Icon(Icons.person_search_outlined, color: AppColors.yellowDot),
           const SizedBox(width: AppSpacing.x10),
           Expanded(
             child: Text(
               'Номер ${result.phone} не зарегистрирован. '
               'Создадим код приглашения — отправите его получателю '
               'любым способом, и он зайдёт в проект.',
-              style: AppTextStyles.caption
-                  .copyWith(color: AppColors.yellowText),
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.yellowText,
+              ),
             ),
           ),
         ],
@@ -492,18 +489,21 @@ class _InviteCodeView extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.x6),
                       Text(
                         'Кому: $phone',
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.brandDark),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.brandDark,
+                        ),
                       ),
                       Text(
                         'Роль: ${invitation.role.displayName}',
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.brandDark),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.brandDark,
+                        ),
                       ),
                       Text(
                         'Действителен до ${_formatDate(invitation.expiresAt)}',
-                        style: AppTextStyles.micro
-                            .copyWith(color: AppColors.brandDark),
+                        style: AppTextStyles.micro.copyWith(
+                          color: AppColors.brandDark,
+                        ),
                       ),
                     ],
                   ),
@@ -585,7 +585,8 @@ class _InviteCodeView extends ConsumerWidget {
     final greeting =
         'Здравствуйте! Приглашаю вас в проект «$projectTitle» '
         'в Repair Control как ${role.displayName.toLowerCase()}.';
-    const howTo = 'Откройте приложение, нажмите «Присоединиться по коду» '
+    const howTo =
+        'Откройте приложение, нажмите «Присоединиться по коду» '
         'и введите этот код.';
     return [
       greeting,
@@ -626,16 +627,11 @@ class _ShareMessagePreview extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.send_outlined,
-                size: 16,
-                color: AppColors.brand,
-              ),
+              const Icon(Icons.send_outlined, size: 16, color: AppColors.brand),
               const SizedBox(width: AppSpacing.x6),
               Text(
                 'Готовое сообщение',
-                style: AppTextStyles.caption
-                    .copyWith(color: AppColors.brand),
+                style: AppTextStyles.caption.copyWith(color: AppColors.brand),
               ),
             ],
           ),

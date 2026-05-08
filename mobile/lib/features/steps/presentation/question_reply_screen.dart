@@ -40,10 +40,10 @@ class _QuestionReplyScreenState extends ConsumerState<QuestionReplyScreen> {
   int _length = 0;
 
   StepDetailKey get _key => StepDetailKey(
-        projectId: widget.projectId,
-        stageId: widget.stageId,
-        stepId: widget.stepId,
-      );
+    projectId: widget.projectId,
+    stageId: widget.stageId,
+    stepId: widget.stepId,
+  );
 
   @override
   void initState() {
@@ -72,10 +72,7 @@ class _QuestionReplyScreenState extends ConsumerState<QuestionReplyScreen> {
     });
     final failure = await ref
         .read(stepDetailProvider(_key).notifier)
-        .answerQuestion(
-          questionId: widget.questionId,
-          answer: answer,
-        );
+        .answerQuestion(questionId: widget.questionId, answer: answer);
     if (!mounted) return;
     setState(() => _submitting = false);
     if (failure == null) {
@@ -294,21 +291,21 @@ class _PhotoSlot extends StatelessWidget {
 }
 
 InputDecoration _textDec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.all(12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
-      ),
-    );
+  hintText: hint,
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  filled: true,
+  fillColor: AppColors.n0,
+  contentPadding: const EdgeInsets.all(12),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+  ),
+);

@@ -121,8 +121,7 @@ class _SearchBar extends StatelessWidget {
             onSubmitted: onSubmit,
             decoration: InputDecoration(
               hintText: 'Поиск по статьям...',
-              hintStyle:
-                  AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
               prefixIcon: const Icon(
                 Icons.search_rounded,
                 color: AppColors.n400,
@@ -203,10 +202,7 @@ class _SectionRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.n300,
-            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
           ],
         ),
       ),

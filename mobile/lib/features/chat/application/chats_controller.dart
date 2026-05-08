@@ -12,16 +12,16 @@ import '../domain/message.dart';
 /// Сортировка чатов по `lastMessageAt DESC`, при равных или null — `createdAt`.
 List<Chat> _sortChats(List<Chat> input) {
   return [...input]..sort((a, b) {
-      final ad = a.lastMessageAt ?? a.createdAt;
-      final bd = b.lastMessageAt ?? b.createdAt;
-      return bd.compareTo(ad);
-    });
+    final ad = a.lastMessageAt ?? a.createdAt;
+    final bd = b.lastMessageAt ?? b.createdAt;
+    return bd.compareTo(ad);
+  });
 }
 
-final projectChatsProvider = AsyncNotifierProvider.family<
-    ProjectChatsController, List<Chat>, String>(
-  ProjectChatsController.new,
-);
+final projectChatsProvider =
+    AsyncNotifierProvider.family<ProjectChatsController, List<Chat>, String>(
+      ProjectChatsController.new,
+    );
 
 /// Агрегированные чаты пользователя через все активные проекты —
 /// для mobile-таба «Чаты». Возвращает items с project-context'ом
@@ -30,12 +30,10 @@ final myChatsProvider = FutureProvider<List<MyChatItem>>((ref) async {
   return ref.read(chatsRepositoryProvider).listMine();
 });
 
-class ProjectChatsController
-    extends FamilyAsyncNotifier<List<Chat>, String> {
+class ProjectChatsController extends FamilyAsyncNotifier<List<Chat>, String> {
   @override
   Future<List<Chat>> build(String projectId) async {
-    final raw =
-        await ref.read(chatsRepositoryProvider).listProject(projectId);
+    final raw = await ref.read(chatsRepositoryProvider).listProject(projectId);
     return _sortChats(raw);
   }
 
@@ -56,7 +54,9 @@ class ProjectChatsController
     required List<String> participantUserIds,
   }) async {
     try {
-      final c = await ref.read(chatsRepositoryProvider).createGroup(
+      final c = await ref
+          .read(chatsRepositoryProvider)
+          .createGroup(
             projectId: arg,
             title: title,
             participantUserIds: participantUserIds,
@@ -81,13 +81,12 @@ final typingUsersProvider = StateProvider.autoDispose
 
 /// Сообщения одного чата с WS-подписками. Также управляет typing-set
 /// через `typingUsersProvider(chatId)` и mark-read при первой загрузке.
-final messagesProvider = AsyncNotifierProvider.family<
-    MessagesController, List<Message>, String>(
-  MessagesController.new,
-);
+final messagesProvider =
+    AsyncNotifierProvider.family<MessagesController, List<Message>, String>(
+      MessagesController.new,
+    );
 
-class MessagesController
-    extends FamilyAsyncNotifier<List<Message>, String> {
+class MessagesController extends FamilyAsyncNotifier<List<Message>, String> {
   StreamSubscription<dynamic>? _newSub;
   StreamSubscription<dynamic>? _editSub;
   StreamSubscription<dynamic>? _delSub;
@@ -178,9 +177,7 @@ class MessagesController
     final current = state.value ?? const <Message>[];
     final exists = current.any((x) => x.id == m.id);
     if (replace && exists) {
-      state = AsyncData(
-        current.map((x) => x.id == m.id ? m : x).toList(),
-      );
+      state = AsyncData(current.map((x) => x.id == m.id ? m : x).toList());
     } else if (!exists) {
       state = AsyncData([m, ...current]);
     }
@@ -221,10 +218,9 @@ class MessagesController
       return null;
     }
     try {
-      final m = await ref.read(chatsRepositoryProvider).sendMessage(
-            chatId: arg,
-            text: text,
-          );
+      final m = await ref
+          .read(chatsRepositoryProvider)
+          .sendMessage(chatId: arg, text: text);
       _handleIncoming(m);
       return null;
     } on ChatsException catch (e) {
@@ -237,11 +233,9 @@ class MessagesController
     required String text,
   }) async {
     try {
-      final m = await ref.read(chatsRepositoryProvider).editMessage(
-            chatId: arg,
-            messageId: messageId,
-            text: text,
-          );
+      final m = await ref
+          .read(chatsRepositoryProvider)
+          .editMessage(chatId: arg, messageId: messageId, text: text);
       _handleIncoming(m, replace: true);
       return null;
     } on ChatsException catch (e) {
@@ -251,10 +245,9 @@ class MessagesController
 
   Future<AuthFailure?> delete(String messageId) async {
     try {
-      await ref.read(chatsRepositoryProvider).deleteMessage(
-            chatId: arg,
-            messageId: messageId,
-          );
+      await ref
+          .read(chatsRepositoryProvider)
+          .deleteMessage(chatId: arg, messageId: messageId);
       _patchMessage(
         messageId,
         (m) => m.copyWith(text: null, deletedAt: DateTime.now()),
@@ -281,10 +274,9 @@ class MessagesController
     final cursor = _nextCursor;
     if (cursor == null) return;
     try {
-      final page = await ref.read(chatsRepositoryProvider).listMessages(
-            chatId: arg,
-            cursor: cursor,
-          );
+      final page = await ref
+          .read(chatsRepositoryProvider)
+          .listMessages(chatId: arg, cursor: cursor);
       _nextCursor = page.nextCursor;
       state = AsyncData([...?state.value, ...page.items]);
     } on ChatsException {

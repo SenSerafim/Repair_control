@@ -27,10 +27,7 @@ class IdempotencyInterceptor extends Interceptor {
   ];
 
   @override
-  void onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
-  ) {
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (_needsIdempotency(options)) {
       final existing = options.extra['idempotencyKey']?.toString();
       final key = existing ?? _uuid.v4();

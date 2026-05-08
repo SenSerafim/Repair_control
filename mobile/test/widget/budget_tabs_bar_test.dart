@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/finance/presentation/_widgets/budget_tabs_bar.dart';
 
 void main() {
-  testWidgets('BudgetTabsBar показывает 3 таба + badge на Выплатах',
-      (tester) async {
+  testWidgets('BudgetTabsBar показывает 3 таба + badge на Выплатах', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

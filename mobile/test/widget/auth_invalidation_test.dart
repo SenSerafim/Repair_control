@@ -28,16 +28,13 @@ class _TestAuthController extends AuthController {
 }
 
 void main() {
-  test(
-      'watchAuthAndInvalidate инвалидирует переданные провайдеры '
+  test('watchAuthAndInvalidate инвалидирует переданные провайдеры '
       'при logout (authenticated → unauthenticated)', () async {
     var buildCount = 0;
     final probeProvider = FutureProvider<int>((ref) async => ++buildCount);
 
     final container = ProviderContainer(
-      overrides: [
-        authControllerProvider.overrideWith(_TestAuthController.new),
-      ],
+      overrides: [authControllerProvider.overrideWith(_TestAuthController.new)],
     );
     addTearDown(container.dispose);
 
@@ -57,27 +54,30 @@ void main() {
     // Login: unknown → authenticated. Кеш не сбрасывается.
     auth.set(status: AuthStatus.authenticated, userId: 'userA');
     await Future<void>.delayed(Duration.zero);
-    expect(await container.read(probeProvider.future), 1,
-        reason: 'кеш probeProvider не должен инвалидироваться при логине');
+    expect(
+      await container.read(probeProvider.future),
+      1,
+      reason: 'кеш probeProvider не должен инвалидироваться при логине',
+    );
 
     // Logout: authenticated → unauthenticated. Здесь должен сработать invalidate.
     auth.set(status: AuthStatus.unauthenticated);
     await Future<void>.delayed(Duration.zero);
-    expect(await container.read(probeProvider.future), 2,
-        reason:
-            'после logout probeProvider должен быть инвалидирован — это и был root cause багов #11/#12');
+    expect(
+      await container.read(probeProvider.future),
+      2,
+      reason:
+          'после logout probeProvider должен быть инвалидирован — это и был root cause багов #11/#12',
+    );
   });
 
-  test(
-      'watchAuthAndInvalidate НЕ инвалидирует на initial bootstrap '
+  test('watchAuthAndInvalidate НЕ инвалидирует на initial bootstrap '
       '(unknown → authenticated, без предыдущей сессии)', () async {
     var buildCount = 0;
     final probeProvider = FutureProvider<int>((ref) async => ++buildCount);
 
     final container = ProviderContainer(
-      overrides: [
-        authControllerProvider.overrideWith(_TestAuthController.new),
-      ],
+      overrides: [authControllerProvider.overrideWith(_TestAuthController.new)],
     );
     addTearDown(container.dispose);
 
@@ -102,9 +102,12 @@ void main() {
     // Smoke-test, чтобы случайное удаление импорта в user_scoped_providers.dart
     // не сделало список пустым.
     expect(userScopedProviders, isNotEmpty);
-    expect(userScopedProviders.length, greaterThan(10),
-        reason:
-            'утечка между сессиями возможна через любой провайдер с user-data; '
-            'если их меньше 10, скорее всего что-то пропущено');
+    expect(
+      userScopedProviders.length,
+      greaterThan(10),
+      reason:
+          'утечка между сессиями возможна через любой провайдер с user-data; '
+          'если их меньше 10, скорее всего что-то пропущено',
+    );
   });
 }

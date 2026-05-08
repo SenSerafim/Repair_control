@@ -11,11 +11,7 @@ enum ChainStepState { done, current, pending }
 /// `мастер → бригадир → заказчик` или `бригадир → заказчик`.
 /// Каждый chip — одна сторона; arrow между chip-ами тоже dim/active.
 class ApprovalChainStrip extends StatelessWidget {
-  const ApprovalChainStrip({
-    required this.steps,
-    this.footnote,
-    super.key,
-  });
+  const ApprovalChainStrip({required this.steps, this.footnote, super.key});
 
   final List<ChainStep> steps;
 
@@ -134,25 +130,25 @@ class _Chip extends StatelessWidget {
   }
 
   _Palette _palette(ChainStepTone tone) => switch (tone) {
-        ChainStepTone.brand => const _Palette(
-            bg: AppColors.brandLight,
-            bgMuted: AppColors.brandLight,
-            fg: AppColors.brand,
-            fgMuted: AppColors.brand,
-          ),
-        ChainStepTone.purple => const _Palette(
-            bg: AppColors.purpleBg,
-            bgMuted: AppColors.purpleBg,
-            fg: AppColors.purple,
-            fgMuted: AppColors.purple,
-          ),
-        ChainStepTone.customer => const _Palette(
-            bg: AppColors.brandLight,
-            bgMuted: AppColors.n100,
-            fg: AppColors.brand,
-            fgMuted: AppColors.n500,
-          ),
-      };
+    ChainStepTone.brand => const _Palette(
+      bg: AppColors.brandLight,
+      bgMuted: AppColors.brandLight,
+      fg: AppColors.brand,
+      fgMuted: AppColors.brand,
+    ),
+    ChainStepTone.purple => const _Palette(
+      bg: AppColors.purpleBg,
+      bgMuted: AppColors.purpleBg,
+      fg: AppColors.purple,
+      fgMuted: AppColors.purple,
+    ),
+    ChainStepTone.customer => const _Palette(
+      bg: AppColors.brandLight,
+      bgMuted: AppColors.n100,
+      fg: AppColors.brand,
+      fgMuted: AppColors.n500,
+    ),
+  };
 }
 
 class _Palette {

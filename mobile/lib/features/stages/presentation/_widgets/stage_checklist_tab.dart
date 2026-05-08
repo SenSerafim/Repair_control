@@ -39,8 +39,8 @@ class StageChecklistTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final key = StepsKey(projectId: stage.projectId, stageId: stage.id);
     final async = ref.watch(stepsControllerProvider(key));
-    final locked = display == StageDisplayStatus.pending &&
-        stage.foremanIds.isEmpty;
+    final locked =
+        display == StageDisplayStatus.pending && stage.foremanIds.isEmpty;
     // Master имеет step.manage только для своих шагов (rbac.matrix.ts:42).
     // Создание новых шагов — прерогатива бригадира/customer-owner. Скрываем
     // кнопку «Добавить шаг» если активная роль — master, чтобы не получать
@@ -61,7 +61,7 @@ class StageChecklistTab extends ConsumerWidget {
               title: 'Шагов пока нет',
               subtitle: canAddStep
                   ? 'Добавьте основной шаг — именно они определяют '
-                      'прогресс этапа.'
+                        'прогресс этапа.'
                   : 'Шаги добавит бригадир этого этапа.',
               icon: Icons.checklist_rounded,
               actionLabel: canAddStep ? 'Добавить шаг' : null,
@@ -70,8 +70,7 @@ class StageChecklistTab extends ConsumerWidget {
           );
         }
         // Первый незавершённый шаг = активный.
-        final activeIdx =
-            steps.indexWhere((s) => s.status != StepStatus.done);
+        final activeIdx = steps.indexWhere((s) => s.status != StepStatus.done);
         return ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.x16,
@@ -94,7 +93,8 @@ class StageChecklistTab extends ConsumerWidget {
                   id: 'stage_detail.first_step',
                   child: ChecklistStepRow(
                     step: steps[i],
-                    isActive: !locked &&
+                    isActive:
+                        !locked &&
                         display == StageDisplayStatus.active &&
                         i == activeIdx,
                     locked: locked,
@@ -109,7 +109,8 @@ class StageChecklistTab extends ConsumerWidget {
               else
                 ChecklistStepRow(
                   step: steps[i],
-                  isActive: !locked &&
+                  isActive:
+                      !locked &&
                       display == StageDisplayStatus.active &&
                       i == activeIdx,
                   locked: locked,
@@ -157,8 +158,7 @@ class StageChecklistTab extends ConsumerWidget {
                             'Добавить шаг',
                             style: AppTextStyles.subtitle.copyWith(
                               fontSize: 13,
-                              color:
-                                  locked ? AppColors.n300 : AppColors.brand,
+                              color: locked ? AppColors.n300 : AppColors.brand,
                             ),
                           ),
                         ],
@@ -177,9 +177,7 @@ class StageChecklistTab extends ConsumerWidget {
   StepAnnotation? _annotationFor(Step step) {
     if (step.type == StepType.extra &&
         step.status == StepStatus.pendingApproval) {
-      return ExtraWorkPendingAnnotation(
-        amountKopecks: step.price ?? 0,
-      );
+      return ExtraWorkPendingAnnotation(amountKopecks: step.price ?? 0);
     }
     return null;
   }

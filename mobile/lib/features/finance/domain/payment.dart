@@ -23,22 +23,22 @@ enum PaymentKind {
   }
 
   String get apiValue => switch (this) {
-        PaymentKind.advance => 'advance',
-        PaymentKind.distribution => 'distribution',
-        PaymentKind.correction => 'correction',
-      };
+    PaymentKind.advance => 'advance',
+    PaymentKind.distribution => 'distribution',
+    PaymentKind.correction => 'correction',
+  };
 
   String get displayName => switch (this) {
-        PaymentKind.advance => 'Аванс',
-        PaymentKind.distribution => 'Выплата мастеру',
-        PaymentKind.correction => 'Корректировка',
-      };
+    PaymentKind.advance => 'Аванс',
+    PaymentKind.distribution => 'Выплата мастеру',
+    PaymentKind.correction => 'Корректировка',
+  };
 
   IconData get icon => switch (this) {
-        PaymentKind.advance => Icons.north_east_rounded,
-        PaymentKind.distribution => Icons.call_split_rounded,
-        PaymentKind.correction => Icons.tune_rounded,
-      };
+    PaymentKind.advance => Icons.north_east_rounded,
+    PaymentKind.distribution => Icons.call_split_rounded,
+    PaymentKind.correction => Icons.tune_rounded,
+  };
 }
 
 enum PaymentStatus {
@@ -65,28 +65,28 @@ enum PaymentStatus {
   }
 
   String get apiValue => switch (this) {
-        PaymentStatus.pending => 'pending',
-        PaymentStatus.confirmed => 'confirmed',
-        PaymentStatus.disputed => 'disputed',
-        PaymentStatus.resolved => 'resolved',
-        PaymentStatus.cancelled => 'cancelled',
-      };
+    PaymentStatus.pending => 'pending',
+    PaymentStatus.confirmed => 'confirmed',
+    PaymentStatus.disputed => 'disputed',
+    PaymentStatus.resolved => 'resolved',
+    PaymentStatus.cancelled => 'cancelled',
+  };
 
   String get displayName => switch (this) {
-        PaymentStatus.pending => 'Ожидает',
-        PaymentStatus.confirmed => 'Подтверждено',
-        PaymentStatus.disputed => 'Спор',
-        PaymentStatus.resolved => 'Решено',
-        PaymentStatus.cancelled => 'Отменено',
-      };
+    PaymentStatus.pending => 'Ожидает',
+    PaymentStatus.confirmed => 'Подтверждено',
+    PaymentStatus.disputed => 'Спор',
+    PaymentStatus.resolved => 'Решено',
+    PaymentStatus.cancelled => 'Отменено',
+  };
 
   Semaphore get semaphore => switch (this) {
-        PaymentStatus.pending => Semaphore.blue,
-        PaymentStatus.confirmed => Semaphore.green,
-        PaymentStatus.disputed => Semaphore.red,
-        PaymentStatus.resolved => Semaphore.plan,
-        PaymentStatus.cancelled => Semaphore.plan,
-      };
+    PaymentStatus.pending => Semaphore.blue,
+    PaymentStatus.confirmed => Semaphore.green,
+    PaymentStatus.disputed => Semaphore.red,
+    PaymentStatus.resolved => Semaphore.plan,
+    PaymentStatus.cancelled => Semaphore.plan,
+  };
 }
 
 @freezed
@@ -104,16 +104,16 @@ class PaymentDispute with _$PaymentDispute {
   }) = _PaymentDispute;
 
   static PaymentDispute parse(Map<String, dynamic> json) => PaymentDispute(
-        id: json['id'] as String,
-        paymentId: json['paymentId'] as String,
-        openedById: json['openedById'] as String? ?? '',
-        reason: json['reason'] as String? ?? '',
-        status: json['status'] as String? ?? 'open',
-        resolution: json['resolution'] as String?,
-        resolvedAt: _d(json['resolvedAt']),
-        resolvedBy: json['resolvedBy'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    paymentId: json['paymentId'] as String,
+    openedById: json['openedById'] as String? ?? '',
+    reason: json['reason'] as String? ?? '',
+    status: json['status'] as String? ?? 'open',
+    resolution: json['resolution'] as String?,
+    resolvedAt: _d(json['resolvedAt']),
+    resolvedBy: json['resolvedBy'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 }
 
 @freezed
@@ -142,31 +142,31 @@ class Payment with _$Payment {
   }) = _Payment;
 
   static Payment parse(Map<String, dynamic> json) => Payment(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        parentPaymentId: json['parentPaymentId'] as String?,
-        kind: PaymentKind.fromString(json['kind'] as String?),
-        fromUserId: json['fromUserId'] as String? ?? '',
-        toUserId: json['toUserId'] as String? ?? '',
-        amount: (json['amount'] as num?)?.toInt() ?? 0,
-        resolvedAmount: (json['resolvedAmount'] as num?)?.toInt(),
-        comment: json['comment'] as String?,
-        photoKey: json['photoKey'] as String?,
-        status: PaymentStatus.fromString(json['status'] as String?),
-        confirmedAt: _d(json['confirmedAt']),
-        disputedAt: _d(json['disputedAt']),
-        resolvedAt: _d(json['resolvedAt']),
-        cancelledAt: _d(json['cancelledAt']),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        children: (json['children'] as List<dynamic>? ?? const [])
-            .map((e) => Payment.parse(e as Map<String, dynamic>))
-            .toList(),
-        disputes: (json['disputes'] as List<dynamic>? ?? const [])
-            .map((e) => PaymentDispute.parse(e as Map<String, dynamic>))
-            .toList(),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    parentPaymentId: json['parentPaymentId'] as String?,
+    kind: PaymentKind.fromString(json['kind'] as String?),
+    fromUserId: json['fromUserId'] as String? ?? '',
+    toUserId: json['toUserId'] as String? ?? '',
+    amount: (json['amount'] as num?)?.toInt() ?? 0,
+    resolvedAmount: (json['resolvedAmount'] as num?)?.toInt(),
+    comment: json['comment'] as String?,
+    photoKey: json['photoKey'] as String?,
+    status: PaymentStatus.fromString(json['status'] as String?),
+    confirmedAt: _d(json['confirmedAt']),
+    disputedAt: _d(json['disputedAt']),
+    resolvedAt: _d(json['resolvedAt']),
+    cancelledAt: _d(json['cancelledAt']),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    children: (json['children'] as List<dynamic>? ?? const [])
+        .map((e) => Payment.parse(e as Map<String, dynamic>))
+        .toList(),
+    disputes: (json['disputes'] as List<dynamic>? ?? const [])
+        .map((e) => PaymentDispute.parse(e as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

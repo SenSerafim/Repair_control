@@ -41,10 +41,7 @@ class ToolRow extends StatelessWidget {
   }
 
   /// Конструктор из ToolItem (для warehouse-режима).
-  factory ToolRow.fromItem({
-    required ToolItem item,
-    VoidCallback? onTap,
-  }) {
+  factory ToolRow.fromItem({required ToolItem item, VoidCallback? onTap}) {
     return ToolRow(
       title: item.name,
       meta: 'Свободно: ${item.availableQty}/${item.totalQty}',

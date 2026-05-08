@@ -33,9 +33,10 @@ class SelfPurchaseDetailScreen extends ConsumerWidget {
     final async = ref.watch(
       selfpurchasesControllerProvider(projectId).select(
         (v) => v.whenData(
-          (list) => list
-              .cast<SelfPurchase?>()
-              .firstWhere((s) => s?.id == id, orElse: () => null),
+          (list) => list.cast<SelfPurchase?>().firstWhere(
+            (s) => s?.id == id,
+            orElse: () => null,
+          ),
         ),
       ),
     );
@@ -66,11 +67,7 @@ class SelfPurchaseDetailScreen extends ConsumerWidget {
 }
 
 class _Body extends ConsumerWidget {
-  const _Body({
-    required this.sp,
-    required this.meId,
-    required this.projectId,
-  });
+  const _Body({required this.sp, required this.meId, required this.projectId});
 
   final SelfPurchase sp;
   final String? meId;
@@ -78,8 +75,8 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAddressee = sp.addresseeId == meId &&
-        sp.status == SelfPurchaseStatus.pending;
+    final isAddressee =
+        sp.addresseeId == meId && sp.status == SelfPurchaseStatus.pending;
     final viewerIsForeman = isAddressee && sp.byRole == SelfPurchaseBy.master;
     return Column(
       children: [
@@ -156,11 +153,11 @@ class _Body extends ConsumerWidget {
     final fmt = DateFormat('d MMM y', 'ru');
     return [
       PaymentInfoRow('Сумма', Money.format(sp.amount)),
+      PaymentInfoRow('Этап', sp.stageId == null ? 'Без этапа' : 'Привязан'),
       PaymentInfoRow(
-        'Этап',
-        sp.stageId == null ? 'Без этапа' : 'Привязан',
+        'Купил',
+        '${sp.byRole.displayName} (${_short(sp.byUserId)})',
       ),
-      PaymentInfoRow('Купил', '${sp.byRole.displayName} (${_short(sp.byUserId)})'),
       PaymentInfoRow(
         'Дата покупки',
         '${fmt.format(sp.createdAt)} (неизменяемая)',
@@ -174,7 +171,10 @@ class _Body extends ConsumerWidget {
     ];
   }
 
-  List<ChainStep> _chainSteps(SelfPurchase sp, {required bool viewerIsForeman}) {
+  List<ChainStep> _chainSteps(
+    SelfPurchase sp, {
+    required bool viewerIsForeman,
+  }) {
     if (sp.byRole == SelfPurchaseBy.master) {
       return [
         ChainStep(
@@ -238,8 +238,7 @@ class _Body extends ConsumerWidget {
     ];
   }
 
-  String _short(String id) =>
-      id.length <= 12 ? id : '${id.substring(0, 12)}…';
+  String _short(String id) => id.length <= 12 ? id : '${id.substring(0, 12)}…';
 }
 
 class _ApprovedBanner extends StatelessWidget {
@@ -385,18 +384,15 @@ class _Actions extends ConsumerWidget {
             Expanded(
               flex: 2,
               child: AppButton(
-                label: viewerIsForeman ? 'Подтвердить → заказчику' : 'Подтвердить',
+                label: viewerIsForeman
+                    ? 'Подтвердить → заказчику'
+                    : 'Подтвердить',
                 variant: AppButtonVariant.success,
                 icon: Icons.check_rounded,
                 onPressed: () async {
                   final failure = await ref
-                      .read(
-                        selfpurchasesControllerProvider(projectId).notifier,
-                      )
-                      .approve(
-                        id: sp.id,
-                        forwardOnApprove: viewerIsForeman,
-                      );
+                      .read(selfpurchasesControllerProvider(projectId).notifier)
+                      .approve(id: sp.id, forwardOnApprove: viewerIsForeman);
                   if (!context.mounted) return;
                   if (failure != null) {
                     AppToast.show(

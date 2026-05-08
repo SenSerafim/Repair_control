@@ -14,11 +14,10 @@ class UserRoleEntry with _$UserRoleEntry {
   }) = _UserRoleEntry;
 
   static UserRoleEntry parse(Map<String, dynamic> json) => UserRoleEntry(
-        role: SystemRole.fromString(json['role'] as String?) ??
-            SystemRole.master,
-        addedAt: DateTime.parse(json['addedAt'] as String),
-        isActive: json['isActive'] as bool? ?? false,
-      );
+    role: SystemRole.fromString(json['role'] as String?) ?? SystemRole.master,
+    addedAt: DateTime.parse(json['addedAt'] as String),
+    isActive: json['isActive'] as bool? ?? false,
+  );
 }
 
 /// Профиль текущего пользователя. Соответствует GET /api/me.

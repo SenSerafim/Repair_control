@@ -101,11 +101,7 @@ class MoneySummaryChip extends StatelessWidget {
 }
 
 class _Line extends StatelessWidget {
-  const _Line({
-    required this.label,
-    required this.amount,
-    required this.color,
-  });
+  const _Line({required this.label, required this.amount, required this.color});
 
   final String label;
   final int amount;

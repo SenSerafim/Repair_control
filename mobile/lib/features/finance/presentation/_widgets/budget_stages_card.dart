@@ -71,9 +71,7 @@ class _Row extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           border: divider
-              ? const Border(
-                  bottom: BorderSide(color: AppColors.n100),
-                )
+              ? const Border(bottom: BorderSide(color: AppColors.n100))
               : null,
         ),
         child: Row(

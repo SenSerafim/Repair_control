@@ -14,8 +14,8 @@ import '../domain/app_notification.dart';
 /// переедем все вместе.
 class NotificationsStore {
   NotificationsStore({required Logger logger, File? file})
-      : _logger = logger,
-        _file = file;
+    : _logger = logger,
+      _file = file;
 
   static const _fileName = 'notifications.json';
   static const _maxItems = 200;
@@ -61,24 +61,24 @@ class NotificationsStore {
   }
 
   static Map<String, dynamic> _toJson(AppNotification n) => {
-        'id': n.id,
-        'kind': n.kind,
-        'title': n.title,
-        'body': n.body,
-        'data': n.data,
-        'receivedAt': n.receivedAt.toIso8601String(),
-        'read': n.read,
-      };
+    'id': n.id,
+    'kind': n.kind,
+    'title': n.title,
+    'body': n.body,
+    'data': n.data,
+    'receivedAt': n.receivedAt.toIso8601String(),
+    'read': n.read,
+  };
 
   static AppNotification _fromJson(Map<String, dynamic> j) => AppNotification(
-        id: j['id'] as String,
-        kind: j['kind'] as String,
-        title: j['title'] as String,
-        body: j['body'] as String,
-        data: Map<String, dynamic>.from(j['data'] as Map? ?? const {}),
-        receivedAt: DateTime.parse(j['receivedAt'] as String),
-        read: j['read'] as bool? ?? false,
-      );
+    id: j['id'] as String,
+    kind: j['kind'] as String,
+    title: j['title'] as String,
+    body: j['body'] as String,
+    data: Map<String, dynamic>.from(j['data'] as Map? ?? const {}),
+    receivedAt: DateTime.parse(j['receivedAt'] as String),
+    read: j['read'] as bool? ?? false,
+  );
 }
 
 final notificationsStoreProvider = Provider<NotificationsStore>((ref) {

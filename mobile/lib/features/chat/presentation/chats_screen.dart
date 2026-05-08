@@ -75,9 +75,8 @@ class ChatsScreen extends ConsumerWidget {
                   for (final it in entry.value)
                     _ChatRow(
                       chat: it.chat,
-                      onTap: () => context.push(
-                        AppRoutes.chatDetailWith(it.chat.id),
-                      ),
+                      onTap: () =>
+                          context.push(AppRoutes.chatDetailWith(it.chat.id)),
                     ),
                 ],
                 const SizedBox(height: AppSpacing.x16),
@@ -149,8 +148,7 @@ class ProjectChatsScreen extends ConsumerWidget {
         IconButton(
           icon: const Icon(Icons.add_rounded),
           tooltip: 'Новый чат',
-          onPressed: () =>
-              showNewChatSheet(context, ref, projectId: projectId),
+          onPressed: () => showNewChatSheet(context, ref, projectId: projectId),
         ),
       ],
       body: async.when(
@@ -227,8 +225,8 @@ class _ChatRow extends StatelessWidget {
         (chat.type == ChatType.project
             ? 'Общий чат проекта'
             : chat.type == ChatType.stage
-                ? 'Чат этапа'
-                : 'Личный');
+            ? 'Чат этапа'
+            : 'Личный');
   }
 
   String _formatTime(DateTime t) {
@@ -320,8 +318,7 @@ class _ChatRow extends StatelessWidget {
                         minWidth: 20,
                         minHeight: 20,
                       ),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: AppColors.brand,

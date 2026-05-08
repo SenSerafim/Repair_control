@@ -50,10 +50,7 @@ class HouseCelebrationOverlay {
 }
 
 class _CelebrationOverlay extends StatefulWidget {
-  const _CelebrationOverlay({
-    required this.message,
-    required this.onDismiss,
-  });
+  const _CelebrationOverlay({required this.message, required this.onDismiss});
 
   final String message;
   final VoidCallback onDismiss;
@@ -99,10 +96,7 @@ class _CelebrationOverlayState extends State<_CelebrationOverlay> {
 
                 // Конфетти
                 const Positioned.fill(
-                  child: ConfettiLayer(
-                    particleCount: 80,
-                    waves: 3,
-                  ),
+                  child: ConfettiLayer(particleCount: 80, waves: 3),
                 ),
 
                 // Banner «✓ Дом построен!»
@@ -124,27 +118,28 @@ class _SceneShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: ClipRect(
-        child: const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              stops: [0.3, 0.5, 0.7],
-              colors: [
-                Color(0x00FFFFFF),
-                Color(0x33FFFFFF),
-                Color(0x00FFFFFF),
-              ],
-            ),
-          ),
-        )
-            .animate(onPlay: (c) => c.repeat())
-            .slideX(
-              begin: -1.5,
-              end: 1.5,
-              duration: const Duration(seconds: 2),
-              curve: Curves.linear,
-            ),
+        child:
+            const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      stops: [0.3, 0.5, 0.7],
+                      colors: [
+                        Color(0x00FFFFFF),
+                        Color(0x33FFFFFF),
+                        Color(0x00FFFFFF),
+                      ],
+                    ),
+                  ),
+                )
+                .animate(onPlay: (c) => c.repeat())
+                .slideX(
+                  begin: -1.5,
+                  end: 1.5,
+                  duration: const Duration(seconds: 2),
+                  curve: Curves.linear,
+                ),
       ),
     );
   }
@@ -159,26 +154,24 @@ class _CelebrationGlow extends StatelessWidget {
     return SizedBox(
       width: 320,
       height: 320,
-      child: const DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [Color(0x4010B981), Color(0x0010B981)],
-            stops: [0, 0.7],
-          ),
-        ),
-      )
-          .animate(onPlay: (c) => c.repeat(reverse: true))
-          .scale(
-            begin: const Offset(1, 1),
-            end: const Offset(1.08, 1.08),
-            duration: const Duration(seconds: 2),
-            curve: Curves.easeInOut,
-          )
-          .fadeIn(
-            begin: 0.6,
-            duration: const Duration(milliseconds: 300),
-          ),
+      child:
+          const DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Color(0x4010B981), Color(0x0010B981)],
+                    stops: [0, 0.7],
+                  ),
+                ),
+              )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.08, 1.08),
+                duration: const Duration(seconds: 2),
+                curve: Curves.easeInOut,
+              )
+              .fadeIn(begin: 0.6, duration: const Duration(milliseconds: 300)),
     );
   }
 }
@@ -192,34 +185,34 @@ class _CelebrationBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF059669), Color(0xFF10B981)],
-        ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x59059669),
-            blurRadius: 40,
-            offset: Offset(0, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF059669), Color(0xFF10B981)],
+            ),
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x59059669),
+                blurRadius: 40,
+                offset: Offset(0, 8),
+              ),
+            ],
+            border: Border.all(color: const Color(0x26FFFFFF), width: 2),
           ),
-        ],
-        border: Border.all(color: const Color(0x26FFFFFF), width: 2),
-      ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          fontFamily: 'Manrope',
-          fontWeight: FontWeight.w900,
-          fontSize: 17,
-          letterSpacing: -0.3,
-          color: Colors.white,
-        ),
-      ),
-    )
+          child: Text(
+            message,
+            style: const TextStyle(
+              fontFamily: 'Manrope',
+              fontWeight: FontWeight.w900,
+              fontSize: 17,
+              letterSpacing: -0.3,
+              color: Colors.white,
+            ),
+          ),
+        )
         .animate(delay: const Duration(milliseconds: 300))
         .scaleXY(
           begin: 0.7,
@@ -227,9 +220,7 @@ class _CelebrationBanner extends StatelessWidget {
           duration: const Duration(milliseconds: 700),
           curve: Curves.easeOutBack,
         )
-        .fadeIn(
-          duration: const Duration(milliseconds: 700),
-        )
+        .fadeIn(duration: const Duration(milliseconds: 700))
         .moveY(
           begin: -20,
           end: 0,

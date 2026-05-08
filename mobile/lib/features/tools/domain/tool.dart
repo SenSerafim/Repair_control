@@ -35,34 +35,34 @@ enum ToolIssuanceStatus {
   }
 
   String get apiValue => switch (this) {
-        ToolIssuanceStatus.requested => 'requested',
-        ToolIssuanceStatus.approved => 'approved',
-        ToolIssuanceStatus.rejected => 'rejected',
-        ToolIssuanceStatus.issued => 'issued',
-        ToolIssuanceStatus.confirmed => 'confirmed',
-        ToolIssuanceStatus.returnRequested => 'return_requested',
-        ToolIssuanceStatus.returned => 'returned',
-      };
+    ToolIssuanceStatus.requested => 'requested',
+    ToolIssuanceStatus.approved => 'approved',
+    ToolIssuanceStatus.rejected => 'rejected',
+    ToolIssuanceStatus.issued => 'issued',
+    ToolIssuanceStatus.confirmed => 'confirmed',
+    ToolIssuanceStatus.returnRequested => 'return_requested',
+    ToolIssuanceStatus.returned => 'returned',
+  };
 
   String get displayName => switch (this) {
-        ToolIssuanceStatus.requested => 'Запрошен',
-        ToolIssuanceStatus.approved => 'Одобрен',
-        ToolIssuanceStatus.rejected => 'Отклонён',
-        ToolIssuanceStatus.issued => 'Выдан',
-        ToolIssuanceStatus.confirmed => 'Подтверждён',
-        ToolIssuanceStatus.returnRequested => 'Возврат',
-        ToolIssuanceStatus.returned => 'Возвращён',
-      };
+    ToolIssuanceStatus.requested => 'Запрошен',
+    ToolIssuanceStatus.approved => 'Одобрен',
+    ToolIssuanceStatus.rejected => 'Отклонён',
+    ToolIssuanceStatus.issued => 'Выдан',
+    ToolIssuanceStatus.confirmed => 'Подтверждён',
+    ToolIssuanceStatus.returnRequested => 'Возврат',
+    ToolIssuanceStatus.returned => 'Возвращён',
+  };
 
   Semaphore get semaphore => switch (this) {
-        ToolIssuanceStatus.requested => Semaphore.yellow,
-        ToolIssuanceStatus.approved => Semaphore.blue,
-        ToolIssuanceStatus.rejected => Semaphore.red,
-        ToolIssuanceStatus.issued => Semaphore.blue,
-        ToolIssuanceStatus.confirmed => Semaphore.green,
-        ToolIssuanceStatus.returnRequested => Semaphore.yellow,
-        ToolIssuanceStatus.returned => Semaphore.plan,
-      };
+    ToolIssuanceStatus.requested => Semaphore.yellow,
+    ToolIssuanceStatus.approved => Semaphore.blue,
+    ToolIssuanceStatus.rejected => Semaphore.red,
+    ToolIssuanceStatus.issued => Semaphore.blue,
+    ToolIssuanceStatus.confirmed => Semaphore.green,
+    ToolIssuanceStatus.returnRequested => Semaphore.yellow,
+    ToolIssuanceStatus.returned => Semaphore.plan,
+  };
 }
 
 @freezed
@@ -75,8 +75,10 @@ class ToolItem with _$ToolItem {
     required int issuedQty,
     String? unit,
     String? photoKey,
+
     /// П2.14 — серийный/инвентарный номер.
     String? serial,
+
     /// П2.15 — если задан, инструмент привязан к проекту (виден в реестре).
     String? projectId,
     required DateTime createdAt,
@@ -84,18 +86,18 @@ class ToolItem with _$ToolItem {
   }) = _ToolItem;
 
   static ToolItem parse(Map<String, dynamic> json) => ToolItem(
-        id: json['id'] as String,
-        ownerId: json['ownerId'] as String? ?? '',
-        name: json['name'] as String,
-        totalQty: (json['totalQty'] as num?)?.toInt() ?? 0,
-        issuedQty: (json['issuedQty'] as num?)?.toInt() ?? 0,
-        unit: json['unit'] as String?,
-        photoKey: json['photoKey'] as String?,
-        serial: json['serial'] as String?,
-        projectId: json['projectId'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    ownerId: json['ownerId'] as String? ?? '',
+    name: json['name'] as String,
+    totalQty: (json['totalQty'] as num?)?.toInt() ?? 0,
+    issuedQty: (json['issuedQty'] as num?)?.toInt() ?? 0,
+    unit: json['unit'] as String?,
+    photoKey: json['photoKey'] as String?,
+    serial: json['serial'] as String?,
+    projectId: json['projectId'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
 extension ToolItemX on ToolItem {
@@ -121,19 +123,19 @@ class ToolIssuance with _$ToolIssuance {
   }) = _ToolIssuance;
 
   static ToolIssuance parse(Map<String, dynamic> json) => ToolIssuance(
-        id: json['id'] as String,
-        toolItemId: json['toolItemId'] as String,
-        projectId: json['projectId'] as String?,
-        stageId: json['stageId'] as String?,
-        toUserId: json['toUserId'] as String? ?? '',
-        issuedById: json['issuedById'] as String? ?? '',
-        qty: (json['qty'] as num?)?.toInt() ?? 0,
-        returnedQty: (json['returnedQty'] as num?)?.toInt(),
-        status: ToolIssuanceStatus.fromString(json['status'] as String?),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        tool: json['tool'] is Map<String, dynamic>
-            ? ToolItem.parse(json['tool'] as Map<String, dynamic>)
-            : null,
-      );
+    id: json['id'] as String,
+    toolItemId: json['toolItemId'] as String,
+    projectId: json['projectId'] as String?,
+    stageId: json['stageId'] as String?,
+    toUserId: json['toUserId'] as String? ?? '',
+    issuedById: json['issuedById'] as String? ?? '',
+    qty: (json['qty'] as num?)?.toInt() ?? 0,
+    returnedQty: (json['returnedQty'] as num?)?.toInt(),
+    status: ToolIssuanceStatus.fromString(json['status'] as String?),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    tool: json['tool'] is Map<String, dynamic>
+        ? ToolItem.parse(json['tool'] as Map<String, dynamic>)
+        : null,
+  );
 }

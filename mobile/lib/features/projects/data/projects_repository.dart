@@ -40,11 +40,9 @@ class ProjectsRepository {
       });
 
   Future<Project> get(String projectId) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/projects/$projectId',
-        );
-        return Project.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/projects/$projectId');
+    return Project.parse(r.data!);
+  });
 
   Future<Project> create({
     required String title,
@@ -54,25 +52,23 @@ class ProjectsRepository {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
-  }) =>
-      _call(() async {
-        final body = <String, dynamic>{
-          'title': title,
-          if (address != null && address.isNotEmpty) 'address': address,
-          if (description != null && description.isNotEmpty)
-            'description': description,
-          if (plannedStart != null)
-            'plannedStart': plannedStart.toIso8601String(),
-          if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-          if (workBudget != null) 'workBudget': workBudget,
-          if (materialsBudget != null) 'materialsBudget': materialsBudget,
-        };
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects',
-          data: body,
-        );
-        return Project.parse(r.data!);
-      });
+  }) => _call(() async {
+    final body = <String, dynamic>{
+      'title': title,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      if (plannedStart != null) 'plannedStart': plannedStart.toIso8601String(),
+      if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+      if (workBudget != null) 'workBudget': workBudget,
+      if (materialsBudget != null) 'materialsBudget': materialsBudget,
+    };
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects',
+      data: body,
+    );
+    return Project.parse(r.data!);
+  });
 
   Future<Project> update(
     String projectId, {
@@ -83,86 +79,79 @@ class ProjectsRepository {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
-  }) =>
-      _call(() async {
-        final body = <String, dynamic>{
-          if (title != null) 'title': title,
-          if (address != null) 'address': address,
-          if (description != null) 'description': description,
-          if (plannedStart != null)
-            'plannedStart': plannedStart.toIso8601String(),
-          if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-          if (workBudget != null) 'workBudget': workBudget,
-          if (materialsBudget != null) 'materialsBudget': materialsBudget,
-        };
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/projects/$projectId',
-          data: body,
-        );
-        return Project.parse(r.data!);
-      });
+  }) => _call(() async {
+    final body = <String, dynamic>{
+      if (title != null) 'title': title,
+      if (address != null) 'address': address,
+      if (description != null) 'description': description,
+      if (plannedStart != null) 'plannedStart': plannedStart.toIso8601String(),
+      if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+      if (workBudget != null) 'workBudget': workBudget,
+      if (materialsBudget != null) 'materialsBudget': materialsBudget,
+    };
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/projects/$projectId',
+      data: body,
+    );
+    return Project.parse(r.data!);
+  });
 
   Future<Project> archive(String projectId) => _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/archive',
-        );
-        return Project.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/archive',
+    );
+    return Project.parse(r.data!);
+  });
 
   Future<Project> restore(String projectId) => _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/restore',
-        );
-        return Project.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/restore',
+    );
+    return Project.parse(r.data!);
+  });
 
-  Future<Project> copy(String projectId, {String? newTitle}) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/copy',
-          data: {if (newTitle != null) 'newTitle': newTitle},
-        );
-        return Project.parse(r.data!);
-      });
+  Future<Project> copy(String projectId, {String? newTitle}) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/copy',
+      data: {if (newTitle != null) 'newTitle': newTitle},
+    );
+    return Project.parse(r.data!);
+  });
 
   Future<List<Membership>> members(String projectId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/members',
-        );
-        return r.data!
-            .map((e) => Membership.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/projects/$projectId/members');
+    return r.data!
+        .map((e) => Membership.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<ProjectMemberUser?> searchUser(
     String projectId, {
     String? phone,
     String? email,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<Map<String, dynamic>?>(
-          '/api/projects/$projectId/search-user',
-          queryParameters: {
-            if (phone != null) 'phone': phone,
-            if (email != null) 'email': email,
-          },
-        );
-        final data = r.data;
-        if (data == null || data.isEmpty) return null;
-        return ProjectMemberUser.parse(data);
-      });
+  }) => _call(() async {
+    final r = await _dio.get<Map<String, dynamic>?>(
+      '/api/projects/$projectId/search-user',
+      queryParameters: {
+        if (phone != null) 'phone': phone,
+        if (email != null) 'email': email,
+      },
+    );
+    final data = r.data;
+    if (data == null || data.isEmpty) return null;
+    return ProjectMemberUser.parse(data);
+  });
 
   Future<void> invite({
     required String projectId,
     required String phone,
     required MembershipRole role,
-  }) =>
-      _call(() async {
-        await _dio.post<void>(
-          '/api/projects/$projectId/invitations',
-          data: {'phone': phone, 'role': role.name},
-        );
-      });
+  }) => _call(() async {
+    await _dio.post<void>(
+      '/api/projects/$projectId/invitations',
+      data: {'phone': phone, 'role': role.name},
+    );
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

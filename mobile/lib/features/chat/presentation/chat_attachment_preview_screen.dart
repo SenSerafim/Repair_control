@@ -47,10 +47,7 @@ class _ChatAttachmentPreviewScreenState
                 color: AppColors.n900,
                 alignment: Alignment.center,
                 child: InteractiveViewer(
-                  child: Image.file(
-                    widget.file,
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.file(widget.file, fit: BoxFit.contain),
                 ),
               ),
             ),

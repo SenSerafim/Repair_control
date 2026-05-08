@@ -53,7 +53,7 @@ final connectivityProvider = StreamProvider<ConnectivityStatus>((ref) async* {
 
 Future<ConnectivityStatus> _currentStatus(Connectivity conn) async {
   final results = await conn.checkConnectivity();
-  final offline = results.isEmpty ||
-      results.every((r) => r == ConnectivityResult.none);
+  final offline =
+      results.isEmpty || results.every((r) => r == ConnectivityResult.none);
   return offline ? ConnectivityStatus.offline : ConnectivityStatus.online;
 }

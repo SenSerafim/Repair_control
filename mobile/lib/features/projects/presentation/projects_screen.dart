@@ -27,7 +27,10 @@ class ProjectsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(filteredActiveProjectsProvider);
-    final unread = ref.watch(notificationsProvider).where((n) => !n.read).length;
+    final unread = ref
+        .watch(notificationsProvider)
+        .where((n) => !n.read)
+        .length;
 
     return Scaffold(
       backgroundColor: AppColors.n50,
@@ -37,8 +40,7 @@ class ProjectsScreen extends ConsumerWidget {
             unreadNotifications: unread,
             activeIndex: 0,
             onArchiveTap: () => context.push(AppRoutes.projectsArchive),
-            onJoinByCodeTap: () =>
-                context.push(AppRoutes.projectsJoinByCode),
+            onJoinByCodeTap: () => context.push(AppRoutes.projectsJoinByCode),
           ),
           Expanded(
             child: async.when(
@@ -78,19 +80,18 @@ class ProjectsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton:
-          ref.watch(canProvider(DomainAction.projectCreate))
-              ? FloatingActionButton(
-                  onPressed: () => context.push(AppRoutes.projectsCreate),
-                  backgroundColor: AppColors.brand,
-                  elevation: 4,
-                  child: Icon(
-                    PhosphorIconsBold.plus,
-                    color: AppColors.n0,
-                    size: 24,
-                  ),
-                )
-              : null,
+      floatingActionButton: ref.watch(canProvider(DomainAction.projectCreate))
+          ? FloatingActionButton(
+              onPressed: () => context.push(AppRoutes.projectsCreate),
+              backgroundColor: AppColors.brand,
+              elevation: 4,
+              child: Icon(
+                PhosphorIconsBold.plus,
+                color: AppColors.n0,
+                size: 24,
+              ),
+            )
+          : null,
     );
   }
 }
@@ -116,8 +117,7 @@ class _Header extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
         decoration: const BoxDecoration(
           color: AppColors.n0,
-          border:
-              Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
+          border: Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -155,11 +155,7 @@ class _Header extends ConsumerWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                _Tab(
-                  label: 'Активные',
-                  active: activeIndex == 0,
-                  onTap: () {},
-                ),
+                _Tab(label: 'Активные', active: activeIndex == 0, onTap: () {}),
                 _Tab(
                   label: 'Архив',
                   active: activeIndex == 1,
@@ -228,11 +224,7 @@ class _IconBtn extends StatelessWidget {
 }
 
 class _Tab extends StatelessWidget {
-  const _Tab({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
+  const _Tab({required this.label, required this.active, required this.onTap});
 
   final String label;
   final bool active;
@@ -300,24 +292,25 @@ class _EmptyState extends ConsumerWidget {
 
     final (title, subtitle, icon) = switch (activeRole) {
       SystemRole.representative => (
-          'Вас ещё не добавили',
-          'Введите 6-значный код от заказчика, или дождитесь, пока вас добавят в проект',
-          PhosphorIconsRegular.usersThree,
-        ),
+        'Вас ещё не добавили',
+        'Введите 6-значный код от заказчика, или дождитесь, пока вас добавят в проект',
+        PhosphorIconsRegular.usersThree,
+      ),
       SystemRole.contractor || SystemRole.master => (
-          'Нет назначений',
-          'Введите 6-значный код от заказчика или бригадира — проект появится здесь сразу',
-          PhosphorIconsRegular.wrench,
-        ),
+        'Нет назначений',
+        'Введите 6-значный код от заказчика или бригадира — проект появится здесь сразу',
+        PhosphorIconsRegular.wrench,
+      ),
       _ => (
-          'Нет активных объектов',
-          'Создайте первый объект, чтобы управлять ремонтом из любой точки мира',
-          PhosphorIconsRegular.house,
-        ),
+        'Нет активных объектов',
+        'Создайте первый объект, чтобы управлять ремонтом из любой точки мира',
+        PhosphorIconsRegular.house,
+      ),
     };
 
     // Для не-customer ролей даём явный CTA — присоединиться по коду.
-    final showJoinByCodeCta = activeRole == SystemRole.contractor ||
+    final showJoinByCodeCta =
+        activeRole == SystemRole.contractor ||
         activeRole == SystemRole.master ||
         activeRole == SystemRole.representative;
 
@@ -423,15 +416,9 @@ class _ProjectsSkeleton extends StatelessWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          AppSkeletonRow(
-                            width: 80,
-                            height: 18,
-                            radius: 100,
-                          ),
+                          AppSkeletonRow(width: 80, height: 18, radius: 100),
                           const SizedBox(width: 8),
-                          const Expanded(
-                            child: AppSkeletonRow(height: 11),
-                          ),
+                          const Expanded(child: AppSkeletonRow(height: 11)),
                         ],
                       ),
                       const SizedBox(height: 8),
