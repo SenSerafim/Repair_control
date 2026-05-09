@@ -63,16 +63,18 @@ jobs:
         # QA-batch фиксов.
         run: flutter test --reporter expanded --coverage test/widget test/offline_conflict_test.dart
 
-      - name: Coverage gate (>=70% lines + per-domain >=80% on critical)
+      - name: Coverage gate (>=30% global + per-domain soft warning)
         run: |
-          # Простой gate без зависимости от lcov-utils: считаем
-          # покрытые / непокрытые строки прямо из lcov.info.
+          # Простой gate без зависимости от lcov-utils: считаем покрытые /
+          # непокрытые строки прямо из lcov.info через `wc -l` (всегда
+          # возвращает число и exit 0, в отличие от `grep -c || echo 0`,
+          # который при пустом матче давал "0\n0" и ломал арифметику).
           if [ ! -f coverage/lcov.info ]; then
             echo "::warning::coverage/lcov.info not found, skipping gate"
             exit 0
           fi
-          covered=$(grep -c '^DA:.*,[1-9]' coverage/lcov.info || echo 0)
-          uncovered=$(grep -c '^DA:.*,0$' coverage/lcov.info || echo 0)
+          covered=$(grep -E '^DA:[0-9]+,[1-9]' coverage/lcov.info | wc -l)
+          uncovered=$(grep -E '^DA:[0-9]+,0$' coverage/lcov.info | wc -l)
           total=$((covered + uncovered))
           if [ "$total" -eq 0 ]; then
             echo "::warning::No coverage data"
@@ -81,21 +83,28 @@ jobs:
           pct=$(awk "BEGIN { printf \"%.1f\", $covered * 100 / $total }")
           echo "Global coverage: $pct% ($covered / $total lines)"
           # Threshold = 30%: реальный baseline после исключения goldens из
-          # CI (см. шаг тестов). Critical-domain logic покрыта высоко
-          # (finance/approvals/access ≥80%), но UI-presentation слой
-          # тянет вниз. Поднимаем threshold инкрементально по мере
-          # наращивания widget-tests на screens (план §9) и
+          # CI. Critical-domain logic покрыта высоко (finance/approvals/
+          # access ≥80%), но UI-presentation слой тянет вниз. Поднимаем
+          # инкрементально по мере наращивания widget-tests (план §9) и
           # re-baseline'а goldens.
           awk -v p="$pct" 'BEGIN { exit (p+0 < 30.0) }' || {
             echo "::error::Global coverage $pct% is below 30% threshold"
             exit 1
           }
 
-          # Per-domain gate ≥80% для critical: finance / approvals / access / traffic_light.
-          # ROAD_TO_100 Этап 9: критичная бизнес-логика должна иметь высокое покрытие.
+          # Per-domain gate (soft warning ≥60%, target ≥80%).
+          # `awk` range pattern извлекает DA-строки между SF:<domain> и
+          # end_of_record — старая версия с `grep -A 0 SF: | grep DA:`
+          # была сломана и всегда возвращала 0 (первый grep оставлял
+          # только SF-строки, в которых DA: отсутствует by definition).
           for domain in features/finance features/approvals core/access; do
-            dcovered=$(grep -A 0 "^SF:lib/$domain" coverage/lcov.info | grep -c '^DA:.*,[1-9]' || echo 0)
-            duncovered=$(grep -A 0 "^SF:lib/$domain" coverage/lcov.info | grep -c '^DA:.*,0$' || echo 0)
+            dblock=$(awk -v d="lib/$domain" '
+              $0 ~ "^SF:" d { in_block=1 }
+              in_block { print }
+              /^end_of_record/ { in_block=0 }
+            ' coverage/lcov.info)
+            dcovered=$(echo "$dblock" | grep -E '^DA:[0-9]+,[1-9]' | wc -l)
+            duncovered=$(echo "$dblock" | grep -E '^DA:[0-9]+,0$' | wc -l)
             dtotal=$((dcovered + duncovered))
             if [ "$dtotal" -eq 0 ]; then
               echo "::warning::Domain $domain: no coverage data"
@@ -103,7 +112,6 @@ jobs:
             fi
             dpct=$(awk "BEGIN { printf \"%.1f\", $dcovered * 100 / $dtotal }")
             echo "Domain $domain: $dpct%"
-            # Soft warning (не fatal) — поднимем до error после стабилизации.
             awk -v p="$dpct" 'BEGIN { exit (p+0 < 60.0) }' || {
               echo "::warning::Domain $domain coverage $dpct% is below 60% (target 80%)"
             }
