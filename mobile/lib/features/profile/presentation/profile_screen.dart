@@ -30,8 +30,7 @@ class ProfileScreen extends ConsumerWidget {
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить профиль',
           subtitle: e.toString(),
-          onRetry: () =>
-              ref.read(profileControllerProvider.notifier).refresh(),
+          onRetry: () => ref.read(profileControllerProvider.notifier).refresh(),
         ),
         data: (profile) => RefreshIndicator(
           onRefresh: () =>
@@ -41,13 +40,11 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               ProfileHero(
                 profile: profile,
-                onTapRole: () =>
-                    context.push(AppRoutes.profileRoleSwitcher),
+                onTapRole: () => context.push(AppRoutes.profileRoleSwitcher),
               ),
               const SizedBox(height: AppSpacing.x16),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
                 child: Column(
                   children: [
                     // Группа 1 — личное.
@@ -75,8 +72,7 @@ class ProfileScreen extends ConsumerWidget {
                           iconColor: AppColors.purple,
                           label: 'Права представителя',
                           sub: 'Справочный список доступных действий',
-                          onTap: () =>
-                              context.push(AppRoutes.profileRepRights),
+                          onTap: () => context.push(AppRoutes.profileRepRights),
                         ),
                         AppMenuRow(
                           icon: PhosphorIconsFill.wrench,
@@ -173,16 +169,14 @@ class ProfileScreen extends ConsumerWidget {
                           iconColor: AppColors.brand,
                           label: 'Обратная связь',
                           value: 'Telegram',
-                          onTap: () =>
-                              context.push(AppRoutes.profileFeedback),
+                          onTap: () => context.push(AppRoutes.profileFeedback),
                         ),
                         AppMenuRow(
                           icon: PhosphorIconsFill.filePdf,
                           iconBg: AppColors.brandLight,
                           iconColor: AppColors.brand,
                           label: 'Юридические документы',
-                          onTap: () =>
-                              LegalPublicationsSheet.show(context),
+                          onTap: () => LegalPublicationsSheet.show(context),
                         ),
                         AppMenuRow(
                           icon: PhosphorIconsFill.bookOpen,
@@ -249,16 +243,15 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   String? _unreadLabel(WidgetRef ref) {
-    final unread =
-        ref.watch(notificationsProvider).where((n) => !n.read).length;
+    final unread = ref
+        .watch(notificationsProvider)
+        .where((n) => !n.read)
+        .length;
     if (unread == 0) return null;
     return unread > 99 ? '99+' : '$unread';
   }
 
-  Future<void> _openLanguageSheet(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
+  Future<void> _openLanguageSheet(BuildContext context, WidgetRef ref) async {
     await showLanguageSheet(context, ref);
   }
 }

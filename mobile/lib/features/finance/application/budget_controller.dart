@@ -5,10 +5,12 @@ import '../data/payments_repository.dart';
 import '../domain/budget.dart';
 import '../domain/money_flow.dart';
 
-final projectBudgetProvider = AsyncNotifierProvider.family<
-    ProjectBudgetController, ProjectBudget, String>(
-  ProjectBudgetController.new,
-);
+final projectBudgetProvider =
+    AsyncNotifierProvider.family<
+      ProjectBudgetController,
+      ProjectBudget,
+      String
+    >(ProjectBudgetController.new);
 
 class ProjectBudgetController
     extends FamilyAsyncNotifier<ProjectBudget, String> {
@@ -18,13 +20,12 @@ class ProjectBudgetController
   }
 }
 
-final stageBudgetProvider = AsyncNotifierProvider.family<
-    StageBudgetController, StageBudget?, String>(
-  StageBudgetController.new,
-);
+final stageBudgetProvider =
+    AsyncNotifierProvider.family<StageBudgetController, StageBudget?, String>(
+      StageBudgetController.new,
+    );
 
-class StageBudgetController
-    extends FamilyAsyncNotifier<StageBudget?, String> {
+class StageBudgetController extends FamilyAsyncNotifier<StageBudget?, String> {
   @override
   Future<StageBudget?> build(String stageId) {
     return ref.read(paymentsRepositoryProvider).stageBudget(stageId);
@@ -36,8 +37,8 @@ class StageBudgetController
 /// + totals. Для остальных — пустой объект.
 final moneyFlowProvider =
     AsyncNotifierProvider.family<MoneyFlowController, MoneyFlow, String>(
-  MoneyFlowController.new,
-);
+      MoneyFlowController.new,
+    );
 
 class MoneyFlowController extends FamilyAsyncNotifier<MoneyFlow, String> {
   @override
@@ -69,19 +70,19 @@ class MoneyFlowQuery {
 
 /// Эта версия принимает date-range — используется в табе «Материалы»
 /// бюджета (e-budget-materials) для фильтрации по периоду.
-final moneyFlowFilteredProvider = AsyncNotifierProvider.family<
-    MoneyFlowFilteredController, MoneyFlow, MoneyFlowQuery>(
-  MoneyFlowFilteredController.new,
-);
+final moneyFlowFilteredProvider =
+    AsyncNotifierProvider.family<
+      MoneyFlowFilteredController,
+      MoneyFlow,
+      MoneyFlowQuery
+    >(MoneyFlowFilteredController.new);
 
 class MoneyFlowFilteredController
     extends FamilyAsyncNotifier<MoneyFlow, MoneyFlowQuery> {
   @override
   Future<MoneyFlow> build(MoneyFlowQuery query) {
-    return ref.read(paymentsRepositoryProvider).moneyFlow(
-          query.projectId,
-          from: query.from,
-          to: query.to,
-        );
+    return ref
+        .read(paymentsRepositoryProvider)
+        .moneyFlow(query.projectId, from: query.from, to: query.to);
   }
 }

@@ -28,8 +28,7 @@ class DemoStepsRepository extends StepsRepository {
     int? price,
     String? description,
     List<String>? assigneeIds,
-  }) async =>
-      DemoData.steps.first;
+  }) async => DemoData.steps.first;
 
   @override
   Future<Step> updateStep({
@@ -40,8 +39,7 @@ class DemoStepsRepository extends StepsRepository {
     List<String>? assigneeIds,
     String? whatDid,
     String? howDid,
-  }) async =>
-      DemoData.stepById(stepId);
+  }) async => DemoData.stepById(stepId);
 
   @override
   Future<void> deleteStep(String stepId) async {}
@@ -57,8 +55,7 @@ class DemoStepsRepository extends StepsRepository {
     String stepId, {
     String? whatDid,
     String? howDid,
-  }) async =>
-      DemoData.stepById(stepId);
+  }) async => DemoData.stepById(stepId);
 
   @override
   Future<Step> uncompleteStep(String stepId) async => DemoData.stepById(stepId);
@@ -67,15 +64,13 @@ class DemoStepsRepository extends StepsRepository {
   Future<Substep> addSubstep({
     required String stepId,
     required String text,
-  }) async =>
-      DemoData.substepsForStep.first;
+  }) async => DemoData.substepsForStep.first;
 
   @override
   Future<Substep> updateSubstep({
     required String substepId,
     required String text,
-  }) async =>
-      DemoData.substepsForStep.firstWhere((s) => s.id == substepId);
+  }) async => DemoData.substepsForStep.firstWhere((s) => s.id == substepId);
 
   @override
   Future<Substep> completeSubstep(String substepId) async =>
@@ -141,15 +136,13 @@ class DemoStepsRepository extends StepsRepository {
     required String stepId,
     required String text,
     required String addresseeId,
-  }) async =>
-      DemoData.questionsForStep.first;
+  }) async => DemoData.questionsForStep.first;
 
   @override
   Future<Question> answerQuestion({
     required String questionId,
     required String answer,
-  }) async =>
-      DemoData.questionsForStep.first;
+  }) async => DemoData.questionsForStep.first;
 
   @override
   Future<Question> closeQuestion(String questionId) async =>

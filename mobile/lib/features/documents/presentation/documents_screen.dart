@@ -13,25 +13,27 @@ import '../../stages/application/stages_controller.dart';
 import '../application/documents_controller.dart';
 import '../domain/document.dart';
 
-final _filterProvider =
-    StateProvider.autoDispose<DocumentCategory?>((_) => null);
+final _filterProvider = StateProvider.autoDispose<DocumentCategory?>(
+  (_) => null,
+);
 
 final _stageFilterProvider = StateProvider.autoDispose<String?>((_) => null);
 
-final _listProvider = FutureProvider.autoDispose
-    .family<List<Document>, String>((ref, projectId) async {
-  final filter = ref.watch(_filterProvider);
-  final stageId = ref.watch(_stageFilterProvider);
-  return ref.watch(
-    documentsListProvider(
-      DocumentsListParams(
-        projectId: projectId,
-        category: filter,
-        stageId: stageId,
-      ),
-    ).future,
-  );
-});
+final _listProvider = FutureProvider.autoDispose.family<List<Document>, String>(
+  (ref, projectId) async {
+    final filter = ref.watch(_filterProvider);
+    final stageId = ref.watch(_stageFilterProvider);
+    return ref.watch(
+      documentsListProvider(
+        DocumentsListParams(
+          projectId: projectId,
+          category: filter,
+          stageId: stageId,
+        ),
+      ).future,
+    );
+  },
+);
 
 /// `f-docs` / `f-docs-empty` / `f-docs-filter` (`Кластер F`).
 class DocumentsScreen extends ConsumerWidget {
@@ -43,9 +45,12 @@ class DocumentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_listProvider(projectId));
     final filter = ref.watch(_filterProvider);
-    final canWrite = ref.watch(canInProjectProvider(
-      (action: DomainAction.documentWrite, projectId: projectId),
-    ));
+    final canWrite = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.documentWrite,
+        projectId: projectId,
+      )),
+    );
 
     return AppScaffold(
       showBack: true,
@@ -55,8 +60,7 @@ class DocumentsScreen extends ConsumerWidget {
         IconButton(
           tooltip: 'Экспорт',
           icon: const Icon(Icons.cloud_download_outlined),
-          onPressed: () =>
-              showExportSheet(context, ref, projectId: projectId),
+          onPressed: () => showExportSheet(context, ref, projectId: projectId),
         ),
         if (canWrite)
           Padding(
@@ -77,8 +81,7 @@ class DocumentsScreen extends ConsumerWidget {
         children: [
           _CategoryFilter(
             selected: filter,
-            onChanged: (v) =>
-                ref.read(_filterProvider.notifier).state = v,
+            onChanged: (v) => ref.read(_filterProvider.notifier).state = v,
           ),
           _StageFilter(projectId: projectId),
           Expanded(
@@ -94,7 +97,8 @@ class DocumentsScreen extends ConsumerWidget {
                 if (docs.isEmpty) {
                   return AppEmptyState(
                     title: 'Нет документов',
-                    subtitle: 'Загрузите документы проекта: планы, сметы, '
+                    subtitle:
+                        'Загрузите документы проекта: планы, сметы, '
                         'чертежи',
                     icon: Icons.insert_drive_file_outlined,
                     actionLabel: canWrite ? 'Загрузить документ' : null,
@@ -119,8 +123,9 @@ class DocumentsScreen extends ConsumerWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (_, i) => _DocRow(
                       doc: docs[i],
-                      onTap: () => context
-                          .push(AppRoutes.documentDetailWith(docs[i].id)),
+                      onTap: () => context.push(
+                        AppRoutes.documentDetailWith(docs[i].id),
+                      ),
                     ),
                   ),
                 );
@@ -181,9 +186,7 @@ class _CategoryFilter extends StatelessWidget {
         if (id == '__all__') {
           onChanged(null);
         } else {
-          onChanged(
-            DocumentCategory.values.firstWhere((c) => c.name == id),
-          );
+          onChanged(DocumentCategory.values.firstWhere((c) => c.name == id));
         }
       },
     );
@@ -259,10 +262,7 @@ class _DocRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.n300,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
             ],
           ),
         ),
@@ -293,8 +293,7 @@ class _StageFilter extends ConsumerWidget {
         if (stages.isEmpty) return const SizedBox.shrink();
         final chips = <AppFilterPillSpec>[
           const AppFilterPillSpec(id: '__all__', label: 'Все этапы'),
-          for (final s in stages)
-            AppFilterPillSpec(id: s.id, label: s.title),
+          for (final s in stages) AppFilterPillSpec(id: s.id, label: s.title),
         ];
         return Container(
           decoration: const BoxDecoration(
@@ -305,8 +304,9 @@ class _StageFilter extends ConsumerWidget {
             chips: chips,
             activeId: selected ?? '__all__',
             onSelect: (id) {
-              ref.read(_stageFilterProvider.notifier).state =
-                  id == '__all__' ? null : id;
+              ref.read(_stageFilterProvider.notifier).state = id == '__all__'
+                  ? null
+                  : id;
             },
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           ),

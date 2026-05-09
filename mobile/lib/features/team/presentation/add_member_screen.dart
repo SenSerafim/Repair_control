@@ -51,10 +51,9 @@ class _AddMemberScreenState extends ConsumerState<AddMemberScreen> {
       _error = null;
     });
     try {
-      final user = await ref.read(teamRepositoryProvider).searchUser(
-            projectId: widget.projectId,
-            phone: raw,
-          );
+      final user = await ref
+          .read(teamRepositoryProvider)
+          .searchUser(projectId: widget.projectId, phone: raw);
       if (!mounted) return;
       setState(() => _searching = false);
       if (user != null) {
@@ -84,16 +83,14 @@ class _AddMemberScreenState extends ConsumerState<AddMemberScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final projectAsync =
-        ref.watch(projectControllerProvider(widget.projectId));
+    final projectAsync = ref.watch(projectControllerProvider(widget.projectId));
     final projectTitle = projectAsync.maybeWhen(
       data: (p) => p.title,
       orElse: () => '...',
     );
     final teamState = ref.watch(teamControllerProvider(widget.projectId));
     final recentMembers = teamState.maybeWhen<List<Membership>>(
-      data: (s) =>
-          s.members.where((m) => m.user != null).take(5).toList(),
+      data: (s) => s.members.where((m) => m.user != null).take(5).toList(),
       orElse: () => const <Membership>[],
     );
 
@@ -160,15 +157,15 @@ class _AddMemberScreenState extends ConsumerState<AddMemberScreen> {
             const SizedBox(height: AppSpacing.x10),
             Expanded(
               child: ListView.separated(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
                 itemCount: recentMembers.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: AppSpacing.x10),
                 itemBuilder: (_, i) {
                   final m = recentMembers[i];
                   return _MemberCard(
-                    initials: '${_initial(m.user!.firstName)}'
+                    initials:
+                        '${_initial(m.user!.firstName)}'
                         '${_initial(m.user!.lastName)}',
                     name: '${m.user!.firstName} ${m.user!.lastName}'.trim(),
                     role: m.role.displayName,
@@ -185,8 +182,7 @@ class _AddMemberScreenState extends ConsumerState<AddMemberScreen> {
     );
   }
 
-  String _initial(String s) =>
-      s.isEmpty ? '' : s.substring(0, 1).toUpperCase();
+  String _initial(String s) => s.isEmpty ? '' : s.substring(0, 1).toUpperCase();
 }
 
 class _ProjectBanner extends StatelessWidget {
@@ -249,12 +245,7 @@ class _MemberCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          AppAvatar(
-            seed: initials,
-            name: name,
-            size: 40,
-            palette: palette,
-          ),
+          AppAvatar(seed: initials, name: name, size: 40, palette: palette),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/access/user_scoped_providers.dart';
 import 'core/config/app_locale.dart';
 import 'core/config/app_providers.dart';
 import 'core/config/app_theme_mode.dart';
@@ -39,7 +40,10 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
       // Поднимаем воркер-stream (connectivity → drain).
       ..read(offlineQueueDrainProvider)
       // Автоподключение WebSocket при authenticated.
-      ..read(socketAutoconnectProvider);
+      ..read(socketAutoconnectProvider)
+      // Cross-session invalidation: на logout сбрасываем все user-scoped
+      // провайдеры (см. core/access/user_scoped_providers.dart).
+      ..read(userScopedInvalidationProvider);
     // Инициализируем FCM (soft-fail — работает без Firebase на dev).
     final fcm = FcmService(
       logger: ref.read(loggerProvider),

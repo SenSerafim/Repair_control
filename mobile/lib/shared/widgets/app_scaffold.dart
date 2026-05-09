@@ -74,7 +74,8 @@ class _AppScaffoldState extends State<AppScaffold> {
           ? AppBar(
               title: widget.title == null ? null : Text(widget.title!),
               titleTextStyle: AppTextStyles.h1,
-              leading: widget.leading ??
+              leading:
+                  widget.leading ??
                   (widget.showBack
                       ? IconButton(
                           icon: const Icon(

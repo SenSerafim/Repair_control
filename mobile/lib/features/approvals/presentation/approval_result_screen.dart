@@ -39,25 +39,21 @@ class ApprovalResultScreen extends ConsumerWidget {
       children: [
         SuccessScreen(
           title: _isError ? 'Согласование отклонено' : 'Этап одобрен',
-          subtitle: async.maybeWhen(
-            data: _summaryFor,
-            orElse: () => null,
-          ),
+          subtitle: async.maybeWhen(data: _summaryFor, orElse: () => null),
           isError: _isError,
           primaryLabel: 'К списку согласований',
           onPrimary: () => context.go('/projects/$projectId/approvals'),
           secondaryLabel: 'Открыть детали',
           onSecondary: () => context.push(
-            AppRoutes.approvalDetailWith(approvalId)
-                .replaceFirst('/approvals/', '/projects/$projectId/approvals/'),
+            AppRoutes.approvalDetailWith(
+              approvalId,
+            ).replaceFirst('/approvals/', '/projects/$projectId/approvals/'),
           ),
         ),
         Positioned(
           left: 0,
           right: 0,
-          bottom: AppSpacing.x16 +
-              MediaQuery.of(context).padding.bottom +
-              160,
+          bottom: AppSpacing.x16 + MediaQuery.of(context).padding.bottom + 160,
           child: Center(
             child: async.maybeWhen(
               data: (a) => _ResultMetaCard(approval: a, isError: _isError),
@@ -103,10 +99,7 @@ class _ResultMetaCard extends StatelessWidget {
           _MetaRow(label: 'Дата', value: df.format(decidedAt)),
           if (approval.attemptNumber > 1) ...[
             const SizedBox(height: 6),
-            _MetaRow(
-              label: 'Попытка',
-              value: '№${approval.attemptNumber}',
-            ),
+            _MetaRow(label: 'Попытка', value: '№${approval.attemptNumber}'),
           ],
         ],
       ),

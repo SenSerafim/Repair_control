@@ -19,11 +19,11 @@ enum InvitationStatus {
   }
 
   String get displayName => switch (this) {
-        InvitationStatus.pending => 'Ожидает',
-        InvitationStatus.accepted => 'Принято',
-        InvitationStatus.cancelled => 'Отменено',
-        InvitationStatus.expired => 'Истекло',
-      };
+    InvitationStatus.pending => 'Ожидает',
+    InvitationStatus.accepted => 'Принято',
+    InvitationStatus.cancelled => 'Отменено',
+    InvitationStatus.expired => 'Истекло',
+  };
 }
 
 @freezed

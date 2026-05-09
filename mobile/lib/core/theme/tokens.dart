@@ -128,9 +128,9 @@ class AppRadius {
   static BorderRadius get buttonSm => BorderRadius.circular(r16);
   static BorderRadius get container => BorderRadius.circular(r20);
   static BorderRadius get bottomSheet => const BorderRadius.only(
-        topLeft: Radius.circular(r28),
-        topRight: Radius.circular(r28),
-      );
+    topLeft: Radius.circular(r28),
+    topRight: Radius.circular(r28),
+  );
 }
 
 class AppShadows {
@@ -240,11 +240,7 @@ class AppShadows {
 
   /// Красный glow — overdue/disputed status indicator.
   static const List<BoxShadow> glowRed = [
-    BoxShadow(
-      color: Color(0x40DC2626),
-      blurRadius: 12,
-      spreadRadius: 1,
-    ),
+    BoxShadow(color: Color(0x40DC2626), blurRadius: 12, spreadRadius: 1),
   ];
 
   /// Золотой glow — 100%-complete (HouseProgress, StageDone celebration).
@@ -275,8 +271,12 @@ class AppSpacing {
 
   static const EdgeInsets screen = EdgeInsets.symmetric(horizontal: x16);
   static const EdgeInsets cardInset = EdgeInsets.all(x14);
-  static const EdgeInsets bottomSheet =
-      EdgeInsets.fromLTRB(x20, x14, x20, x40 + x4);
+  static const EdgeInsets bottomSheet = EdgeInsets.fromLTRB(
+    x20,
+    x14,
+    x20,
+    x40 + x4,
+  );
 }
 
 class AppDurations {
@@ -295,11 +295,7 @@ class AppGradients {
   static const LinearGradient heroDark = LinearGradient(
     begin: Alignment(-0.6, -1),
     end: Alignment(0.6, 1),
-    colors: [
-      Color(0xFF0F172A),
-      Color(0xFF1E3A5F),
-      Color(0xFF1D4ED8),
-    ],
+    colors: [Color(0xFF0F172A), Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
     stops: [0, 0.5, 1],
   );
 
@@ -307,11 +303,7 @@ class AppGradients {
   static const LinearGradient heroProfile = LinearGradient(
     begin: Alignment(-0.6, -1),
     end: Alignment(0.6, 1),
-    colors: [
-      Color(0xFF0F172A),
-      Color(0xFF1A2D5A),
-      Color(0xFF2A3F7E),
-    ],
+    colors: [Color(0xFF0F172A), Color(0xFF1A2D5A), Color(0xFF2A3F7E)],
     stops: [0, 0.5, 1],
   );
 

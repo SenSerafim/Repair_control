@@ -44,10 +44,7 @@ class _MemberFoundScreenState extends ConsumerState<MemberFoundScreen> {
     setState(() => _busy = true);
     final failure = await ref
         .read(teamControllerProvider(widget.projectId).notifier)
-        .addMember(
-          userId: widget.args.userId,
-          role: MembershipRole.foreman,
-        );
+        .addMember(userId: widget.args.userId, role: MembershipRole.foreman);
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure == null) {
@@ -68,8 +65,7 @@ class _MemberFoundScreenState extends ConsumerState<MemberFoundScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final fullName =
-        '${widget.args.firstName} ${widget.args.lastName}'.trim();
+    final fullName = '${widget.args.firstName} ${widget.args.lastName}'.trim();
     final ctaLabel = _kind == _AssignKind.project
         ? 'Назначить бригадиром'
         : 'Выбрать этап';
@@ -171,8 +167,7 @@ class _MemberFoundScreenState extends ConsumerState<MemberFoundScreen> {
                   title: 'На проект',
                   sub: 'Бригадир',
                   selected: _kind == _AssignKind.project,
-                  onTap: () =>
-                      setState(() => _kind = _AssignKind.project),
+                  onTap: () => setState(() => _kind = _AssignKind.project),
                 ),
               ),
               const SizedBox(width: AppSpacing.x8),
@@ -190,7 +185,8 @@ class _MemberFoundScreenState extends ConsumerState<MemberFoundScreen> {
           ),
           const SizedBox(height: AppSpacing.x12),
           _HintBox(
-            text: '«На проект» — видит все этапы, назначает мастеров. '
+            text:
+                '«На проект» — видит все этапы, назначает мастеров. '
                 '«На этап» — работает только в выбранном этапе.',
           ),
           const SizedBox(height: AppSpacing.x20),
@@ -297,11 +293,7 @@ class _HintBox extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            PhosphorIconsRegular.info,
-            size: 16,
-            color: AppColors.brand,
-          ),
+          Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.brand),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

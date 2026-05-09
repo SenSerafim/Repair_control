@@ -5,10 +5,12 @@ import '../../finance/application/budget_controller.dart';
 import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
 
-final materialsControllerProvider = AsyncNotifierProvider.family<
-    MaterialsController, List<MaterialRequest>, String>(
-  MaterialsController.new,
-);
+final materialsControllerProvider =
+    AsyncNotifierProvider.family<
+      MaterialsController,
+      List<MaterialRequest>,
+      String
+    >(MaterialsController.new);
 
 class MaterialsController
     extends FamilyAsyncNotifier<List<MaterialRequest>, String> {
@@ -30,9 +32,7 @@ class MaterialsController
     final cur = state.value ?? const <MaterialRequest>[];
     final exists = cur.any((x) => x.id == r.id);
     state = AsyncData(
-      exists
-          ? cur.map((x) => x.id == r.id ? r : x).toList()
-          : [r, ...cur],
+      exists ? cur.map((x) => x.id == r.id ? r : x).toList() : [r, ...cur],
     );
   }
 
@@ -64,14 +64,13 @@ class MaterialsController
     required String requestId,
     required String itemId,
     required int pricePerUnit,
-  }) =>
-      _run(
-        () => _repo.markBought(
-          requestId: requestId,
-          itemId: itemId,
-          pricePerUnit: pricePerUnit,
-        ),
-      );
+  }) => _run(
+    () => _repo.markBought(
+      requestId: requestId,
+      itemId: itemId,
+      pricePerUnit: pricePerUnit,
+    ),
+  );
   Future<AuthFailure?> finalizeRequest(String id) async {
     final failure = await _run(() => _repo.finalizeRequest(id));
     if (failure == null) _invalidateBudget();
@@ -86,8 +85,9 @@ class MaterialsController
     required String id,
     required String resolution,
   }) async {
-    final failure =
-        await _run(() => _repo.resolve(id: id, resolution: resolution));
+    final failure = await _run(
+      () => _repo.resolve(id: id, resolution: resolution),
+    );
     if (failure == null) _invalidateBudget();
     return failure;
   }
@@ -103,10 +103,12 @@ class MaterialsController
   }
 }
 
-final materialDetailProvider = AsyncNotifierProvider.family<
-    MaterialDetailController, MaterialRequest, String>(
-  MaterialDetailController.new,
-);
+final materialDetailProvider =
+    AsyncNotifierProvider.family<
+      MaterialDetailController,
+      MaterialRequest,
+      String
+    >(MaterialDetailController.new);
 
 class MaterialDetailController
     extends FamilyAsyncNotifier<MaterialRequest, String> {

@@ -21,5 +21,5 @@ class LegalPublicationsRepository {
 
 final legalPublicationsRepositoryProvider =
     Provider<LegalPublicationsRepository>(
-  (ref) => LegalPublicationsRepository(ref.read(dioProvider)),
-);
+      (ref) => LegalPublicationsRepository(ref.read(dioProvider)),
+    );

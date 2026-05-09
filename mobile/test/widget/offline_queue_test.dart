@@ -17,7 +17,10 @@ void main() {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
-  OfflineQueue build() => OfflineQueue(logger: Logger(level: Level.off), file: file);
+  OfflineQueue build() => OfflineQueue(
+    logger: Logger(level: Level.off),
+    file: file,
+  );
 
   test('enqueue сохраняет в файл и переживает перезагрузку', () async {
     final q1 = build();
@@ -87,10 +90,7 @@ void main() {
   test('drain без handler → action удаляется без ошибки', () async {
     final q = build();
     await q.load();
-    await q.enqueue(
-      kind: OfflineActionKind.questionAnswer,
-      payload: {'q': 1},
-    );
+    await q.enqueue(kind: OfflineActionKind.questionAnswer, payload: {'q': 1});
     await q.drain();
     expect(q.pending, isEmpty);
   });

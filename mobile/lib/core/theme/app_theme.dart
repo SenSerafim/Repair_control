@@ -95,26 +95,20 @@ class AppTheme {
       splashFactory: InkSparkle.splashFactory,
       visualDensity: VisualDensity.standard,
       textTheme: TextTheme(
-        displayLarge:
-            AppTextStyles.screenTitle.copyWith(color: AppColorsDark.n800),
-        headlineMedium:
-            AppTextStyles.h1.copyWith(color: AppColorsDark.n800),
-        titleLarge:
-            AppTextStyles.h2.copyWith(color: AppColorsDark.n800),
-        titleMedium:
-            AppTextStyles.subtitle.copyWith(color: AppColorsDark.n800),
-        bodyLarge:
-            AppTextStyles.body.copyWith(color: AppColorsDark.n700),
-        bodyMedium:
-            AppTextStyles.bodyMedium.copyWith(color: AppColorsDark.n700),
-        bodySmall:
-            AppTextStyles.caption.copyWith(color: AppColorsDark.n600),
-        labelLarge:
-            AppTextStyles.button.copyWith(color: AppColorsDark.n900),
-        labelMedium:
-            AppTextStyles.buttonSm.copyWith(color: AppColorsDark.n900),
-        labelSmall:
-            AppTextStyles.micro.copyWith(color: AppColorsDark.n500),
+        displayLarge: AppTextStyles.screenTitle.copyWith(
+          color: AppColorsDark.n800,
+        ),
+        headlineMedium: AppTextStyles.h1.copyWith(color: AppColorsDark.n800),
+        titleLarge: AppTextStyles.h2.copyWith(color: AppColorsDark.n800),
+        titleMedium: AppTextStyles.subtitle.copyWith(color: AppColorsDark.n800),
+        bodyLarge: AppTextStyles.body.copyWith(color: AppColorsDark.n700),
+        bodyMedium: AppTextStyles.bodyMedium.copyWith(
+          color: AppColorsDark.n700,
+        ),
+        bodySmall: AppTextStyles.caption.copyWith(color: AppColorsDark.n600),
+        labelLarge: AppTextStyles.button.copyWith(color: AppColorsDark.n900),
+        labelMedium: AppTextStyles.buttonSm.copyWith(color: AppColorsDark.n900),
+        labelSmall: AppTextStyles.micro.copyWith(color: AppColorsDark.n500),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColorsDark.n50,

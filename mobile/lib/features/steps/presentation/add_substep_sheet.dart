@@ -101,8 +101,7 @@ class _AddSubstepBodyState extends ConsumerState<_AddSubstepBody> {
             contentPadding: const EdgeInsets.all(12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
           ),
         ),

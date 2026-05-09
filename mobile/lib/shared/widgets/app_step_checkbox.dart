@@ -32,9 +32,7 @@ class AppStepCheckbox extends StatelessWidget {
         decoration: BoxDecoration(
           color: checked ? AppColors.greenDot : AppColors.n0,
           shape: BoxShape.circle,
-          border: checked
-              ? null
-              : Border.all(color: AppColors.n300, width: 2),
+          border: checked ? null : Border.all(color: AppColors.n300, width: 2),
           boxShadow: checked ? AppShadows.glowGreen : null,
         ),
         alignment: Alignment.center,

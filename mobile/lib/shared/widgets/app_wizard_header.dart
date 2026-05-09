@@ -34,8 +34,7 @@ class AppWizardHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
         decoration: const BoxDecoration(
           color: AppColors.n0,
-          border:
-              Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
+          border: Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,8 +138,8 @@ class _StepPills extends StatelessWidget {
       final state = i < step
           ? _PillState.done
           : i == step
-              ? _PillState.active
-              : _PillState.inactive;
+          ? _PillState.active
+          : _PillState.inactive;
       widgets.add(_Pill(label: '$i', state: state));
       if (i < total) {
         widgets.add(
@@ -174,20 +173,12 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg, shadow) = switch (state) {
       _PillState.done => (
-          const Color(0xFFDEF7EC),
-          const Color(0xFF057A55),
-          <BoxShadow>[],
-        ),
-      _PillState.active => (
-          AppColors.brand,
-          AppColors.n0,
-          AppShadows.shBlue,
-        ),
-      _PillState.inactive => (
-          AppColors.n100,
-          AppColors.n400,
-          <BoxShadow>[],
-        ),
+        const Color(0xFFDEF7EC),
+        const Color(0xFF057A55),
+        <BoxShadow>[],
+      ),
+      _PillState.active => (AppColors.brand, AppColors.n0, AppShadows.shBlue),
+      _PillState.inactive => (AppColors.n100, AppColors.n400, <BoxShadow>[]),
     };
 
     return AnimatedContainer(
@@ -201,7 +192,11 @@ class _Pill extends StatelessWidget {
         boxShadow: shadow,
       ),
       child: state == _PillState.done
-          ? const Icon(PhosphorIconsBold.check, size: 14, color: Color(0xFF057A55))
+          ? const Icon(
+              PhosphorIconsBold.check,
+              size: 14,
+              color: Color(0xFF057A55),
+            )
           : Text(
               label,
               style: TextStyle(

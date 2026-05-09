@@ -10,8 +10,8 @@ import '../domain/app_notification.dart';
 /// Восстанавливается при старте приложения, ограничен 200 записями.
 final notificationsProvider =
     NotifierProvider<NotificationsController, List<AppNotification>>(
-  NotificationsController.new,
-);
+      NotificationsController.new,
+    );
 
 class NotificationsController extends Notifier<List<AppNotification>> {
   static const _uuid = Uuid();
@@ -53,7 +53,8 @@ class NotificationsController extends Notifier<List<AppNotification>> {
 
   void markRead(String id) {
     state = [
-      for (final n in state) if (n.id == id) n.copyWith(read: true) else n,
+      for (final n in state)
+        if (n.id == id) n.copyWith(read: true) else n,
     ];
     _persist();
   }

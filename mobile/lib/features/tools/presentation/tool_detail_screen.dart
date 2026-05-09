@@ -64,11 +64,7 @@ class _Body extends ConsumerWidget {
                 color: iconBg,
                 borderRadius: BorderRadius.circular(AppRadius.r16),
               ),
-              child: Icon(
-                PhosphorIconsFill.wrench,
-                size: 28,
-                color: iconColor,
-              ),
+              child: Icon(PhosphorIconsFill.wrench, size: 28, color: iconColor),
             ),
             const SizedBox(width: AppSpacing.x14),
             Expanded(
@@ -128,10 +124,7 @@ class _Body extends ConsumerWidget {
               const _Divider(),
               _DetailRow(label: 'На складе', value: '${tool.availableQty}'),
               const _Divider(),
-              _DetailRow(
-                label: 'Создан',
-                value: df.format(tool.createdAt),
-              ),
+              _DetailRow(label: 'Создан', value: df.format(tool.createdAt)),
             ],
           ),
         ),
@@ -246,8 +239,7 @@ class _Timeline extends StatelessWidget {
               text: 'Выдан (${tool.issuedQty} шт.)',
               dateText: df.format(tool.updatedAt),
             ),
-          if (tool.issuedQty > 0)
-            const SizedBox(height: AppSpacing.x12),
+          if (tool.issuedQty > 0) const SizedBox(height: AppSpacing.x12),
           _TimelineRow(
             dotColor: AppColors.greenDark,
             text: 'Добавлен в список',

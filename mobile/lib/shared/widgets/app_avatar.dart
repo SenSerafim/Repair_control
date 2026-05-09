@@ -15,12 +15,12 @@ enum AvatarPalette {
   grey;
 
   (Color, Color) get colors => switch (this) {
-        AvatarPalette.blue => (AppColors.brand, AppColors.brandDark),
-        AvatarPalette.green => (AppColors.greenDot, AppColors.greenDark),
-        AvatarPalette.yellow => (AppColors.yellowDot, AppColors.yellowText),
-        AvatarPalette.purple => (AppColors.purple, AppColors.purple),
-        AvatarPalette.grey => (AppColors.n500, AppColors.n700),
-      };
+    AvatarPalette.blue => (AppColors.brand, AppColors.brandDark),
+    AvatarPalette.green => (AppColors.greenDot, AppColors.greenDark),
+    AvatarPalette.yellow => (AppColors.yellowDot, AppColors.yellowText),
+    AvatarPalette.purple => (AppColors.purple, AppColors.purple),
+    AvatarPalette.grey => (AppColors.n500, AppColors.n700),
+  };
 
   /// Стабильно выбрать палитру по [seed] (userId / name / id).
   /// Чистая функция — те же входные данные дают тот же результат.

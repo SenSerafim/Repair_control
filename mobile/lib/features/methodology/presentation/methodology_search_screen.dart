@@ -61,8 +61,7 @@ class _MethodologySearchScreenState
                 size: 20,
               ),
               hintText: 'Например, «гипсокартон»',
-              hintStyle:
-                  AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
               filled: true,
               fillColor: AppColors.n0,
               contentPadding: const EdgeInsets.symmetric(
@@ -71,8 +70,7 @@ class _MethodologySearchScreenState
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
             ),
           ),
@@ -88,8 +86,8 @@ class _MethodologySearchScreenState
                     loading: () => const AppLoadingState(),
                     error: (e, _) => AppErrorState(
                       title: 'Ошибка поиска',
-                      onRetry: () => ref
-                          .invalidate(methodologySearchResultsProvider),
+                      onRetry: () =>
+                          ref.invalidate(methodologySearchResultsProvider),
                     ),
                     data: (hits) {
                       if (hits.isEmpty) {
@@ -184,10 +182,7 @@ class _SnippetText extends StatelessWidget {
       spans.add(TextSpan(text: snippet.substring(lastEnd)));
     }
     return Text.rich(
-      TextSpan(
-        children: spans,
-        style: AppTextStyles.caption,
-      ),
+      TextSpan(children: spans, style: AppTextStyles.caption),
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
     );

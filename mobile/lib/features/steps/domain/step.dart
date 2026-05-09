@@ -23,12 +23,12 @@ enum StepStatus {
   rejected;
 
   String get apiValue => switch (this) {
-        StepStatus.pending => 'pending',
-        StepStatus.inProgress => 'in_progress',
-        StepStatus.done => 'done',
-        StepStatus.pendingApproval => 'pending_approval',
-        StepStatus.rejected => 'rejected',
-      };
+    StepStatus.pending => 'pending',
+    StepStatus.inProgress => 'in_progress',
+    StepStatus.done => 'done',
+    StepStatus.pendingApproval => 'pending_approval',
+    StepStatus.rejected => 'rejected',
+  };
 
   static StepStatus fromString(String? raw) {
     switch (raw) {
@@ -47,20 +47,20 @@ enum StepStatus {
   }
 
   String get displayName => switch (this) {
-        StepStatus.pending => 'Ожидает',
-        StepStatus.inProgress => 'В работе',
-        StepStatus.done => 'Выполнен',
-        StepStatus.pendingApproval => 'На согласовании',
-        StepStatus.rejected => 'Отклонён',
-      };
+    StepStatus.pending => 'Ожидает',
+    StepStatus.inProgress => 'В работе',
+    StepStatus.done => 'Выполнен',
+    StepStatus.pendingApproval => 'На согласовании',
+    StepStatus.rejected => 'Отклонён',
+  };
 
   Semaphore get semaphore => switch (this) {
-        StepStatus.pending => Semaphore.plan,
-        StepStatus.inProgress => Semaphore.green,
-        StepStatus.done => Semaphore.green,
-        StepStatus.pendingApproval => Semaphore.blue,
-        StepStatus.rejected => Semaphore.red,
-      };
+    StepStatus.pending => Semaphore.plan,
+    StepStatus.inProgress => Semaphore.green,
+    StepStatus.done => Semaphore.green,
+    StepStatus.pendingApproval => Semaphore.blue,
+    StepStatus.rejected => Semaphore.red,
+  };
 }
 
 @freezed
@@ -96,41 +96,42 @@ class Step with _$Step {
   }) = _Step;
 
   static Step parse(Map<String, dynamic> json) => Step(
-        id: json['id'] as String,
-        stageId: json['stageId'] as String,
-        title: json['title'] as String,
-        orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
-        type: StepType.fromString(json['type'] as String?),
-        status: StepStatus.fromString(json['status'] as String?),
-        price: (json['price'] as num?)?.toInt(),
-        description: json['description'] as String?,
-        authorId: json['authorId'] as String? ?? '',
-        assigneeIds: (json['assigneeIds'] as List<dynamic>? ?? const [])
-            .map((e) => e.toString())
-            .toList(),
-        doneAt: _date(json['doneAt']),
-        doneById: json['doneById'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        substepsCount:
-            (json['substepsCount'] as num?)?.toInt() ??
-                (json['substeps'] as List<dynamic>?)?.length ??
-                0,
-        substepsDone: (json['substepsDone'] as num?)?.toInt() ??
-            (json['substeps'] as List<dynamic>? ?? const [])
-                .where((s) => (s as Map)['isDone'] == true)
-                .length,
-        photosCount: (json['photosCount'] as num?)?.toInt() ??
-            (json['photos'] as List<dynamic>?)?.length ??
-            0,
-        methodologyArticleId: json['methodologyArticleId'] as String?,
-        whatDid: json['whatDid'] as String?,
-        howDid: json['howDid'] as String?,
-      );
+    id: json['id'] as String,
+    stageId: json['stageId'] as String,
+    title: json['title'] as String,
+    orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
+    type: StepType.fromString(json['type'] as String?),
+    status: StepStatus.fromString(json['status'] as String?),
+    price: (json['price'] as num?)?.toInt(),
+    description: json['description'] as String?,
+    authorId: json['authorId'] as String? ?? '',
+    assigneeIds: (json['assigneeIds'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toList(),
+    doneAt: _date(json['doneAt']),
+    doneById: json['doneById'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    substepsCount:
+        (json['substepsCount'] as num?)?.toInt() ??
+        (json['substeps'] as List<dynamic>?)?.length ??
+        0,
+    substepsDone:
+        (json['substepsDone'] as num?)?.toInt() ??
+        (json['substeps'] as List<dynamic>? ?? const [])
+            .where((s) => (s as Map)['isDone'] == true)
+            .length,
+    photosCount:
+        (json['photosCount'] as num?)?.toInt() ??
+        (json['photos'] as List<dynamic>?)?.length ??
+        0,
+    methodologyArticleId: json['methodologyArticleId'] as String?,
+    whatDid: json['whatDid'] as String?,
+    howDid: json['howDid'] as String?,
+  );
 }
 
-DateTime? _date(Object? raw) =>
-    raw is String ? DateTime.tryParse(raw) : null;
+DateTime? _date(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;
 
 extension StepX on Step {
   bool get isDone => status == StepStatus.done;

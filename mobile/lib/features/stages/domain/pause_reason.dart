@@ -9,35 +9,34 @@ enum PauseReason {
 
   /// API-значение для отправки на бекенд.
   String get apiValue => switch (this) {
-        PauseReason.materials => 'materials',
-        PauseReason.approval => 'approval',
-        PauseReason.forceMajeure => 'force_majeure',
-        PauseReason.other => 'other',
-      };
+    PauseReason.materials => 'materials',
+    PauseReason.approval => 'approval',
+    PauseReason.forceMajeure => 'force_majeure',
+    PauseReason.other => 'other',
+  };
 
   String get displayName => switch (this) {
-        PauseReason.materials => 'Ждём материалы',
-        PauseReason.approval => 'Ждём согласование',
-        PauseReason.forceMajeure => 'Форс-мажор',
-        PauseReason.other => 'Другая причина',
-      };
+    PauseReason.materials => 'Ждём материалы',
+    PauseReason.approval => 'Ждём согласование',
+    PauseReason.forceMajeure => 'Форс-мажор',
+    PauseReason.other => 'Другая причина',
+  };
 
   String get hint => switch (this) {
-        PauseReason.materials =>
-          'Материалы не привезли или заказчик не подтвердил.',
-        PauseReason.approval =>
-          'Ждём ответ заказчика по согласованию.',
-        PauseReason.forceMajeure =>
-          'Обстоятельства вне зоны контроля (погода, доступ, …).',
-        PauseReason.other => 'Укажите подробности в комментарии.',
-      };
+    PauseReason.materials =>
+      'Материалы не привезли или заказчик не подтвердил.',
+    PauseReason.approval => 'Ждём ответ заказчика по согласованию.',
+    PauseReason.forceMajeure =>
+      'Обстоятельства вне зоны контроля (погода, доступ, …).',
+    PauseReason.other => 'Укажите подробности в комментарии.',
+  };
 
   IconData get icon => switch (this) {
-        PauseReason.materials => Icons.inventory_2_outlined,
-        PauseReason.approval => Icons.pending_actions_outlined,
-        PauseReason.forceMajeure => Icons.warning_amber_rounded,
-        PauseReason.other => Icons.edit_note_outlined,
-      };
+    PauseReason.materials => Icons.inventory_2_outlined,
+    PauseReason.approval => Icons.pending_actions_outlined,
+    PauseReason.forceMajeure => Icons.warning_amber_rounded,
+    PauseReason.other => Icons.edit_note_outlined,
+  };
 
   static PauseReason fromApiValue(String? raw) {
     switch (raw) {

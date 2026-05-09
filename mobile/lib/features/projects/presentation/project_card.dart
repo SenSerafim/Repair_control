@@ -40,10 +40,7 @@ class ProjectCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  height: 3,
-                  color: project.semaphore.dot,
-                ),
+                Container(height: 3, color: project.semaphore.dot),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
                   child: Column(

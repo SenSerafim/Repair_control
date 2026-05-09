@@ -8,10 +8,7 @@ import '../../core/theme/tokens.dart';
 /// padding 2×6 + radius 4`. Используется на approved/completed/paid/
 /// partial_purchase/dateChanged event-items.
 class AppImmutableBadge extends StatelessWidget {
-  const AppImmutableBadge({
-    this.text = 'Неизменяемое',
-    super.key,
-  });
+  const AppImmutableBadge({this.text = 'Неизменяемое', super.key});
 
   final String text;
 
@@ -26,7 +23,11 @@ class AppImmutableBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_outline_rounded, size: 10, color: AppColors.n400),
+          const Icon(
+            Icons.lock_outline_rounded,
+            size: 10,
+            color: AppColors.n400,
+          ),
           const SizedBox(width: 3),
           Text(
             text,

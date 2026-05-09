@@ -5,8 +5,8 @@ import '../domain/methodology.dart';
 
 final methodologySectionsProvider =
     AsyncNotifierProvider<SectionsController, List<MethodologySection>>(
-  SectionsController.new,
-);
+      SectionsController.new,
+    );
 
 class SectionsController extends AsyncNotifier<List<MethodologySection>> {
   @override
@@ -26,10 +26,10 @@ class SectionsController extends AsyncNotifier<List<MethodologySection>> {
   }
 }
 
-final methodologySectionProvider = AsyncNotifierProvider.family<
-    SectionController, MethodologySection, String>(
-  SectionController.new,
-);
+final methodologySectionProvider =
+    AsyncNotifierProvider.family<SectionController, MethodologySection, String>(
+      SectionController.new,
+    );
 
 class SectionController
     extends FamilyAsyncNotifier<MethodologySection, String> {
@@ -39,10 +39,10 @@ class SectionController
   }
 }
 
-final methodologyArticleProvider = AsyncNotifierProvider.family<
-    ArticleController, MethodologyArticle, String>(
-  ArticleController.new,
-);
+final methodologyArticleProvider =
+    AsyncNotifierProvider.family<ArticleController, MethodologyArticle, String>(
+      ArticleController.new,
+    );
 
 class ArticleController
     extends FamilyAsyncNotifier<MethodologyArticle, String> {
@@ -56,7 +56,7 @@ final methodologySearchQueryProvider = StateProvider<String>((ref) => '');
 
 final methodologySearchResultsProvider =
     FutureProvider<List<MethodologySearchHit>>((ref) async {
-  final query = ref.watch(methodologySearchQueryProvider).trim();
-  if (query.length < 2) return const [];
-  return ref.read(methodologyRepositoryProvider).search(query);
-});
+      final query = ref.watch(methodologySearchQueryProvider).trim();
+      if (query.length < 2) return const [];
+      return ref.read(methodologyRepositoryProvider).search(query);
+    });

@@ -37,24 +37,15 @@ void main() {
     });
 
     test('payment — глобальный маршрут, даже без projectId', () {
-      expect(
-        DeepLinkRouter.routeFor({'paymentId': 'pay1'}),
-        '/payments/pay1',
-      );
+      expect(DeepLinkRouter.routeFor({'paymentId': 'pay1'}), '/payments/pay1');
     });
 
     test('chat — глобальный маршрут', () {
-      expect(
-        DeepLinkRouter.routeFor({'chatId': 'c1'}),
-        '/chats/c1',
-      );
+      expect(DeepLinkRouter.routeFor({'chatId': 'c1'}), '/chats/c1');
     });
 
     test('project fallback', () {
-      expect(
-        DeepLinkRouter.routeFor({'projectId': 'p1'}),
-        '/projects/p1',
-      );
+      expect(DeepLinkRouter.routeFor({'projectId': 'p1'}), '/projects/p1');
     });
 
     test('пустой payload → null', () {
@@ -96,10 +87,7 @@ void main() {
     });
 
     test('chat_* → chat', () {
-      expect(
-        DeepLinkRouter.categoryOf('chat_message'),
-        NotificationRoute.chat,
-      );
+      expect(DeepLinkRouter.categoryOf('chat_message'), NotificationRoute.chat);
     });
 
     test('material_/selfpurchase_/tool_issued → materials', () {

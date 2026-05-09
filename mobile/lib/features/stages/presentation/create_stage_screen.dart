@@ -24,8 +24,7 @@ class CreateStageScreen extends ConsumerStatefulWidget {
   final String projectId;
 
   @override
-  ConsumerState<CreateStageScreen> createState() =>
-      _CreateStageScreenState();
+  ConsumerState<CreateStageScreen> createState() => _CreateStageScreenState();
 }
 
 class _CreateStageScreenState extends ConsumerState<CreateStageScreen> {
@@ -198,8 +197,9 @@ class _BlankFormState extends ConsumerState<_BlankForm> {
                   const SizedBox(height: AppSpacing.x8),
                   Text(
                     'Конец должен быть позже старта.',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.redDot),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.redDot,
+                    ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.x20),
@@ -211,10 +211,7 @@ class _BlankFormState extends ConsumerState<_BlankForm> {
                 const SizedBox(height: AppSpacing.x10),
                 MoneyInput(controller: _workBudget, label: 'Работы'),
                 const SizedBox(height: AppSpacing.x12),
-                MoneyInput(
-                  controller: _materialsBudget,
-                  label: 'Материалы',
-                ),
+                MoneyInput(controller: _materialsBudget, label: 'Материалы'),
                 if (_totalBudget != null && _totalBudget! > 0) ...[
                   const SizedBox(height: AppSpacing.x10),
                   _BudgetSummary(total: _totalBudget!),
@@ -223,7 +220,8 @@ class _BlankFormState extends ConsumerState<_BlankForm> {
                 const _SectionHeader(
                   number: 4,
                   title: 'Бригадиры',
-                  hint: 'Кто отвечает за этап. '
+                  hint:
+                      'Кто отвечает за этап. '
                       'Можно выбрать нескольких или не выбирать.',
                 ),
                 const SizedBox(height: AppSpacing.x10),
@@ -266,8 +264,8 @@ class _BlankFormState extends ConsumerState<_BlankForm> {
                     onPressed: _submitting
                         ? null
                         : () => context.push(
-                              AppRoutes.stagesTemplatesWith(widget.projectId),
-                            ),
+                            AppRoutes.stagesTemplatesWith(widget.projectId),
+                          ),
                   ),
                 ],
               ),
@@ -357,8 +355,7 @@ class _BudgetSummary extends StatelessWidget {
           Expanded(
             child: Text(
               'Итого по этапу',
-              style:
-                  AppTextStyles.caption.copyWith(color: AppColors.brandDark),
+              style: AppTextStyles.caption.copyWith(color: AppColors.brandDark),
             ),
           ),
           Text(
@@ -421,17 +418,15 @@ class _ForemanPicker extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.engineering_outlined,
-                  color: AppColors.n400,
-                ),
+                const Icon(Icons.engineering_outlined, color: AppColors.n400),
                 const SizedBox(width: AppSpacing.x10),
                 Expanded(
                   child: Text(
                     'В команде пока нет бригадиров. '
                     'Можно создать этап и назначить позже на странице «Команда».',
-                    style:
-                        AppTextStyles.caption.copyWith(color: AppColors.n500),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.n500,
+                    ),
                   ),
                 ),
               ],
@@ -508,10 +503,7 @@ class _ForemanRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (user?.phone != null && user!.phone.isNotEmpty)
-                      Text(
-                        user.phone,
-                        style: AppTextStyles.caption,
-                      ),
+                      Text(user.phone, style: AppTextStyles.caption),
                   ],
                 ),
               ),
@@ -609,32 +601,29 @@ class _DateTile extends StatelessWidget {
 }
 
 InputDecoration _dec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.redDot, width: 1.5),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.redDot, width: 1.5),
-      ),
-    );
+  hintText: hint,
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  filled: true,
+  fillColor: AppColors.n0,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+  ),
+  errorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.redDot, width: 1.5),
+  ),
+  focusedErrorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.redDot, width: 1.5),
+  ),
+);

@@ -22,11 +22,7 @@ void main() {
   group('AppStepCheckbox', () {
     testWidgets('checked → checkmark icon', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AppStepCheckbox(checked: true),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: AppStepCheckbox(checked: true))),
       );
       // AnimatedSwitcher шевелит виджет — даём frame.
       await tester.pump(const Duration(milliseconds: 200));
@@ -36,9 +32,7 @@ void main() {
     testWidgets('unchecked → нет checkmark', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AppStepCheckbox(checked: false),
-          ),
+          home: Scaffold(body: AppStepCheckbox(checked: false)),
         ),
       );
       await tester.pump(const Duration(milliseconds: 200));
@@ -47,13 +41,12 @@ void main() {
   });
 
   group('AppMessageBubble', () {
-    testWidgets('outgoing — bottomRight=4 (асимметричный радиус)',
-        (tester) async {
+    testWidgets('outgoing — bottomRight=4 (асимметричный радиус)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AppMessageBubble(text: 'Привет', isMine: true),
-          ),
+          home: Scaffold(body: AppMessageBubble(text: 'Привет', isMine: true)),
         ),
       );
       final container = tester.widget<Container>(
@@ -71,9 +64,7 @@ void main() {
     testWidgets('incoming — bottomLeft=4', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AppMessageBubble(text: 'Привет', isMine: false),
-          ),
+          home: Scaffold(body: AppMessageBubble(text: 'Привет', isMine: false)),
         ),
       );
       final container = tester.widget<Container>(
@@ -93,9 +84,7 @@ void main() {
     testWidgets('overspent (>1) → red palette', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: AppGradientProgressBar(progress: 1.5),
-          ),
+          home: Scaffold(body: AppGradientProgressBar(progress: 1.5)),
         ),
       );
       // Smoke — не падает при превышении.

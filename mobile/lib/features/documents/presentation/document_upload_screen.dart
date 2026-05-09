@@ -39,14 +39,7 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   Future<void> _pick() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const [
-        'pdf',
-        'jpg',
-        'jpeg',
-        'png',
-        'docx',
-        'xlsx',
-      ],
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'docx', 'xlsx'],
       withData: false,
     );
     if (result == null || result.files.isEmpty) return;
@@ -91,7 +84,9 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
     try {
       final mime = _mime(_file!.name);
       final bytes = await File(_file!.path!).readAsBytes();
-      await ref.read(documentsControllerProvider).upload(
+      await ref
+          .read(documentsControllerProvider)
+          .upload(
             projectId: widget.projectId,
             category: _category,
             title: title,

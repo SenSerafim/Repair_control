@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/materials/presentation/_widgets/resolve_option_card.dart';
 
 void main() {
-  testWidgets('ResolveOptionCard рендерит title + subtitle и dispatch onTap',
-      (tester) async {
+  testWidgets('ResolveOptionCard рендерит title + subtitle и dispatch onTap', (
+    tester,
+  ) async {
     var tapped = false;
     await tester.pumpWidget(
       MaterialApp(

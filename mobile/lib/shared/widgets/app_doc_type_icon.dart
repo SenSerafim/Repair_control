@@ -12,11 +12,7 @@ import '../../core/theme/tokens.dart';
 /// - DOCX/DOC/TXT → brandLight + brand
 /// - else → n100 + n500
 class AppDocTypeIcon extends StatelessWidget {
-  const AppDocTypeIcon({
-    required this.mimeType,
-    this.size = 44,
-    super.key,
-  });
+  const AppDocTypeIcon({required this.mimeType, this.size = 44, super.key});
 
   final String mimeType;
   final double size;

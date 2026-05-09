@@ -61,8 +61,8 @@ class AppMenuRow extends StatelessWidget {
     final labelColor = danger
         ? AppColors.redText
         : disabled
-            ? AppColors.n400
-            : AppColors.n700;
+        ? AppColors.n400
+        : AppColors.n700;
 
     final row = Padding(
       padding: const EdgeInsets.symmetric(
@@ -144,20 +144,13 @@ class AppMenuRow extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: row,
-      ),
+      child: InkWell(onTap: onTap, child: row),
     );
   }
 }
 
 class _IconBadge extends StatelessWidget {
-  const _IconBadge({
-    required this.icon,
-    required this.bg,
-    required this.color,
-  });
+  const _IconBadge({required this.icon, required this.bg, required this.color});
 
   final IconData icon;
   final Color bg;

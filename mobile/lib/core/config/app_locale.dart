@@ -13,8 +13,9 @@ const _fallback = 'ru';
 /// 1. Перед load — `_fallback` (сразу `Locale('ru')`).
 /// 2. После hydrate — значение из `SecureStorage.readLocale()`.
 /// 3. После Login/смены языка — обновляется через `setLocale(...)`.
-final appLocaleProvider =
-    NotifierProvider<AppLocaleNotifier, Locale>(AppLocaleNotifier.new);
+final appLocaleProvider = NotifierProvider<AppLocaleNotifier, Locale>(
+  AppLocaleNotifier.new,
+);
 
 class AppLocaleNotifier extends Notifier<Locale> {
   @override

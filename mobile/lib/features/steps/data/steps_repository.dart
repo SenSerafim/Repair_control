@@ -27,12 +27,13 @@ class PresignedPhoto {
   });
 
   factory PresignedPhoto.fromJson(Map<String, dynamic> json) => PresignedPhoto(
-        fileKey: (json['fileKey'] ?? json['key']) as String,
-        url: (json['url'] ?? json['uploadUrl']) as String,
-        method: (json['method'] as String?) ?? 'PUT',
-        headers: (json['headers'] as Map<String, dynamic>? ?? const {})
-            .map((k, v) => MapEntry(k, v.toString())),
-      );
+    fileKey: (json['fileKey'] ?? json['key']) as String,
+    url: (json['url'] ?? json['uploadUrl']) as String,
+    method: (json['method'] as String?) ?? 'PUT',
+    headers: (json['headers'] as Map<String, dynamic>? ?? const {}).map(
+      (k, v) => MapEntry(k, v.toString()),
+    ),
+  );
 
   final String fileKey;
   final String url;
@@ -46,18 +47,14 @@ class StepsRepository {
   final Dio _dio;
 
   Future<List<Step>> listForStage(String stageId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/stages/$stageId/steps',
-        );
-        return r.data!
-            .map((e) => Step.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/stages/$stageId/steps');
+    return r.data!.map((e) => Step.parse(e as Map<String, dynamic>)).toList();
+  });
 
   Future<Step> getStep(String stepId) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>('/api/steps/$stepId');
-        return Step.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/steps/$stepId');
+    return Step.parse(r.data!);
+  });
 
   Future<Step> createStep({
     required String stageId,
@@ -66,20 +63,19 @@ class StepsRepository {
     int? price,
     String? description,
     List<String>? assigneeIds,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/stages/$stageId/steps',
-          data: {
-            'title': title,
-            'type': type == StepType.extra ? 'extra' : 'regular',
-            if (price != null) 'price': price,
-            if (description != null) 'description': description,
-            if (assigneeIds != null) 'assigneeIds': assigneeIds,
-          },
-        );
-        return Step.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/stages/$stageId/steps',
+      data: {
+        'title': title,
+        'type': type == StepType.extra ? 'extra' : 'regular',
+        if (price != null) 'price': price,
+        if (description != null) 'description': description,
+        if (assigneeIds != null) 'assigneeIds': assigneeIds,
+      },
+    );
+    return Step.parse(r.data!);
+  });
 
   Future<Step> updateStep({
     required String stepId,
@@ -87,51 +83,45 @@ class StepsRepository {
     int? price,
     String? description,
     List<String>? assigneeIds,
+
     /// П2.8 — поля отчёта о шаге («что делал» / «как делал»).
     String? whatDid,
     String? howDid,
-  }) =>
-      _call(() async {
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/steps/$stepId',
-          data: {
-            if (title != null) 'title': title,
-            if (price != null) 'price': price,
-            if (description != null) 'description': description,
-            if (assigneeIds != null) 'assigneeIds': assigneeIds,
-            if (whatDid != null) 'whatDid': whatDid,
-            if (howDid != null) 'howDid': howDid,
-          },
-        );
-        return Step.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/steps/$stepId',
+      data: {
+        if (title != null) 'title': title,
+        if (price != null) 'price': price,
+        if (description != null) 'description': description,
+        if (assigneeIds != null) 'assigneeIds': assigneeIds,
+        if (whatDid != null) 'whatDid': whatDid,
+        if (howDid != null) 'howDid': howDid,
+      },
+    );
+    return Step.parse(r.data!);
+  });
 
   Future<void> deleteStep(String stepId) => _call(() async {
-        await _dio.delete<void>('/api/steps/$stepId');
-      });
+    await _dio.delete<void>('/api/steps/$stepId');
+  });
 
   Future<void> reorderSteps({
     required String stageId,
     required List<({String id, int orderIndex})> items,
-  }) =>
-      _call(() async {
-        await _dio.patch<dynamic>(
-          '/api/stages/$stageId/steps/reorder',
-          data: {
-            'items': [
-              for (final it in items)
-                {'id': it.id, 'orderIndex': it.orderIndex},
-            ],
-          },
-        );
-      });
+  }) => _call(() async {
+    await _dio.patch<dynamic>(
+      '/api/stages/$stageId/steps/reorder',
+      data: {
+        'items': [
+          for (final it in items) {'id': it.id, 'orderIndex': it.orderIndex},
+        ],
+      },
+    );
+  });
 
   /// П2.8 — `complete` принимает опциональный отчёт.
-  Future<Step> completeStep(
-    String stepId, {
-    String? whatDid,
-    String? howDid,
-  }) =>
+  Future<Step> completeStep(String stepId, {String? whatDid, String? howDid}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/steps/$stepId/complete',
@@ -144,17 +134,15 @@ class StepsRepository {
       });
 
   Future<Step> uncompleteStep(String stepId) => _call(() async {
-        final r = await _dio
-            .post<Map<String, dynamic>>('/api/steps/$stepId/uncomplete');
-        return Step.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/steps/$stepId/uncomplete',
+    );
+    return Step.parse(r.data!);
+  });
 
   // ───────── Substeps ─────────
 
-  Future<Substep> addSubstep({
-    required String stepId,
-    required String text,
-  }) =>
+  Future<Substep> addSubstep({required String stepId, required String text}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/steps/$stepId/substeps',
@@ -166,59 +154,57 @@ class StepsRepository {
   Future<Substep> updateSubstep({
     required String substepId,
     required String text,
-  }) =>
-      _call(() async {
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/substeps/$substepId',
-          data: {'text': text},
-        );
-        return Substep.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/substeps/$substepId',
+      data: {'text': text},
+    );
+    return Substep.parse(r.data!);
+  });
 
   Future<Substep> completeSubstep(String substepId) => _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/substeps/$substepId/complete',
-        );
-        return Substep.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/substeps/$substepId/complete',
+    );
+    return Substep.parse(r.data!);
+  });
 
   Future<Substep> uncompleteSubstep(String substepId) => _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/substeps/$substepId/uncomplete',
-        );
-        return Substep.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/substeps/$substepId/uncomplete',
+    );
+    return Substep.parse(r.data!);
+  });
 
   Future<void> deleteSubstep(String substepId) => _call(() async {
-        await _dio.delete<void>('/api/substeps/$substepId');
-      });
+    await _dio.delete<void>('/api/substeps/$substepId');
+  });
 
   // ───────── Photos ─────────
 
   Future<List<StepPhoto>> listPhotos(String stepId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>('/api/steps/$stepId/photos');
-        return r.data!
-            .map((e) => StepPhoto.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/steps/$stepId/photos');
+    return r.data!
+        .map((e) => StepPhoto.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<PresignedPhoto> presignPhoto({
     required String stepId,
     required String mime,
     required int sizeBytes,
     String? originalName,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/steps/$stepId/photos/presign',
-          data: {
-            'mime': mime,
-            'size': sizeBytes,
-            if (originalName != null) 'originalName': originalName,
-          },
-        );
-        return PresignedPhoto.fromJson(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/steps/$stepId/photos/presign',
+      data: {
+        'mime': mime,
+        'size': sizeBytes,
+        if (originalName != null) 'originalName': originalName,
+      },
+    );
+    return PresignedPhoto.fromJson(r.data!);
+  });
 
   /// Загружает байты в S3-хранилище (MinIO / Selectel) через presigned URL.
   /// Raw HTTP PUT без auth-interceptor'а — поэтому отдельный Dio.
@@ -258,65 +244,56 @@ class StepsRepository {
     required String fileKey,
     required String mimeType,
     required int sizeBytes,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/steps/$stepId/photos/confirm',
-          data: {
-            'fileKey': fileKey,
-            'mimeType': mimeType,
-            'sizeBytes': sizeBytes,
-          },
-        );
-        return StepPhoto.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/steps/$stepId/photos/confirm',
+      data: {'fileKey': fileKey, 'mimeType': mimeType, 'sizeBytes': sizeBytes},
+    );
+    return StepPhoto.parse(r.data!);
+  });
 
   Future<void> deletePhoto(String photoId) => _call(() async {
-        await _dio.delete<void>('/api/photos/$photoId');
-      });
+    await _dio.delete<void>('/api/photos/$photoId');
+  });
 
   // ───────── Questions ─────────
 
   Future<List<Question>> listQuestions(String stepId) => _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/steps/$stepId/questions',
-        );
-        return r.data!
-            .map((e) => Question.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+    final r = await _dio.get<List<dynamic>>('/api/steps/$stepId/questions');
+    return r.data!
+        .map((e) => Question.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<Question> askQuestion({
     required String stepId,
     required String text,
     required String addresseeId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/steps/$stepId/questions',
-          data: {'text': text, 'addresseeId': addresseeId},
-        );
-        return Question.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/steps/$stepId/questions',
+      data: {'text': text, 'addresseeId': addresseeId},
+    );
+    return Question.parse(r.data!);
+  });
 
   Future<Question> answerQuestion({
     required String questionId,
     required String answer,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/questions/$questionId/answer',
-          data: {'answer': answer},
-        );
-        return Question.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/questions/$questionId/answer',
+      data: {'answer': answer},
+    );
+    return Question.parse(r.data!);
+  });
 
   Future<Question> closeQuestion(String questionId) => _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/questions/$questionId/close',
-        );
-        return Question.parse(r.data!);
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/questions/$questionId/close',
+    );
+    return Question.parse(r.data!);
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

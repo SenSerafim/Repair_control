@@ -36,8 +36,7 @@ class MyToolsScreen extends ConsumerWidget {
         ),
         data: (tools) {
           final total = tools.length;
-          final issued =
-              tools.where((t) => t.issuedQty > 0).length;
+          final issued = tools.where((t) => t.issuedQty > 0).length;
           final inStock = tools.where((t) => t.availableQty > 0).length;
 
           return RefreshIndicator(
@@ -52,7 +51,8 @@ class MyToolsScreen extends ConsumerWidget {
                 if (tools.isEmpty)
                   AppEmptyState(
                     title: 'Инструментов ещё нет',
-                    subtitle: 'Добавьте свой инструмент, чтобы выдавать '
+                    subtitle:
+                        'Добавьте свой инструмент, чтобы выдавать '
                         'его мастерам на объекте.',
                     icon: PhosphorIconsFill.wrench,
                     actionLabel: 'Добавить',

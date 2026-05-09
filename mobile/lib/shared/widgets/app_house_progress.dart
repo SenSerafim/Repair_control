@@ -60,9 +60,7 @@ class _AppHouseProgressState extends State<AppHouseProgress>
     TweenSequenceItem(tween: Tween(begin: 1.07, end: 0.97), weight: 25),
     TweenSequenceItem(tween: Tween(begin: 0.97, end: 1.02), weight: 25),
     TweenSequenceItem(tween: Tween(begin: 1.02, end: 1), weight: 25),
-  ]).animate(
-    CurvedAnimation(parent: _bounceCtrl, curve: Curves.easeOut),
-  );
+  ]).animate(CurvedAnimation(parent: _bounceCtrl, curve: Curves.easeOut));
 
   @override
   void initState() {
@@ -190,10 +188,7 @@ class _AppHouseProgressState extends State<AppHouseProgress>
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFBFC8D4),
-                                Color(0xFFAEB8C6),
-                              ],
+                              colors: [Color(0xFFBFC8D4), Color(0xFFAEB8C6)],
                             ),
                             border: Border(
                               top: BorderSide(color: Color(0x0F000000)),

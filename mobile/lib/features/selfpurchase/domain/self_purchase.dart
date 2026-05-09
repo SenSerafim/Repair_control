@@ -22,22 +22,22 @@ enum SelfPurchaseStatus {
   }
 
   String get apiValue => switch (this) {
-        SelfPurchaseStatus.pending => 'pending',
-        SelfPurchaseStatus.approved => 'approved',
-        SelfPurchaseStatus.rejected => 'rejected',
-      };
+    SelfPurchaseStatus.pending => 'pending',
+    SelfPurchaseStatus.approved => 'approved',
+    SelfPurchaseStatus.rejected => 'rejected',
+  };
 
   String get displayName => switch (this) {
-        SelfPurchaseStatus.pending => 'На согласовании',
-        SelfPurchaseStatus.approved => 'Подтверждено',
-        SelfPurchaseStatus.rejected => 'Отклонено',
-      };
+    SelfPurchaseStatus.pending => 'На согласовании',
+    SelfPurchaseStatus.approved => 'Подтверждено',
+    SelfPurchaseStatus.rejected => 'Отклонено',
+  };
 
   Semaphore get semaphore => switch (this) {
-        SelfPurchaseStatus.pending => Semaphore.blue,
-        SelfPurchaseStatus.approved => Semaphore.green,
-        SelfPurchaseStatus.rejected => Semaphore.red,
-      };
+    SelfPurchaseStatus.pending => Semaphore.blue,
+    SelfPurchaseStatus.approved => Semaphore.green,
+    SelfPurchaseStatus.rejected => Semaphore.red,
+  };
 }
 
 enum SelfPurchaseBy {
@@ -48,14 +48,14 @@ enum SelfPurchaseBy {
       raw == 'foreman' ? SelfPurchaseBy.foreman : SelfPurchaseBy.master;
 
   String get apiValue => switch (this) {
-        SelfPurchaseBy.foreman => 'foreman',
-        SelfPurchaseBy.master => 'master',
-      };
+    SelfPurchaseBy.foreman => 'foreman',
+    SelfPurchaseBy.master => 'master',
+  };
 
   String get displayName => switch (this) {
-        SelfPurchaseBy.foreman => 'Бригадир',
-        SelfPurchaseBy.master => 'Мастер',
-      };
+    SelfPurchaseBy.foreman => 'Бригадир',
+    SelfPurchaseBy.master => 'Мастер',
+  };
 }
 
 @freezed
@@ -74,6 +74,7 @@ class SelfPurchase with _$SelfPurchase {
     DateTime? decidedAt,
     String? decidedById,
     String? decisionComment,
+
     /// 3-tier forwarding: id master-самозакупа, на основе которого создан этот
     /// foreman→customer forward. null для оригинальных одноступенчатых записей.
     String? forwardedFromId,
@@ -82,25 +83,25 @@ class SelfPurchase with _$SelfPurchase {
   }) = _SelfPurchase;
 
   static SelfPurchase parse(Map<String, dynamic> json) => SelfPurchase(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        byUserId: json['byUserId'] as String? ?? '',
-        byRole: SelfPurchaseBy.fromString(json['byRole'] as String?),
-        addresseeId: json['addresseeId'] as String? ?? '',
-        amount: (json['amount'] as num?)?.toInt() ?? 0,
-        comment: json['comment'] as String?,
-        photoKeys: (json['photoKeys'] as List<dynamic>? ?? const [])
-            .map((e) => e.toString())
-            .toList(),
-        status: SelfPurchaseStatus.fromString(json['status'] as String?),
-        decidedAt: _d(json['decidedAt']),
-        decidedById: json['decidedById'] as String?,
-        decisionComment: json['decisionComment'] as String?,
-        forwardedFromId: json['forwardedFromId'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    byUserId: json['byUserId'] as String? ?? '',
+    byRole: SelfPurchaseBy.fromString(json['byRole'] as String?),
+    addresseeId: json['addresseeId'] as String? ?? '',
+    amount: (json['amount'] as num?)?.toInt() ?? 0,
+    comment: json['comment'] as String?,
+    photoKeys: (json['photoKeys'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toList(),
+    status: SelfPurchaseStatus.fromString(json['status'] as String?),
+    decidedAt: _d(json['decidedAt']),
+    decidedById: json['decidedById'] as String?,
+    decisionComment: json['decisionComment'] as String?,
+    forwardedFromId: json['forwardedFromId'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

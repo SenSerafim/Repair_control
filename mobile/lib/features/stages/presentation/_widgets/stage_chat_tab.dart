@@ -34,13 +34,14 @@ class StageChatTab extends ConsumerWidget {
       ),
       data: (chats) {
         final stageChat = chats.cast<Chat?>().firstWhere(
-              (c) => c?.stageId == stageId,
-              orElse: () => null,
-            );
+          (c) => c?.stageId == stageId,
+          orElse: () => null,
+        );
         if (stageChat == null) {
           return const AppEmptyState(
             title: 'Чат этапа не создан',
-            subtitle: 'Чат появится автоматически, когда вы назначите '
+            subtitle:
+                'Чат появится автоматически, когда вы назначите '
                 'бригадира этапа.',
             icon: Icons.chat_bubble_outline_rounded,
           );
@@ -58,10 +59,7 @@ class StageChatTab extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.forum_outlined,
-                      color: AppColors.brand,
-                    ),
+                    const Icon(Icons.forum_outlined, color: AppColors.brand),
                     const SizedBox(width: AppSpacing.x12),
                     Expanded(
                       child: Text(
@@ -76,8 +74,7 @@ class StageChatTab extends ConsumerWidget {
               AppButton(
                 label: 'Открыть чат',
                 icon: Icons.chat_outlined,
-                onPressed: () =>
-                    context.push('/chats/${stageChat.id}'),
+                onPressed: () => context.push('/chats/${stageChat.id}'),
               ),
             ],
           ),

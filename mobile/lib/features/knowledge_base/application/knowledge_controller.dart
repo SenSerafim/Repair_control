@@ -23,24 +23,27 @@ class KnowledgeCategoriesFilter {
   int get hashCode => Object.hash(scope, moduleSlug);
 }
 
-final knowledgeCategoriesProvider = FutureProvider.family<
-    List<KnowledgeCategory>, KnowledgeCategoriesFilter>((ref, filter) async {
-  final repo = ref.read(knowledgeRepositoryProvider);
-  return repo.listCategories(
-    scope: filter.scope,
-    moduleSlug: filter.moduleSlug,
-  );
-});
+final knowledgeCategoriesProvider =
+    FutureProvider.family<List<KnowledgeCategory>, KnowledgeCategoriesFilter>((
+      ref,
+      filter,
+    ) async {
+      final repo = ref.read(knowledgeRepositoryProvider);
+      return repo.listCategories(
+        scope: filter.scope,
+        moduleSlug: filter.moduleSlug,
+      );
+    });
 
 final knowledgeCategoryDetailProvider =
     FutureProvider.family<KnowledgeCategoryDetail, String>(
-  (ref, id) async => ref.read(knowledgeRepositoryProvider).getCategory(id),
-);
+      (ref, id) async => ref.read(knowledgeRepositoryProvider).getCategory(id),
+    );
 
 final knowledgeArticleProvider =
     FutureProvider.family<KnowledgeArticle, String>(
-  (ref, id) async => ref.read(knowledgeRepositoryProvider).getArticle(id),
-);
+      (ref, id) async => ref.read(knowledgeRepositoryProvider).getArticle(id),
+    );
 
 class KnowledgeSearchController
     extends AutoDisposeFamilyAsyncNotifier<List<KnowledgeSearchHit>, String> {
@@ -52,7 +55,9 @@ class KnowledgeSearchController
   }
 }
 
-final knowledgeSearchProvider = AutoDisposeAsyncNotifierProvider.family<
-    KnowledgeSearchController, List<KnowledgeSearchHit>, String>(
-  KnowledgeSearchController.new,
-);
+final knowledgeSearchProvider =
+    AutoDisposeAsyncNotifierProvider.family<
+      KnowledgeSearchController,
+      List<KnowledgeSearchHit>,
+      String
+    >(KnowledgeSearchController.new);

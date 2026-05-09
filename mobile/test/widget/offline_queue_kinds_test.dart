@@ -8,10 +8,7 @@ void main() {
     // Старые 4 + 5 новых = 9.
     expect(OfflineActionKind.values.length, 9);
     expect(OfflineActionKind.values, contains(OfflineActionKind.stagePause));
-    expect(
-      OfflineActionKind.values,
-      contains(OfflineActionKind.stageResume),
-    );
+    expect(OfflineActionKind.values, contains(OfflineActionKind.stageResume));
     expect(
       OfflineActionKind.values,
       contains(OfflineActionKind.paymentDispute),

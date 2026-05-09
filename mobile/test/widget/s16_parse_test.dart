@@ -22,11 +22,7 @@ void main() {
     const author = 'u1';
     final now = DateTime.utc(2026, 4, 22, 12);
 
-    Message msg({
-      String? authorId,
-      DateTime? createdAt,
-      DateTime? deletedAt,
-    }) =>
+    Message msg({String? authorId, DateTime? createdAt, DateTime? deletedAt}) =>
         Message(
           id: 'm1',
           chatId: 'c1',
@@ -72,15 +68,8 @@ void main() {
         'createdById': 'u1',
         'createdAt': '2026-04-22T10:00:00Z',
         'participants': [
-          {
-            'userId': 'u1',
-            'joinedAt': '2026-04-22T10:00:00Z',
-          },
-          {
-            'userId': 'u2',
-            'joinedAt': '2026-04-22T10:05:00Z',
-            'leftAt': null,
-          },
+          {'userId': 'u1', 'joinedAt': '2026-04-22T10:00:00Z'},
+          {'userId': 'u2', 'joinedAt': '2026-04-22T10:05:00Z', 'leftAt': null},
         ],
         'unreadCount': 3,
       });
@@ -133,12 +122,10 @@ void main() {
       expect(FeedCategory.fromKind('photo_attached'), FeedCategory.step);
       expect(FeedCategory.fromKind('note_created'), FeedCategory.step);
       expect(FeedCategory.fromKind('question_asked'), FeedCategory.step);
-      expect(FeedCategory.fromKind('extra_work_requested'),
-          FeedCategory.step);
+      expect(FeedCategory.fromKind('extra_work_requested'), FeedCategory.step);
     });
     test('approval_* → approval', () {
-      expect(FeedCategory.fromKind('approval_approved'),
-          FeedCategory.approval);
+      expect(FeedCategory.fromKind('approval_approved'), FeedCategory.approval);
       expect(FeedCategory.fromKind('plan_approved'), FeedCategory.approval);
       expect(FeedCategory.fromKind('stage_accepted'), FeedCategory.approval);
     });
@@ -147,15 +134,19 @@ void main() {
       expect(FeedCategory.fromKind('budget_updated'), FeedCategory.finance);
     });
     test('material_ → materials', () {
-      expect(FeedCategory.fromKind('material_request_sent'),
-          FeedCategory.materials);
+      expect(
+        FeedCategory.fromKind('material_request_sent'),
+        FeedCategory.materials,
+      );
     });
     test('chat_ → chat', () {
       expect(FeedCategory.fromKind('chat_message'), FeedCategory.chat);
     });
     test('document_/export_ → documents', () {
-      expect(FeedCategory.fromKind('document_uploaded'),
-          FeedCategory.documents);
+      expect(
+        FeedCategory.fromKind('document_uploaded'),
+        FeedCategory.documents,
+      );
       expect(FeedCategory.fromKind('export_ready'), FeedCategory.documents);
     });
     test('неизвестное → other', () {

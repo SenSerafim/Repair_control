@@ -71,9 +71,7 @@ class AppMessageBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: isMine ? null : AppColors.n0,
             gradient: isMine ? AppGradients.bubbleOut : null,
-            border: isMine
-                ? null
-                : Border.all(color: AppColors.n200, width: 1),
+            border: isMine ? null : Border.all(color: AppColors.n200, width: 1),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(AppRadius.r16),
               topRight: const Radius.circular(AppRadius.r16),

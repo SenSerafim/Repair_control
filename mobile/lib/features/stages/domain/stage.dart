@@ -23,22 +23,22 @@ enum StageStatus {
   }
 
   String get displayName => switch (this) {
-        StageStatus.pending => 'Ожидает',
-        StageStatus.active => 'В работе',
-        StageStatus.paused => 'На паузе',
-        StageStatus.review => 'На приёмке',
-        StageStatus.done => 'Завершён',
-        StageStatus.rejected => 'Отклонён',
-      };
+    StageStatus.pending => 'Ожидает',
+    StageStatus.active => 'В работе',
+    StageStatus.paused => 'На паузе',
+    StageStatus.review => 'На приёмке',
+    StageStatus.done => 'Завершён',
+    StageStatus.rejected => 'Отклонён',
+  };
 
   Semaphore get semaphore => switch (this) {
-        StageStatus.pending => Semaphore.plan,
-        StageStatus.active => Semaphore.green,
-        StageStatus.paused => Semaphore.yellow,
-        StageStatus.review => Semaphore.blue,
-        StageStatus.done => Semaphore.green,
-        StageStatus.rejected => Semaphore.red,
-      };
+    StageStatus.pending => Semaphore.plan,
+    StageStatus.active => Semaphore.green,
+    StageStatus.paused => Semaphore.yellow,
+    StageStatus.review => Semaphore.blue,
+    StageStatus.done => Semaphore.green,
+    StageStatus.rejected => Semaphore.red,
+  };
 }
 
 @freezed
@@ -66,28 +66,28 @@ class Stage with _$Stage {
   }) = _Stage;
 
   static Stage parse(Map<String, dynamic> json) => Stage(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        title: json['title'] as String,
-        orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
-        status: StageStatus.fromString(json['status'] as String?),
-        plannedStart: _date(json['plannedStart']),
-        plannedEnd: _date(json['plannedEnd']),
-        originalEnd: _date(json['originalEnd']),
-        pauseDurationMs: (json['pauseDurationMs'] as num?)?.toInt() ?? 0,
-        workBudget: (json['workBudget'] as num?)?.toInt() ?? 0,
-        materialsBudget: (json['materialsBudget'] as num?)?.toInt() ?? 0,
-        foremanIds: (json['foremanIds'] as List<dynamic>? ?? const [])
-            .map((e) => e.toString())
-            .toList(),
-        progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
-        planApproved: json['planApproved'] as bool? ?? false,
-        startedAt: _date(json['startedAt']),
-        sentToReviewAt: _date(json['sentToReviewAt']),
-        doneAt: _date(json['doneAt']),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    title: json['title'] as String,
+    orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
+    status: StageStatus.fromString(json['status'] as String?),
+    plannedStart: _date(json['plannedStart']),
+    plannedEnd: _date(json['plannedEnd']),
+    originalEnd: _date(json['originalEnd']),
+    pauseDurationMs: (json['pauseDurationMs'] as num?)?.toInt() ?? 0,
+    workBudget: (json['workBudget'] as num?)?.toInt() ?? 0,
+    materialsBudget: (json['materialsBudget'] as num?)?.toInt() ?? 0,
+    foremanIds: (json['foremanIds'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toList(),
+    progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
+    planApproved: json['planApproved'] as bool? ?? false,
+    startedAt: _date(json['startedAt']),
+    sentToReviewAt: _date(json['sentToReviewAt']),
+    doneAt: _date(json['doneAt']),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
 DateTime? _date(Object? raw) {

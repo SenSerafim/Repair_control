@@ -218,9 +218,7 @@ class _MiniCard extends StatelessWidget {
           Text(
             'Остаток: ${Money.format(bucket.remaining)}',
             style: AppTextStyles.tiny.copyWith(
-              color: bucket.overSpent
-                  ? AppColors.redText
-                  : AppColors.greenDark,
+              color: bucket.overSpent ? AppColors.redText : AppColors.greenDark,
               fontWeight: FontWeight.w700,
             ),
             maxLines: 1,

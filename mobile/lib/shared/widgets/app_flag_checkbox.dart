@@ -99,11 +99,7 @@ class _Check extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: selected
-          ? const Icon(
-              PhosphorIconsBold.check,
-              size: 12,
-              color: AppColors.n0,
-            )
+          ? const Icon(PhosphorIconsBold.check, size: 12, color: AppColors.n0)
           : null,
     );
   }

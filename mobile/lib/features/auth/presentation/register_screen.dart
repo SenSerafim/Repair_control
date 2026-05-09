@@ -44,10 +44,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    final firstNameErr =
-        _firstName.text.trim().isEmpty ? 'Введите имя' : null;
-    final lastNameErr =
-        _lastName.text.trim().isEmpty ? 'Введите фамилию' : null;
+    final firstNameErr = _firstName.text.trim().isEmpty ? 'Введите имя' : null;
+    final lastNameErr = _lastName.text.trim().isEmpty
+        ? 'Введите фамилию'
+        : null;
     String? phoneErr;
     if (_phone.text.trim().isEmpty) {
       phoneErr = 'Введите номер телефона';
@@ -81,7 +81,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _phoneError = null;
       _passwordError = null;
     });
-    final failure = await ref.read(authControllerProvider.notifier).register(
+    final failure = await ref
+        .read(authControllerProvider.notifier)
+        .register(
           phone: phoneToE164(_phone.text),
           password: _password.text,
           firstName: _firstName.text.trim(),
@@ -209,7 +211,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(height: AppSpacing.x12),
           _InfoBanner(
-            text: 'Одна регистрация — все роли. Добавить другие роли '
+            text:
+                'Одна регистрация — все роли. Добавить другие роли '
                 'можно в профиле.',
           ),
           const SizedBox(height: AppSpacing.x20),
@@ -256,11 +259,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 extension on AppRoleKind {
   /// Маппинг UI-карточки на системную роль. Соответствие 1-к-1.
   SystemRole get systemRole => switch (this) {
-        AppRoleKind.customer => SystemRole.customer,
-        AppRoleKind.representative => SystemRole.representative,
-        AppRoleKind.foreman => SystemRole.contractor,
-        AppRoleKind.master => SystemRole.master,
-      };
+    AppRoleKind.customer => SystemRole.customer,
+    AppRoleKind.representative => SystemRole.representative,
+    AppRoleKind.foreman => SystemRole.contractor,
+    AppRoleKind.master => SystemRole.master,
+  };
 }
 
 class _InfoBanner extends StatelessWidget {

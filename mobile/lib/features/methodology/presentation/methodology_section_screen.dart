@@ -26,8 +26,7 @@ class MethodologySectionScreen extends ConsumerWidget {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить раздел',
-          onRetry: () =>
-              ref.invalidate(methodologySectionProvider(sectionId)),
+          onRetry: () => ref.invalidate(methodologySectionProvider(sectionId)),
         ),
         data: (section) {
           final tone = MethodologySectionTone.fromTitle(section.title);
@@ -70,8 +69,9 @@ class MethodologySectionScreen extends ConsumerWidget {
                         Text(
                           '${section.articles.length} '
                           '${_articlesWord(section.articles.length)}',
-                          style: AppTextStyles.tiny
-                              .copyWith(color: AppColors.n500),
+                          style: AppTextStyles.tiny.copyWith(
+                            color: AppColors.n500,
+                          ),
                         ),
                       ],
                     ),
@@ -143,11 +143,7 @@ class _ArticleRow extends StatelessWidget {
                 color: tone.bg,
                 borderRadius: BorderRadius.circular(AppRadius.r8),
               ),
-              child: Icon(
-                Icons.article_outlined,
-                color: tone.fg,
-                size: 18,
-              ),
+              child: Icon(Icons.article_outlined, color: tone.fg, size: 18),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
@@ -170,10 +166,7 @@ class _ArticleRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.n300,
-            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
           ],
         ),
       ),

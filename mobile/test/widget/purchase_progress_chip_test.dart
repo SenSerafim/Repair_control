@@ -6,9 +6,7 @@ void main() {
   testWidgets('PurchaseProgressChip показывает N/M', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: PurchaseProgressChip(bought: 2, total: 3),
-        ),
+        home: Scaffold(body: PurchaseProgressChip(bought: 2, total: 3)),
       ),
     );
     expect(find.text('2/3'), findsOneWidget);
@@ -18,9 +16,7 @@ void main() {
   testWidgets('PurchaseProgressChip handles total=0 без NaN', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: PurchaseProgressChip(bought: 0, total: 0),
-        ),
+        home: Scaffold(body: PurchaseProgressChip(bought: 0, total: 0)),
       ),
     );
     expect(find.text('0/0'), findsOneWidget);

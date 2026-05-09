@@ -11,38 +11,36 @@ void main() {
     required int amount,
     int? resolvedAmount,
     List<Payment> children = const [],
-  }) =>
-      Payment.parse({
-        'id': id,
-        'projectId': 'p-1',
-        if (parentId != null) 'parentPaymentId': parentId,
-        'kind': kind.apiValue,
-        'fromUserId': 'u-1',
-        'toUserId': 'u-2',
-        'amount': amount,
-        if (resolvedAmount != null) 'resolvedAmount': resolvedAmount,
-        'status': status.apiValue,
-        'createdAt': '2026-04-01T10:00:00Z',
-        'updatedAt': '2026-04-01T10:00:00Z',
-        if (children.isNotEmpty)
-          'children': [
-            for (final c in children)
-              {
-                'id': c.id,
-                'projectId': 'p-1',
-                'parentPaymentId': id,
-                'kind': c.kind.apiValue,
-                'fromUserId': 'u-1',
-                'toUserId': 'u-3',
-                'amount': c.amount,
-                if (c.resolvedAmount != null)
-                  'resolvedAmount': c.resolvedAmount,
-                'status': c.status.apiValue,
-                'createdAt': '2026-04-01T10:00:00Z',
-                'updatedAt': '2026-04-01T10:00:00Z',
-              },
-          ],
-      });
+  }) => Payment.parse({
+    'id': id,
+    'projectId': 'p-1',
+    if (parentId != null) 'parentPaymentId': parentId,
+    'kind': kind.apiValue,
+    'fromUserId': 'u-1',
+    'toUserId': 'u-2',
+    'amount': amount,
+    if (resolvedAmount != null) 'resolvedAmount': resolvedAmount,
+    'status': status.apiValue,
+    'createdAt': '2026-04-01T10:00:00Z',
+    'updatedAt': '2026-04-01T10:00:00Z',
+    if (children.isNotEmpty)
+      'children': [
+        for (final c in children)
+          {
+            'id': c.id,
+            'projectId': 'p-1',
+            'parentPaymentId': id,
+            'kind': c.kind.apiValue,
+            'fromUserId': 'u-1',
+            'toUserId': 'u-3',
+            'amount': c.amount,
+            if (c.resolvedAmount != null) 'resolvedAmount': c.resolvedAmount,
+            'status': c.status.apiValue,
+            'createdAt': '2026-04-01T10:00:00Z',
+            'updatedAt': '2026-04-01T10:00:00Z',
+          },
+      ],
+  });
 
   group('PaymentX.effectiveAmount + remainingToDistribute', () {
     test('effectiveAmount = amount если resolvedAmount=null', () {
@@ -66,33 +64,35 @@ void main() {
       expect(p.effectiveAmount, 80000);
     });
 
-    test('remainingToDistribute = effective - sum(active children effective)',
-        () {
-      final parent = payment(
-        id: 'parent',
-        kind: PaymentKind.advance,
-        status: PaymentStatus.confirmed,
-        amount: 100000,
-        children: [
-          payment(
-            id: 'c1',
-            parentId: 'parent',
-            kind: PaymentKind.distribution,
-            status: PaymentStatus.confirmed,
-            amount: 30000,
-          ),
-          payment(
-            id: 'c2',
-            parentId: 'parent',
-            kind: PaymentKind.distribution,
-            status: PaymentStatus.pending,
-            amount: 20000,
-          ),
-        ],
-      );
-      expect(parent.distributedAmount, 50000);
-      expect(parent.remainingToDistribute, 50000);
-    });
+    test(
+      'remainingToDistribute = effective - sum(active children effective)',
+      () {
+        final parent = payment(
+          id: 'parent',
+          kind: PaymentKind.advance,
+          status: PaymentStatus.confirmed,
+          amount: 100000,
+          children: [
+            payment(
+              id: 'c1',
+              parentId: 'parent',
+              kind: PaymentKind.distribution,
+              status: PaymentStatus.confirmed,
+              amount: 30000,
+            ),
+            payment(
+              id: 'c2',
+              parentId: 'parent',
+              kind: PaymentKind.distribution,
+              status: PaymentStatus.pending,
+              amount: 20000,
+            ),
+          ],
+        );
+        expect(parent.distributedAmount, 50000);
+        expect(parent.remainingToDistribute, 50000);
+      },
+    );
 
     test('cancelled child НЕ учитывается в distributedAmount', () {
       final parent = payment(
@@ -122,8 +122,7 @@ void main() {
       expect(parent.remainingToDistribute, 70000);
     });
 
-    test(
-        'remainingToDistribute учитывает resolvedAmount '
+    test('remainingToDistribute учитывает resolvedAmount '
         'и родителя, и детей', () {
       // Родитель: 100k → resolved 80k. Дети: 30k confirmed + 20k → resolved 15k.
       // Доступно: 80 - (30 + 15) = 35k.

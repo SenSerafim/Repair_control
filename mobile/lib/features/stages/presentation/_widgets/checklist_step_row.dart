@@ -108,13 +108,10 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
                           color: isDone ? AppColors.greenDot : null,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isDone
-                                ? Colors.transparent
-                                : AppColors.n300,
+                            color: isDone ? Colors.transparent : AppColors.n300,
                             width: 2,
                           ),
-                          boxShadow:
-                              isDone ? AppShadows.glowGreen : null,
+                          boxShadow: isDone ? AppShadows.glowGreen : null,
                         ),
                         child: isDone
                             ? const Icon(
@@ -137,8 +134,9 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: AppColors.n800,
-                              decoration:
-                                  isDone ? TextDecoration.lineThrough : null,
+                              decoration: isDone
+                                  ? TextDecoration.lineThrough
+                                  : null,
                               decorationColor: AppColors.n400,
                             ),
                           ),
@@ -161,8 +159,7 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
                     ),
                     if (hasSubsteps)
                       IconButton(
-                        onPressed: () =>
-                            setState(() => _expanded = !_expanded),
+                        onPressed: () => setState(() => _expanded = !_expanded),
                         icon: Icon(
                           _expanded
                               ? Icons.expand_less_rounded
@@ -182,9 +179,7 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
             if (_expanded && hasSubsteps)
               Container(
                 decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: AppColors.n100),
-                  ),
+                  border: Border(top: BorderSide(color: AppColors.n100)),
                 ),
                 child: Column(
                   children: [
@@ -215,17 +210,17 @@ class _AnnotationPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, text, color, bg) = switch (annotation) {
       OpenQuestionAnnotation(:final text) => (
-          Icons.help_outline_rounded,
-          text.length > 60 ? '${text.substring(0, 57)}…' : text,
-          AppColors.yellowText,
-          AppColors.yellowBg,
-        ),
+        Icons.help_outline_rounded,
+        text.length > 60 ? '${text.substring(0, 57)}…' : text,
+        AppColors.yellowText,
+        AppColors.yellowBg,
+      ),
       ExtraWorkPendingAnnotation(:final amountKopecks) => (
-          Icons.payments_outlined,
-          'Доп. ${(amountKopecks / 100).toStringAsFixed(0)} ₽ · Ожидает одобрения',
-          AppColors.yellowText,
-          AppColors.yellowBg,
-        ),
+        Icons.payments_outlined,
+        'Доп. ${(amountKopecks / 100).toStringAsFixed(0)} ₽ · Ожидает одобрения',
+        AppColors.yellowText,
+        AppColors.yellowBg,
+      ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(

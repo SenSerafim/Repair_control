@@ -82,25 +82,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     icon: Icons.notifications_none_rounded,
                   )
                 : filtered.isEmpty
-                    ? const AppEmptyState(
-                        title: 'Нет уведомлений в категории',
-                        icon: Icons.filter_alt_outlined,
-                      )
-                    : _NotifList(
-                        items: filtered,
-                        onTap: (n) => _handle(context, ref, n),
-                      ),
+                ? const AppEmptyState(
+                    title: 'Нет уведомлений в категории',
+                    icon: Icons.filter_alt_outlined,
+                  )
+                : _NotifList(
+                    items: filtered,
+                    onTap: (n) => _handle(context, ref, n),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  void _handle(
-    BuildContext context,
-    WidgetRef ref,
-    AppNotification note,
-  ) {
+  void _handle(BuildContext context, WidgetRef ref, AppNotification note) {
     if (_navigating) return;
     _navigating = true;
     ref.read(notificationsProvider.notifier).markRead(note.id);
@@ -176,8 +172,12 @@ class _TypeFilter extends StatelessWidget {
           if (id == '__all__') {
             onChanged(null);
           } else {
-            onChanged(NotificationRoute.values
-                .firstWhere((r) => r.name == id, orElse: () => NotificationRoute.other));
+            onChanged(
+              NotificationRoute.values.firstWhere(
+                (r) => r.name == id,
+                orElse: () => NotificationRoute.other,
+              ),
+            );
           }
         },
       ),
@@ -209,22 +209,20 @@ class _NotifList extends StatelessWidget {
               ? TourAnchor(id: 'notifications.first_item', child: tile)
               : tile,
         )
-        ..add(const Divider(
-          height: 1,
-          thickness: 1,
-          indent: 68,
-          color: AppColors.n100,
-        ));
+        ..add(
+          const Divider(
+            height: 1,
+            thickness: 1,
+            indent: 68,
+            color: AppColors.n100,
+          ),
+        );
       firstTile = false;
     }
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: children,
-    );
+    return ListView(padding: EdgeInsets.zero, children: children);
   }
 
-  String _dayKey(DateTime t) =>
-      DateFormat('yyyy-MM-dd').format(t);
+  String _dayKey(DateTime t) => DateFormat('yyyy-MM-dd').format(t);
 
   String _dayLabel(DateTime t) {
     final now = DateTime.now();
@@ -249,11 +247,7 @@ class _DateSeparator extends StatelessWidget {
       child: Row(
         children: [
           const Expanded(
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: AppColors.n200,
-            ),
+            child: Divider(height: 1, thickness: 1, color: AppColors.n200),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -268,11 +262,7 @@ class _DateSeparator extends StatelessWidget {
             ),
           ),
           const Expanded(
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: AppColors.n200,
-            ),
+            child: Divider(height: 1, thickness: 1, color: AppColors.n200),
           ),
         ],
       ),
@@ -299,8 +289,11 @@ class _NotifTile extends StatelessWidget {
       notification.data,
       fallback: notification.body,
     );
-    final mainText = (title.isEmpty ? notification.title : title)
-        + (bodyText.isEmpty ? '' : '\n${bodyText.isEmpty ? notification.body : bodyText}');
+    final mainText =
+        (title.isEmpty ? notification.title : title) +
+        (bodyText.isEmpty
+            ? ''
+            : '\n${bodyText.isEmpty ? notification.body : bodyText}');
     return Material(
       color: notification.read ? AppColors.n0 : AppColors.brandLight,
       child: InkWell(
@@ -361,56 +354,57 @@ class _NotifTile extends StatelessWidget {
     if (diff.inMinutes < 1) return 'только что';
     if (diff.inMinutes < 60) return '${diff.inMinutes} мин назад';
     if (diff.inHours < 24) return '${diff.inHours} ч назад';
-    if (diff.inDays == 1) return 'вчера, ${DateFormat('HH:mm', 'ru').format(t)}';
+    if (diff.inDays == 1)
+      return 'вчера, ${DateFormat('HH:mm', 'ru').format(t)}';
     return DateFormat('d MMM, HH:mm', 'ru').format(t);
   }
 
   (Color, Color, IconData) _styleFor(NotificationRoute route) =>
       switch (route) {
         NotificationRoute.approval => (
-            AppColors.purpleBg,
-            AppColors.purple,
-            Icons.rule_rounded,
-          ),
+          AppColors.purpleBg,
+          AppColors.purple,
+          Icons.rule_rounded,
+        ),
         NotificationRoute.payment => (
-            AppColors.greenLight,
-            AppColors.greenDark,
-            Icons.account_balance_wallet_outlined,
-          ),
+          AppColors.greenLight,
+          AppColors.greenDark,
+          Icons.account_balance_wallet_outlined,
+        ),
         NotificationRoute.chat => (
-            AppColors.brandLight,
-            AppColors.brand,
-            Icons.chat_bubble_outline_rounded,
-          ),
+          AppColors.brandLight,
+          AppColors.brand,
+          Icons.chat_bubble_outline_rounded,
+        ),
         NotificationRoute.materials => (
-            AppColors.redBg,
-            AppColors.redDot,
-            Icons.help_outline_rounded,
-          ),
+          AppColors.redBg,
+          AppColors.redDot,
+          Icons.help_outline_rounded,
+        ),
         NotificationRoute.stage => (
-            AppColors.yellowBg,
-            const Color(0xFFD97706),
-            Icons.access_time_rounded,
-          ),
+          AppColors.yellowBg,
+          const Color(0xFFD97706),
+          Icons.access_time_rounded,
+        ),
         NotificationRoute.document => (
-            AppColors.brandLight,
-            AppColors.brand,
-            Icons.insert_drive_file_outlined,
-          ),
+          AppColors.brandLight,
+          AppColors.brand,
+          Icons.insert_drive_file_outlined,
+        ),
         NotificationRoute.export => (
-            AppColors.greenLight,
-            AppColors.greenDark,
-            Icons.cloud_download_outlined,
-          ),
+          AppColors.greenLight,
+          AppColors.greenDark,
+          Icons.cloud_download_outlined,
+        ),
         NotificationRoute.announcement => (
-            AppColors.brandLight,
-            AppColors.brand,
-            Icons.campaign_outlined,
-          ),
+          AppColors.brandLight,
+          AppColors.brand,
+          Icons.campaign_outlined,
+        ),
         NotificationRoute.other => (
-            AppColors.n100,
-            AppColors.n500,
-            Icons.notifications_none_rounded,
-          ),
+          AppColors.n100,
+          AppColors.n500,
+          Icons.notifications_none_rounded,
+        ),
       };
 }

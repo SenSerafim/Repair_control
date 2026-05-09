@@ -26,10 +26,7 @@ class MaterialLifecycleTimeline extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < steps.length; i++)
-            _Step(
-              step: steps[i],
-              divider: i < steps.length - 1,
-            ),
+            _Step(step: steps[i], divider: i < steps.length - 1),
         ],
       ),
     );

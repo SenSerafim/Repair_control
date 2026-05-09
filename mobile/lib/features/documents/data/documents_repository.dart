@@ -29,8 +29,9 @@ class PresignedUpload {
         fileKey: (json['fileKey'] ?? json['key']) as String,
         url: (json['url'] ?? json['uploadUrl']) as String,
         method: (json['method'] as String?) ?? 'PUT',
-        headers: (json['headers'] as Map<String, dynamic>? ?? const {})
-            .map((k, v) => MapEntry(k, v.toString())),
+        headers: (json['headers'] as Map<String, dynamic>? ?? const {}).map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
       );
 
   final String documentId;
@@ -50,28 +51,25 @@ class DocumentsRepository {
     String? stepId,
     DocumentCategory? category,
     String? q,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/documents',
-          queryParameters: {
-            if (stageId != null) 'stageId': stageId,
-            if (stepId != null) 'stepId': stepId,
-            if (category != null) 'category': category.apiValue,
-            if (q != null && q.isNotEmpty) 'q': q,
-          },
-        );
-        return r.data!
-            .map((e) => Document.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/projects/$projectId/documents',
+      queryParameters: {
+        if (stageId != null) 'stageId': stageId,
+        if (stepId != null) 'stepId': stepId,
+        if (category != null) 'category': category.apiValue,
+        if (q != null && q.isNotEmpty) 'q': q,
+      },
+    );
+    return r.data!
+        .map((e) => Document.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<Document> get(String id) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/documents/$id',
-        );
-        return Document.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/documents/$id');
+    return Document.parse(r.data!);
+  });
 
   Future<PresignedUpload> presignUpload({
     required String projectId,
@@ -81,21 +79,20 @@ class DocumentsRepository {
     required int sizeBytes,
     String? stageId,
     String? stepId,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/documents/presign-upload',
-          data: {
-            'category': category.apiValue,
-            'title': title,
-            'mimeType': mimeType,
-            'sizeBytes': sizeBytes,
-            if (stageId != null) 'stageId': stageId,
-            if (stepId != null) 'stepId': stepId,
-          },
-        );
-        return PresignedUpload.fromJson(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/documents/presign-upload',
+      data: {
+        'category': category.apiValue,
+        'title': title,
+        'mimeType': mimeType,
+        'sizeBytes': sizeBytes,
+        if (stageId != null) 'stageId': stageId,
+        if (stepId != null) 'stepId': stepId,
+      },
+    );
+    return PresignedUpload.fromJson(r.data!);
+  });
 
   Future<void> uploadToStorage({
     required PresignedUpload presigned,
@@ -131,14 +128,13 @@ class DocumentsRepository {
   Future<Document> confirm({
     required String documentId,
     required String fileKey,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/documents/$documentId/confirm',
-          data: {'fileKey': fileKey},
-        );
-        return Document.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/documents/$documentId/confirm',
+      data: {'fileKey': fileKey},
+    );
+    return Document.parse(r.data!);
+  });
 
   Future<Document> patch({
     required String id,
@@ -146,31 +142,30 @@ class DocumentsRepository {
     DocumentCategory? category,
     String? stageId,
     String? stepId,
-  }) =>
-      _call(() async {
-        final r = await _dio.patch<Map<String, dynamic>>(
-          '/api/documents/$id',
-          data: {
-            if (title != null) 'title': title,
-            if (category != null) 'category': category.apiValue,
-            if (stageId != null) 'stageId': stageId,
-            if (stepId != null) 'stepId': stepId,
-          },
-        );
-        return Document.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.patch<Map<String, dynamic>>(
+      '/api/documents/$id',
+      data: {
+        if (title != null) 'title': title,
+        if (category != null) 'category': category.apiValue,
+        if (stageId != null) 'stageId': stageId,
+        if (stepId != null) 'stepId': stepId,
+      },
+    );
+    return Document.parse(r.data!);
+  });
 
   Future<void> delete(String id) => _call(() async {
-        await _dio.delete<void>('/api/documents/$id');
-      });
+    await _dio.delete<void>('/api/documents/$id');
+  });
 
   /// GET /api/documents/:id/download → { url, expiresIn }.
   Future<String> downloadUrl(String id) => _call(() async {
-        final r = await _dio.get<Map<String, dynamic>>(
-          '/api/documents/$id/download',
-        );
-        return r.data!['url'] as String;
-      });
+    final r = await _dio.get<Map<String, dynamic>>(
+      '/api/documents/$id/download',
+    );
+    return r.data!['url'] as String;
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

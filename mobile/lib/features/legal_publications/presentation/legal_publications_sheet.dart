@@ -154,10 +154,7 @@ class _Row extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Версия ${doc.version} · ${_humanSize(doc.sizeBytes)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.n500,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: AppColors.n500),
                   ),
                 ],
               ),

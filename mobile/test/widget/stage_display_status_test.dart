@@ -9,33 +9,33 @@ void main() {
     DateTime? plannedStart,
     DateTime? plannedEnd,
     DateTime? startedAt,
-  }) =>
-      Stage.parse({
-        'id': 'x',
-        'projectId': 'p',
-        'title': 't',
-        'orderIndex': 0,
-        'status': status.name,
-        'pauseDurationMs': 0,
-        'workBudget': 0,
-        'materialsBudget': 0,
-        'foremanIds': <String>[],
-        'progressCache': 0,
-        'planApproved': false,
-        if (plannedStart != null)
-          'plannedStart': plannedStart.toIso8601String(),
-        if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
-        if (startedAt != null) 'startedAt': startedAt.toIso8601String(),
-        'createdAt': '2026-04-01T00:00:00Z',
-        'updatedAt': '2026-04-01T00:00:00Z',
-      });
+  }) => Stage.parse({
+    'id': 'x',
+    'projectId': 'p',
+    'title': 't',
+    'orderIndex': 0,
+    'status': status.name,
+    'pauseDurationMs': 0,
+    'workBudget': 0,
+    'materialsBudget': 0,
+    'foremanIds': <String>[],
+    'progressCache': 0,
+    'planApproved': false,
+    if (plannedStart != null) 'plannedStart': plannedStart.toIso8601String(),
+    if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
+    if (startedAt != null) 'startedAt': startedAt.toIso8601String(),
+    'createdAt': '2026-04-01T00:00:00Z',
+    'updatedAt': '2026-04-01T00:00:00Z',
+  });
 
   final now = DateTime.utc(2026, 4, 22);
 
   group('StageDisplayStatus.of — базовые', () {
     test('pending без дат → pending', () {
-      final d = StageDisplayStatus.of(stageOf(status: StageStatus.pending),
-          now: now);
+      final d = StageDisplayStatus.of(
+        stageOf(status: StageStatus.pending),
+        now: now,
+      );
       expect(d, StageDisplayStatus.pending);
       expect(d.semaphore, Semaphore.plan);
     });
@@ -49,10 +49,7 @@ void main() {
 
     test('done → done (не overdue, даже если дедлайн прошёл)', () {
       final d = StageDisplayStatus.of(
-        stageOf(
-          status: StageStatus.done,
-          plannedEnd: DateTime.utc(2026, 4, 1),
-        ),
+        stageOf(status: StageStatus.done, plannedEnd: DateTime.utc(2026, 4, 1)),
         now: now,
       );
       expect(d, StageDisplayStatus.done);
@@ -60,8 +57,7 @@ void main() {
 
     test('rejected → rejected', () {
       expect(
-        StageDisplayStatus.of(stageOf(status: StageStatus.rejected),
-            now: now),
+        StageDisplayStatus.of(stageOf(status: StageStatus.rejected), now: now),
         StageDisplayStatus.rejected,
       );
     });
@@ -121,10 +117,7 @@ void main() {
       // review priority лишь при default ветке, но plannedEnd прошёл —
       // technically попадает в overdue. Это ок, но семантически это
       // подсветка блокера: «отправили на приёмку и уже просрочено».
-      expect(
-        d,
-        anyOf(StageDisplayStatus.review, StageDisplayStatus.overdue),
-      );
+      expect(d, anyOf(StageDisplayStatus.review, StageDisplayStatus.overdue));
     });
   });
 }

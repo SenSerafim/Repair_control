@@ -27,7 +27,8 @@ String _onlyDigits(String s) => s.replaceAll(RegExp(r'\D'), '');
 String _localDigits(String raw) {
   var digits = _onlyDigits(raw);
   // Срез leading 7/8 для строк вида `+79991234567` или `89991234567`.
-  if (digits.length == 11 && (digits.startsWith('7') || digits.startsWith('8'))) {
+  if (digits.length == 11 &&
+      (digits.startsWith('7') || digits.startsWith('8'))) {
     digits = digits.substring(1);
   } else if (digits.length > 10) {
     // 12+ цифр — отбросим всё, что после первых 10. Если первая цифра 7/8 и

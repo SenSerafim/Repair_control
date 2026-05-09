@@ -12,11 +12,7 @@ import '../../application/tour_anchor_registry.dart';
 /// За пределами `/tour` route — это no-op обёртка, child рендерится как
 /// есть, регистрация уходит в default-реестр (никто не читает).
 class TourAnchor extends ConsumerStatefulWidget {
-  const TourAnchor({
-    required this.id,
-    required this.child,
-    super.key,
-  });
+  const TourAnchor({required this.id, required this.child, super.key});
 
   final String id;
   final Widget child;

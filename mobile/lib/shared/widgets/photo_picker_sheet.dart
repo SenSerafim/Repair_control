@@ -133,8 +133,9 @@ class _Tile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style:
-                        AppTextStyles.caption.copyWith(color: AppColors.n400),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.n400,
+                    ),
                   ),
                 ],
               ),

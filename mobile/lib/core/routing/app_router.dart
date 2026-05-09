@@ -101,7 +101,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       final loc = state.matchedLocation;
-      final isAuthArea = loc == AppRoutes.welcome ||
+      final isAuthArea =
+          loc == AppRoutes.welcome ||
           loc == AppRoutes.login ||
           loc == AppRoutes.register ||
           loc == AppRoutes.recovery;
@@ -139,10 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.welcome,
         builder: (_, __) => const WelcomeScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.login,
-        builder: (_, __) => const LoginScreen(),
-      ),
+      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
       GoRoute(
         path: AppRoutes.register,
         builder: (_, __) => const RegisterScreen(),
@@ -154,10 +152,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // S19: интерактивный демо-тур. Top-level route, ProviderScope с
       // override-ами на 8 mock-репо живёт внутри TourShell — за пределами
       // /tour моки не видны.
-      GoRoute(
-        path: '/tour',
-        builder: (_, __) => const TourShell(),
-      ),
+      GoRoute(path: '/tour', builder: (_, __) => const TourShell()),
       // P2.4: deep-link /invite/:code (root-level).
       // repair-control://invite/123456 (Android scheme + iOS URL Type)
       // или https-link с тем же path попадает сюда. Перенаправляем на
@@ -179,8 +174,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'create',
-                pageBuilder:
-                    slideUpPage((_, __) => const CreateProjectScreen()),
+                pageBuilder: slideUpPage(
+                  (_, __) => const CreateProjectScreen(),
+                ),
               ),
               GoRoute(
                 path: 'archive',
@@ -290,8 +286,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'create',
                         pageBuilder: slideUpPage(
                           (_, state) => CreateStageScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -299,8 +294,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'created',
                         pageBuilder: slideUpPage(
                           (_, state) => StageCreatedScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                             stageId: state.uri.queryParameters['stageId'],
                           ),
                         ),
@@ -309,8 +303,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'templates',
                         pageBuilder: slideLeftPage(
                           (_, state) => TemplatesScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                         routes: [
@@ -318,10 +311,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                             path: ':templateId/preview',
                             pageBuilder: slideLeftPage(
                               (_, state) => TemplatePreviewScreen(
-                                projectId:
-                                    state.pathParameters['projectId']!,
-                                templateId:
-                                    state.pathParameters['templateId']!,
+                                projectId: state.pathParameters['projectId']!,
+                                templateId: state.pathParameters['templateId']!,
                               ),
                             ),
                           ),
@@ -331,8 +322,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: ':stageId',
                         pageBuilder: slideLeftPage(
                           (_, state) => StageDetailScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                             stageId: state.pathParameters['stageId']!,
                           ),
                         ),
@@ -341,12 +331,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                             path: 'steps/:stepId',
                             pageBuilder: slideLeftPage(
                               (_, state) => StepDetailScreen(
-                                projectId:
-                                    state.pathParameters['projectId']!,
-                                stageId:
-                                    state.pathParameters['stageId']!,
-                                stepId:
-                                    state.pathParameters['stepId']!,
+                                projectId: state.pathParameters['projectId']!,
+                                stageId: state.pathParameters['stageId']!,
+                                stepId: state.pathParameters['stepId']!,
                               ),
                             ),
                             routes: [
@@ -356,12 +343,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                                   (_, state) => QuestionReplyScreen(
                                     projectId:
                                         state.pathParameters['projectId']!,
-                                    stageId:
-                                        state.pathParameters['stageId']!,
-                                    stepId:
-                                        state.pathParameters['stepId']!,
-                                    questionId: state
-                                        .pathParameters['questionId']!,
+                                    stageId: state.pathParameters['stageId']!,
+                                    stepId: state.pathParameters['stepId']!,
+                                    questionId:
+                                        state.pathParameters['questionId']!,
                                   ),
                                 ),
                               ),
@@ -391,10 +376,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: ':approvalId',
                         pageBuilder: slideLeftPage(
                           (_, state) => ApprovalDetailScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
-                            approvalId:
-                                state.pathParameters['approvalId']!,
+                            projectId: state.pathParameters['projectId']!,
+                            approvalId: state.pathParameters['approvalId']!,
                           ),
                         ),
                         routes: [
@@ -402,11 +385,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                             path: 'result',
                             pageBuilder: slideLeftPage(
                               (_, state) => ApprovalResultScreen(
-                                projectId:
-                                    state.pathParameters['projectId']!,
-                                approvalId:
-                                    state.pathParameters['approvalId']!,
-                                status: state.uri.queryParameters['status'] ??
+                                projectId: state.pathParameters['projectId']!,
+                                approvalId: state.pathParameters['approvalId']!,
+                                status:
+                                    state.uri.queryParameters['status'] ??
                                     'approved',
                               ),
                             ),
@@ -443,8 +425,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'new',
                         pageBuilder: slideUpPage(
                           (_, state) => CreateAdvanceScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -452,8 +433,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'advance',
                         pageBuilder: slideUpPage(
                           (_, state) => CreateAdvanceScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -471,8 +451,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'new',
                         pageBuilder: slideUpPage(
                           (_, state) => CreateMaterialScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -480,10 +459,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: ':requestId',
                         pageBuilder: slideLeftPage(
                           (_, state) => MaterialDetailScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
-                            requestId:
-                                state.pathParameters['requestId']!,
+                            projectId: state.pathParameters['projectId']!,
+                            requestId: state.pathParameters['requestId']!,
                           ),
                         ),
                         routes: [
@@ -491,12 +468,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                             path: 'items/:itemId/edit',
                             pageBuilder: slideUpPage(
                               (_, state) => EditPurchasedItemScreen(
-                                projectId:
-                                    state.pathParameters['projectId']!,
-                                requestId:
-                                    state.pathParameters['requestId']!,
-                                itemId:
-                                    state.pathParameters['itemId']!,
+                                projectId: state.pathParameters['projectId']!,
+                                requestId: state.pathParameters['requestId']!,
+                                itemId: state.pathParameters['itemId']!,
                               ),
                             ),
                           ),
@@ -516,8 +490,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'new',
                         pageBuilder: slideUpPage(
                           (_, state) => CreateSelfPurchaseScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -525,8 +498,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: ':id',
                         pageBuilder: slideLeftPage(
                           (_, state) => SelfPurchaseDetailScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                             id: state.pathParameters['id']!,
                           ),
                         ),
@@ -535,8 +507,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                             path: 'reject',
                             pageBuilder: slideUpPage(
                               (_, state) => RejectSelfPurchaseScreen(
-                                projectId:
-                                    state.pathParameters['projectId']!,
+                                projectId: state.pathParameters['projectId']!,
                                 id: state.pathParameters['id']!,
                               ),
                             ),
@@ -557,8 +528,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'new',
                         pageBuilder: slideUpPage(
                           (_, state) => IssueToolScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -593,8 +563,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'upload',
                         pageBuilder: slideUpPage(
                           (_, state) => DocumentUploadScreen(
-                            projectId:
-                                state.pathParameters['projectId']!,
+                            projectId: state.pathParameters['projectId']!,
                           ),
                         ),
                       ),
@@ -634,13 +603,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'tools',
-                pageBuilder:
-                    slideLeftPage((_, __) => const MyToolsScreen()),
+                pageBuilder: slideLeftPage((_, __) => const MyToolsScreen()),
                 routes: [
                   GoRoute(
                     path: 'add',
-                    pageBuilder:
-                        slideUpPage((_, __) => const AddToolScreen()),
+                    pageBuilder: slideUpPage(
+                      (_, state) => AddToolScreen(
+                        projectId: state.uri.queryParameters['projectId'],
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: ':toolId',
@@ -655,24 +626,26 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'edit',
                 parentNavigatorKey: null,
-                pageBuilder:
-                    slideLeftPage((_, __) => const EditProfileScreen()),
+                pageBuilder: slideLeftPage(
+                  (_, __) => const EditProfileScreen(),
+                ),
               ),
               GoRoute(
                 path: 'switch-role',
-                pageBuilder:
-                    slideLeftPage((_, __) => const RoleSwitcherScreen()),
+                pageBuilder: slideLeftPage(
+                  (_, __) => const RoleSwitcherScreen(),
+                ),
               ),
               GoRoute(
                 path: 'roles',
-                pageBuilder:
-                    slideLeftPage((_, __) => const RolesScreen()),
+                pageBuilder: slideLeftPage((_, __) => const RolesScreen()),
                 routes: [
                   GoRoute(
                     path: 'switched',
                     pageBuilder: fadePage(
                       (_, state) => RoleSwitchedScreen(
-                        role: SystemRole.fromString(
+                        role:
+                            SystemRole.fromString(
                               state.uri.queryParameters['role'],
                             ) ??
                             SystemRole.customer,
@@ -683,13 +656,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: 'rep-rights',
-                pageBuilder:
-                    slideLeftPage((_, __) => const RepRightsScreen()),
+                pageBuilder: slideLeftPage((_, __) => const RepRightsScreen()),
               ),
               GoRoute(
                 path: 'language',
-                pageBuilder:
-                    slideLeftPage((_, __) => const LanguageScreen()),
+                pageBuilder: slideLeftPage((_, __) => const LanguageScreen()),
               ),
               GoRoute(
                 path: 'notifications',
@@ -713,8 +684,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: 'feedback',
-                pageBuilder:
-                    slideLeftPage((_, __) => const FeedbackScreen()),
+                pageBuilder: slideLeftPage((_, __) => const FeedbackScreen()),
               ),
             ],
           ),
@@ -731,9 +701,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/chats/:chatId',
         pageBuilder: slideLeftPage(
-          (_, state) => ChatConversationScreen(
-            chatId: state.pathParameters['chatId']!,
-          ),
+          (_, state) =>
+              ChatConversationScreen(chatId: state.pathParameters['chatId']!),
         ),
       ),
       GoRoute(
@@ -768,8 +737,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'search',
-            pageBuilder:
-                fadePage((_, __) => const MethodologySearchScreen()),
+            pageBuilder: fadePage((_, __) => const MethodologySearchScreen()),
           ),
           GoRoute(
             path: 'sections/:sectionId',
@@ -782,9 +750,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'articles/:articleId',
             pageBuilder: slideLeftPage(
-              (_, state) => ArticleScreen(
-                articleId: state.pathParameters['articleId']!,
-              ),
+              (_, state) =>
+                  ArticleScreen(articleId: state.pathParameters['articleId']!),
             ),
           ),
         ],
@@ -799,8 +766,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'search',
-            pageBuilder:
-                fadePage((_, __) => const KnowledgeSearchScreen()),
+            pageBuilder: fadePage((_, __) => const KnowledgeSearchScreen()),
           ),
           GoRoute(
             path: 'categories/:categoryId',

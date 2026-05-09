@@ -9,10 +9,7 @@ import '../application/profile_controller.dart';
 ///
 /// Активная карточка получает синий чекбокс; tap по неактивной — мгновенное
 /// переключение через `profile_controller.updateProfile(language: ...)`.
-Future<void> showLanguageSheet(
-  BuildContext context,
-  WidgetRef ref,
-) async {
+Future<void> showLanguageSheet(BuildContext context, WidgetRef ref) async {
   await showAppBottomSheet<void>(
     context: context,
     child: const _LanguageSheet(),

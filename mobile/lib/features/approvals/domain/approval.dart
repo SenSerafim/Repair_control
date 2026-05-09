@@ -48,52 +48,52 @@ enum ApprovalScope {
   }
 
   String get apiValue => switch (this) {
-        ApprovalScope.plan => 'plan',
-        ApprovalScope.step => 'step',
-        ApprovalScope.extraWork => 'extra_work',
-        ApprovalScope.deadlineChange => 'deadline_change',
-        ApprovalScope.stageAccept => 'stage_accept',
-        ApprovalScope.stageCreate => 'stage_create',
-        ApprovalScope.materialPurchase => 'material_purchase',
-        ApprovalScope.selfPurchase => 'self_purchase',
-        ApprovalScope.paymentDispute => 'payment_dispute',
-      };
+    ApprovalScope.plan => 'plan',
+    ApprovalScope.step => 'step',
+    ApprovalScope.extraWork => 'extra_work',
+    ApprovalScope.deadlineChange => 'deadline_change',
+    ApprovalScope.stageAccept => 'stage_accept',
+    ApprovalScope.stageCreate => 'stage_create',
+    ApprovalScope.materialPurchase => 'material_purchase',
+    ApprovalScope.selfPurchase => 'self_purchase',
+    ApprovalScope.paymentDispute => 'payment_dispute',
+  };
 
   String get displayName => switch (this) {
-        ApprovalScope.plan => 'План работ',
-        ApprovalScope.step => 'Шаг',
-        ApprovalScope.extraWork => 'Доп.работа',
-        ApprovalScope.deadlineChange => 'Перенос дедлайна',
-        ApprovalScope.stageAccept => 'Приёмка этапа',
-        ApprovalScope.stageCreate => 'Создание этапа',
-        ApprovalScope.materialPurchase => 'Закупка материалов',
-        ApprovalScope.selfPurchase => 'Самокуп',
-        ApprovalScope.paymentDispute => 'Диспут по платежу',
-      };
+    ApprovalScope.plan => 'План работ',
+    ApprovalScope.step => 'Шаг',
+    ApprovalScope.extraWork => 'Доп.работа',
+    ApprovalScope.deadlineChange => 'Перенос дедлайна',
+    ApprovalScope.stageAccept => 'Приёмка этапа',
+    ApprovalScope.stageCreate => 'Создание этапа',
+    ApprovalScope.materialPurchase => 'Закупка материалов',
+    ApprovalScope.selfPurchase => 'Самокуп',
+    ApprovalScope.paymentDispute => 'Диспут по платежу',
+  };
 
   String get shortHint => switch (this) {
-        ApprovalScope.plan => 'План всех этапов',
-        ApprovalScope.step => 'Отметка шага',
-        ApprovalScope.extraWork => 'Работа сверх плана',
-        ApprovalScope.deadlineChange => 'Перенести дату завершения',
-        ApprovalScope.stageAccept => 'Завершение этапа',
-        ApprovalScope.stageCreate => 'Этап от бригадира',
-        ApprovalScope.materialPurchase => 'Купить материалы',
-        ApprovalScope.selfPurchase => 'Возмещение мастеру',
-        ApprovalScope.paymentDispute => 'Спор по сумме',
-      };
+    ApprovalScope.plan => 'План всех этапов',
+    ApprovalScope.step => 'Отметка шага',
+    ApprovalScope.extraWork => 'Работа сверх плана',
+    ApprovalScope.deadlineChange => 'Перенести дату завершения',
+    ApprovalScope.stageAccept => 'Завершение этапа',
+    ApprovalScope.stageCreate => 'Этап от бригадира',
+    ApprovalScope.materialPurchase => 'Купить материалы',
+    ApprovalScope.selfPurchase => 'Возмещение мастеру',
+    ApprovalScope.paymentDispute => 'Спор по сумме',
+  };
 
   IconData get icon => switch (this) {
-        ApprovalScope.plan => Icons.list_alt_rounded,
-        ApprovalScope.step => Icons.check_circle_outline,
-        ApprovalScope.extraWork => Icons.add_circle_outline,
-        ApprovalScope.deadlineChange => Icons.update_rounded,
-        ApprovalScope.stageAccept => Icons.verified_outlined,
-        ApprovalScope.stageCreate => Icons.layers_outlined,
-        ApprovalScope.materialPurchase => Icons.shopping_cart_outlined,
-        ApprovalScope.selfPurchase => Icons.payments_outlined,
-        ApprovalScope.paymentDispute => Icons.gavel_outlined,
-      };
+    ApprovalScope.plan => Icons.list_alt_rounded,
+    ApprovalScope.step => Icons.check_circle_outline,
+    ApprovalScope.extraWork => Icons.add_circle_outline,
+    ApprovalScope.deadlineChange => Icons.update_rounded,
+    ApprovalScope.stageAccept => Icons.verified_outlined,
+    ApprovalScope.stageCreate => Icons.layers_outlined,
+    ApprovalScope.materialPurchase => Icons.shopping_cart_outlined,
+    ApprovalScope.selfPurchase => Icons.payments_outlined,
+    ApprovalScope.paymentDispute => Icons.gavel_outlined,
+  };
 }
 
 /// П2.6 — роль адресата для текущей ступени approval. Используется на UI
@@ -120,11 +120,11 @@ enum ApprovalActorRole {
   }
 
   String get displayName => switch (this) {
-        ApprovalActorRole.customer => 'заказчика',
-        ApprovalActorRole.representative => 'представителя',
-        ApprovalActorRole.foreman => 'бригадира',
-        ApprovalActorRole.master => 'мастера',
-      };
+    ApprovalActorRole.customer => 'заказчика',
+    ApprovalActorRole.representative => 'представителя',
+    ApprovalActorRole.foreman => 'бригадира',
+    ApprovalActorRole.master => 'мастера',
+  };
 }
 
 /// Статус согласования — FSM: pending → approved|rejected|cancelled.
@@ -150,25 +150,25 @@ enum ApprovalStatus {
   }
 
   String get apiValue => switch (this) {
-        ApprovalStatus.pending => 'pending',
-        ApprovalStatus.approved => 'approved',
-        ApprovalStatus.rejected => 'rejected',
-        ApprovalStatus.cancelled => 'cancelled',
-      };
+    ApprovalStatus.pending => 'pending',
+    ApprovalStatus.approved => 'approved',
+    ApprovalStatus.rejected => 'rejected',
+    ApprovalStatus.cancelled => 'cancelled',
+  };
 
   String get displayName => switch (this) {
-        ApprovalStatus.pending => 'На согласовании',
-        ApprovalStatus.approved => 'Одобрено',
-        ApprovalStatus.rejected => 'Отклонено',
-        ApprovalStatus.cancelled => 'Отменено',
-      };
+    ApprovalStatus.pending => 'На согласовании',
+    ApprovalStatus.approved => 'Одобрено',
+    ApprovalStatus.rejected => 'Отклонено',
+    ApprovalStatus.cancelled => 'Отменено',
+  };
 
   Semaphore get semaphore => switch (this) {
-        ApprovalStatus.pending => Semaphore.blue,
-        ApprovalStatus.approved => Semaphore.green,
-        ApprovalStatus.rejected => Semaphore.red,
-        ApprovalStatus.cancelled => Semaphore.plan,
-      };
+    ApprovalStatus.pending => Semaphore.blue,
+    ApprovalStatus.approved => Semaphore.green,
+    ApprovalStatus.rejected => Semaphore.red,
+    ApprovalStatus.cancelled => Semaphore.plan,
+  };
 
   bool get isHistory => this != ApprovalStatus.pending;
 }
@@ -186,14 +186,14 @@ class ApprovalAttempt with _$ApprovalAttempt {
   }) = _ApprovalAttempt;
 
   static ApprovalAttempt parse(Map<String, dynamic> json) => ApprovalAttempt(
-        id: json['id'] as String,
-        approvalId: json['approvalId'] as String,
-        attemptNumber: (json['attemptNumber'] as num?)?.toInt() ?? 1,
-        action: json['action'] as String? ?? 'created',
-        actorId: json['actorId'] as String? ?? '',
-        comment: json['comment'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    approvalId: json['approvalId'] as String,
+    attemptNumber: (json['attemptNumber'] as num?)?.toInt() ?? 1,
+    action: json['action'] as String? ?? 'created',
+    actorId: json['actorId'] as String? ?? '',
+    comment: json['comment'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 }
 
 @freezed
@@ -233,6 +233,7 @@ class Approval with _$Approval {
     @Default(<String, dynamic>{}) Map<String, dynamic> payload,
     required String requestedById,
     required String addresseeId,
+
     /// П2.6 — роль адресата текущей ступени; null для approvals из старой
     /// схемы (без actorRole). Если null — fallback на addresseeId-проверку.
     ApprovalActorRole? actorRole,
@@ -249,31 +250,30 @@ class Approval with _$Approval {
   }) = _Approval;
 
   static Approval parse(Map<String, dynamic> json) => Approval(
-        id: json['id'] as String,
-        scope: ApprovalScope.fromString(json['scope'] as String?),
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        stepId: json['stepId'] as String?,
-        payload:
-            Map<String, dynamic>.from(json['payload'] as Map? ?? const {}),
-        requestedById: json['requestedById'] as String? ?? '',
-        addresseeId: json['addresseeId'] as String? ?? '',
-        actorRole: ApprovalActorRole.fromString(json['actorRole'] as String?),
-        status: ApprovalStatus.fromString(json['status'] as String?),
-        attemptNumber: (json['attemptNumber'] as num?)?.toInt() ?? 1,
-        requiresReassign: json['requiresReassign'] as bool? ?? false,
-        decidedAt: _d(json['decidedAt']),
-        decidedById: json['decidedById'] as String?,
-        decisionComment: json['decisionComment'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        attempts: (json['attempts'] as List<dynamic>? ?? const [])
-            .map((e) => ApprovalAttempt.parse(e as Map<String, dynamic>))
-            .toList(),
-        attachments: (json['attachments'] as List<dynamic>? ?? const [])
-            .map((e) => ApprovalAttachment.parse(e as Map<String, dynamic>))
-            .toList(),
-      );
+    id: json['id'] as String,
+    scope: ApprovalScope.fromString(json['scope'] as String?),
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    stepId: json['stepId'] as String?,
+    payload: Map<String, dynamic>.from(json['payload'] as Map? ?? const {}),
+    requestedById: json['requestedById'] as String? ?? '',
+    addresseeId: json['addresseeId'] as String? ?? '',
+    actorRole: ApprovalActorRole.fromString(json['actorRole'] as String?),
+    status: ApprovalStatus.fromString(json['status'] as String?),
+    attemptNumber: (json['attemptNumber'] as num?)?.toInt() ?? 1,
+    requiresReassign: json['requiresReassign'] as bool? ?? false,
+    decidedAt: _d(json['decidedAt']),
+    decidedById: json['decidedById'] as String?,
+    decisionComment: json['decisionComment'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    attempts: (json['attempts'] as List<dynamic>? ?? const [])
+        .map((e) => ApprovalAttempt.parse(e as Map<String, dynamic>))
+        .toList(),
+    attachments: (json['attachments'] as List<dynamic>? ?? const [])
+        .map((e) => ApprovalAttachment.parse(e as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

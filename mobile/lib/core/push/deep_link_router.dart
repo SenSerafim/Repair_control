@@ -44,8 +44,7 @@ class DeepLinkRouter {
 
     // Export deep-link: открывает список экспортов проекта (отдельная
     // карточка с jobId не нужна — списка достаточно для скачивания).
-    if (exportId != null ||
-        (kind != null && kind.startsWith('export_'))) {
+    if (exportId != null || (kind != null && kind.startsWith('export_'))) {
       return '/projects/$projectId/exports';
     }
     if (approvalId != null) {
@@ -68,8 +67,7 @@ class DeepLinkRouter {
   /// Разбор строки «тип уведомления» из backend (NotificationKind) в
   /// удобную категорию — используется в NotificationsScreen для иконок.
   static NotificationRoute categoryOf(String kind) {
-    if (kind.startsWith('approval_') ||
-        kind == 'stage_rejected_by_customer') {
+    if (kind.startsWith('approval_') || kind == 'stage_rejected_by_customer') {
       return NotificationRoute.approval;
     }
     if (kind.startsWith('payment_')) return NotificationRoute.payment;

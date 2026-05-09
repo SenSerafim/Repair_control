@@ -10,26 +10,27 @@ void main() {
 
   for (final palette in AvatarPalette.values) {
     for (final size in [32.0, 48.0, 64.0]) {
-      testWidgets(
-        'AppAvatar — ${palette.name} @ ${size.toInt()}',
-        (tester) async {
-          await tester.pumpWidget(
-            goldenScaffold(
-              size: Size(size + 16, size + 16),
-              child: AppAvatar(
-                seed: palette.name,
-                name: 'Иван Иванов',
-                size: size,
-                palette: palette,
-              ),
+      testWidgets('AppAvatar — ${palette.name} @ ${size.toInt()}', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          goldenScaffold(
+            size: Size(size + 16, size + 16),
+            child: AppAvatar(
+              seed: palette.name,
+              name: 'Иван Иванов',
+              size: size,
+              palette: palette,
             ),
-          );
-          await expectLater(
-            find.byType(AppAvatar),
-            matchesGoldenFile('goldens/avatar_${palette.name}_${size.toInt()}.png'),
-          );
-        },
-      );
+          ),
+        );
+        await expectLater(
+          find.byType(AppAvatar),
+          matchesGoldenFile(
+            'goldens/avatar_${palette.name}_${size.toInt()}.png',
+          ),
+        );
+      });
     }
   }
 }

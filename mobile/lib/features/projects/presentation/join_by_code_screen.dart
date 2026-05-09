@@ -114,8 +114,10 @@ class _JoinByCodeScreenState extends ConsumerState<JoinByCodeScreen> {
               filled: true,
               fillColor: AppColors.n0,
               hintText: '······',
-              hintStyle: AppTextStyles.h1
-                  .copyWith(color: AppColors.n300, letterSpacing: 8),
+              hintStyle: AppTextStyles.h1.copyWith(
+                color: AppColors.n300,
+                letterSpacing: 8,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
                 borderSide: const BorderSide(color: AppColors.n200, width: 1.5),

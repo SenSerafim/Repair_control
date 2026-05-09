@@ -56,8 +56,11 @@ class KnowledgeScreen extends ConsumerWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(PhosphorIconsFill.magnifyingGlass,
-                        color: AppColors.n400, size: 18),
+                    Icon(
+                      PhosphorIconsFill.magnifyingGlass,
+                      color: AppColors.n400,
+                      size: 18,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Поиск по статьям…',
@@ -83,8 +86,8 @@ class KnowledgeScreen extends ConsumerWidget {
                       iconColor: AppColors.brand,
                       label: c.title,
                       value: '${c.articleCount} статей',
-                      onTap: () => context
-                          .push(AppRoutes.knowledgeCategoryWith(c.id)),
+                      onTap: () =>
+                          context.push(AppRoutes.knowledgeCategoryWith(c.id)),
                     ),
                 ],
               ),

@@ -22,25 +22,21 @@ class LegalPendingState {
     bool? isLoading,
     AuthFailure? failure,
     bool clearFailure = false,
-  }) =>
-      LegalPendingState(
-        pendingKinds: pendingKinds ?? this.pendingKinds,
-        isLoading: isLoading ?? this.isLoading,
-        failure: clearFailure ? null : (failure ?? this.failure),
-      );
+  }) => LegalPendingState(
+    pendingKinds: pendingKinds ?? this.pendingKinds,
+    isLoading: isLoading ?? this.isLoading,
+    failure: clearFailure ? null : (failure ?? this.failure),
+  );
 }
 
 /// Контроллер legal-acceptance. Опрашивает `/me/legal-acceptance` после
 /// логина и отслеживает какие документы нужно принять.
 final legalControllerProvider =
-    NotifierProvider<LegalController, LegalPendingState>(
-  LegalController.new,
-);
+    NotifierProvider<LegalController, LegalPendingState>(LegalController.new);
 
 class LegalController extends Notifier<LegalPendingState> {
   @override
-  LegalPendingState build() =>
-      const LegalPendingState(pendingKinds: []);
+  LegalPendingState build() => const LegalPendingState(pendingKinds: []);
 
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
@@ -65,8 +61,7 @@ class LegalController extends Notifier<LegalPendingState> {
     try {
       await _repo.legalAccept(kind);
       state = state.copyWith(
-        pendingKinds:
-            state.pendingKinds.where((k) => k != kind).toList(),
+        pendingKinds: state.pendingKinds.where((k) => k != kind).toList(),
       );
     } on AuthException catch (e) {
       state = state.copyWith(failure: e.failure);

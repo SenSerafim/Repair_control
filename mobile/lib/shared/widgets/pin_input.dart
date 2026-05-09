@@ -37,8 +37,9 @@ class _PinInputState extends State<PinInput> {
   void initState() {
     super.initState();
     if (widget.autofocus) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _focus.requestFocus());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focus.requestFocus(),
+      );
     }
     _controller.addListener(_onChanged);
   }
@@ -60,8 +61,7 @@ class _PinInputState extends State<PinInput> {
 
   @override
   Widget build(BuildContext context) {
-    final hasError =
-        widget.errorText != null && widget.errorText!.isNotEmpty;
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,11 +199,7 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: Tween<double>(begin: 1, end: 0.3).animate(_ctrl),
-      child: Container(
-        width: 2,
-        height: 28,
-        color: AppColors.brand,
-      ),
+      child: Container(width: 2, height: 28, color: AppColors.brand),
     );
   }
 }

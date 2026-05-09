@@ -78,12 +78,18 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canDecide = ref.watch(canInProjectProvider(
-      (action: DomainAction.approvalDecide, projectId: project.id),
-    ));
-    final canRequest = ref.watch(canInProjectProvider(
-      (action: DomainAction.approvalRequest, projectId: project.id),
-    ));
+    final canDecide = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalDecide,
+        projectId: project.id,
+      )),
+    );
+    final canRequest = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalRequest,
+        projectId: project.id,
+      )),
+    );
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -208,18 +214,24 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final workBudget = stages.fold<int>(0, (sum, s) => sum + s.workBudget);
-    final materialsBudget =
-        stages.fold<int>(0, (sum, s) => sum + s.materialsBudget);
+    final materialsBudget = stages.fold<int>(
+      0,
+      (sum, s) => sum + s.materialsBudget,
+    );
     final earliest = stages
         .where((s) => s.plannedStart != null)
         .map((s) => s.plannedStart!)
-        .fold<DateTime?>(null,
-            (acc, d) => acc == null || d.isBefore(acc) ? d : acc);
+        .fold<DateTime?>(
+          null,
+          (acc, d) => acc == null || d.isBefore(acc) ? d : acc,
+        );
     final latest = stages
         .where((s) => s.plannedEnd != null)
         .map((s) => s.plannedEnd!)
-        .fold<DateTime?>(null,
-            (acc, d) => acc == null || d.isAfter(acc) ? d : acc);
+        .fold<DateTime?>(
+          null,
+          (acc, d) => acc == null || d.isAfter(acc) ? d : acc,
+        );
     String fmt(DateTime? d) =>
         d == null ? '—' : DateFormat('d MMM y', 'ru').format(d);
     return Container(
@@ -245,17 +257,17 @@ class _Summary extends StatelessWidget {
   }
 
   static Widget _row(String label, String value) => Row(
-        children: [
-          Expanded(child: Text(label, style: AppTextStyles.caption)),
-          Flexible(
-            child: Text(
-              value,
-              style: AppTextStyles.subtitle,
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      );
+    children: [
+      Expanded(child: Text(label, style: AppTextStyles.caption)),
+      Flexible(
+        child: Text(
+          value,
+          style: AppTextStyles.subtitle,
+          textAlign: TextAlign.right,
+        ),
+      ),
+    ],
+  );
 }
 
 class _PlanStageRow extends StatelessWidget {
@@ -359,16 +371,14 @@ class _Actions extends ConsumerWidget {
             AppButton(
               label: 'Запросить корректировку',
               variant: AppButtonVariant.destructive,
-              onPressed: () =>
-                  showRejectSheet(context, ref, approval: pending),
+              onPressed: () => showRejectSheet(context, ref, approval: pending),
             ),
           ],
           AppButton(
             label: 'Открыть детали согласования',
             variant: AppButtonVariant.ghost,
-            onPressed: () => context.push(
-              AppRoutes.approvalDetailWith(pending.id),
-            ),
+            onPressed: () =>
+                context.push(AppRoutes.approvalDetailWith(pending.id)),
           ),
         ],
       );
@@ -402,26 +412,28 @@ class _Actions extends ConsumerWidget {
         );
         return;
       }
-      await ref.read(approvalsRepositoryProvider).create(
-        projectId: projectId,
-        scope: ApprovalScope.plan,
-        addresseeId: ownerId,
-        payload: {
-          'stages': [
-            for (final s in stages)
-              {
-                'stageId': s.id,
-                'title': s.title,
-                if (s.plannedStart != null)
-                  'plannedStart': s.plannedStart!.toIso8601String(),
-                if (s.plannedEnd != null)
-                  'plannedEnd': s.plannedEnd!.toIso8601String(),
-                'workBudget': s.workBudget,
-                'materialsBudget': s.materialsBudget,
-              },
-          ],
-        },
-      );
+      await ref
+          .read(approvalsRepositoryProvider)
+          .create(
+            projectId: projectId,
+            scope: ApprovalScope.plan,
+            addresseeId: ownerId,
+            payload: {
+              'stages': [
+                for (final s in stages)
+                  {
+                    'stageId': s.id,
+                    'title': s.title,
+                    if (s.plannedStart != null)
+                      'plannedStart': s.plannedStart!.toIso8601String(),
+                    if (s.plannedEnd != null)
+                      'plannedEnd': s.plannedEnd!.toIso8601String(),
+                    'workBudget': s.workBudget,
+                    'materialsBudget': s.materialsBudget,
+                  },
+              ],
+            },
+          );
       ref.invalidate(approvalsControllerProvider(projectId));
       if (!context.mounted) return;
       AppToast.show(

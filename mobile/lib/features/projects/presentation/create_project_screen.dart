@@ -58,8 +58,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   @override
   void initState() {
     super.initState();
-    _workBudget = TextEditingController()
-      ..addListener(() => setState(() {}));
+    _workBudget = TextEditingController()..addListener(() => setState(() {}));
     _materialsBudget = TextEditingController()
       ..addListener(() => setState(() {}));
   }
@@ -128,7 +127,9 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
       _submitError = null;
     });
     try {
-      final created = await ref.read(projectCreatorProvider).create(
+      final created = await ref
+          .read(projectCreatorProvider)
+          .create(
             title: _title.text.trim(),
             address: _address.text.trim(),
             description: _description.text.trim().isEmpty
@@ -196,8 +197,8 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
               title: _step == 1
                   ? 'Новый объект'
                   : _step == 2
-                      ? 'Бюджет проекта'
-                      : 'Этапы',
+                  ? 'Бюджет проекта'
+                  : 'Этапы',
               step: _step,
               totalSteps: 3,
               onBack: _back,
@@ -252,8 +253,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                 variant: _step == 3
                     ? AppButtonVariant.success
                     : AppButtonVariant.primary,
-                icon:
-                    _step == 3 ? PhosphorIconsBold.check : null,
+                icon: _step == 3 ? PhosphorIconsBold.check : null,
                 isLoading: _submitting,
                 onPressed: canProceed && !_submitting ? _next : null,
               ),
@@ -384,10 +384,7 @@ class _Step2 extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.x14),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: AppColors.brandLight,
             border: Border.all(color: AppColors.brand, width: 1.5),
@@ -498,11 +495,7 @@ class _Step3 extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  PhosphorIconsBold.plus,
-                  size: 14,
-                  color: AppColors.n500,
-                ),
+                Icon(PhosphorIconsBold.plus, size: 14, color: AppColors.n500),
                 const SizedBox(width: 6),
                 const Text(
                   'Добавить кастомный этап',
@@ -546,9 +539,7 @@ class _CustomStageDialogState extends State<_CustomStageDialog> {
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'Например: Балкон',
-        ),
+        decoration: const InputDecoration(hintText: 'Например: Балкон'),
         textInputAction: TextInputAction.done,
         onSubmitted: (_) => _submit(),
       ),
@@ -557,10 +548,7 @@ class _CustomStageDialogState extends State<_CustomStageDialog> {
           onPressed: () => Navigator.of(context).pop(null),
           child: const Text('Отмена'),
         ),
-        TextButton(
-          onPressed: _submit,
-          child: const Text('Добавить'),
-        ),
+        TextButton(onPressed: _submit, child: const Text('Добавить')),
       ],
     );
   }
@@ -643,8 +631,9 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted =
-        value == null ? 'Выберите' : DateFormat('d MMM y', 'ru').format(value!);
+    final formatted = value == null
+        ? 'Выберите'
+        : DateFormat('d MMM y', 'ru').format(value!);
     final filled = value != null;
     return GestureDetector(
       onTap: () async {
@@ -734,10 +723,7 @@ class _BudgetCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          MoneyInput(
-            controller: controller,
-            hint: '0 ₽',
-          ),
+          MoneyInput(controller: controller, hint: '0 ₽'),
         ],
       ),
     );
@@ -830,11 +816,7 @@ class _Check extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: selected
-          ? const Icon(
-              PhosphorIconsBold.check,
-              size: 14,
-              color: AppColors.n0,
-            )
+          ? const Icon(PhosphorIconsBold.check, size: 14, color: AppColors.n0)
           : null,
     );
   }

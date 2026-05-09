@@ -62,8 +62,7 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('На 30% видны фундамент + цоколь, нет стен 1F',
-      (tester) async {
+  testWidgets('На 30% видны фундамент + цоколь, нет стен 1F', (tester) async {
     await pumpHouse(tester, percent: 30, semaphore: Semaphore.red);
     // Дать слоям дойти до конечного opacity.
     await tester.pump(const Duration(milliseconds: 500));
@@ -88,10 +87,7 @@ void main() {
       tester.widget<HouseFoundation>(find.byType(HouseFoundation)).visible,
       isTrue,
     );
-    expect(
-      tester.widget<HouseSocle>(find.byType(HouseSocle)).visible,
-      isTrue,
-    );
+    expect(tester.widget<HouseSocle>(find.byType(HouseSocle)).visible, isTrue);
     expect(
       tester.widget<HouseWalls1F>(find.byType(HouseWalls1F)).visible,
       isTrue,
@@ -108,10 +104,7 @@ void main() {
       tester.widget<HouseRafters>(find.byType(HouseRafters)).visible,
       isTrue,
     );
-    expect(
-      tester.widget<HouseRoof>(find.byType(HouseRoof)).visible,
-      isTrue,
-    );
+    expect(tester.widget<HouseRoof>(find.byType(HouseRoof)).visible, isTrue);
     expect(
       tester.widget<HouseFacade>(find.byType(HouseFacade)).visible,
       isTrue,
@@ -133,8 +126,9 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('Изменение bouncePulse запускает Transform.scale-анимацию',
-      (tester) async {
+  testWidgets('Изменение bouncePulse запускает Transform.scale-анимацию', (
+    tester,
+  ) async {
     await pumpHouse(tester, percent: 60, semaphore: Semaphore.green);
 
     // bouncePulse = 0 → ни одна frame-callback не активна на bounce.

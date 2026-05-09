@@ -25,9 +25,12 @@ class TeamScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(teamControllerProvider(projectId));
-    final canManage = ref.watch(canInProjectProvider(
-      (action: DomainAction.projectInviteMember, projectId: projectId),
-    ));
+    final canManage = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectInviteMember,
+        projectId: projectId,
+      )),
+    );
 
     return AppScaffold(
       showBack: true,
@@ -38,18 +41,14 @@ class TeamScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.qr_code_2_rounded),
             tooltip: 'Сгенерировать код приглашения',
-            onPressed: () => showGenerateInviteCodeSheet(
-              context,
-              ref,
-              projectId: projectId,
-            ),
+            onPressed: () =>
+                showGenerateInviteCodeSheet(context, ref, projectId: projectId),
           ),
           IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined),
             tooltip: 'Добавить участника',
-            onPressed: () => context.push(
-              AppRoutes.projectAddMemberWith(projectId),
-            ),
+            onPressed: () =>
+                context.push(AppRoutes.projectAddMemberWith(projectId)),
           ),
         ],
       ],
@@ -58,8 +57,7 @@ class TeamScreen extends ConsumerWidget {
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить команду',
           subtitle: e.toString(),
-          onRetry: () =>
-              ref.invalidate(teamControllerProvider(projectId)),
+          onRetry: () => ref.invalidate(teamControllerProvider(projectId)),
         ),
         data: (team) {
           if (team.isEmpty) {
@@ -67,9 +65,9 @@ class TeamScreen extends ConsumerWidget {
               title: 'Пока нет участников',
               subtitle: canManage
                   ? 'Пригласите представителя, бригадира или мастера — '
-                      'они получат доступ к проекту сразу после входа.\n\n'
-                      'Самый быстрый способ — сгенерировать 6-значный код '
-                      'и отправить его получателю в любой мессенджер.'
+                        'они получат доступ к проекту сразу после входа.\n\n'
+                        'Самый быстрый способ — сгенерировать 6-значный код '
+                        'и отправить его получателю в любой мессенджер.'
                   : 'Заказчик ещё не пригласил участников.',
               icon: Icons.people_outline_rounded,
               actionLabel: canManage ? 'Сгенерировать код' : null,
@@ -98,13 +96,8 @@ class TeamScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.x8),
                     ...grouped[role]!.map(
                       (m) => Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: AppSpacing.x10,
-                        ),
-                        child: _MemberRow(
-                          projectId: projectId,
-                          member: m,
-                        ),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+                        child: _MemberRow(projectId: projectId, member: m),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.x12),
@@ -114,8 +107,7 @@ class TeamScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.x8),
                   ...team.invitations.map(
                     (inv) => Padding(
-                      padding:
-                          const EdgeInsets.only(bottom: AppSpacing.x10),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.x10),
                       child: _InvitationRow(
                         projectId: projectId,
                         invitation: inv,
@@ -198,10 +190,9 @@ class _LeaveTeamSection extends ConsumerWidget {
     );
     if (action == null || !context.mounted) return;
     try {
-      await ref.read(teamRepositoryProvider).leaveTeam(
-            projectId: projectId,
-            toolsAction: action,
-          );
+      await ref
+          .read(teamRepositoryProvider)
+          .leaveTeam(projectId: projectId, toolsAction: action);
       if (!context.mounted) return;
       AppToast.show(
         context,
@@ -251,9 +242,12 @@ class _MemberRow extends ConsumerWidget {
         ? 'Участник'
         : '${user.firstName} ${user.lastName}'.trim();
     final isRepresentative = member.role == MembershipRole.representative;
-    final canManage = ref.watch(canInProjectProvider(
-      (action: DomainAction.projectInviteMember, projectId: projectId),
-    ));
+    final canManage = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectInviteMember,
+        projectId: projectId,
+      )),
+    );
 
     final roleTone = _toneFor(member.role);
     return InkWell(
@@ -275,85 +269,85 @@ class _MemberRow extends ConsumerWidget {
               imageUrl: user?.avatarUrl,
               size: 40,
             ),
-          const SizedBox(width: AppSpacing.x12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name.isEmpty ? '—' : name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.n900,
-                    height: 1.3,
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name.isEmpty ? '—' : name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.n900,
+                      height: 1.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  member.role.displayName,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _roleColor(roleTone),
+                  const SizedBox(height: 2),
+                  Text(
+                    member.role.displayName,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _roleColor(roleTone),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (canManage)
-            PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'rights' && isRepresentative) {
-                await showRepRightsSheet(
-                  context,
-                  ref,
-                  projectId: projectId,
-                  member: member,
-                );
-              } else if (v == 'remove') {
-                final confirmed = await showAppBottomSheet<bool>(
-                  context: context,
-                  child: _RemoveConfirm(name: name),
-                );
-                if ((confirmed ?? false) && context.mounted) {
-                  final failure = await ref
-                      .read(teamControllerProvider(projectId).notifier)
-                      .removeMember(member.id);
-                  if (!context.mounted) return;
-                  AppToast.show(
-                    context,
-                    message: failure == null
-                        ? 'Участник удалён'
-                        : failure.userMessage,
-                    kind: failure == null
-                        ? AppToastKind.success
-                        : AppToastKind.error,
-                  );
-                }
-              }
-            },
-            itemBuilder: (_) => [
-              if (isRepresentative)
-                const PopupMenuItem(
-                  value: 'rights',
-                  child: Text('Настроить права'),
-                ),
-              const PopupMenuItem(
-                value: 'remove',
-                child: Text(
-                  'Удалить из команды',
-                  style: TextStyle(color: AppColors.redDot),
+            if (canManage)
+              PopupMenuButton<String>(
+                onSelected: (v) async {
+                  if (v == 'rights' && isRepresentative) {
+                    await showRepRightsSheet(
+                      context,
+                      ref,
+                      projectId: projectId,
+                      member: member,
+                    );
+                  } else if (v == 'remove') {
+                    final confirmed = await showAppBottomSheet<bool>(
+                      context: context,
+                      child: _RemoveConfirm(name: name),
+                    );
+                    if ((confirmed ?? false) && context.mounted) {
+                      final failure = await ref
+                          .read(teamControllerProvider(projectId).notifier)
+                          .removeMember(member.id);
+                      if (!context.mounted) return;
+                      AppToast.show(
+                        context,
+                        message: failure == null
+                            ? 'Участник удалён'
+                            : failure.userMessage,
+                        kind: failure == null
+                            ? AppToastKind.success
+                            : AppToastKind.error,
+                      );
+                    }
+                  }
+                },
+                itemBuilder: (_) => [
+                  if (isRepresentative)
+                    const PopupMenuItem(
+                      value: 'rights',
+                      child: Text('Настроить права'),
+                    ),
+                  const PopupMenuItem(
+                    value: 'remove',
+                    child: Text(
+                      'Удалить из команды',
+                      style: TextStyle(color: AppColors.redDot),
+                    ),
+                  ),
+                ],
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.n400,
                 ),
               ),
-            ],
-            icon: const Icon(
-              Icons.more_vert_rounded,
-              color: AppColors.n400,
-            ),
-          ),
           ],
         ),
       ),
@@ -367,20 +361,31 @@ class _MemberRow extends ConsumerWidget {
     required String name,
     required bool canManage,
   }) async {
+    // QA-баг #6 «не открывается карточка участника»: до этого фикса
+    // _showCard молча выходил, если бэк по какой-то причине не вернул
+    // вложенный user (deleted-аккаунт, частичный ответ, кеш race).
+    // Теперь падаем в графу best-effort: используем member.userId и то,
+    // что есть в name/role, а недостающее показываем как «—».
     final user = member.user;
-    if (user == null) return;
-    final commonProjects = await _loadCommonProjects(ref, user.id);
+    final userIdForCommon = user?.id ?? member.userId;
+    final commonProjects = await _loadCommonProjects(ref, userIdForCommon);
     if (!context.mounted) return;
+    final parts = name.trim().split(RegExp(r'\s+'));
+    final fallbackFirstName =
+        user?.firstName ?? (parts.isNotEmpty ? parts.first : 'Участник');
+    final fallbackLastName =
+        user?.lastName ?? (parts.length > 1 ? parts.sublist(1).join(' ') : '');
     await showMemberCardSheet(
       context,
       data: MemberCardData(
-        userId: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        userId: userIdForCommon,
+        firstName: fallbackFirstName,
+        lastName: fallbackLastName,
         roleInCurrentProject: member.role.displayName,
-        currentProjectTitle: '', // не показываем — экран уже в контексте проекта
-        phone: user.phone,
-        avatarUrl: user.avatarUrl,
+        currentProjectTitle:
+            '', // не показываем — экран уже в контексте проекта
+        phone: user?.phone ?? '',
+        avatarUrl: user?.avatarUrl,
         commonProjects: commonProjects,
       ),
       onOpenProject: (id) => context.go('/projects/$id'),
@@ -392,8 +397,9 @@ class _MemberRow extends ConsumerWidget {
               if (!context.mounted) return;
               AppToast.show(
                 context,
-                message:
-                    failure == null ? 'Участник удалён' : failure.userMessage,
+                message: failure == null
+                    ? 'Участник удалён'
+                    : failure.userMessage,
                 kind: failure == null
                     ? AppToastKind.success
                     : AppToastKind.error,
@@ -464,10 +470,7 @@ Color _roleColor(AppRoleBadgeTone tone) {
 }
 
 class _InvitationRow extends ConsumerWidget {
-  const _InvitationRow({
-    required this.projectId,
-    required this.invitation,
-  });
+  const _InvitationRow({required this.projectId, required this.invitation});
 
   final String projectId;
   final Invitation invitation;
@@ -475,9 +478,12 @@ class _InvitationRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pending = invitation.status == InvitationStatus.pending;
-    final canManage = ref.watch(canInProjectProvider(
-      (action: DomainAction.projectInviteMember, projectId: projectId),
-    ));
+    final canManage = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectInviteMember,
+        projectId: projectId,
+      )),
+    );
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
@@ -540,7 +546,8 @@ class _RemoveConfirm extends StatelessWidget {
       children: [
         AppBottomSheetHeader(
           title: 'Удалить участника?',
-          subtitle: '«$name» потеряет доступ к проекту. '
+          subtitle:
+              '«$name» потеряет доступ к проекту. '
               'История шагов и сообщений сохранится.',
         ),
         AppButton(

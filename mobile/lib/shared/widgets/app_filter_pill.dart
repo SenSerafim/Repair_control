@@ -4,11 +4,7 @@ import '../../core/theme/tokens.dart';
 
 /// Спецификация одного фильтр-чипа Cluster F.
 class AppFilterPillSpec {
-  const AppFilterPillSpec({
-    required this.id,
-    required this.label,
-    this.icon,
-  });
+  const AppFilterPillSpec({required this.id, required this.label, this.icon});
 
   final String id;
   final String label;

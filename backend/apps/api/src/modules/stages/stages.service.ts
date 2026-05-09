@@ -400,6 +400,7 @@ export class StagesService {
     const stage = await this.prisma.stage.findUnique({
       where: { id: stageId },
       select: {
+        foremanIds: true,
         planApproved: true,
         pendingApproval: true,
         project: { select: { requiresPlanApproval: true, planApproved: true } },
@@ -417,6 +418,19 @@ export class StagesService {
       throw new ConflictError(
         'approvals.plan_not_approved',
         'plan must be approved before starting this stage',
+      );
+    }
+    // QA-доку «Контроль ремонта.docx» баг #1: запуск без бригадира должен
+    // быть запрещён. До этого фикса foremanIds=[] не блокировал старт, а
+    // UI-предупреждение «нельзя без бригадира» оставалось пустой
+    // декларацией. По решению заказчика (П1.11) на этапе обязателен один
+    // бригадир — без него старт не имеет смысла, потому что отвечать за
+    // выполнение шагов некому. Кидаем валидируемую ошибку, чтобы клиент
+    // мог показать понятное сообщение и переход к assign-foreman.
+    if (stage && stage.foremanIds.length === 0) {
+      throw new InvalidInputError(
+        ErrorCodes.STAGE_NO_FOREMAN,
+        'cannot start stage without an assigned foreman',
       );
     }
     return this.transition(stageId, actorUserId, 'start', async (st, tx) => {

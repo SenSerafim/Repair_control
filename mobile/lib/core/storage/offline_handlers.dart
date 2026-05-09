@@ -23,8 +23,7 @@ void registerOfflineHandlers(ProviderContainer container) {
   final notesRepo = container.read(notesRepositoryProvider);
   final stagesRepo = container.read(stagesRepositoryProvider);
   final paymentsRepo = container.read(paymentsRepositoryProvider);
-  final selfpurchaseRepo =
-      container.read(selfPurchaseRepositoryProvider);
+  final selfpurchaseRepo = container.read(selfPurchaseRepositoryProvider);
   final materialsRepo = container.read(materialsRepositoryProvider);
 
   queue

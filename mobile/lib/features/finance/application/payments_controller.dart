@@ -6,8 +6,10 @@ import '../data/payments_repository.dart';
 import '../domain/payment.dart';
 import 'budget_controller.dart';
 
-final paymentsControllerProvider = AsyncNotifierProvider.family<
-    PaymentsController, List<Payment>, String>(PaymentsController.new);
+final paymentsControllerProvider =
+    AsyncNotifierProvider.family<PaymentsController, List<Payment>, String>(
+      PaymentsController.new,
+    );
 
 class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
   @override
@@ -110,7 +112,11 @@ class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
     List<String>? photoKeys,
   }) async {
     try {
-      final p = await _repo.dispute(id: id, reason: reason, photoKeys: photoKeys);
+      final p = await _repo.dispute(
+        id: id,
+        reason: reason,
+        photoKeys: photoKeys,
+      );
       _upsert(p);
       _invalidateBudgetAndProject();
       return null;
@@ -139,8 +145,10 @@ class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
   }
 }
 
-final paymentDetailProvider = AsyncNotifierProvider.family<
-    PaymentDetailController, Payment, String>(PaymentDetailController.new);
+final paymentDetailProvider =
+    AsyncNotifierProvider.family<PaymentDetailController, Payment, String>(
+      PaymentDetailController.new,
+    );
 
 class PaymentDetailController extends FamilyAsyncNotifier<Payment, String> {
   @override

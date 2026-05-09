@@ -8,28 +8,28 @@ enum Semaphore { plan, green, yellow, red, blue }
 
 extension SemaphoreColors on Semaphore {
   Color get dot => switch (this) {
-        Semaphore.plan => AppColors.n400,
-        Semaphore.green => AppColors.greenDot,
-        Semaphore.yellow => AppColors.yellowDot,
-        Semaphore.red => AppColors.redDot,
-        Semaphore.blue => AppColors.blueDot,
-      };
+    Semaphore.plan => AppColors.n400,
+    Semaphore.green => AppColors.greenDot,
+    Semaphore.yellow => AppColors.yellowDot,
+    Semaphore.red => AppColors.redDot,
+    Semaphore.blue => AppColors.blueDot,
+  };
 
   Color get bg => switch (this) {
-        Semaphore.plan => AppColors.n100,
-        Semaphore.green => AppColors.greenLight,
-        Semaphore.yellow => AppColors.yellowBg,
-        Semaphore.red => AppColors.redBg,
-        Semaphore.blue => AppColors.blueBg,
-      };
+    Semaphore.plan => AppColors.n100,
+    Semaphore.green => AppColors.greenLight,
+    Semaphore.yellow => AppColors.yellowBg,
+    Semaphore.red => AppColors.redBg,
+    Semaphore.blue => AppColors.blueBg,
+  };
 
   Color get text => switch (this) {
-        Semaphore.plan => AppColors.n600,
-        Semaphore.green => AppColors.greenDark,
-        Semaphore.yellow => AppColors.yellowText,
-        Semaphore.red => AppColors.redText,
-        Semaphore.blue => AppColors.blueText,
-      };
+    Semaphore.plan => AppColors.n600,
+    Semaphore.green => AppColors.greenDark,
+    Semaphore.yellow => AppColors.yellowText,
+    Semaphore.red => AppColors.redText,
+    Semaphore.blue => AppColors.blueText,
+  };
 }
 
 /// Pill-чип со статусом, аналог `.stg-badge` в макетах.

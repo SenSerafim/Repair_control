@@ -34,47 +34,50 @@ class DocumentsListParams {
           other.query == query;
 
   @override
-  int get hashCode =>
-      Object.hash(projectId, stageId, stepId, category, query);
+  int get hashCode => Object.hash(projectId, stageId, stepId, category, query);
 }
 
 /// Документы проекта с произвольным фильтром.
 final documentsListProvider = FutureProvider.autoDispose
     .family<List<Document>, DocumentsListParams>((ref, p) async {
-  return ref.read(documentsRepositoryProvider).list(
-        projectId: p.projectId,
-        stageId: p.stageId,
-        stepId: p.stepId,
-        category: p.category,
-        q: p.query,
-      );
-});
+      return ref
+          .read(documentsRepositoryProvider)
+          .list(
+            projectId: p.projectId,
+            stageId: p.stageId,
+            stepId: p.stepId,
+            category: p.category,
+            q: p.query,
+          );
+    });
 
 /// Документы по этапу (для StageDetailScreen).
 final documentsByStageProvider = FutureProvider.autoDispose
-    .family<List<Document>, ({String projectId, String stageId})>(
-        (ref, p) async {
-  return ref.read(documentsRepositoryProvider).list(
-        projectId: p.projectId,
-        stageId: p.stageId,
-      );
-});
+    .family<List<Document>, ({String projectId, String stageId})>((
+      ref,
+      p,
+    ) async {
+      return ref
+          .read(documentsRepositoryProvider)
+          .list(projectId: p.projectId, stageId: p.stageId);
+    });
 
 /// Документы по шагу.
 final documentsByStepProvider = FutureProvider.autoDispose
-    .family<List<Document>, ({String projectId, String stepId})>(
-        (ref, p) async {
-  return ref.read(documentsRepositoryProvider).list(
-        projectId: p.projectId,
-        stepId: p.stepId,
-      );
-});
+    .family<List<Document>, ({String projectId, String stepId})>((
+      ref,
+      p,
+    ) async {
+      return ref
+          .read(documentsRepositoryProvider)
+          .list(projectId: p.projectId, stepId: p.stepId);
+    });
 
 /// Один документ по id.
-final documentByIdProvider =
-    FutureProvider.autoDispose.family<Document, String>((ref, id) async {
-  return ref.read(documentsRepositoryProvider).get(id);
-});
+final documentByIdProvider = FutureProvider.autoDispose
+    .family<Document, String>((ref, id) async {
+      return ref.read(documentsRepositoryProvider).get(id);
+    });
 
 /// Контроллер мутаций над документами (upload/confirm/patch/delete).
 /// Чтения — через FutureProvider.family выше.

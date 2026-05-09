@@ -11,8 +11,9 @@ import '../application/payments_controller.dart';
 import '../domain/payment.dart';
 import 'payment_card.dart';
 
-final _statusFilterProvider =
-    StateProvider.autoDispose<PaymentStatus?>((_) => null);
+final _statusFilterProvider = StateProvider.autoDispose<PaymentStatus?>(
+  (_) => null,
+);
 
 /// s-budget-payments — список выплат проекта.
 class PaymentsListScreen extends ConsumerWidget {
@@ -32,8 +33,7 @@ class PaymentsListScreen extends ConsumerWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.add_circle_outline_rounded),
-          onPressed: () =>
-              context.push('/projects/$projectId/payments/new'),
+          onPressed: () => context.push('/projects/$projectId/payments/new'),
         ),
       ],
       body: Column(
@@ -45,8 +45,7 @@ class PaymentsListScreen extends ConsumerWidget {
           ),
           Expanded(
             child: async.when(
-              loading: () =>
-                  const AppLoadingState(skeleton: AppListSkeleton()),
+              loading: () => const AppLoadingState(skeleton: AppListSkeleton()),
               error: (e, _) => AppErrorState(
                 title: 'Не удалось загрузить',
                 onRetry: () =>
@@ -63,21 +62,19 @@ class PaymentsListScreen extends ConsumerWidget {
                         : 'Нет по этому фильтру',
                     subtitle: filter == null
                         ? 'Создайте первый аванс — отсюда запускается '
-                            'цикл «заказчик → бригадир → мастер».'
+                              'цикл «заказчик → бригадир → мастер».'
                         : null,
                     icon: Icons.receipt_long_outlined,
-                    actionLabel:
-                        filter == null ? 'Новая выплата' : null,
+                    actionLabel: filter == null ? 'Новая выплата' : null,
                     onAction: filter == null
-                        ? () => context.push(
-                              '/projects/$projectId/payments/new',
-                            )
+                        ? () =>
+                              context.push('/projects/$projectId/payments/new')
                         : null,
                   );
                 }
                 return RefreshIndicator(
-                  onRefresh: () async => ref
-                      .invalidate(paymentsControllerProvider(projectId)),
+                  onRefresh: () async =>
+                      ref.invalidate(paymentsControllerProvider(projectId)),
                   child: ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     itemCount: filtered.length,

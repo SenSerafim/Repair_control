@@ -86,24 +86,24 @@ class _Banner extends StatelessWidget {
 }
 
 InputDecoration _textDec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.all(12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
-      ),
-    );
+  hintText: hint,
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  filled: true,
+  fillColor: AppColors.n0,
+  contentPadding: const EdgeInsets.all(12),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+  ),
+);
 
 void _navigateResult(
   BuildContext context, {
@@ -162,9 +162,7 @@ class _ApproveBodyState extends ConsumerState<_ApproveBody> {
       _error = null;
     });
     final failure = await ref
-        .read(
-          approvalsControllerProvider(widget.approval.projectId).notifier,
-        )
+        .read(approvalsControllerProvider(widget.approval.projectId).notifier)
         .approve(
           approval: widget.approval,
           comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
@@ -193,7 +191,8 @@ class _ApproveBodyState extends ConsumerState<_ApproveBody> {
           icon: Icons.check_rounded,
           tone: _IconTone.success,
           title: 'Одобрить работу?',
-          subtitle: 'Подтвердите, что работа выполнена корректно. '
+          subtitle:
+              'Подтвердите, что работа выполнена корректно. '
               'После одобрения изменения попадут в проект.',
         ),
         if (_error != null) ...[
@@ -306,8 +305,10 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
   Future<void> _submit() async {
     final comment = _comment.text.trim();
     if (comment.length < _minLength) {
-      setState(() => _error =
-          'Объясните причину отклонения (минимум $_minLength символов)');
+      setState(
+        () => _error =
+            'Объясните причину отклонения (минимум $_minLength символов)',
+      );
       return;
     }
     setState(() {
@@ -315,9 +316,7 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
       _error = null;
     });
     final failure = await ref
-        .read(
-          approvalsControllerProvider(widget.approval.projectId).notifier,
-        )
+        .read(approvalsControllerProvider(widget.approval.projectId).notifier)
         .reject(approval: widget.approval, comment: comment);
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -344,7 +343,8 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
           icon: Icons.close_rounded,
           tone: _IconTone.danger,
           title: 'Отклонить работу?',
-          subtitle: 'Опишите, что нужно исправить. Бригада увидит ваш '
+          subtitle:
+              'Опишите, что нужно исправить. Бригада увидит ваш '
               'комментарий и сможет переотправить.',
         ),
         if (_error != null) ...[
@@ -382,9 +382,7 @@ class _RejectBodyState extends ConsumerState<_RejectBody> {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            _length < _minLength
-                ? 'Ещё ${_minLength - _length} симв.'
-                : 'OK',
+            _length < _minLength ? 'Ещё ${_minLength - _length} симв.' : 'OK',
             style: AppTextStyles.tiny.copyWith(
               color: _length < _minLength
                   ? AppColors.redText
@@ -471,9 +469,7 @@ class _ResubmitBodyState extends ConsumerState<_ResubmitBody> {
       _error = null;
     });
     final failure = await ref
-        .read(
-          approvalsControllerProvider(widget.approval.projectId).notifier,
-        )
+        .read(approvalsControllerProvider(widget.approval.projectId).notifier)
         .resubmit(approval: widget.approval);
     if (!mounted) return;
     setState(() => _submitting = false);

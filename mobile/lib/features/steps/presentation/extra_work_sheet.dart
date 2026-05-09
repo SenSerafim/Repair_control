@@ -61,12 +61,11 @@ class _ExtraWorkBodyState extends ConsumerState<_ExtraWorkBody> {
       _error = null;
     });
     final failure = await ref
-        .read(stepsControllerProvider(
-          StepsKey(
-            projectId: widget.projectId,
-            stageId: widget.stageId,
-          ),
-        ).notifier)
+        .read(
+          stepsControllerProvider(
+            StepsKey(projectId: widget.projectId, stageId: widget.stageId),
+          ).notifier,
+        )
         .createExtra(
           title: _title.text.trim(),
           priceKopecks: priceKop,
@@ -116,8 +115,7 @@ class _ExtraWorkBodyState extends ConsumerState<_ExtraWorkBody> {
                 ),
                 child: Text(
                   _error!,
-                  style: AppTextStyles.body
-                      .copyWith(color: AppColors.redText),
+                  style: AppTextStyles.body.copyWith(color: AppColors.redText),
                 ),
               ),
               const SizedBox(height: AppSpacing.x12),
@@ -127,9 +125,8 @@ class _ExtraWorkBodyState extends ConsumerState<_ExtraWorkBody> {
             TextFormField(
               controller: _title,
               textCapitalization: TextCapitalization.sentences,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Введите название'
-                  : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Введите название' : null,
               decoration: _dec('Например, Демонтаж доп. перегородки'),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -161,24 +158,21 @@ class _ExtraWorkBodyState extends ConsumerState<_ExtraWorkBody> {
 }
 
 InputDecoration _dec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
-      ),
-    );
+  hintText: hint,
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  filled: true,
+  fillColor: AppColors.n0,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+  ),
+);

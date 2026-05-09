@@ -20,10 +20,10 @@ enum QuestionStatus {
   }
 
   String get displayName => switch (this) {
-        QuestionStatus.open => 'Открыт',
-        QuestionStatus.answered => 'Отвечен',
-        QuestionStatus.closed => 'Закрыт',
-      };
+    QuestionStatus.open => 'Открыт',
+    QuestionStatus.answered => 'Отвечен',
+    QuestionStatus.closed => 'Закрыт',
+  };
 }
 
 @freezed
@@ -43,18 +43,18 @@ class Question with _$Question {
   }) = _Question;
 
   static Question parse(Map<String, dynamic> json) => Question(
-        id: json['id'] as String,
-        stepId: json['stepId'] as String,
-        authorId: json['authorId'] as String? ?? '',
-        addresseeId: json['addresseeId'] as String? ?? '',
-        text: json['text'] as String,
-        status: QuestionStatus.fromString(json['status'] as String?),
-        answer: json['answer'] as String?,
-        answeredAt: _d(json['answeredAt']),
-        answeredBy: json['answeredBy'] as String?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    id: json['id'] as String,
+    stepId: json['stepId'] as String,
+    authorId: json['authorId'] as String? ?? '',
+    addresseeId: json['addresseeId'] as String? ?? '',
+    text: json['text'] as String,
+    status: QuestionStatus.fromString(json['status'] as String?),
+    answer: json['answer'] as String?,
+    answeredAt: _d(json['answeredAt']),
+    answeredBy: json['answeredBy'] as String?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

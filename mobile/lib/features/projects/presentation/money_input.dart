@@ -54,24 +54,15 @@ class MoneyInput extends StatelessWidget {
             suffixIconConstraints: const BoxConstraints(minWidth: 20),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide: const BorderSide(
-                color: AppColors.n200,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide: const BorderSide(
-                color: AppColors.n200,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide: const BorderSide(
-                color: AppColors.brand,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
             ),
           ),
         ),
@@ -85,9 +76,6 @@ class MoneyInput extends StatelessWidget {
 
   /// Устанавливает значение из копеек.
   static void setFromKopecks(TextEditingController c, int kopecks) {
-    c.text = Money.format(
-      kopecks,
-      currency: '',
-    ).trim();
+    c.text = Money.format(kopecks, currency: '').trim();
   }
 }

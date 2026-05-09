@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/auth/application/auth_controller.dart' show secureStorageProvider;
+import '../../features/auth/application/auth_controller.dart'
+    show secureStorageProvider;
 
 /// Текущий режим темы приложения. Источник истины: persisted secure_storage.
 /// Этап 7.5 ROAD_TO_100.
-final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override

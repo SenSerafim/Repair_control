@@ -24,14 +24,14 @@ class LoginResult with _$LoginResult {
   }) = _LoginResult;
 
   factory LoginResult.fromJson(Map<String, dynamic> json) => LoginResult(
-        userId: json['userId'] as String,
-        systemRole: json['systemRole'] as String,
-        tokens: AuthTokens(
-          accessToken: json['accessToken'] as String,
-          refreshToken: json['refreshToken'] as String,
-          expiresIn: (json['expiresIn'] as num).toInt(),
-        ),
-      );
+    userId: json['userId'] as String,
+    systemRole: json['systemRole'] as String,
+    tokens: AuthTokens(
+      accessToken: json['accessToken'] as String,
+      refreshToken: json['refreshToken'] as String,
+      expiresIn: (json['expiresIn'] as num).toInt(),
+    ),
+  );
 }
 
 @freezed
@@ -42,11 +42,11 @@ class RegisterResult with _$RegisterResult {
   }) = _RegisterResult;
 
   factory RegisterResult.fromJson(Map<String, dynamic> json) => RegisterResult(
-        userId: json['userId'] as String,
-        tokens: AuthTokens(
-          accessToken: json['accessToken'] as String,
-          refreshToken: json['refreshToken'] as String,
-          expiresIn: (json['expiresIn'] as num).toInt(),
-        ),
-      );
+    userId: json['userId'] as String,
+    tokens: AuthTokens(
+      accessToken: json['accessToken'] as String,
+      refreshToken: json['refreshToken'] as String,
+      expiresIn: (json['expiresIn'] as num).toInt(),
+    ),
+  );
 }

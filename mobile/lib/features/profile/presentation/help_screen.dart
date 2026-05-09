@@ -103,9 +103,8 @@ class HelpScreen extends ConsumerWidget {
                   for (final item in section.items)
                     AppMenuRow(
                       label: item.question,
-                      onTap: () => context.push(
-                        AppRoutes.profileFaqDetailWith(item.id),
-                      ),
+                      onTap: () =>
+                          context.push(AppRoutes.profileFaqDetailWith(item.id)),
                     ),
                 ],
               ),

@@ -1,9 +1,8 @@
 enum KnowledgeCategoryScope { global, projectModule }
 
-KnowledgeCategoryScope _scopeFromString(String raw) =>
-    raw == 'project_module'
-        ? KnowledgeCategoryScope.projectModule
-        : KnowledgeCategoryScope.global;
+KnowledgeCategoryScope _scopeFromString(String raw) => raw == 'project_module'
+    ? KnowledgeCategoryScope.projectModule
+    : KnowledgeCategoryScope.global;
 
 class KnowledgeCategory {
   const KnowledgeCategory({

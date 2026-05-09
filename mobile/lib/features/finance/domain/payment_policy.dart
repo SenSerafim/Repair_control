@@ -42,10 +42,7 @@ class PaymentPolicy {
   /// «Отменить» — только отправитель ещё не подтверждённой выплаты.
   /// Бэкенд разрешает sender'у вне зависимости от `payment.create` —
   /// отзыв собственного pending не требует RBAC.
-  static bool canCancel({
-    required Payment payment,
-    required String? meId,
-  }) {
+  static bool canCancel({required Payment payment, required String? meId}) {
     if (meId == null) return false;
     return payment.status == PaymentStatus.pending &&
         payment.fromUserId == meId;
@@ -66,10 +63,7 @@ class PaymentPolicy {
 
   /// «Разрешить спор» — только заказчик-владелец (или admin/representative
   /// с `canApprove`). Точная роль закрыта в `finance.payment.resolve`.
-  static bool canResolve({
-    required Payment payment,
-    required bool hasResolve,
-  }) {
+  static bool canResolve({required Payment payment, required bool hasResolve}) {
     return hasResolve && payment.status == PaymentStatus.disputed;
   }
 

@@ -29,14 +29,15 @@ class MemberNotFoundScreen extends ConsumerStatefulWidget {
       _MemberNotFoundScreenState();
 }
 
-class _MemberNotFoundScreenState
-    extends ConsumerState<MemberNotFoundScreen> {
+class _MemberNotFoundScreenState extends ConsumerState<MemberNotFoundScreen> {
   bool _busy = false;
 
   Future<void> _sendInvite() async {
     setState(() => _busy = true);
     try {
-      await ref.read(teamRepositoryProvider).invite(
+      await ref
+          .read(teamRepositoryProvider)
+          .invite(
             projectId: widget.projectId,
             phone: widget.phone,
             role: MembershipRole.foreman,
@@ -127,7 +128,8 @@ class _MemberNotFoundScreenState
                       ),
                     ),
                     const TextSpan(
-                      text: ' не зарегистрирован в приложении. '
+                      text:
+                          ' не зарегистрирован в приложении. '
                           'Отправьте SMS-приглашение.',
                     ),
                   ],

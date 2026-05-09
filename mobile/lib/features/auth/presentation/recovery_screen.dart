@@ -45,11 +45,11 @@ class RecoveryScreen extends ConsumerWidget {
   }
 
   int _stepIndex(RecoveryStep step) => switch (step) {
-        RecoveryStep.enterPhone => 0,
-        RecoveryStep.enterCode => 1,
-        RecoveryStep.enterNewPassword => 2,
-        RecoveryStep.done => 2,
-      };
+    RecoveryStep.enterPhone => 0,
+    RecoveryStep.enterCode => 1,
+    RecoveryStep.enterNewPassword => 2,
+    RecoveryStep.done => 2,
+  };
 }
 
 class _StepHero extends StatelessWidget {
@@ -407,11 +407,7 @@ class _DoneStep extends ConsumerWidget {
               borderRadius: BorderRadius.circular(AppRadius.r24),
               boxShadow: AppShadows.shGreen,
             ),
-            child: Icon(
-              PhosphorIconsBold.check,
-              color: AppColors.n0,
-              size: 32,
-            ),
+            child: Icon(PhosphorIconsBold.check, color: AppColors.n0, size: 32),
           ),
         ),
         const SizedBox(height: AppSpacing.x16),

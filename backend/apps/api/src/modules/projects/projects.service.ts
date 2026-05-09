@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { Prisma, ProjectStatus, SystemRole } from '@prisma/client';
 import {
@@ -10,6 +11,7 @@ import {
 } from '@app/common';
 import { FeedService } from '../feed/feed.service';
 import { ChatsService } from '../chats/chats.service';
+import { ProgressCalculator } from '../stages/progress-calculator';
 
 export interface CreateProjectInput {
   ownerId: string;
@@ -39,6 +41,7 @@ export class ProjectsService {
     private readonly feed: FeedService,
     private readonly clock: Clock,
     private readonly chats: ChatsService,
+    private readonly calculator: ProgressCalculator,
   ) {}
 
   async create(input: CreateProjectInput) {
@@ -266,6 +269,32 @@ export class ProjectsService {
     });
     if (!source) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'source not found');
 
+    // QA-доку «Контроль ремонта.docx» баг #14: до этого фикса copy()
+    // переносил только owner-membership и stages БЕЗ foremanIds/masterId.
+    // Команда (members + бригадиры/мастера на этапах) и pending-инвайты
+    // терялись — пользователь получал «копию» с одним собой и без работ
+    // по этапам. Чиним полным переносом:
+    //   1. memberships: все active (removedAt: null), с маппингом
+    //      stageIds → новые stage ID после копирования этапов;
+    //   2. stages: foremanIds/masterId копируем, фильтруя по
+    //      переехавшим userId — на случай если в source были orphan-
+    //      назначения после soft-remove;
+    //   3. pending invitations: переносим с новым уникальным token,
+    //      stageIds — также через map old→new.
+
+    const sourceMemberships = await this.prisma.membership.findMany({
+      where: { projectId, removedAt: null },
+    });
+    const copiedUserIds = new Set(sourceMemberships.map((m) => m.userId));
+    // Owner customer-membership всегда есть, даже если в source он один.
+    if (!copiedUserIds.has(source.ownerId)) {
+      copiedUserIds.add(source.ownerId);
+    }
+
+    const sourcePendingInvitations = await this.prisma.projectInvitation.findMany({
+      where: { projectId, status: 'pending' },
+    });
+
     const copy = await this.prisma.$transaction(async (tx) => {
       const p = await tx.project.create({
         data: {
@@ -276,17 +305,46 @@ export class ProjectsService {
           plannedEnd: source.plannedEnd,
           workBudget: source.workBudget,
           materialsBudget: source.materialsBudget,
-          memberships: {
-            create: {
-              userId: source.ownerId,
-              role: 'customer',
-              permissions: {} as Prisma.InputJsonValue,
-            },
-          },
         },
       });
+
+      // 1a. Копируем memberships (включая owner-customer'а; если его нет
+      // в source — это аномалия, но мы её закрываем создание явно).
+      const ownerInSource = sourceMemberships.find(
+        (m) => m.userId === source.ownerId && m.role === 'customer',
+      );
+      if (!ownerInSource) {
+        await tx.membership.create({
+          data: {
+            projectId: p.id,
+            userId: source.ownerId,
+            role: 'customer',
+            permissions: {} as Prisma.InputJsonValue,
+          },
+        });
+      }
+      for (const m of sourceMemberships) {
+        await tx.membership.create({
+          data: {
+            projectId: p.id,
+            userId: m.userId,
+            role: m.role,
+            invitedById: m.invitedById,
+            // stageIds — позже обновим, когда узнаем new stage IDs.
+            stageIds: [],
+            permissions: (m.permissions ?? {}) as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      // 2. Stages с маппингом old → new + копированием foremanIds/masterId.
+      const stageIdMap = new Map<string, string>();
       for (const stage of source.stages) {
-        await tx.stage.create({
+        const sourceForemanIds = stage.foremanIds ?? [];
+        const copiedForemanIds = sourceForemanIds.filter((id) => copiedUserIds.has(id));
+        const copiedMasterId =
+          stage.masterId && copiedUserIds.has(stage.masterId) ? stage.masterId : null;
+        const newStage = await tx.stage.create({
           data: {
             projectId: p.id,
             title: stage.title,
@@ -296,9 +354,49 @@ export class ProjectsService {
             originalEnd: stage.plannedEnd,
             workBudget: stage.workBudget,
             materialsBudget: stage.materialsBudget,
+            foremanIds: copiedForemanIds,
+            masterId: copiedMasterId,
+          },
+        });
+        stageIdMap.set(stage.id, newStage.id);
+      }
+
+      // 1b. Обновляем stageIds в скопированных memberships по карте.
+      for (const m of sourceMemberships) {
+        if (m.stageIds.length === 0) continue;
+        const newStageIds = m.stageIds
+          .map((id) => stageIdMap.get(id))
+          .filter((id): id is string => id !== undefined);
+        if (newStageIds.length === 0) continue;
+        await tx.membership.updateMany({
+          where: { projectId: p.id, userId: m.userId },
+          data: { stageIds: newStageIds },
+        });
+      }
+
+      // 3. Pending invitations — переносим с новым уникальным token и
+      // продлеваем expiresAt от текущего момента (TTL=14 дней,
+      // унифицировано с invitations.service.ts).
+      const newExpiresAt = new Date(this.clock.now().getTime() + 14 * 24 * 60 * 60 * 1000);
+      for (const inv of sourcePendingInvitations) {
+        const newStageIds = inv.stageIds
+          .map((id) => stageIdMap.get(id))
+          .filter((id): id is string => id !== undefined);
+        await tx.projectInvitation.create({
+          data: {
+            projectId: p.id,
+            phone: inv.phone,
+            role: inv.role,
+            invitedById: inv.invitedById,
+            status: 'pending',
+            token: generateInvitationToken(),
+            permissions: (inv.permissions ?? {}) as Prisma.InputJsonValue,
+            stageIds: newStageIds,
+            expiresAt: newExpiresAt,
           },
         });
       }
+
       return p;
     });
     await this.feed.emit({
@@ -309,7 +407,17 @@ export class ProjectsService {
     });
     // П2.10 — копия проекта тоже сразу получает общий чат с владельцем-customer.
     await this.chats.ensureProjectChat(copy.id, source.ownerId);
-    return this.serialize(copy);
+    // QA-баг #13 «При копировании проекта на главном экране отображается
+    // неверный статус». Без пересчёта project.semaphoreCache остаётся в
+    // дефолтном 'green' и не зависит от состояния скопированных стадий.
+    // recalcProject пересчитывает progressCache + semaphoreCache по
+    // фактическим plannedStart/plannedEnd/status стадий — это и есть
+    // «правильный» цвет светофора для скопированного проекта.
+    await this.calculator.recalcProject(copy.id);
+    const refreshed = await this.prisma.project.findUnique({
+      where: { id: copy.id },
+    });
+    return this.serialize(refreshed ?? copy);
   }
 
   private validateDateRange(start?: string, end?: string): void {
@@ -329,4 +437,13 @@ export class ProjectsService {
       materialsBudget: Number(p.materialsBudget),
     };
   }
+}
+
+/// 6-значный numeric token для приглашений. Унифицирован с
+/// invitations.service.ts#generateNumericCode, дублируется тут чтобы не
+/// тащить инжект целого InvitationsService в copy()-flow.
+function generateInvitationToken(): string {
+  const min = 100_000;
+  const max = 1_000_000;
+  return crypto.randomInt(min, max).toString();
 }

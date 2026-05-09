@@ -19,24 +19,20 @@ class SelfPurchaseRepository {
   Future<List<SelfPurchase>> list({
     required String projectId,
     SelfPurchaseStatus? status,
-  }) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/selfpurchases',
-          queryParameters: {
-            if (status != null) 'status': status.apiValue,
-          },
-        );
-        return r.data!
-            .map((e) => SelfPurchase.parse(e as Map<String, dynamic>))
-            .toList();
-      });
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/projects/$projectId/selfpurchases',
+      queryParameters: {if (status != null) 'status': status.apiValue},
+    );
+    return r.data!
+        .map((e) => SelfPurchase.parse(e as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<SelfPurchase> get(String id) => _call(() async {
-        final r = await _dio
-            .get<Map<String, dynamic>>('/api/selfpurchases/$id');
-        return SelfPurchase.parse(r.data!);
-      });
+    final r = await _dio.get<Map<String, dynamic>>('/api/selfpurchases/$id');
+    return SelfPurchase.parse(r.data!);
+  });
 
   Future<SelfPurchase> create({
     required String projectId,
@@ -44,19 +40,18 @@ class SelfPurchaseRepository {
     String? stageId,
     String? comment,
     List<String>? photoKeys,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/selfpurchases',
-          data: {
-            'amount': amount,
-            if (stageId != null) 'stageId': stageId,
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-            if (photoKeys != null) 'photoKeys': photoKeys,
-          },
-        );
-        return SelfPurchase.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/selfpurchases',
+      data: {
+        'amount': amount,
+        if (stageId != null) 'stageId': stageId,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (photoKeys != null) 'photoKeys': photoKeys,
+      },
+    );
+    return SelfPurchase.parse(r.data!);
+  });
 
   /// approve с поддержкой 3-tier forwarding (master→foreman→customer).
   /// Если [forwardOnApprove] === true и это master-самозакуп, бекенд
@@ -65,25 +60,22 @@ class SelfPurchaseRepository {
     required String id,
     String? comment,
     bool forwardOnApprove = false,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/selfpurchases/$id/approve',
-          data: {
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-            if (forwardOnApprove) 'forwardOnApprove': true,
-          },
-        );
-        return SelfPurchase.parse(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/selfpurchases/$id/approve',
+      data: {
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (forwardOnApprove) 'forwardOnApprove': true,
+      },
+    );
+    return SelfPurchase.parse(r.data!);
+  });
 
   Future<SelfPurchase> reject({required String id, String? comment}) =>
       _call(() async {
         final r = await _dio.post<Map<String, dynamic>>(
           '/api/selfpurchases/$id/reject',
-          data: {
-            if (comment != null && comment.isNotEmpty) 'comment': comment,
-          },
+          data: {if (comment != null && comment.isNotEmpty) 'comment': comment},
         );
         return SelfPurchase.parse(r.data!);
       });
@@ -98,7 +90,6 @@ class SelfPurchaseRepository {
   }
 }
 
-final selfPurchaseRepositoryProvider =
-    Provider<SelfPurchaseRepository>((ref) {
+final selfPurchaseRepositoryProvider = Provider<SelfPurchaseRepository>((ref) {
   return SelfPurchaseRepository(ref.read(dioProvider));
 });

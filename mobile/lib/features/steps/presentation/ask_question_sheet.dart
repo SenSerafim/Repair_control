@@ -77,8 +77,9 @@ class _AskBodyState extends ConsumerState<_AskBody> {
 
   @override
   Widget build(BuildContext context) {
-    final teamAsync =
-        ref.watch(teamControllerProvider(widget.detailKey.projectId));
+    final teamAsync = ref.watch(
+      teamControllerProvider(widget.detailKey.projectId),
+    );
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SingleChildScrollView(
@@ -102,8 +103,7 @@ class _AskBodyState extends ConsumerState<_AskBody> {
               ),
               child: Text(
                 _error!,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.redText),
+                style: AppTextStyles.body.copyWith(color: AppColors.redText),
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -117,8 +117,7 @@ class _AskBodyState extends ConsumerState<_AskBody> {
             ),
             error: (e, _) => Text(
               'Не удалось загрузить команду',
-              style:
-                  AppTextStyles.caption.copyWith(color: AppColors.redDot),
+              style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
             ),
             data: (team) => Wrap(
               spacing: 8,
@@ -145,15 +144,13 @@ class _AskBodyState extends ConsumerState<_AskBody> {
             maxLength: 2000,
             decoration: InputDecoration(
               hintText: 'Что уточнить?',
-              hintStyle:
-                  AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
               filled: true,
               fillColor: AppColors.n0,
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
             ),
           ),

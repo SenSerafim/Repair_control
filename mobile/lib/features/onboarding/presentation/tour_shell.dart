@@ -72,8 +72,9 @@ class _TourBody extends ConsumerWidget {
                     : () => ref.read(tourControllerProvider.notifier).back(),
                 onNext: () =>
                     ref.read(tourControllerProvider.notifier).advance(),
-                onCutoutTapHint:
-                    s.requiresUserTap ? 'или нажмите подсвеченную кнопку' : null,
+                onCutoutTapHint: s.requiresUserTap
+                    ? 'или нажмите подсвеченную кнопку'
+                    : null,
               ),
             ),
           ],

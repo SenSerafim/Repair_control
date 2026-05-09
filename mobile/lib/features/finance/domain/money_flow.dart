@@ -11,25 +11,25 @@ class MoneyFlow {
   });
 
   factory MoneyFlow.parse(Map<String, dynamic> json) => MoneyFlow(
-        advances: (json['advances'] as List<dynamic>? ?? const [])
-            .map((e) => AdvanceFlow.parse(e as Map<String, dynamic>))
+    advances: (json['advances'] as List<dynamic>? ?? const [])
+        .map((e) => AdvanceFlow.parse(e as Map<String, dynamic>))
+        .toList(),
+    distributions: (json['distributions'] as List<dynamic>? ?? const [])
+        .map((e) => DistributionFlow.parse(e as Map<String, dynamic>))
+        .toList(),
+    approvedSelfpurchases:
+        (json['approvedSelfpurchases'] as List<dynamic>? ?? const [])
+            .map(
+              (e) => ApprovedSelfpurchaseFlow.parse(e as Map<String, dynamic>),
+            )
             .toList(),
-        distributions: (json['distributions'] as List<dynamic>? ?? const [])
-            .map((e) => DistributionFlow.parse(e as Map<String, dynamic>))
-            .toList(),
-        approvedSelfpurchases:
-            (json['approvedSelfpurchases'] as List<dynamic>? ?? const [])
-                .map((e) =>
-                    ApprovedSelfpurchaseFlow.parse(e as Map<String, dynamic>))
-                .toList(),
-        materialPurchases:
-            (json['materialPurchases'] as List<dynamic>? ?? const [])
-                .map((e) => MaterialPurchaseFlow.parse(e as Map<String, dynamic>))
-                .toList(),
-        totals: MoneyFlowTotals.parse(
-          json['totals'] as Map<String, dynamic>? ?? const {},
-        ),
-      );
+    materialPurchases: (json['materialPurchases'] as List<dynamic>? ?? const [])
+        .map((e) => MaterialPurchaseFlow.parse(e as Map<String, dynamic>))
+        .toList(),
+    totals: MoneyFlowTotals.parse(
+      json['totals'] as Map<String, dynamic>? ?? const {},
+    ),
+  );
 
   final List<AdvanceFlow> advances;
   final List<DistributionFlow> distributions;
@@ -54,13 +54,13 @@ class MoneyFlowTotals {
   });
 
   factory MoneyFlowTotals.parse(Map<String, dynamic> json) => MoneyFlowTotals(
-        advances: (json['advances'] as num?)?.toInt() ?? 0,
-        distributed: (json['distributed'] as num?)?.toInt() ?? 0,
-        undistributed: (json['undistributed'] as num?)?.toInt() ?? 0,
-        approvedSelfpurchases:
-            (json['approvedSelfpurchases'] as num?)?.toInt() ?? 0,
-        materials: (json['materials'] as num?)?.toInt() ?? 0,
-      );
+    advances: (json['advances'] as num?)?.toInt() ?? 0,
+    distributed: (json['distributed'] as num?)?.toInt() ?? 0,
+    undistributed: (json['undistributed'] as num?)?.toInt() ?? 0,
+    approvedSelfpurchases:
+        (json['approvedSelfpurchases'] as num?)?.toInt() ?? 0,
+    materials: (json['materials'] as num?)?.toInt() ?? 0,
+  );
 
   final int advances;
   final int distributed;
@@ -81,16 +81,16 @@ class AdvanceFlow {
   });
 
   factory AdvanceFlow.parse(Map<String, dynamic> json) => AdvanceFlow(
-        id: json['id'] as String,
-        toUserId: json['toUserId'] as String,
-        toUserName: (json['toUserName'] as String?) ?? '—',
-        amount: (json['amount'] as num).toInt(),
-        status: json['status'] as String? ?? 'pending',
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        confirmedAt: json['confirmedAt'] == null
-            ? null
-            : DateTime.parse(json['confirmedAt'] as String),
-      );
+    id: json['id'] as String,
+    toUserId: json['toUserId'] as String,
+    toUserName: (json['toUserName'] as String?) ?? '—',
+    amount: (json['amount'] as num).toInt(),
+    status: json['status'] as String? ?? 'pending',
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    confirmedAt: json['confirmedAt'] == null
+        ? null
+        : DateTime.parse(json['confirmedAt'] as String),
+  );
 
   final String id;
   final String toUserId;
@@ -114,15 +114,15 @@ class DistributionFlow {
   });
 
   factory DistributionFlow.parse(Map<String, dynamic> json) => DistributionFlow(
-        id: json['id'] as String,
-        parentPaymentId: json['parentPaymentId'] as String?,
-        fromUserId: json['fromUserId'] as String,
-        toUserId: json['toUserId'] as String,
-        toUserName: (json['toUserName'] as String?) ?? '—',
-        amount: (json['amount'] as num).toInt(),
-        status: json['status'] as String? ?? 'pending',
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    parentPaymentId: json['parentPaymentId'] as String?,
+    fromUserId: json['fromUserId'] as String,
+    toUserId: json['toUserId'] as String,
+    toUserName: (json['toUserName'] as String?) ?? '—',
+    amount: (json['amount'] as num).toInt(),
+    status: json['status'] as String? ?? 'pending',
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 
   final String id;
   final String? parentPaymentId;

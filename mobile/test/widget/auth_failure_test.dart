@@ -38,10 +38,7 @@ void main() {
         statusCode: 400,
         code: 'auth.recovery_invalid_code',
       );
-      expect(
-        AuthFailure.fromApiError(e),
-        AuthFailure.recoveryInvalidCode,
-      );
+      expect(AuthFailure.fromApiError(e), AuthFailure.recoveryInvalidCode);
     });
 
     test('recovery_expired', () {
@@ -54,18 +51,12 @@ void main() {
     });
 
     test('network by kind', () {
-      const e = ApiError(
-        kind: ApiErrorKind.network,
-        statusCode: 0,
-      );
+      const e = ApiError(kind: ApiErrorKind.network, statusCode: 0);
       expect(AuthFailure.fromApiError(e), AuthFailure.network);
     });
 
     test('server by kind', () {
-      const e = ApiError(
-        kind: ApiErrorKind.server,
-        statusCode: 500,
-      );
+      const e = ApiError(kind: ApiErrorKind.server, statusCode: 500);
       expect(AuthFailure.fromApiError(e), AuthFailure.server);
     });
 

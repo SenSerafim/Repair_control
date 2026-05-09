@@ -58,15 +58,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final archived = ref.watch(archivedProjectsProvider).value ?? const [];
     final all = [...active, ...archived];
 
-    final results = (_query.isEmpty
-            ? all
-            : all.where(
-                (p) =>
-                    p.title.toLowerCase().contains(_query) ||
-                    (p.address?.toLowerCase().contains(_query) ?? false),
-              ))
-        .where(_matchesFilter)
-        .toList();
+    final results =
+        (_query.isEmpty
+                ? all
+                : all.where(
+                    (p) =>
+                        p.title.toLowerCase().contains(_query) ||
+                        (p.address?.toLowerCase().contains(_query) ?? false),
+                  ))
+            .where(_matchesFilter)
+            .toList();
 
     return AppScaffold(
       showBack: true,
@@ -126,23 +127,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: _query.isEmpty && _filter == _SearchFilter.all
                 ? const _Hint()
                 : results.isEmpty
-                    ? const AppEmptyState(
-                        title: 'Ничего не найдено',
-                        subtitle:
-                            'Попробуйте изменить запрос или сбросить фильтры',
-                        icon: PhosphorIconsRegular.magnifyingGlassMinus,
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                        itemCount: results.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.x10),
-                        itemBuilder: (_, i) => ProjectCard(
-                          project: results[i],
-                          onTap: () =>
-                              context.push('/projects/${results[i].id}'),
-                        ),
-                      ),
+                ? const AppEmptyState(
+                    title: 'Ничего не найдено',
+                    subtitle: 'Попробуйте изменить запрос или сбросить фильтры',
+                    icon: PhosphorIconsRegular.magnifyingGlassMinus,
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                    itemCount: results.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.x10),
+                    itemBuilder: (_, i) => ProjectCard(
+                      project: results[i],
+                      onTap: () => context.push('/projects/${results[i].id}'),
+                    ),
+                  ),
           ),
         ],
       ),

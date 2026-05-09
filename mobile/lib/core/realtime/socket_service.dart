@@ -39,9 +39,9 @@ class SocketService {
     required AppEnv env,
     required SecureStorage storage,
     required Logger logger,
-  })  : _env = env,
-        _storage = storage,
-        _logger = logger;
+  }) : _env = env,
+       _storage = storage,
+       _logger = logger;
 
   final AppEnv _env;
   final SecureStorage _storage;

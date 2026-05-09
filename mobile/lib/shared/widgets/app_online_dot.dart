@@ -7,13 +7,11 @@ import '../../core/theme/tokens.dart';
 /// Online: 6px зелёный круг + текст «Online» (10/600/`greenDark`).
 /// Offline: только время «2ч» / «10 фев» / «вчера» (10/600/n400).
 class AppOnlineDot extends StatelessWidget {
-  const AppOnlineDot.online({super.key})
-      : online = true,
-        lastSeenLabel = null;
+  const AppOnlineDot.online({super.key}) : online = true, lastSeenLabel = null;
 
   const AppOnlineDot.lastSeen({required String label, super.key})
-      : online = false,
-        lastSeenLabel = label;
+    : online = false,
+      lastSeenLabel = label;
 
   final bool online;
   final String? lastSeenLabel;

@@ -4,8 +4,9 @@ import 'package:repair_control/features/finance/domain/budget.dart';
 import 'package:repair_control/features/finance/presentation/_widgets/budget_hero_card.dart';
 
 void main() {
-  testWidgets('BudgetHeroCard рендерит сумму, потрачено и остаток',
-      (tester) async {
+  testWidgets('BudgetHeroCard рендерит сумму, потрачено и остаток', (
+    tester,
+  ) async {
     const total = BudgetBucket(
       planned: 830_000_00,
       spent: 375_000_00,
@@ -24,11 +25,7 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: BudgetHeroCard(
-            total: total,
-            work: work,
-            materials: materials,
-          ),
+          body: BudgetHeroCard(total: total, work: work, materials: materials),
         ),
       ),
     );
@@ -50,11 +47,7 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: BudgetHeroCard(
-            total: total,
-            work: work,
-            materials: materials,
-          ),
+          body: BudgetHeroCard(total: total, work: work, materials: materials),
         ),
       ),
     );

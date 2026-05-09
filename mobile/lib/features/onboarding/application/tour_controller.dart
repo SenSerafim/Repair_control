@@ -77,8 +77,9 @@ class TourController extends Notifier<TourState> {
 
 /// `NotifierProvider` без `family` — тур всегда один. Override-ится только
 /// внутри `/tour` `ProviderScope`, за его пределами доступа к нему нет.
-final tourControllerProvider =
-    NotifierProvider<TourController, TourState>(TourController.new);
+final tourControllerProvider = NotifierProvider<TourController, TourState>(
+  TourController.new,
+);
 
 /// Текущее значение «тур пройден» — синхронно доступно из `redirect`
 /// GoRouter-а. `null` означает «ещё не загрузили из SecureStorage» —
@@ -99,22 +100,18 @@ class TutorialCompletedNotifier extends Notifier<bool?> {
   /// Вызывается из `TourController.complete` — после прохождения тура
   /// пользователь больше не должен попадать в `/tour`.
   Future<void> markCompleted() async {
-    await ref
-        .read(secureStorageProvider)
-        .writeTutorialCompleted(value: true);
+    await ref.read(secureStorageProvider).writeTutorialCompleted(value: true);
     state = true;
   }
 
   /// «Пройти обучение заново» из Profile — сбрасывает флаг.
   Future<void> reset() async {
-    await ref
-        .read(secureStorageProvider)
-        .writeTutorialCompleted(value: false);
+    await ref.read(secureStorageProvider).writeTutorialCompleted(value: false);
     state = false;
   }
 }
 
 final tutorialCompletedProvider =
     NotifierProvider<TutorialCompletedNotifier, bool?>(
-  TutorialCompletedNotifier.new,
-);
+      TutorialCompletedNotifier.new,
+    );

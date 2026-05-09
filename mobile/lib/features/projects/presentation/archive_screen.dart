@@ -20,7 +20,10 @@ class ArchiveScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(archivedProjectsProvider);
-    final unread = ref.watch(notificationsProvider).where((n) => !n.read).length;
+    final unread = ref
+        .watch(notificationsProvider)
+        .where((n) => !n.read)
+        .length;
 
     return Scaffold(
       backgroundColor: AppColors.n50,
@@ -49,7 +52,8 @@ class ArchiveScreen extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                     children: [
                       const _InfoBox(
-                        text: 'Архивные проекты хранятся бессрочно. '
+                        text:
+                            'Архивные проекты хранятся бессрочно. '
                             'Данные и фотографии не удаляются.',
                       ),
                       const SizedBox(height: AppSpacing.x16),
@@ -72,8 +76,7 @@ class ArchiveScreen extends ConsumerWidget {
                         AppArchiveCard(
                           title: items[i].title,
                           meta: _meta(items[i]),
-                          onRestore: () =>
-                              _restore(context, ref, items[i]),
+                          onRestore: () => _restore(context, ref, items[i]),
                           onDownload: () =>
                               _downloadZip(context, ref, items[i]),
                         ),
@@ -146,10 +149,9 @@ class ArchiveScreen extends ConsumerWidget {
     );
     if (confirmed ?? false) {
       try {
-        await ref.read(exportsRepositoryProvider).create(
-              projectId: project.id,
-              kind: ExportKind.projectZip,
-            );
+        await ref
+            .read(exportsRepositoryProvider)
+            .create(projectId: project.id, kind: ExportKind.projectZip);
         if (!context.mounted) return;
         AppToast.show(
           context,
@@ -169,10 +171,7 @@ class ArchiveScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.unreadNotifications,
-    required this.onActiveTap,
-  });
+  const _Header({required this.unreadNotifications, required this.onActiveTap});
 
   final int unreadNotifications;
   final VoidCallback onActiveTap;
@@ -185,8 +184,7 @@ class _Header extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
         decoration: const BoxDecoration(
           color: AppColors.n0,
-          border:
-              Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
+          border: Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -206,8 +204,7 @@ class _Header extends StatelessWidget {
                 ),
                 _IconBtn(
                   icon: PhosphorIconsRegular.question,
-                  onTap: () =>
-                      Navigator.of(context).pushNamed('/profile/help'),
+                  onTap: () => Navigator.of(context).pushNamed('/profile/help'),
                 ),
                 _IconBtn(
                   icon: PhosphorIconsRegular.bell,
@@ -227,9 +224,7 @@ class _Header extends StatelessWidget {
                     child: const _Tab(label: 'Активные', active: false),
                   ),
                 ),
-                const Expanded(
-                  child: _Tab(label: 'Архив', active: true),
-                ),
+                const Expanded(child: _Tab(label: 'Архив', active: true)),
               ],
             ),
           ],

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../team/application/team_controller.dart';
 import '../application/notes_controller.dart';
 import '../domain/note.dart';
 import 'note_detail_screen.dart';
@@ -48,9 +49,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               loading: () => const AppLoadingState(),
               error: (e, _) => AppErrorState(
                 title: 'Не удалось загрузить заметки',
-                onRetry: () => ref.invalidate(
-                  notesControllerProvider(widget.projectId),
-                ),
+                onRetry: () =>
+                    ref.invalidate(notesControllerProvider(widget.projectId)),
               ),
               data: (notes) {
                 final filtered = _filter == null
@@ -58,11 +58,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     : notes.where((n) => n.scope == _filter).toList();
                 if (filtered.isEmpty) {
                   return AppEmptyState(
-                    title:
-                        _filter == null ? 'Нет заметок' : 'Ничего не найдено',
+                    title: _filter == null
+                        ? 'Нет заметок'
+                        : 'Ничего не найдено',
                     subtitle: _filter == null
                         ? 'Создайте заметку — личную для себя или общую для '
-                            'всей команды'
+                              'всей команды'
                         : null,
                     icon: Icons.sticky_note_2_outlined,
                     actionLabel: 'Создать заметку',
@@ -70,9 +71,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   );
                 }
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(
-                    notesControllerProvider(widget.projectId),
-                  ),
+                  onRefresh: () async =>
+                      ref.invalidate(notesControllerProvider(widget.projectId)),
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                     itemCount: filtered.length,
@@ -99,9 +99,15 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 
   Future<void> _showCreateSheet(BuildContext context) async {
+    // QA-баг #2: модалка должна открываться на текущем фильтре, а не на
+    // дефолтном «Только мне». Передаём активный _filter как начальный scope
+    // для _CreateNoteBody, если он выбран.
     await showAppBottomSheet<void>(
       context: context,
-      child: _CreateNoteBody(projectId: widget.projectId),
+      child: _CreateNoteBody(
+        projectId: widget.projectId,
+        initialScope: _filter,
+      ),
     );
   }
 }
@@ -268,16 +274,22 @@ class _NoteTile extends StatelessWidget {
 }
 
 class _CreateNoteBody extends ConsumerStatefulWidget {
-  const _CreateNoteBody({required this.projectId});
+  const _CreateNoteBody({required this.projectId, this.initialScope});
 
   final String projectId;
+  final NoteScope? initialScope;
 
   @override
   ConsumerState<_CreateNoteBody> createState() => _CreateNoteBodyState();
 }
 
 class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
-  NoteScope _scope = NoteScope.personal;
+  late NoteScope _scope = widget.initialScope ?? NoteScope.personal;
+
+  /// QA-баг #5: при scope=forMe нужен явный addressee. Заполняется picker'ом
+  /// из участников проекта; кнопка submit disabled, пока null.
+  String? _addresseeId;
+  String? _addresseeName;
   final _text = TextEditingController();
   bool _submitting = false;
   String? _error;
@@ -293,13 +305,21 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
       setState(() => _error = 'Введите текст');
       return;
     }
+    if (_scope == NoteScope.forMe && _addresseeId == null) {
+      setState(() => _error = 'Выберите получателя');
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;
     });
     final failure = await ref
         .read(notesControllerProvider(widget.projectId).notifier)
-        .create(scope: _scope, text: _text.text.trim());
+        .create(
+          scope: _scope,
+          text: _text.text.trim(),
+          addresseeId: _scope == NoteScope.forMe ? _addresseeId : null,
+        );
     if (!mounted) return;
     setState(() => _submitting = false);
     if (failure == null) {
@@ -307,6 +327,63 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
     } else {
       setState(() => _error = failure.userMessage);
     }
+  }
+
+  Future<void> _pickAddressee() async {
+    final teamAsync = ref.read(teamControllerProvider(widget.projectId));
+    final team = teamAsync.value;
+    if (team == null) {
+      setState(() => _error = 'Команда ещё загружается, попробуйте ещё раз');
+      return;
+    }
+    if (team.members.isEmpty) {
+      setState(() => _error = 'В команде проекта пока нет других участников');
+      return;
+    }
+    final selected = await showAppBottomSheet<({String id, String name})>(
+      context: context,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AppBottomSheetHeader(title: 'Выберите получателя'),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 360),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: team.members.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              itemBuilder: (context, i) {
+                final m = team.members[i];
+                final user = m.user;
+                final fullName = user == null
+                    ? m.userId
+                    : '${user.firstName} ${user.lastName}'.trim();
+                return ListTile(
+                  leading: AppAvatar(
+                    seed: m.userId,
+                    name: fullName.isEmpty ? null : fullName,
+                    imageUrl: user?.avatarUrl,
+                  ),
+                  title: Text(fullName.isEmpty ? 'Без имени' : fullName),
+                  subtitle: Text(m.role.displayName),
+                  onTap: () => Navigator.of(context).pop((
+                    id: m.userId,
+                    name: fullName.isEmpty ? 'Участник' : fullName,
+                  )),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _addresseeId = selected.id;
+      _addresseeName = selected.name;
+      _error = null;
+    });
   }
 
   @override
@@ -355,9 +432,70 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
           _ScopeOption(
             scope: s,
             selected: _scope == s,
-            onTap: () => setState(() => _scope = s),
+            onTap: () => setState(() {
+              _scope = s;
+              if (s != NoteScope.forMe) {
+                _addresseeId = null;
+                _addresseeName = null;
+              }
+            }),
           ),
           if (s != NoteScope.values.last) const SizedBox(height: 8),
+        ],
+        if (_scope == NoteScope.forMe) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'ПОЛУЧАТЕЛЬ',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n500,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Material(
+            color: AppColors.n0,
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            child: InkWell(
+              onTap: _pickAddressee,
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.n200),
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColors.n400,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _addresseeName ?? 'Выбрать участника',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _addresseeName == null
+                              ? AppColors.n400
+                              : AppColors.n900,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.n400,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
         const SizedBox(height: 16),
         const Text(
@@ -383,18 +521,15 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
             contentPadding: const EdgeInsets.all(14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.n200, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide:
-                  const BorderSide(color: AppColors.brand, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
             ),
           ),
         ),
@@ -421,11 +556,11 @@ class _ScopeOption extends StatelessWidget {
   final VoidCallback onTap;
 
   IconData get _icon => switch (scope) {
-        NoteScope.personal => Icons.lock_outline_rounded,
-        NoteScope.forMe => Icons.person_outline_rounded,
-        NoteScope.stage => Icons.groups_outlined,
-        NoteScope.teamBroadcast => Icons.campaign_outlined,
-      };
+    NoteScope.personal => Icons.lock_outline_rounded,
+    NoteScope.forMe => Icons.person_outline_rounded,
+    NoteScope.stage => Icons.groups_outlined,
+    NoteScope.teamBroadcast => Icons.campaign_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {

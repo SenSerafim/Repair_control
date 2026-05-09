@@ -57,8 +57,11 @@ class _KnowledgeSearchScreenState extends ConsumerState<KnowledgeSearchScreen> {
             onChanged: _onChanged,
             decoration: InputDecoration(
               hintText: 'Что ищем?',
-              prefixIcon: const Icon(PhosphorIconsFill.magnifyingGlass,
-                  size: 18, color: AppColors.n400),
+              prefixIcon: const Icon(
+                PhosphorIconsFill.magnifyingGlass,
+                size: 18,
+                color: AppColors.n400,
+              ),
               filled: true,
               fillColor: AppColors.n0,
               border: OutlineInputBorder(
@@ -102,8 +105,9 @@ class _KnowledgeSearchScreenState extends ConsumerState<KnowledgeSearchScreen> {
                               return Container(
                                 decoration: BoxDecoration(
                                   color: AppColors.n0,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.r12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.r12,
+                                  ),
                                 ),
                                 child: ListTile(
                                   title: Text(
@@ -113,7 +117,9 @@ class _KnowledgeSearchScreenState extends ConsumerState<KnowledgeSearchScreen> {
                                       color: AppColors.n900,
                                     ),
                                   ),
-                                  subtitle: _StripMarkSnippet(snippet: h.snippet),
+                                  subtitle: _StripMarkSnippet(
+                                    snippet: h.snippet,
+                                  ),
                                   onTap: () => context.push(
                                     AppRoutes.knowledgeArticleWith(h.id),
                                   ),
@@ -143,13 +149,15 @@ class _StripMarkSnippet extends StatelessWidget {
       if (match.start > lastEnd) {
         spans.add(TextSpan(text: snippet.substring(lastEnd, match.start)));
       }
-      spans.add(TextSpan(
-        text: match.group(1) ?? '',
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          color: AppColors.brand,
+      spans.add(
+        TextSpan(
+          text: match.group(1) ?? '',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.brand,
+          ),
         ),
-      ));
+      );
       lastEnd = match.end;
     }
     if (lastEnd < snippet.length) {
@@ -157,7 +165,11 @@ class _StripMarkSnippet extends StatelessWidget {
     }
     return RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 13, color: AppColors.n500, height: 1.4),
+        style: const TextStyle(
+          fontSize: 13,
+          color: AppColors.n500,
+          height: 1.4,
+        ),
         children: spans,
       ),
       maxLines: 3,

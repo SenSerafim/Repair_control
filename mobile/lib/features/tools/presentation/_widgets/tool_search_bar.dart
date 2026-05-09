@@ -28,11 +28,7 @@ class ToolSearchBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.search_rounded,
-            size: 16,
-            color: AppColors.n400,
-          ),
+          const Icon(Icons.search_rounded, size: 16, color: AppColors.n400),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(

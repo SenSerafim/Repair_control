@@ -31,16 +31,14 @@ class MaterialsListScreen extends ConsumerWidget {
         if (canCreate)
           IconButton(
             icon: const Icon(Icons.add_circle_outline_rounded),
-            onPressed: () =>
-                context.push('/projects/$projectId/materials/new'),
+            onPressed: () => context.push('/projects/$projectId/materials/new'),
           ),
       ],
       body: async.when(
         loading: () => const AppLoadingState(skeleton: AppListSkeleton()),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить',
-          onRetry: () =>
-              ref.invalidate(materialsControllerProvider(projectId)),
+          onRetry: () => ref.invalidate(materialsControllerProvider(projectId)),
         ),
         data: (items) {
           if (items.isEmpty) {

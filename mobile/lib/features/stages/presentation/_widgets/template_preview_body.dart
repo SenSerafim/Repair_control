@@ -61,10 +61,7 @@ class TemplatePreviewBody extends StatelessWidget {
                             thickness: 1,
                             color: AppColors.n100,
                           ),
-                        _StepRow(
-                          number: i + 1,
-                          title: template.steps[i].title,
-                        ),
+                        _StepRow(number: i + 1, title: template.steps[i].title),
                       ],
                     ],
                   ),
@@ -148,10 +145,7 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                template.title,
-                style: AppTextStyles.h1,
-              ),
+              Text(template.title, style: AppTextStyles.h1),
               const SizedBox(height: 2),
               Text(
                 '${template.steps.length} ${_pluralSteps(template.steps.length)} · ${template.kind == TemplateKind.platform ? 'предустановленный шаблон' : 'мой шаблон'}',

@@ -94,10 +94,7 @@ void main() {
         'requestedById': 'u1',
         'addresseeId': 'u2',
         'attemptNumber': 2,
-        'payload': {
-          'price': 50_000_00,
-          'description': 'Доп.демонтаж стены',
-        },
+        'payload': {'price': 50_000_00, 'description': 'Доп.демонтаж стены'},
         'createdAt': '2026-04-22T10:00:00Z',
         'updatedAt': '2026-04-22T10:00:00Z',
       });

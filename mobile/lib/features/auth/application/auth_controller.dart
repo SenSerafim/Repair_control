@@ -25,20 +25,20 @@ class AuthState {
     AuthStatus? status,
     SystemRole? activeRole,
     String? userId,
-  }) =>
-      AuthState(
-        status: status ?? this.status,
-        activeRole: activeRole ?? this.activeRole,
-        userId: userId ?? this.userId,
-      );
+  }) => AuthState(
+    status: status ?? this.status,
+    activeRole: activeRole ?? this.activeRole,
+    userId: userId ?? this.userId,
+  );
 }
 
 final secureStorageProvider = Provider<SecureStorage>((ref) {
   return SecureStorage();
 });
 
-final authControllerProvider =
-    NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);
 
 class AuthController extends Notifier<AuthState> {
   static const _uuid = Uuid();

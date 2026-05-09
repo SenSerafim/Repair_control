@@ -36,24 +36,24 @@ class DemoApprovalsRepository extends ApprovalsRepository {
     String? stepId,
     Map<String, dynamic>? payload,
     List<String>? attachmentKeys,
-  }) async =>
-      DemoData.approvals.first;
+  }) async => DemoData.approvals.first;
 
   @override
   Future<Approval> approve({required String id, String? comment}) async =>
       DemoData.approvalById(id);
 
   @override
-  Future<Approval> reject({required String id, required String comment}) async =>
-      DemoData.approvalById(id);
+  Future<Approval> reject({
+    required String id,
+    required String comment,
+  }) async => DemoData.approvalById(id);
 
   @override
   Future<Approval> resubmit({
     required String id,
     Map<String, dynamic>? payload,
     List<String>? attachmentKeys,
-  }) async =>
-      DemoData.approvalById(id);
+  }) async => DemoData.approvalById(id);
 
   @override
   Future<Approval> cancel(String id) async => DemoData.approvalById(id);

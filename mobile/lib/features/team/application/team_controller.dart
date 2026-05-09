@@ -6,10 +6,7 @@ import '../data/team_repository.dart';
 import '../domain/invitation.dart';
 
 class TeamState {
-  const TeamState({
-    required this.members,
-    required this.invitations,
-  });
+  const TeamState({required this.members, required this.invitations});
 
   final List<Membership> members;
   final List<Invitation> invitations;
@@ -17,17 +14,18 @@ class TeamState {
   TeamState copyWith({
     List<Membership>? members,
     List<Invitation>? invitations,
-  }) =>
-      TeamState(
-        members: members ?? this.members,
-        invitations: invitations ?? this.invitations,
-      );
+  }) => TeamState(
+    members: members ?? this.members,
+    invitations: invitations ?? this.invitations,
+  );
 
   bool get isEmpty => members.isEmpty && invitations.isEmpty;
 }
 
-final teamControllerProvider = AsyncNotifierProvider.family<
-    TeamController, TeamState, String>(TeamController.new);
+final teamControllerProvider =
+    AsyncNotifierProvider.family<TeamController, TeamState, String>(
+      TeamController.new,
+    );
 
 class TeamController extends FamilyAsyncNotifier<TeamState, String> {
   @override
@@ -47,7 +45,9 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     List<String>? stageIds,
   }) async {
     try {
-      final m = await ref.read(teamRepositoryProvider).addMember(
+      final m = await ref
+          .read(teamRepositoryProvider)
+          .addMember(
             projectId: arg,
             userId: userId,
             role: role,
@@ -66,16 +66,16 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
 
   Future<AuthFailure?> removeMember(String membershipId) async {
     try {
-      await ref.read(teamRepositoryProvider).removeMember(
-            projectId: arg,
-            membershipId: membershipId,
-          );
+      await ref
+          .read(teamRepositoryProvider)
+          .removeMember(projectId: arg, membershipId: membershipId);
       final current = state.value;
       if (current != null) {
         state = AsyncData(
           current.copyWith(
-            members:
-                current.members.where((m) => m.id != membershipId).toList(),
+            members: current.members
+                .where((m) => m.id != membershipId)
+                .toList(),
           ),
         );
       }
@@ -90,7 +90,9 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     required Map<String, bool> permissions,
   }) async {
     try {
-      final m = await ref.read(teamRepositoryProvider).updateMember(
+      final m = await ref
+          .read(teamRepositoryProvider)
+          .updateMember(
             projectId: arg,
             membershipId: membershipId,
             permissions: permissions,
@@ -99,9 +101,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
       if (current != null) {
         state = AsyncData(
           current.copyWith(
-            members: current.members
-                .map((x) => x.id == m.id ? m : x)
-                .toList(),
+            members: current.members.map((x) => x.id == m.id ? m : x).toList(),
           ),
         );
       }
@@ -133,10 +133,9 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
 
   Future<AuthFailure?> cancelInvitation(String invitationId) async {
     try {
-      await ref.read(teamRepositoryProvider).cancelInvitation(
-            projectId: arg,
-            invitationId: invitationId,
-          );
+      await ref
+          .read(teamRepositoryProvider)
+          .cancelInvitation(projectId: arg, invitationId: invitationId);
       final current = state.value;
       if (current != null) {
         state = AsyncData(

@@ -13,11 +13,11 @@ class FaqItem with _$FaqItem {
   }) = _FaqItem;
 
   static FaqItem parse(Map<String, dynamic> json) => FaqItem(
-        id: json['id'] as String,
-        question: json['question'] as String,
-        answer: json['answer'] as String,
-        orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
-      );
+    id: json['id'] as String,
+    question: json['question'] as String,
+    answer: json['answer'] as String,
+    orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
+  );
 }
 
 /// Секция FAQ с вложенными items.

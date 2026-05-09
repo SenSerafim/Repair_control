@@ -84,9 +84,7 @@ class AppOptionRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Icon(
-                selected
-                    ? Icons.check_rounded
-                    : Icons.chevron_right_rounded,
+                selected ? Icons.check_rounded : Icons.chevron_right_rounded,
                 size: selected ? 20 : 22,
                 color: selected ? AppColors.brand : AppColors.n300,
               ),

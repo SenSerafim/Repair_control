@@ -7,10 +7,7 @@ import '../data/approvals_repository.dart';
 import '../domain/approval.dart';
 
 class ApprovalsBuckets {
-  const ApprovalsBuckets({
-    required this.pending,
-    required this.history,
-  });
+  const ApprovalsBuckets({required this.pending, required this.history});
 
   final List<Approval> pending;
   final List<Approval> history;
@@ -18,19 +15,18 @@ class ApprovalsBuckets {
   ApprovalsBuckets copyWith({
     List<Approval>? pending,
     List<Approval>? history,
-  }) =>
-      ApprovalsBuckets(
-        pending: pending ?? this.pending,
-        history: history ?? this.history,
-      );
+  }) => ApprovalsBuckets(
+    pending: pending ?? this.pending,
+    history: history ?? this.history,
+  );
 
   bool get isEmpty => pending.isEmpty && history.isEmpty;
 }
 
-final approvalsControllerProvider = AsyncNotifierProvider.family<
-    ApprovalsController, ApprovalsBuckets, String>(
-  ApprovalsController.new,
-);
+final approvalsControllerProvider =
+    AsyncNotifierProvider.family<ApprovalsController, ApprovalsBuckets, String>(
+      ApprovalsController.new,
+    );
 
 class ApprovalsController
     extends FamilyAsyncNotifier<ApprovalsBuckets, String> {
@@ -125,8 +121,9 @@ class ApprovalsController
 
   Future<AuthFailure?> cancel(Approval approval) async {
     try {
-      final updated =
-          await ref.read(approvalsRepositoryProvider).cancel(approval.id);
+      final updated = await ref
+          .read(approvalsRepositoryProvider)
+          .cancel(approval.id);
       _replace(updated);
       _invalidateStageAndProject(approval.stageId);
       return null;
@@ -138,13 +135,12 @@ class ApprovalsController
 
 /// Детальный провайдер отдельного согласования — используется экраном
 /// детали для свежего state с attachments.
-final approvalDetailProvider = AsyncNotifierProvider.family<
-    ApprovalDetailController, Approval, String>(
-  ApprovalDetailController.new,
-);
+final approvalDetailProvider =
+    AsyncNotifierProvider.family<ApprovalDetailController, Approval, String>(
+      ApprovalDetailController.new,
+    );
 
-class ApprovalDetailController
-    extends FamilyAsyncNotifier<Approval, String> {
+class ApprovalDetailController extends FamilyAsyncNotifier<Approval, String> {
   @override
   Future<Approval> build(String approvalId) {
     return ref.read(approvalsRepositoryProvider).get(approvalId);

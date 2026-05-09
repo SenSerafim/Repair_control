@@ -187,10 +187,9 @@ class _DetailView extends ConsumerWidget {
           Navigator.of(context).pop();
           try {
             final file = await _downloadToTemp(ref);
-            await Share.shareXFiles(
-              [XFile(file.path, mimeType: doc.mimeType)],
-              text: doc.title,
-            );
+            await Share.shareXFiles([
+              XFile(file.path, mimeType: doc.mimeType),
+            ], text: doc.title);
           } on DocumentsException catch (e) {
             if (!context.mounted) return;
             AppToast.show(
@@ -215,14 +214,16 @@ class _DetailView extends ConsumerWidget {
   /// (он не требует JWT-авторизации). Имя файла — `<id>__<title>` чтобы
   /// избежать коллизий и сохранить расширение для open_filex.
   Future<File> _downloadToTemp(WidgetRef ref) async {
-    final url = doc.url ??
+    final url =
+        doc.url ??
         await ref.read(documentsControllerProvider).downloadUrl(doc.id);
     final tmpDir = await getTemporaryDirectory();
-    final safeTitle = doc.title.replaceAll(RegExp(r'[^A-Za-z0-9._\-А-Яа-я ]'), '_');
+    final safeTitle = doc.title.replaceAll(
+      RegExp(r'[^A-Za-z0-9._\-А-Яа-я ]'),
+      '_',
+    );
     final filename = '${doc.id}__$safeTitle';
-    final ext = p.extension(filename).isEmpty
-        ? _extFromMime(doc.mimeType)
-        : '';
+    final ext = p.extension(filename).isEmpty ? _extFromMime(doc.mimeType) : '';
     final file = File(p.join(tmpDir.path, '$filename$ext'));
     final raw = Dio();
     try {
@@ -272,10 +273,9 @@ class _DetailView extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(documentsControllerProvider).delete(
-            id: doc.id,
-            projectId: doc.projectId,
-          );
+      await ref
+          .read(documentsControllerProvider)
+          .delete(id: doc.id, projectId: doc.projectId);
       if (!context.mounted) return;
       Navigator.of(context).pop();
     } on DocumentsException catch (e) {
@@ -375,9 +375,7 @@ class _OutlinedDocAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = destructive ? AppColors.redDot : AppColors.n700;
     final bg = destructive ? AppColors.redBg : AppColors.n0;
-    final border = destructive
-        ? const Color(0xFFFECACA)
-        : AppColors.n200;
+    final border = destructive ? const Color(0xFFFECACA) : AppColors.n200;
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(AppRadius.r12),
@@ -429,7 +427,11 @@ class _MetaCard extends StatelessWidget {
         children: [
           _row('Файл', doc.title),
           _row('Размер', _size(doc.sizeBytes)),
-          _row('Категория', doc.category.displayName, valueColor: AppColors.brand),
+          _row(
+            'Категория',
+            doc.category.displayName,
+            valueColor: AppColors.brand,
+          ),
           _row(
             'Дата',
             DateFormat('dd.MM.yyyy, HH:mm', 'ru').format(doc.createdAt),
@@ -440,27 +442,24 @@ class _MetaCard extends StatelessWidget {
   }
 
   Widget _row(String k, String v, {Color? valueColor}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Text(
-              k,
-              style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        Text(k, style: AppTextStyles.caption.copyWith(color: AppColors.n500)),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            v,
+            style: AppTextStyles.subtitle.copyWith(
+              color: valueColor ?? AppColors.n800,
             ),
-            const Spacer(),
-            Flexible(
-              child: Text(
-                v,
-                style: AppTextStyles.subtitle.copyWith(
-                  color: valueColor ?? AppColors.n800,
-                ),
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   String _size(int b) {
     if (b < 1024) return '$b Б';
@@ -528,12 +527,13 @@ class _ShareSheet extends StatelessWidget {
             icon: c.type == ChatType.project
                 ? Icons.home_outlined
                 : c.type == ChatType.stage
-                    ? Icons.layers_outlined
-                    : Icons.person_outline,
+                ? Icons.layers_outlined
+                : Icons.person_outline,
             iconBg: AppColors.brandLight,
             iconFg: AppColors.brand,
             title: c.title ?? c.type.displayName,
-            subtitle: '${c.type.displayName} · ${c.participants.length} '
+            subtitle:
+                '${c.type.displayName} · ${c.participants.length} '
                 'участников',
             onTap: () => onPickChat(c.id),
           ),

@@ -9,11 +9,7 @@ import '../../../steps/domain/substep.dart';
 /// 8×8 dot (brand-light/brand-mid border, или green-mid/green при done) +
 /// текст с line-through при done.
 class SubstepRow extends StatelessWidget {
-  const SubstepRow({
-    required this.substep,
-    required this.onToggle,
-    super.key,
-  });
+  const SubstepRow({required this.substep, required this.onToggle, super.key});
 
   final Substep substep;
   final VoidCallback onToggle;

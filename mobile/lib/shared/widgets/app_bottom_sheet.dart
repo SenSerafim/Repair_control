@@ -28,38 +28,51 @@ class _AppBottomSheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.n0,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.r28),
-            topRight: Radius.circular(AppRadius.r28),
+    // QA-баг #4: до этого фикса bottom-sheet с TextField'ом (создание
+    // заметки, ввод комментария к паузе, поиск участника и т.д.) не
+    // поднимался над клавиатурой — поле ввода оказывалось под ней.
+    // showModalBottomSheet с isScrollControlled=true позволяет sheet'у
+    // расти, но мы должны явно компенсировать viewInsets.bottom (высота
+    // системной клавиатуры). AnimatedPadding даёт плавный апскейл вместе
+    // с анимацией клавиатуры.
+    final viewInsetsBottom = MediaQuery.viewInsetsOf(context).bottom;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: viewInsetsBottom),
+      child: SafeArea(
+        top: false,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.n0,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppRadius.r28),
+              topRight: Radius.circular(AppRadius.r28),
+            ),
           ),
-        ),
-        padding: AppSpacing.bottomSheet,
-        // ConstrainedBox + Column[Flexible] позволяет content'у sheet'а
-        // ужиматься без RenderFlex overflow когда содержимое больше экрана
-        // (например, длинный invite-form со списком прав).
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.92,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.x16),
-                decoration: BoxDecoration(
-                  color: AppColors.n200,
-                  borderRadius: BorderRadius.circular(2),
+          padding: AppSpacing.bottomSheet,
+          // ConstrainedBox + Column[Flexible] позволяет content'у sheet'а
+          // ужиматься без RenderFlex overflow когда содержимое больше экрана
+          // (например, длинный invite-form со списком прав).
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.92,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x16),
+                  decoration: BoxDecoration(
+                    color: AppColors.n200,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Flexible(child: child),
-            ],
+                Flexible(child: child),
+              ],
+            ),
           ),
         ),
       ),
@@ -87,8 +100,9 @@ class AppBottomSheetHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final align = centered ? TextAlign.center : TextAlign.start;
     return Column(
-      crossAxisAlignment:
-          centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         Text(title, style: AppTextStyles.h1, textAlign: align),
         if (subtitle != null) ...[

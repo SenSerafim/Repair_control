@@ -34,13 +34,7 @@ void main() {
   });
 
   testWidgets('SuccessScreen isError — красная иконка', (tester) async {
-    await pump(
-      tester,
-      const SuccessScreen(
-        title: 'Ошибка',
-        isError: true,
-      ),
-    );
+    await pump(tester, const SuccessScreen(title: 'Ошибка', isError: true));
     expect(find.text('Ошибка'), findsOneWidget);
   });
 }

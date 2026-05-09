@@ -27,10 +27,7 @@ class PaymentInfoCard extends StatelessWidget {
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: widgets,
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: widgets),
     );
   }
 

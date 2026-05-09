@@ -23,15 +23,14 @@ class _RolesScreenState extends ConsumerState<RolesScreen> {
 
   Future<void> _setActive(SystemRole role) async {
     setState(() => _switching = true);
-    final failure =
-        await ref.read(profileControllerProvider.notifier).setActiveRole(role);
+    final failure = await ref
+        .read(profileControllerProvider.notifier)
+        .setActiveRole(role);
     if (!mounted) return;
     setState(() => _switching = false);
     if (failure == null) {
       // Открываем экран успеха.
-      context.push(
-        '${AppRoutes.profileRolesSwitched}?role=${role.name}',
-      );
+      context.push('${AppRoutes.profileRolesSwitched}?role=${role.name}');
     } else {
       AppToast.show(
         context,
@@ -72,8 +71,9 @@ class _RolesScreenState extends ConsumerState<RolesScreen> {
       ),
     );
     if (picked != null && mounted) {
-      final failure =
-          await ref.read(profileControllerProvider.notifier).addRole(picked);
+      final failure = await ref
+          .read(profileControllerProvider.notifier)
+          .addRole(picked);
       if (!mounted) return;
       if (failure == null) {
         AppToast.show(
@@ -92,12 +92,12 @@ class _RolesScreenState extends ConsumerState<RolesScreen> {
   }
 
   static AppRoleKind _kindFor(SystemRole role) => switch (role) {
-        SystemRole.customer => AppRoleKind.customer,
-        SystemRole.contractor => AppRoleKind.foreman,
-        SystemRole.master => AppRoleKind.master,
-        SystemRole.representative => AppRoleKind.representative,
-        SystemRole.admin => AppRoleKind.customer,
-      };
+    SystemRole.customer => AppRoleKind.customer,
+    SystemRole.contractor => AppRoleKind.foreman,
+    SystemRole.master => AppRoleKind.master,
+    SystemRole.representative => AppRoleKind.representative,
+    SystemRole.admin => AppRoleKind.customer,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -111,8 +111,7 @@ class _RolesScreenState extends ConsumerState<RolesScreen> {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить роли',
-          onRetry: () =>
-              ref.read(profileControllerProvider.notifier).refresh(),
+          onRetry: () => ref.read(profileControllerProvider.notifier).refresh(),
         ),
         data: (profile) => ListView(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
@@ -138,9 +137,7 @@ class _RolesScreenState extends ConsumerState<RolesScreen> {
               const SizedBox(height: AppSpacing.x10),
             ],
             const SizedBox(height: AppSpacing.x6),
-            _DashedAddButton(
-              onTap: () => _openAddRoleSheet(profile.roles),
-            ),
+            _DashedAddButton(onTap: () => _openAddRoleSheet(profile.roles)),
           ],
         ),
       ),
@@ -209,9 +206,7 @@ class _RoleRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      entry.isActive
-                          ? 'Активная роль'
-                          : 'Переключиться',
+                      entry.isActive ? 'Активная роль' : 'Переключиться',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -261,20 +256,20 @@ class _RoleRow extends StatelessWidget {
   }
 
   static IconData _iconFor(SystemRole r) => switch (r) {
-        SystemRole.customer => PhosphorIconsFill.user,
-        SystemRole.contractor => PhosphorIconsFill.wrench,
-        SystemRole.master => PhosphorIconsFill.hardHat,
-        SystemRole.representative => PhosphorIconsFill.usersThree,
-        SystemRole.admin => PhosphorIconsFill.shieldStar,
-      };
+    SystemRole.customer => PhosphorIconsFill.user,
+    SystemRole.contractor => PhosphorIconsFill.wrench,
+    SystemRole.master => PhosphorIconsFill.hardHat,
+    SystemRole.representative => PhosphorIconsFill.usersThree,
+    SystemRole.admin => PhosphorIconsFill.shieldStar,
+  };
 
   static LinearGradient _gradientFor(SystemRole r) => switch (r) {
-        SystemRole.customer => AppGradients.avatarBlue,
-        SystemRole.contractor => AppGradients.avatarGreen,
-        SystemRole.master => AppGradients.avatarYellow,
-        SystemRole.representative => AppGradients.avatarPurple,
-        SystemRole.admin => AppGradients.avatarGrey,
-      };
+    SystemRole.customer => AppGradients.avatarBlue,
+    SystemRole.contractor => AppGradients.avatarGreen,
+    SystemRole.master => AppGradients.avatarYellow,
+    SystemRole.representative => AppGradients.avatarPurple,
+    SystemRole.admin => AppGradients.avatarGrey,
+  };
 }
 
 class _DashedAddButton extends StatelessWidget {
@@ -295,11 +290,7 @@ class _DashedAddButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              PhosphorIconsBold.plus,
-              color: AppColors.brand,
-              size: 18,
-            ),
+            Icon(PhosphorIconsBold.plus, color: AppColors.brand, size: 18),
             const SizedBox(width: AppSpacing.x6),
             const Text(
               'Добавить роль',

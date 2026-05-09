@@ -18,28 +18,28 @@ enum FeedCategory {
   other;
 
   String get displayName => switch (this) {
-        FeedCategory.project => 'Проект',
-        FeedCategory.stage => 'Этапы',
-        FeedCategory.step => 'Шаги',
-        FeedCategory.approval => 'Согласования',
-        FeedCategory.finance => 'Финансы',
-        FeedCategory.materials => 'Материалы',
-        FeedCategory.chat => 'Чат',
-        FeedCategory.documents => 'Документы',
-        FeedCategory.other => 'Прочее',
-      };
+    FeedCategory.project => 'Проект',
+    FeedCategory.stage => 'Этапы',
+    FeedCategory.step => 'Шаги',
+    FeedCategory.approval => 'Согласования',
+    FeedCategory.finance => 'Финансы',
+    FeedCategory.materials => 'Материалы',
+    FeedCategory.chat => 'Чат',
+    FeedCategory.documents => 'Документы',
+    FeedCategory.other => 'Прочее',
+  };
 
   IconData get icon => switch (this) {
-        FeedCategory.project => Icons.folder_outlined,
-        FeedCategory.stage => Icons.dashboard_outlined,
-        FeedCategory.step => Icons.checklist_outlined,
-        FeedCategory.approval => Icons.rule_rounded,
-        FeedCategory.finance => Icons.account_balance_wallet_outlined,
-        FeedCategory.materials => Icons.inventory_2_outlined,
-        FeedCategory.chat => Icons.chat_bubble_outline_rounded,
-        FeedCategory.documents => Icons.insert_drive_file_outlined,
-        FeedCategory.other => Icons.bolt_outlined,
-      };
+    FeedCategory.project => Icons.folder_outlined,
+    FeedCategory.stage => Icons.dashboard_outlined,
+    FeedCategory.step => Icons.checklist_outlined,
+    FeedCategory.approval => Icons.rule_rounded,
+    FeedCategory.finance => Icons.account_balance_wallet_outlined,
+    FeedCategory.materials => Icons.inventory_2_outlined,
+    FeedCategory.chat => Icons.chat_bubble_outline_rounded,
+    FeedCategory.documents => Icons.insert_drive_file_outlined,
+    FeedCategory.other => Icons.bolt_outlined,
+  };
 
   /// Маппинг backend FeedEventKind → FeedCategory.
   /// Approval-события (включая stage_accepted/stage_rejected_by_customer)
@@ -95,20 +95,46 @@ class FeedEvent with _$FeedEvent {
   }) = _FeedEvent;
 
   static FeedEvent parse(Map<String, dynamic> json) => FeedEvent(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        kind: json['kind'] as String,
-        actorId: json['actorId'] as String? ?? '',
-        payload: Map<String, dynamic>.from(
-          json['payload'] as Map? ?? const {},
-        ),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    kind: json['kind'] as String,
+    actorId: json['actorId'] as String? ?? '',
+    payload: Map<String, dynamic>.from(json['payload'] as Map? ?? const {}),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
 }
+
+/// Технические FeedEventKind, которые UI не должен показывать в ленте проекта.
+/// Бэк их пишет в feed для админки/аудита, но в потребительском списке это
+/// шум: создание чата, изменение видимости, ротация участников чата,
+/// каждое отправленное сообщение и т.п.
+///
+/// QA-баги #9 и #10: ранее в ленте мелькали `chat_created`,
+/// `chat_message_sent` как сырые технические идентификаторы (FeedEventX
+/// .summary fallback'ом возвращает kind, если в `labels` нет ключа), что
+/// QA воспринял как «поехала вёрстка» — на фоне нормальных «Новый этап /
+/// Создан проект» это выглядит сломанным. Решение: вообще не показывать
+/// эти kind'ы в потребительской ленте.
+const _hiddenFeedKinds = <String>{
+  'chat_created',
+  'chat_message_sent',
+  'chat_message_edited',
+  'chat_message_deleted',
+  'chat_participant_added',
+  'chat_participant_removed',
+  'chat_visibility_toggled',
+  'message_sent',
+  'message_edited',
+  'message_deleted',
+};
 
 extension FeedEventX on FeedEvent {
   FeedCategory get category => FeedCategory.fromKind(kind);
+
+  /// Должно ли событие отображаться в потребительской ленте проекта.
+  /// `false` — событие записано в БД (для аудита/админки), но UI его прячет.
+  bool get isUiVisible => !_hiddenFeedKinds.contains(kind);
 
   /// Тон цветной точки для feed-row (`Кластер F` — `f-feed`).
   AppFeedDotTone get dotTone {
@@ -200,6 +226,13 @@ extension FeedEventX on FeedEvent {
       'extra_work_requested': 'Запрос доп.работы',
       'budget_updated': 'Обновлён бюджет',
     };
-    return labels[kind] ?? kind;
+    final hit = labels[kind];
+    if (hit != null) return hit;
+    // Defensive fallback: на новый kind с бэка, для которого ещё нет
+    // явного перевода, не показываем сырой technical id (это и было
+    // частью QA-бага #9 — `chat_message_sent` светился в ленте). Берём
+    // префикс категории как читаемый заголовок: «Этап», «Шаг»,
+    // «Финансы» и т.д.
+    return category.displayName;
   }
 }

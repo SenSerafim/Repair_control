@@ -9,20 +9,17 @@ void main() {
   setUpAll(loadAppFonts);
 
   for (final checked in [true, false]) {
-    testWidgets(
-      'AppStepCheckbox — checked=$checked',
-      (tester) async {
-        await tester.pumpWidget(
-          goldenScaffold(
-            size: const Size(48, 48),
-            child: Center(child: AppStepCheckbox(checked: checked)),
-          ),
-        );
-        await expectLater(
-          find.byType(AppStepCheckbox),
-          matchesGoldenFile('goldens/step_checkbox_$checked.png'),
-        );
-      },
-    );
+    testWidgets('AppStepCheckbox — checked=$checked', (tester) async {
+      await tester.pumpWidget(
+        goldenScaffold(
+          size: const Size(48, 48),
+          child: Center(child: AppStepCheckbox(checked: checked)),
+        ),
+      );
+      await expectLater(
+        find.byType(AppStepCheckbox),
+        matchesGoldenFile('goldens/step_checkbox_$checked.png'),
+      );
+    });
   }
 }

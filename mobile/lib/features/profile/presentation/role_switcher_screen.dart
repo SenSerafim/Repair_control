@@ -25,8 +25,7 @@ class RoleSwitcherScreen extends ConsumerStatefulWidget {
   const RoleSwitcherScreen({super.key});
 
   @override
-  ConsumerState<RoleSwitcherScreen> createState() =>
-      _RoleSwitcherScreenState();
+  ConsumerState<RoleSwitcherScreen> createState() => _RoleSwitcherScreenState();
 }
 
 class _RoleSwitcherScreenState extends ConsumerState<RoleSwitcherScreen> {
@@ -36,8 +35,7 @@ class _RoleSwitcherScreenState extends ConsumerState<RoleSwitcherScreen> {
   Future<void> _apply() async {
     final role = _selected;
     if (role == null || _busy) return;
-    final current =
-        ref.read(profileControllerProvider).valueOrNull?.activeRole;
+    final current = ref.read(profileControllerProvider).valueOrNull?.activeRole;
     if (current == role) {
       // Already active — просто закрываем.
       context.pop();
@@ -73,8 +71,7 @@ class _RoleSwitcherScreenState extends ConsumerState<RoleSwitcherScreen> {
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить роли',
-          onRetry: () =>
-              ref.read(profileControllerProvider.notifier).refresh(),
+          onRetry: () => ref.read(profileControllerProvider.notifier).refresh(),
         ),
         data: (profile) {
           // По умолчанию выделена активная роль.
@@ -118,8 +115,7 @@ class _RoleSwitcherScreenState extends ConsumerState<RoleSwitcherScreen> {
                     : 'Сделать основной',
                 icon: PhosphorIconsBold.check,
                 isLoading: _busy,
-                onPressed: _selected == null ||
-                        _selected == profile.activeRole
+                onPressed: _selected == null || _selected == profile.activeRole
                     ? null
                     : _apply,
               ),
@@ -128,8 +124,9 @@ class _RoleSwitcherScreenState extends ConsumerState<RoleSwitcherScreen> {
                 label: 'Управление ролями',
                 variant: AppButtonVariant.secondary,
                 icon: PhosphorIconsRegular.gear,
-                onPressed:
-                    _busy ? null : () => context.push(AppRoutes.profileRoles),
+                onPressed: _busy
+                    ? null
+                    : () => context.push(AppRoutes.profileRoles),
               ),
               const SizedBox(height: AppSpacing.x16),
             ],
@@ -248,20 +245,20 @@ class _RoleRow extends StatelessWidget {
   }
 
   static IconData _iconFor(SystemRole r) => switch (r) {
-        SystemRole.customer => PhosphorIconsFill.user,
-        SystemRole.contractor => PhosphorIconsFill.wrench,
-        SystemRole.master => PhosphorIconsFill.hardHat,
-        SystemRole.representative => PhosphorIconsFill.usersThree,
-        SystemRole.admin => PhosphorIconsFill.shieldStar,
-      };
+    SystemRole.customer => PhosphorIconsFill.user,
+    SystemRole.contractor => PhosphorIconsFill.wrench,
+    SystemRole.master => PhosphorIconsFill.hardHat,
+    SystemRole.representative => PhosphorIconsFill.usersThree,
+    SystemRole.admin => PhosphorIconsFill.shieldStar,
+  };
 
   static LinearGradient _gradientFor(SystemRole r) => switch (r) {
-        SystemRole.customer => AppGradients.avatarBlue,
-        SystemRole.contractor => AppGradients.avatarGreen,
-        SystemRole.master => AppGradients.avatarYellow,
-        SystemRole.representative => AppGradients.avatarPurple,
-        SystemRole.admin => AppGradients.avatarGrey,
-      };
+    SystemRole.customer => AppGradients.avatarBlue,
+    SystemRole.contractor => AppGradients.avatarGreen,
+    SystemRole.master => AppGradients.avatarYellow,
+    SystemRole.representative => AppGradients.avatarPurple,
+    SystemRole.admin => AppGradients.avatarGrey,
+  };
 }
 
 class _Radio extends StatelessWidget {

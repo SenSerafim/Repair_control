@@ -85,7 +85,8 @@ class _AddPhotoBodyState extends ConsumerState<_AddPhotoBody> {
       children: [
         const AppBottomSheetHeader(
           title: 'Добавить фото',
-          subtitle: 'Выберите источник. Перед отправкой фото сжимается '
+          subtitle:
+              'Выберите источник. Перед отправкой фото сжимается '
               'до 1920 px, 80% JPEG, EXIF очищается.',
         ),
         if (_error != null) ...[
@@ -180,10 +181,7 @@ class _SourceTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.n300,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
             ],
           ),
         ),

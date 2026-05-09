@@ -14,8 +14,8 @@ import '../domain/user_profile.dart';
 /// и держит кеш.
 final profileControllerProvider =
     AsyncNotifierProvider<ProfileController, UserProfile>(
-  ProfileController.new,
-);
+      ProfileController.new,
+    );
 
 class ProfileController extends AsyncNotifier<UserProfile> {
   @override
@@ -72,9 +72,7 @@ class ProfileController extends AsyncNotifier<UserProfile> {
     try {
       final repo = ref.read(profileRepositoryProvider);
       await repo.setActiveRole(role);
-      await ref
-          .read(authControllerProvider.notifier)
-          .setActiveRole(role);
+      await ref.read(authControllerProvider.notifier).setActiveRole(role);
       final current = state.value;
       if (current != null) {
         state = AsyncData(
@@ -134,5 +132,11 @@ class ProfileController extends AsyncNotifier<UserProfile> {
     } on ProfileException catch (e, st) {
       state = AsyncError(e, st);
     }
+  }
+
+  /// Сброс state до AsyncLoading() без previous (см.
+  /// [userScopedInvalidationProvider]).
+  void resetForLogout() {
+    state = const AsyncValue.loading();
   }
 }

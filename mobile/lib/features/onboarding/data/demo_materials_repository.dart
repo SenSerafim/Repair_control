@@ -14,7 +14,9 @@ class DemoMaterialsRepository extends MaterialsRepository {
     MaterialRequestStatus? status,
   }) async {
     if (status != null) {
-      return DemoData.materialRequests.where((m) => m.status == status).toList();
+      return DemoData.materialRequests
+          .where((m) => m.status == status)
+          .toList();
     }
     return DemoData.materialRequests;
   }
@@ -30,8 +32,7 @@ class DemoMaterialsRepository extends MaterialsRepository {
     required List<MaterialItemInput> items,
     String? stageId,
     String? comment,
-  }) async =>
-      DemoData.materialRequests.first;
+  }) async => DemoData.materialRequests.first;
 
   @override
   Future<MaterialRequest> send(String id) async => DemoData.materialById(id);
@@ -41,8 +42,7 @@ class DemoMaterialsRepository extends MaterialsRepository {
     required String requestId,
     required String itemId,
     required int pricePerUnit,
-  }) async =>
-      DemoData.materialById(requestId);
+  }) async => DemoData.materialById(requestId);
 
   @override
   Future<MaterialRequest> finalizeRequest(String id) async =>
@@ -56,13 +56,11 @@ class DemoMaterialsRepository extends MaterialsRepository {
   Future<MaterialRequest> dispute({
     required String id,
     required String reason,
-  }) async =>
-      DemoData.materialById(id);
+  }) async => DemoData.materialById(id);
 
   @override
   Future<MaterialRequest> resolve({
     required String id,
     required String resolution,
-  }) async =>
-      DemoData.materialById(id);
+  }) async => DemoData.materialById(id);
 }

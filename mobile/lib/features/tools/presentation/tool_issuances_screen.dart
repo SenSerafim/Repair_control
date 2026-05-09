@@ -21,8 +21,9 @@ import '_widgets/tool_surrender_sheet.dart';
 
 /// In-memory set юзеров, кому только что выдали инструмент. Сбрасывается
 /// при перезагрузке экрана. Используется для green-dot indicator.
-final _recentlyAddedHoldersProvider =
-    StateProvider.autoDispose<Set<String>>((ref) => <String>{});
+final _recentlyAddedHoldersProvider = StateProvider.autoDispose<Set<String>>(
+  (ref) => <String>{},
+);
 
 /// e-instruments: search + filter-chips per person + status-tabs + alphabetical
 /// list. IconButton «+» в header → IssueToolScreen.
@@ -51,8 +52,7 @@ class _ToolIssuancesScreenState extends ConsumerState<ToolIssuancesScreen> {
   @override
   Widget build(BuildContext context) {
     final canIssue = ref.watch(canProvider(DomainAction.toolsIssue));
-    final issuancesAsync =
-        ref.watch(toolIssuancesProvider(widget.projectId));
+    final issuancesAsync = ref.watch(toolIssuancesProvider(widget.projectId));
     final teamAsync = ref.watch(teamControllerProvider(widget.projectId));
     final me = ref.watch(authControllerProvider).userId;
     final recentlyAdded = ref.watch(_recentlyAddedHoldersProvider);
@@ -124,9 +124,11 @@ class _ToolIssuancesScreenState extends ConsumerState<ToolIssuancesScreen> {
                     ref,
                     projectId: widget.projectId,
                     issuances: issuances
-                        .where((i) =>
-                            i.status == ToolIssuanceStatus.confirmed &&
-                            i.toUserId == me)
+                        .where(
+                          (i) =>
+                              i.status == ToolIssuanceStatus.confirmed &&
+                              i.toUserId == me,
+                        )
                         .toList(),
                   ),
                 ),
@@ -207,26 +209,24 @@ class _ToolIssuancesScreenState extends ConsumerState<ToolIssuancesScreen> {
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       list = list
-          .where((i) =>
-              (i.tool?.name ?? '').toLowerCase().contains(q))
+          .where((i) => (i.tool?.name ?? '').toLowerCase().contains(q))
           .toList();
     }
     return [...list]
-      ..sort((a, b) =>
-          (a.tool?.name ?? '').compareTo(b.tool?.name ?? ''));
+      ..sort((a, b) => (a.tool?.name ?? '').compareTo(b.tool?.name ?? ''));
   }
 
   bool _hasMastersSurrender(List<ToolIssuance> issuances, String? meId) {
     if (meId == null) return false;
     return issuances.any(
-      (i) =>
-          i.status == ToolIssuanceStatus.confirmed && i.toUserId == meId,
+      (i) => i.status == ToolIssuanceStatus.confirmed && i.toUserId == meId,
     );
   }
 
   Future<void> _openIssueScreen(BuildContext context) async {
-    final newRecipient = await context
-        .push<String?>('/projects/${widget.projectId}/tools/new');
+    final newRecipient = await context.push<String?>(
+      '/projects/${widget.projectId}/tools/new',
+    );
     if (!mounted) return;
     if (newRecipient is String) {
       ref
@@ -299,10 +299,7 @@ class _SurrenderHint extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.brand,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.brand),
             ],
           ),
         ),

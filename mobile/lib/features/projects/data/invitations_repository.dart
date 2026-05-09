@@ -23,14 +23,14 @@ class InviteCode {
   });
 
   factory InviteCode.fromJson(Map<String, dynamic> json) => InviteCode(
-        id: json['id'] as String,
-        token: json['token'] as String,
-        role: MembershipRole.fromString(json['role'] as String?),
-        stageIds: (json['stageIds'] as List<dynamic>? ?? const [])
-            .map((e) => e as String)
-            .toList(),
-        expiresAt: DateTime.parse(json['expiresAt'] as String),
-      );
+    id: json['id'] as String,
+    token: json['token'] as String,
+    role: MembershipRole.fromString(json['role'] as String?),
+    stageIds: (json['stageIds'] as List<dynamic>? ?? const [])
+        .map((e) => e as String)
+        .toList(),
+    expiresAt: DateTime.parse(json['expiresAt'] as String),
+  );
 
   final String id;
   final String token;
@@ -56,31 +56,30 @@ class InvitationsRepository {
     required MembershipRole role,
     Map<String, bool>? permissions,
     List<String>? stageIds,
-  }) =>
-      _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/$projectId/invitations/generate-code',
-          data: {
-            'role': role.name,
-            if (permissions != null) 'permissions': permissions,
-            if (stageIds != null) 'stageIds': stageIds,
-          },
-        );
-        return InviteCode.fromJson(r.data!);
-      });
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/invitations/generate-code',
+      data: {
+        'role': role.name,
+        if (permissions != null) 'permissions': permissions,
+        if (stageIds != null) 'stageIds': stageIds,
+      },
+    );
+    return InviteCode.fromJson(r.data!);
+  });
 
   /// POST /api/projects/join-by-code
   Future<JoinByCodeResult> joinByCode(String code) => _call(() async {
-        final r = await _dio.post<Map<String, dynamic>>(
-          '/api/projects/join-by-code',
-          data: {'code': code},
-        );
-        final membership = (r.data!['membership'] as Map<String, dynamic>?) ?? {};
-        return JoinByCodeResult(
-          projectId: r.data!['projectId'] as String,
-          role: MembershipRole.fromString(membership['role'] as String?),
-        );
-      });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/join-by-code',
+      data: {'code': code},
+    );
+    final membership = (r.data!['membership'] as Map<String, dynamic>?) ?? {};
+    return JoinByCodeResult(
+      projectId: r.data!['projectId'] as String,
+      role: MembershipRole.fromString(membership['role'] as String?),
+    );
+  });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

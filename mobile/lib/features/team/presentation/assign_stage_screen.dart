@@ -24,8 +24,7 @@ class AssignStageScreen extends ConsumerStatefulWidget {
   final MemberFoundArgs args;
 
   @override
-  ConsumerState<AssignStageScreen> createState() =>
-      _AssignStageScreenState();
+  ConsumerState<AssignStageScreen> createState() => _AssignStageScreenState();
 }
 
 class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
@@ -60,10 +59,8 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final stagesAsync =
-        ref.watch(stagesControllerProvider(widget.projectId));
-    final fullName =
-        '${widget.args.firstName} ${widget.args.lastName}'.trim();
+    final stagesAsync = ref.watch(stagesControllerProvider(widget.projectId));
+    final fullName = '${widget.args.firstName} ${widget.args.lastName}'.trim();
 
     return AppScaffold(
       showBack: true,
@@ -78,9 +75,8 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
               loading: () => const AppLoadingState(),
               error: (e, _) => AppErrorState(
                 title: 'Не удалось загрузить этапы',
-                onRetry: () => ref.invalidate(
-                  stagesControllerProvider(widget.projectId),
-                ),
+                onRetry: () =>
+                    ref.invalidate(stagesControllerProvider(widget.projectId)),
               ),
               data: (stages) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.x16),
@@ -237,30 +233,30 @@ class _StageCard extends StatelessWidget {
   }
 
   static (Color, Color, Color) _colorsFor(StageStatus s) => switch (s) {
-        StageStatus.active => (
-            const Color(0xFFDBEAFE),
-            const Color(0xFFBFDBFE),
-            const Color(0xFF2563EB),
-          ),
-        StageStatus.done => (
-            const Color(0xFFD1FAE5),
-            const Color(0xFFA7F3D0),
-            AppColors.greenDark,
-          ),
-        StageStatus.paused => (
-            const Color(0xFFFEF3C7),
-            const Color(0xFFFDE68A),
-            AppColors.yellowText,
-          ),
-        StageStatus.rejected => (
-            const Color(0xFFFEE2E2),
-            const Color(0xFFFECACA),
-            AppColors.redDot,
-          ),
-        _ => (
-            const Color(0xFFFEF3C7),
-            const Color(0xFFFDE68A),
-            AppColors.yellowText,
-          ),
-      };
+    StageStatus.active => (
+      const Color(0xFFDBEAFE),
+      const Color(0xFFBFDBFE),
+      const Color(0xFF2563EB),
+    ),
+    StageStatus.done => (
+      const Color(0xFFD1FAE5),
+      const Color(0xFFA7F3D0),
+      AppColors.greenDark,
+    ),
+    StageStatus.paused => (
+      const Color(0xFFFEF3C7),
+      const Color(0xFFFDE68A),
+      AppColors.yellowText,
+    ),
+    StageStatus.rejected => (
+      const Color(0xFFFEE2E2),
+      const Color(0xFFFECACA),
+      AppColors.redDot,
+    ),
+    _ => (
+      const Color(0xFFFEF3C7),
+      const Color(0xFFFDE68A),
+      AppColors.yellowText,
+    ),
+  };
 }

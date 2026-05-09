@@ -7,7 +7,11 @@ import '../domain/project.dart';
 
 /// Большая traffic-badge для шапки консоли.
 class BigTrafficBadge extends StatelessWidget {
-  const BigTrafficBadge({required this.semaphore, required this.label, super.key});
+  const BigTrafficBadge({
+    required this.semaphore,
+    required this.label,
+    super.key,
+  });
 
   final Semaphore semaphore;
   final String label;
@@ -180,8 +184,7 @@ class ConsoleBanner extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style:
-                      AppTextStyles.caption.copyWith(color: AppColors.n700),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.n700),
                 ),
                 if (actionLabel != null && onAction != null) ...[
                   const SizedBox(height: AppSpacing.x8),
@@ -252,8 +255,7 @@ class ConsoleNavTile extends StatelessWidget {
                       color: AppColors.brandLight,
                       borderRadius: BorderRadius.circular(AppRadius.r12),
                     ),
-                    child:
-                        Icon(icon, size: 18, color: AppColors.brand),
+                    child: Icon(icon, size: 18, color: AppColors.brand),
                   ),
                   const Spacer(),
                   if (badge != null)
@@ -266,13 +268,11 @@ class ConsoleNavTile extends StatelessWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: AppColors.redDot,
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.pill),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       child: Text(
                         badge!,
-                        style: AppTextStyles.tiny
-                            .copyWith(color: AppColors.n0),
+                        style: AppTextStyles.tiny.copyWith(color: AppColors.n0),
                       ),
                     ),
                 ],
@@ -333,8 +333,7 @@ class StagePreviewCard extends StatelessWidget {
                 ),
                 child: Text(
                   '$index',
-                  style: AppTextStyles.micro
-                      .copyWith(color: semaphore.text),
+                  style: AppTextStyles.micro.copyWith(color: semaphore.text),
                 ),
               ),
               const SizedBox(width: AppSpacing.x8),
@@ -385,9 +384,7 @@ extension ProjectConsoleX on Project {
       if (address != null && address!.isNotEmpty) address!,
     ];
     if (plannedStart != null && plannedEnd != null) {
-      parts.add(
-        '${_fmt(plannedStart!)} — ${_fmt(plannedEnd!)}',
-      );
+      parts.add('${_fmt(plannedStart!)} — ${_fmt(plannedEnd!)}');
     }
     return parts.join(' · ');
   }
@@ -395,8 +392,18 @@ extension ProjectConsoleX on Project {
 
 String _fmt(DateTime d) {
   const months = [
-    'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
-    'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
+    'янв',
+    'фев',
+    'мар',
+    'апр',
+    'мая',
+    'июн',
+    'июл',
+    'авг',
+    'сен',
+    'окт',
+    'ноя',
+    'дек',
   ];
   return '${d.day} ${months[d.month - 1]} ${d.year}';
 }

@@ -41,22 +41,24 @@ enum _Filter {
   noContractor;
 
   String get label => switch (this) {
-        _Filter.all => 'Все',
-        _Filter.active => 'В работе',
-        _Filter.pending => 'Ожидает',
-        _Filter.paused => 'На паузе',
-        _Filter.done => 'Завершён',
-        _Filter.noContractor => 'Без бригадира',
-      };
+    _Filter.all => 'Все',
+    _Filter.active => 'В работе',
+    _Filter.pending => 'Ожидает',
+    _Filter.paused => 'На паузе',
+    _Filter.done => 'Завершён',
+    _Filter.noContractor => 'Без бригадира',
+  };
 
   bool match(Stage s) {
     final display = StageDisplayStatus.of(s);
     return switch (this) {
       _Filter.all => true,
       _Filter.active =>
-        display == StageDisplayStatus.active || display == StageDisplayStatus.overdue,
-      _Filter.pending => display == StageDisplayStatus.pending ||
-          display == StageDisplayStatus.lateStart,
+        display == StageDisplayStatus.active ||
+            display == StageDisplayStatus.overdue,
+      _Filter.pending =>
+        display == StageDisplayStatus.pending ||
+            display == StageDisplayStatus.lateStart,
       _Filter.paused => display == StageDisplayStatus.paused,
       _Filter.done => display == StageDisplayStatus.done,
       _Filter.noContractor => s.foremanIds.isEmpty,
@@ -101,19 +103,16 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       // совместимости с existing AppScaffold API (он рендерит back-кнопку).
       title: projectAsync.value?.title ?? 'Этапы',
       body: async.when(
-        loading: () => const AppLoadingState(
-          skeleton: AppListSkeleton(itemHeight: 96),
-        ),
+        loading: () =>
+            const AppLoadingState(skeleton: AppListSkeleton(itemHeight: 96)),
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить этапы',
           onRetry: () =>
               ref.invalidate(stagesControllerProvider(widget.projectId)),
         ),
         data: (stages) {
-          final canManage =
-              ref.watch(canProvider(DomainAction.stageManage));
-          final filtered =
-              stages.where((s) => _filter.match(s)).toList();
+          final canManage = ref.watch(canProvider(DomainAction.stageManage));
+          final filtered = stages.where((s) => _filter.match(s)).toList();
           if (stages.isEmpty) {
             return AppEmptyState(
               title: 'Пока нет этапов',
@@ -121,8 +120,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               icon: Icons.dashboard_outlined,
               actionLabel: canManage ? 'Добавить этап' : null,
               onAction: canManage
-                  ? () => context
-                      .push('/projects/${widget.projectId}/stages/create')
+                  ? () => context.push(
+                      '/projects/${widget.projectId}/stages/create',
+                    )
                   : null,
             );
           }
@@ -147,19 +147,15 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                   child: filtered.isEmpty
                       ? _FilterEmpty(filter: _filter)
                       : _mode == _ViewMode.tile
-                          ? _TileView(
-                              projectId: widget.projectId,
-                              stages: filtered,
-                            )
-                          : _ListView(
-                              projectId: widget.projectId,
-                              stages: filtered,
-                              filter: _filter,
-                              onReorder: _filter == _Filter.all
-                                  ? (o, n) =>
-                                      _reorder(filtered, o, n)
-                                  : null,
-                            ),
+                      ? _TileView(projectId: widget.projectId, stages: filtered)
+                      : _ListView(
+                          projectId: widget.projectId,
+                          stages: filtered,
+                          filter: _filter,
+                          onReorder: _filter == _Filter.all
+                              ? (o, n) => _reorder(filtered, o, n)
+                              : null,
+                        ),
                 ),
               ),
               if (canManage)
@@ -172,15 +168,14 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                   ),
                   decoration: const BoxDecoration(
                     color: AppColors.n0,
-                    border: Border(
-                      top: BorderSide(color: AppColors.n200),
-                    ),
+                    border: Border(top: BorderSide(color: AppColors.n200)),
                   ),
                   child: AppButton(
                     label: 'Добавить этап',
                     icon: Icons.add_rounded,
-                    onPressed: () => context
-                        .push('/projects/${widget.projectId}/stages/create'),
+                    onPressed: () => context.push(
+                      '/projects/${widget.projectId}/stages/create',
+                    ),
                   ),
                 ),
             ],
@@ -250,10 +245,7 @@ class _Toolbar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _PillSegmented(
-            mode: mode,
-            onChange: onMode,
-          ),
+          _PillSegmented(mode: mode, onChange: onMode),
           const SizedBox(width: AppSpacing.x10),
           Expanded(
             child: SingleChildScrollView(
@@ -265,8 +257,7 @@ class _Toolbar extends StatelessWidget {
                     _Chip(
                       filter: _Filter.values[i],
                       active: filter == _Filter.values[i],
-                      count:
-                          filterCounts[_Filter.values[i]] ?? 0,
+                      count: filterCounts[_Filter.values[i]] ?? 0,
                       onTap: () => onFilter(_Filter.values[i]),
                     ),
                   ],
@@ -346,7 +337,9 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = active ? AppColors.n0 : AppColors.n600;
-    final label = filter == _Filter.all ? '${filter.label} ($count)' : filter.label;
+    final label = filter == _Filter.all
+        ? '${filter.label} ($count)'
+        : filter.label;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -469,8 +462,7 @@ class _ListView extends StatelessWidget {
           return StageRowCard(
             stage: s,
             display: StageDisplayStatus.of(s),
-            onTap: () =>
-                context.push('/projects/$projectId/stages/${s.id}'),
+            onTap: () => context.push('/projects/$projectId/stages/${s.id}'),
             foremanName: null,
           );
         },
@@ -513,8 +505,7 @@ class _ListView extends StatelessWidget {
             child: StageRowCard(
               stage: s,
               display: StageDisplayStatus.of(s),
-              onTap: () =>
-                  context.push('/projects/$projectId/stages/${s.id}'),
+              onTap: () => context.push('/projects/$projectId/stages/${s.id}'),
               reorderable: true,
               foremanName: null,
             ),

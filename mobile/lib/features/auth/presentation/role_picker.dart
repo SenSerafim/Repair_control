@@ -78,27 +78,27 @@ class RoleCard extends StatelessWidget {
   }
 
   _RoleMeta _metaFor(SystemRole r) => switch (r) {
-        SystemRole.customer => const _RoleMeta(
-            Icons.person_outline_rounded,
-            'Ставит задачи, принимает этапы, оплачивает',
-          ),
-        SystemRole.representative => const _RoleMeta(
-            Icons.group_outlined,
-            'Действует от имени заказчика по доверенности',
-          ),
-        SystemRole.contractor => const _RoleMeta(
-            Icons.engineering_outlined,
-            'Управляет этапами и мастерами',
-          ),
-        SystemRole.master => const _RoleMeta(
-            Icons.construction_outlined,
-            'Выполняет работы, отмечает шаги',
-          ),
-        SystemRole.admin => const _RoleMeta(
-            Icons.shield_outlined,
-            'Служебная роль — в приложении не выбирается',
-          ),
-      };
+    SystemRole.customer => const _RoleMeta(
+      Icons.person_outline_rounded,
+      'Ставит задачи, принимает этапы, оплачивает',
+    ),
+    SystemRole.representative => const _RoleMeta(
+      Icons.group_outlined,
+      'Действует от имени заказчика по доверенности',
+    ),
+    SystemRole.contractor => const _RoleMeta(
+      Icons.engineering_outlined,
+      'Управляет этапами и мастерами',
+    ),
+    SystemRole.master => const _RoleMeta(
+      Icons.construction_outlined,
+      'Выполняет работы, отмечает шаги',
+    ),
+    SystemRole.admin => const _RoleMeta(
+      Icons.shield_outlined,
+      'Служебная роль — в приложении не выбирается',
+    ),
+  };
 }
 
 class _RoleMeta {

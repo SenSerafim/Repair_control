@@ -12,11 +12,7 @@ import '../domain/user_profile.dart';
 /// Дизайн `Кластер A` (s-profile): SafeArea-padding сверху, статус-бар
 /// прозрачный с белыми иконками, аватар 80×80 в белой рамке 3px.
 class ProfileHero extends StatelessWidget {
-  const ProfileHero({
-    required this.profile,
-    this.onTapRole,
-    super.key,
-  });
+  const ProfileHero({required this.profile, this.onTapRole, super.key});
 
   final UserProfile profile;
 
@@ -50,9 +46,7 @@ class ProfileHero extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.x4),
             Text(
-              profile.phone.isEmpty
-                  ? '—'
-                  : _formatPhone(profile.phone),
+              profile.phone.isEmpty ? '—' : _formatPhone(profile.phone),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -73,12 +67,12 @@ class ProfileHero extends StatelessWidget {
   }
 
   static IconData _iconFor(SystemRole r) => switch (r) {
-        SystemRole.customer => PhosphorIconsFill.user,
-        SystemRole.contractor => PhosphorIconsFill.wrench,
-        SystemRole.master => PhosphorIconsFill.hardHat,
-        SystemRole.representative => PhosphorIconsFill.usersThree,
-        SystemRole.admin => PhosphorIconsFill.shieldStar,
-      };
+    SystemRole.customer => PhosphorIconsFill.user,
+    SystemRole.contractor => PhosphorIconsFill.wrench,
+    SystemRole.master => PhosphorIconsFill.hardHat,
+    SystemRole.representative => PhosphorIconsFill.usersThree,
+    SystemRole.admin => PhosphorIconsFill.shieldStar,
+  };
 
   static String _formatPhone(String e164) {
     if (!e164.startsWith('+')) return e164;

@@ -98,16 +98,13 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
       _error = null;
     });
     final failure = await ref
-        .read(
-          paymentsControllerProvider(widget.parent.projectId).notifier,
-        )
+        .read(paymentsControllerProvider(widget.parent.projectId).notifier)
         .distribute(
           parentPaymentId: widget.parent.id,
           toUserId: _toUserId!,
           amount: amountKop,
           stageId: widget.parent.stageId,
-          comment:
-              _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+          comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -125,8 +122,9 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
 
   @override
   Widget build(BuildContext context) {
-    final teamAsync =
-        ref.watch(teamControllerProvider(widget.parent.projectId));
+    final teamAsync = ref.watch(
+      teamControllerProvider(widget.parent.projectId),
+    );
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SingleChildScrollView(
@@ -149,8 +147,7 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
               ),
               child: Text(
                 _error!,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.redText),
+                style: AppTextStyles.body.copyWith(color: AppColors.redText),
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -161,8 +158,7 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
             loading: () => const LinearProgressIndicator(),
             error: (e, _) => Text(
               'Не удалось загрузить команду',
-              style:
-                  AppTextStyles.caption.copyWith(color: AppColors.redDot),
+              style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
             ),
             data: (team) {
               final masters = team.members
@@ -171,8 +167,9 @@ class _DistributeBodyState extends ConsumerState<_DistributeBody> {
               if (masters.isEmpty) {
                 return Text(
                   'В проекте нет мастеров.',
-                  style: AppTextStyles.caption
-                      .copyWith(color: AppColors.yellowText),
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.yellowText,
+                  ),
                 );
               }
               return Wrap(
@@ -333,7 +330,9 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
       final file = File(picked.path);
       final size = await file.length();
       final name = picked.name;
-      final mime = name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      final mime = name.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : 'image/jpeg';
       final presigned = await repo.presignUpload(
         originalName: name,
         mimeType: mime,
@@ -345,9 +344,7 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
       await raw.put<void>(
         presigned.url,
         data: bytes,
-        options: Options(
-          headers: {...presigned.headers, 'Content-Type': mime},
-        ),
+        options: Options(headers: {...presigned.headers, 'Content-Type': mime}),
       );
       if (!mounted) return;
       setState(() => _photoKeys.add(presigned.key));
@@ -371,9 +368,7 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
       _error = null;
     });
     final failure = await ref
-        .read(
-          paymentsControllerProvider(widget.payment.projectId).notifier,
-        )
+        .read(paymentsControllerProvider(widget.payment.projectId).notifier)
         .dispute(
           id: widget.payment.id,
           reason: _reason.text.trim(),
@@ -412,8 +407,9 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
             padding: const EdgeInsets.all(AppSpacing.x12),
             decoration: BoxDecoration(
               color: AppColors.redBg,
-              border:
-                  Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: AppColors.redDot.withValues(alpha: 0.3),
+              ),
               borderRadius: BorderRadius.circular(AppRadius.r12),
             ),
             child: Row(
@@ -488,8 +484,9 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
                   decoration: BoxDecoration(
                     color: AppColors.brandLight,
                     borderRadius: BorderRadius.circular(AppRadius.r12),
-                    border:
-                        Border.all(color: AppColors.brand.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.brand.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Stack(
                     children: [
@@ -531,10 +528,7 @@ class _DisputeBodyState extends ConsumerState<_DisputeBody> {
                     decoration: BoxDecoration(
                       color: AppColors.n100,
                       borderRadius: BorderRadius.circular(AppRadius.r12),
-                      border: Border.all(
-                        color: AppColors.n300,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: AppColors.n300, width: 1.5),
                     ),
                     child: Center(
                       child: _uploading
@@ -607,21 +601,14 @@ class _ResolveBodyState extends ConsumerState<_ResolveBody> {
       setState(() => _error = 'Опишите решение');
       return;
     }
-    final adjust =
-        _adjustEnabled ? MoneyInput.readKopecks(_adjust) : null;
+    final adjust = _adjustEnabled ? MoneyInput.readKopecks(_adjust) : null;
     setState(() {
       _submitting = true;
       _error = null;
     });
     final failure = await ref
-        .read(
-          paymentsControllerProvider(widget.payment.projectId).notifier,
-        )
-        .resolve(
-          id: widget.payment.id,
-          resolution: text,
-          adjustAmount: adjust,
-        );
+        .read(paymentsControllerProvider(widget.payment.projectId).notifier)
+        .resolve(id: widget.payment.id, resolution: text, adjustAmount: adjust);
     if (!mounted) return;
     setState(() => _submitting = false);
     if (failure == null) {
@@ -659,8 +646,7 @@ class _ResolveBodyState extends ConsumerState<_ResolveBody> {
               ),
               child: Text(
                 _error!,
-                style:
-                    AppTextStyles.body.copyWith(color: AppColors.redText),
+                style: AppTextStyles.body.copyWith(color: AppColors.redText),
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -687,10 +673,7 @@ class _ResolveBodyState extends ConsumerState<_ResolveBody> {
             ),
           ),
           if (_adjustEnabled) ...[
-            MoneyInput(
-              controller: _adjust,
-              label: 'Итоговая сумма',
-            ),
+            MoneyInput(controller: _adjust, label: 'Итоговая сумма'),
             const SizedBox(height: AppSpacing.x10),
           ],
           AppButton(
@@ -705,10 +688,7 @@ class _ResolveBodyState extends ConsumerState<_ResolveBody> {
 }
 
 class _RemainingHint extends StatelessWidget {
-  const _RemainingHint({
-    required this.remainingAfter,
-    required this.exceeds,
-  });
+  const _RemainingHint({required this.remainingAfter, required this.exceeds});
 
   final int remainingAfter;
   final bool exceeds;
@@ -742,16 +722,16 @@ class _RemainingHint extends StatelessWidget {
 }
 
 InputDecoration _dec(String hint) => InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
-      filled: true,
-      fillColor: AppColors.n0,
-      contentPadding: const EdgeInsets.all(12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-      ),
-    );
+  hintText: hint,
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  filled: true,
+  fillColor: AppColors.n0,
+  contentPadding: const EdgeInsets.all(12),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AppRadius.r12),
+    borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+  ),
+);
 
 /// «Распределение аванса» — read-only sheet поверх PaymentDetailScreen.
 /// Раньше это был полный экран с push в Navigator, что у go_router 14
@@ -816,8 +796,9 @@ class _AdvanceDistributionBody extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.x8),
                   Text(
                     'Нет выплат',
-                    style:
-                        AppTextStyles.subtitle.copyWith(color: AppColors.n500),
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: AppColors.n500,
+                    ),
                   ),
                 ],
               ),
@@ -945,8 +926,7 @@ class _ChildRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   child.status.displayName,
-                  style:
-                      AppTextStyles.caption.copyWith(color: AppColors.n500),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.n500),
                 ),
               ],
             ),

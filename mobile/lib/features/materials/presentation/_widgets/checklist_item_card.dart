@@ -142,11 +142,7 @@ class _Checkbox extends StatelessWidget {
       ),
       child: state == ChecklistItemState.pending
           ? null
-          : const Icon(
-              Icons.check_rounded,
-              size: 14,
-              color: AppColors.n0,
-            ),
+          : const Icon(Icons.check_rounded, size: 14, color: AppColors.n0),
     );
   }
 }
@@ -160,12 +156,17 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, bg, color) = switch (state) {
-      ChecklistItemState.bought =>
-        ('Куплено', AppColors.greenLight, AppColors.greenDark),
-      ChecklistItemState.partial =>
-        ('Частично', AppColors.yellowBg, AppColors.yellowText),
-      ChecklistItemState.pending =>
-        ('Ожидает', AppColors.n100, AppColors.n500),
+      ChecklistItemState.bought => (
+        'Куплено',
+        AppColors.greenLight,
+        AppColors.greenDark,
+      ),
+      ChecklistItemState.partial => (
+        'Частично',
+        AppColors.yellowBg,
+        AppColors.yellowText,
+      ),
+      ChecklistItemState.pending => ('Ожидает', AppColors.n100, AppColors.n500),
     };
     return Row(
       children: [

@@ -48,7 +48,12 @@ class _MockHeader extends StatelessWidget {
 }
 
 class _MockChip extends StatelessWidget {
-  const _MockChip({required this.text, required this.dotColor, required this.bg, required this.fg});
+  const _MockChip({
+    required this.text,
+    required this.dotColor,
+    required this.bg,
+    required this.fg,
+  });
 
   final String text;
   final Color dotColor;
@@ -59,13 +64,27 @@ class _MockChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(100)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(100),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 6),
-          Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
         ],
       ),
     );
@@ -73,7 +92,10 @@ class _MockChip extends StatelessWidget {
 }
 
 class _MockCard extends StatelessWidget {
-  const _MockCard({required this.child, this.padding = const EdgeInsets.all(14)});
+  const _MockCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(14),
+  });
 
   final Widget child;
   final EdgeInsets padding;
@@ -110,7 +132,10 @@ class TourMockConsoleScreen extends StatelessWidget {
             children: [
               const _MockHeader(
                 title: 'Ремонт на Ленинской',
-                trailing: Icon(Icons.notifications_outlined, color: AppColors.n700),
+                trailing: Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.n700,
+                ),
               ),
               const SizedBox(height: 8),
               const Padding(
@@ -136,8 +161,17 @@ class TourMockConsoleScreen extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('38%', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800)),
-                        Text('Прогресс', style: TextStyle(fontSize: 12, color: AppColors.n500)),
+                        Text(
+                          '38%',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Прогресс',
+                          style: TextStyle(fontSize: 12, color: AppColors.n500),
+                        ),
                       ],
                     ),
                   ),
@@ -174,17 +208,41 @@ class TourMockConsoleScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: const [
-                        Expanded(child: _MockNavTile(icon: Icons.people_outline, label: 'Команда', color: AppColors.greenDark)),
+                        Expanded(
+                          child: _MockNavTile(
+                            icon: Icons.people_outline,
+                            label: 'Команда',
+                            color: AppColors.greenDark,
+                          ),
+                        ),
                         SizedBox(width: 8),
-                        Expanded(child: _MockNavTile(icon: Icons.chat_bubble_outline, label: 'Чаты', color: AppColors.brand)),
+                        Expanded(
+                          child: _MockNavTile(
+                            icon: Icons.chat_bubble_outline,
+                            label: 'Чаты',
+                            color: AppColors.brand,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: const [
-                        Expanded(child: _MockNavTile(icon: Icons.account_balance_wallet_outlined, label: 'Бюджет', color: AppColors.greenDark)),
+                        Expanded(
+                          child: _MockNavTile(
+                            icon: Icons.account_balance_wallet_outlined,
+                            label: 'Бюджет',
+                            color: AppColors.greenDark,
+                          ),
+                        ),
                         SizedBox(width: 8),
-                        Expanded(child: _MockNavTile(icon: Icons.description_outlined, label: 'Документы', color: AppColors.n600)),
+                        Expanded(
+                          child: _MockNavTile(
+                            icon: Icons.description_outlined,
+                            label: 'Документы',
+                            color: AppColors.n600,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -199,7 +257,11 @@ class TourMockConsoleScreen extends StatelessWidget {
 }
 
 class _MockNavTile extends StatelessWidget {
-  const _MockNavTile({required this.icon, required this.label, required this.color});
+  const _MockNavTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   final IconData icon;
   final String label;
@@ -215,11 +277,21 @@ class _MockNavTile extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(height: 12),
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.n900)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.n900,
+            ),
+          ),
         ],
       ),
     );
@@ -234,11 +306,36 @@ class TourMockStagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stages = [
-      const _StageRow(title: 'Демонтаж', subtitle: 'Готов', dotColor: AppColors.greenDot, progress: 1.0),
-      const _StageRow(title: 'Электрика', subtitle: 'В работе · 65%', dotColor: AppColors.yellowDot, progress: 0.65),
-      const _StageRow(title: 'Сантехника', subtitle: 'На паузе · 30%', dotColor: AppColors.yellowDot, progress: 0.30),
-      const _StageRow(title: 'Стены и потолок', subtitle: 'Ожидает', dotColor: AppColors.n300, progress: 0),
-      const _StageRow(title: 'Полы', subtitle: 'Ожидает', dotColor: AppColors.n300, progress: 0),
+      const _StageRow(
+        title: 'Демонтаж',
+        subtitle: 'Готов',
+        dotColor: AppColors.greenDot,
+        progress: 1.0,
+      ),
+      const _StageRow(
+        title: 'Электрика',
+        subtitle: 'В работе · 65%',
+        dotColor: AppColors.yellowDot,
+        progress: 0.65,
+      ),
+      const _StageRow(
+        title: 'Сантехника',
+        subtitle: 'На паузе · 30%',
+        dotColor: AppColors.yellowDot,
+        progress: 0.30,
+      ),
+      const _StageRow(
+        title: 'Стены и потолок',
+        subtitle: 'Ожидает',
+        dotColor: AppColors.n300,
+        progress: 0,
+      ),
+      const _StageRow(
+        title: 'Полы',
+        subtitle: 'Ожидает',
+        dotColor: AppColors.n300,
+        progress: 0,
+      ),
     ];
     return _bg(
       SafeArea(
@@ -253,7 +350,10 @@ class TourMockStagesScreen extends StatelessWidget {
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (_, i) {
                   if (i == 0) {
-                    return TourAnchor(id: 'stages.first_stage_card', child: stages[i]);
+                    return TourAnchor(
+                      id: 'stages.first_stage_card',
+                      child: stages[i],
+                    );
                   }
                   return stages[i];
                 },
@@ -267,7 +367,12 @@ class TourMockStagesScreen extends StatelessWidget {
 }
 
 class _StageRow extends StatelessWidget {
-  const _StageRow({required this.title, required this.subtitle, required this.dotColor, required this.progress});
+  const _StageRow({
+    required this.title,
+    required this.subtitle,
+    required this.dotColor,
+    required this.progress,
+  });
 
   final String title;
   final String subtitle;
@@ -279,15 +384,29 @@ class _StageRow extends StatelessWidget {
     return _MockCard(
       child: Row(
         children: [
-          Container(width: 12, height: 12, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.n900)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.n900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.n500)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 12, color: AppColors.n500),
+                ),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
@@ -326,7 +445,10 @@ class TourMockStageDetailScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: AppColors.n0, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: AppColors.n0,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: const [
                   _MockTab(label: 'Чек-лист', active: true),
@@ -342,14 +464,31 @@ class TourMockStageDetailScreen extends StatelessWidget {
                 children: [
                   TourAnchor(
                     id: 'stage_detail.first_step',
-                    child: _MockStep(title: 'Прокладка кабелей', subtitle: '4/4 подшага · 8 фото', done: true),
+                    child: _MockStep(
+                      title: 'Прокладка кабелей',
+                      subtitle: '4/4 подшага · 8 фото',
+                      done: true,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  const _MockStep(title: 'Установка подрозетников', subtitle: 'В работе · 3/3', done: false, active: true),
+                  const _MockStep(
+                    title: 'Установка подрозетников',
+                    subtitle: 'В работе · 3/3',
+                    done: false,
+                    active: true,
+                  ),
                   const SizedBox(height: 8),
-                  const _MockStep(title: 'Установка выключателей', subtitle: 'Ожидает', done: false),
+                  const _MockStep(
+                    title: 'Установка выключателей',
+                    subtitle: 'Ожидает',
+                    done: false,
+                  ),
                   const SizedBox(height: 8),
-                  const _MockStep(title: 'Подключение щитка', subtitle: 'Ожидает', done: false),
+                  const _MockStep(
+                    title: 'Подключение щитка',
+                    subtitle: 'Ожидает',
+                    done: false,
+                  ),
                 ],
               ),
             ),
@@ -390,7 +529,12 @@ class _MockTab extends StatelessWidget {
 }
 
 class _MockStep extends StatelessWidget {
-  const _MockStep({required this.title, required this.subtitle, required this.done, this.active = false});
+  const _MockStep({
+    required this.title,
+    required this.subtitle,
+    required this.done,
+    this.active = false,
+  });
 
   final String title;
   final String subtitle;
@@ -402,8 +546,8 @@ class _MockStep extends StatelessWidget {
     final color = done
         ? AppColors.greenDark
         : active
-            ? AppColors.brand
-            : AppColors.n300;
+        ? AppColors.brand
+        : AppColors.n300;
     return _MockCard(
       child: Row(
         children: [
@@ -415,16 +559,28 @@ class _MockStep extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 2),
             ),
-            child: done ? const Icon(Icons.check, size: 16, color: AppColors.n0) : null,
+            child: done
+                ? const Icon(Icons.check, size: 16, color: AppColors.n0)
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.n900)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.n900,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.n500)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 12, color: AppColors.n500),
+                ),
               ],
             ),
           ),
@@ -457,7 +613,14 @@ class TourMockStepDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Фото', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.n700)),
+                        const Text(
+                          'Фото',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.n700,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           children: List.generate(
@@ -470,7 +633,10 @@ class TourMockStepDetailScreen extends StatelessWidget {
                                 color: AppColors.n200,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.image_outlined, color: AppColors.n500),
+                              child: const Icon(
+                                Icons.image_outlined,
+                                color: AppColors.n500,
+                              ),
                             ),
                           ),
                         ),
@@ -483,7 +649,14 @@ class TourMockStepDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
-                        Text('Чек-лист', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.n700)),
+                        Text(
+                          'Чек-лист',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.n700,
+                          ),
+                        ),
                         SizedBox(height: 8),
                         _MockSubstep(text: 'Разметить положение'),
                         _MockSubstep(text: 'Высверлить отверстия'),
@@ -504,7 +677,11 @@ class TourMockStepDetailScreen extends StatelessWidget {
                       alignment: Alignment.center,
                       child: const Text(
                         'Отметить готовым',
-                        style: TextStyle(color: AppColors.n0, fontSize: 15, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          color: AppColors.n0,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -531,7 +708,12 @@ class _MockSubstep extends StatelessWidget {
         children: [
           const Icon(Icons.check_circle, color: AppColors.greenDark, size: 18),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 13, color: AppColors.n800))),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13, color: AppColors.n800),
+            ),
+          ),
         ],
       ),
     );
@@ -554,7 +736,10 @@ class TourMockApprovalsScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(color: AppColors.n0, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: AppColors.n0,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: const [
                   _MockTab(label: 'Активные · 1', active: true),
@@ -610,18 +795,51 @@ class _MockApproval extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.n900))),
-              Text(amount, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.brand)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.n900,
+                  ),
+                ),
+              ),
+              Text(
+                amount,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.brand,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.n500)),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 12, color: AppColors.n500),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
               const SizedBox(width: 6),
-              Text(statusText, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
+              Text(
+                statusText,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: statusColor,
+                ),
+              ),
             ],
           ),
         ],
@@ -657,11 +875,22 @@ class TourMockApprovalDetailScreen extends StatelessWidget {
                         SizedBox(height: 8),
                         _LabeledRow(label: 'Сумма', value: '+ 22 000 ₽'),
                         SizedBox(height: 12),
-                        Text('Причина', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.n700)),
+                        Text(
+                          'Причина',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.n700,
+                          ),
+                        ),
                         SizedBox(height: 4),
                         Text(
                           'Заказчик решил поставить варочную панель на 7 кВт. Нужна отдельная розеточная группа.',
-                          style: TextStyle(fontSize: 13, color: AppColors.n800, height: 1.4),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.n800,
+                            height: 1.4,
+                          ),
                         ),
                       ],
                     ),
@@ -683,7 +912,13 @@ class TourMockApprovalDetailScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppRadius.r16),
                       ),
                       alignment: Alignment.center,
-                      child: const Text('Отклонить', style: TextStyle(color: AppColors.redText, fontWeight: FontWeight.w700)),
+                      child: const Text(
+                        'Отклонить',
+                        style: TextStyle(
+                          color: AppColors.redText,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -697,7 +932,13 @@ class TourMockApprovalDetailScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(AppRadius.r16),
                         ),
                         alignment: Alignment.center,
-                        child: const Text('Одобрить', style: TextStyle(color: AppColors.n0, fontWeight: FontWeight.w700)),
+                        child: const Text(
+                          'Одобрить',
+                          style: TextStyle(
+                            color: AppColors.n0,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -721,9 +962,19 @@ class _LabeledRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.n500)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 13, color: AppColors.n500),
+        ),
         const Spacer(),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.n900)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.n900,
+          ),
+        ),
       ],
     );
   }
@@ -748,7 +999,10 @@ class TourMockBudgetScreen extends StatelessWidget {
                 id: 'budget.payments_tab',
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: AppColors.n0, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: AppColors.n0,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Row(
                     children: const [
                       _MockTab(label: 'Платежи', active: true),
@@ -768,13 +1022,35 @@ class TourMockBudgetScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Общий бюджет', style: TextStyle(fontSize: 13, color: AppColors.n500)),
+                        const Text(
+                          'Общий бюджет',
+                          style: TextStyle(fontSize: 13, color: AppColors.n500),
+                        ),
                         const SizedBox(height: 4),
-                        const Text('1 500 000 ₽', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.n900)),
+                        const Text(
+                          '1 500 000 ₽',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.n900,
+                          ),
+                        ),
                         const SizedBox(height: 16),
-                        const _BudgetRow(label: 'Работы', spent: '285 000 ₽', total: '850 000 ₽', progress: 0.34, color: AppColors.brand),
+                        const _BudgetRow(
+                          label: 'Работы',
+                          spent: '285 000 ₽',
+                          total: '850 000 ₽',
+                          progress: 0.34,
+                          color: AppColors.brand,
+                        ),
                         const SizedBox(height: 12),
-                        const _BudgetRow(label: 'Материалы', spent: '195 000 ₽', total: '650 000 ₽', progress: 0.30, color: AppColors.purple),
+                        const _BudgetRow(
+                          label: 'Материалы',
+                          spent: '195 000 ₽',
+                          total: '650 000 ₽',
+                          progress: 0.30,
+                          color: AppColors.purple,
+                        ),
                       ],
                     ),
                   ),
@@ -789,7 +1065,13 @@ class TourMockBudgetScreen extends StatelessWidget {
 }
 
 class _BudgetRow extends StatelessWidget {
-  const _BudgetRow({required this.label, required this.spent, required this.total, required this.progress, required this.color});
+  const _BudgetRow({
+    required this.label,
+    required this.spent,
+    required this.total,
+    required this.progress,
+    required this.color,
+  });
 
   final String label;
   final String spent;
@@ -804,9 +1086,19 @@ class _BudgetRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.n800)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.n800,
+              ),
+            ),
             const Spacer(),
-            Text('$spent / $total', style: const TextStyle(fontSize: 12, color: AppColors.n500)),
+            Text(
+              '$spent / $total',
+              style: const TextStyle(fontSize: 12, color: AppColors.n500),
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -905,18 +1197,51 @@ class _PaymentRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.n900))),
-              Text(amount, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.brand)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.n900,
+                  ),
+                ),
+              ),
+              Text(
+                amount,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.brand,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          Text('$from → $to', style: const TextStyle(fontSize: 12, color: AppColors.n500)),
+          Text(
+            '$from → $to',
+            style: const TextStyle(fontSize: 12, color: AppColors.n500),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
               const SizedBox(width: 6),
-              Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
+              Text(
+                status,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: statusColor,
+                ),
+              ),
             ],
           ),
         ],
@@ -995,13 +1320,26 @@ class _MaterialRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.n900)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.n900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(stage, style: const TextStyle(fontSize: 12, color: AppColors.n500)),
+          Text(
+            stage,
+            style: const TextStyle(fontSize: 12, color: AppColors.n500),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Text('$itemsBought / $itemsTotal куплено', style: const TextStyle(fontSize: 12, color: AppColors.n600)),
+              Text(
+                '$itemsBought / $itemsTotal куплено',
+                style: const TextStyle(fontSize: 12, color: AppColors.n600),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1009,7 +1347,14 @@ class _MaterialRow extends StatelessWidget {
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(100),
                 ),
-                child: Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor)),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1041,7 +1386,8 @@ class TourMockChatsScreen extends StatelessWidget {
                     child: const _ChatRow(
                       avatarText: 'РЛ',
                       name: 'Общий чат проекта',
-                      lastMessage: 'Завтра привезут материалы. Принимать будете?',
+                      lastMessage:
+                          'Завтра привезут материалы. Принимать будете?',
                       time: '5 мин',
                       unread: 2,
                     ),
@@ -1087,9 +1433,19 @@ class _ChatRow extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: AppColors.brand,
+              shape: BoxShape.circle,
+            ),
             alignment: Alignment.center,
-            child: Text(avatarText, style: const TextStyle(color: AppColors.n0, fontSize: 14, fontWeight: FontWeight.w700)),
+            child: Text(
+              avatarText,
+              style: const TextStyle(
+                color: AppColors.n0,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1098,8 +1454,23 @@ class _ChatRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.n900))),
-                    Text(time, style: const TextStyle(fontSize: 11, color: AppColors.n500)),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.n900,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      time,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.n500,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -1110,15 +1481,31 @@ class _ChatRow extends StatelessWidget {
                         lastMessage,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppColors.n600),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.n600,
+                        ),
                       ),
                     ),
                     if (unread > 0) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
-                        child: Text('$unread', style: const TextStyle(color: AppColors.n0, fontSize: 11, fontWeight: FontWeight.w700)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: const BoxDecoration(
+                          color: AppColors.brand,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$unread',
+                          style: const TextStyle(
+                            color: AppColors.n0,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -1148,10 +1535,27 @@ class TourMockChatConversationScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 children: const [
-                  _MockMsg(text: 'Добрый день! Как продвигается электрика?', mine: false, author: 'Заказчик'),
-                  _MockMsg(text: 'Кабели проложили, ставим подрозетники. Завтра пришлю фото.', mine: true, author: 'Вы (бригадир)'),
-                  _MockMsg(text: 'Отлично! Спасибо.', mine: false, author: 'Заказчик'),
-                  _MockMsg(text: 'Завтра привезут материалы. Принимать будете?', mine: true, author: 'Вы (бригадир)'),
+                  _MockMsg(
+                    text: 'Добрый день! Как продвигается электрика?',
+                    mine: false,
+                    author: 'Заказчик',
+                  ),
+                  _MockMsg(
+                    text:
+                        'Кабели проложили, ставим подрозетники. Завтра пришлю фото.',
+                    mine: true,
+                    author: 'Вы (бригадир)',
+                  ),
+                  _MockMsg(
+                    text: 'Отлично! Спасибо.',
+                    mine: false,
+                    author: 'Заказчик',
+                  ),
+                  _MockMsg(
+                    text: 'Завтра привезут материалы. Принимать будете?',
+                    mine: true,
+                    author: 'Вы (бригадир)',
+                  ),
                 ],
               ),
             ),
@@ -1169,7 +1573,10 @@ class TourMockChatConversationScreen extends StatelessWidget {
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   alignment: Alignment.centerLeft,
-                  child: const Text('Сообщение…', style: TextStyle(color: AppColors.n400, fontSize: 14)),
+                  child: const Text(
+                    'Сообщение…',
+                    style: TextStyle(color: AppColors.n400, fontSize: 14),
+                  ),
                 ),
               ),
             ),
@@ -1181,7 +1588,11 @@ class TourMockChatConversationScreen extends StatelessWidget {
 }
 
 class _MockMsg extends StatelessWidget {
-  const _MockMsg({required this.text, required this.mine, required this.author});
+  const _MockMsg({
+    required this.text,
+    required this.mine,
+    required this.author,
+  });
 
   final String text;
   final bool mine;
@@ -1194,14 +1605,24 @@ class _MockMsg extends StatelessWidget {
       child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
+          ),
           child: Column(
-            crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment: mine
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
             children: [
-              Text(author, style: const TextStyle(fontSize: 11, color: AppColors.n500)),
+              Text(
+                author,
+                style: const TextStyle(fontSize: 11, color: AppColors.n500),
+              ),
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: mine ? AppColors.brand : AppColors.n0,
                   borderRadius: BorderRadius.circular(12),
@@ -1305,7 +1726,10 @@ class _NotifRow extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(width: 12),
@@ -1320,16 +1744,31 @@ class _NotifRow extends StatelessWidget {
                         title,
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: unread
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                           color: AppColors.n900,
                         ),
                       ),
                     ),
-                    Text(time, style: const TextStyle(fontSize: 11, color: AppColors.n500)),
+                    Text(
+                      time,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.n500,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(fontSize: 12, color: AppColors.n600, height: 1.3)),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.n600,
+                    height: 1.3,
+                  ),
+                ),
               ],
             ),
           ),

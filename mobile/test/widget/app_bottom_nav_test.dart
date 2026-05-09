@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/shared/widgets/app_bottom_nav.dart';
 
 void main() {
-  testWidgets('AppBottomNav — 4 табa, active dot под выбранным', (tester) async {
+  testWidgets('AppBottomNav — 4 табa, active dot под выбранным', (
+    tester,
+  ) async {
     var selected = 0;
     await tester.pumpWidget(
       StatefulBuilder(

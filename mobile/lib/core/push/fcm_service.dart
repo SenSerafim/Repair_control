@@ -21,10 +21,7 @@ import 'deep_link_router.dart';
 /// google-services.json), логируем warning и живём без push.
 /// Важно: fake-реализации и тесты НЕ должны инициализировать Firebase.
 class FcmService {
-  FcmService({
-    required this.logger,
-    required this.container,
-  });
+  FcmService({required this.logger, required this.container});
 
   final Logger logger;
   final ProviderContainer container;
@@ -69,8 +66,9 @@ class FcmService {
     );
 
     _onMessageSub = FirebaseMessaging.onMessage.listen(_onForeground);
-    _onOpenedSub =
-        FirebaseMessaging.onMessageOpenedApp.listen(_onOpenedFromBackground);
+    _onOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen(
+      _onOpenedFromBackground,
+    );
 
     try {
       final initial = await FirebaseMessaging.instance.getInitialMessage();
@@ -100,24 +98,25 @@ class FcmService {
       logger.w('FCM getToken failed: $e');
     }
 
-    _tokenRefreshSub =
-        FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+    _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((
+      token,
+    ) {
       _currentToken = token;
       unawaited(_maybeRegisterDevice());
     });
 
     // Когда auth переходит в authenticated — регистрируем устройство
     // с уже полученным FCM-токеном (или дожидаемся onTokenRefresh).
-    _authSub = container.listen<AuthState>(
-      authControllerProvider,
-      (prev, next) {
-        final wasAuth = prev?.status == AuthStatus.authenticated;
-        final isAuth = next.status == AuthStatus.authenticated;
-        if (!wasAuth && isAuth) {
-          unawaited(_maybeRegisterDevice());
-        }
-      },
-    );
+    _authSub = container.listen<AuthState>(authControllerProvider, (
+      prev,
+      next,
+    ) {
+      final wasAuth = prev?.status == AuthStatus.authenticated;
+      final isAuth = next.status == AuthStatus.authenticated;
+      if (!wasAuth && isAuth) {
+        unawaited(_maybeRegisterDevice());
+      }
+    });
 
     _initialized = true;
     return true;
@@ -155,8 +154,8 @@ class FcmService {
         }
         return;
       } on AuthException catch (e) {
-        final transient = e.failure == AuthFailure.network ||
-            e.failure == AuthFailure.server;
+        final transient =
+            e.failure == AuthFailure.network || e.failure == AuthFailure.server;
         if (transient && attempt < maxAttempts) {
           final delay = Duration(seconds: 1 << attempt);
           logger.w(
@@ -188,7 +187,8 @@ class FcmService {
     }
 
     // Показываем локальный push для foreground.
-    final title = message.notification?.title ?? message.data['title'] as String?;
+    final title =
+        message.notification?.title ?? message.data['title'] as String?;
     final body = message.notification?.body ?? message.data['body'] as String?;
     if (title == null && body == null) return;
     unawaited(
@@ -222,17 +222,15 @@ class FcmService {
     if (path != null) _navigate(path);
   }
 
-  void _recordAndMaybeRoute(
-    RemoteMessage message, {
-    required bool autoRoute,
-  }) {
-    final kind =
-        (message.data['kind'] as String?) ?? 'unknown';
+  void _recordAndMaybeRoute(RemoteMessage message, {required bool autoRoute}) {
+    final kind = (message.data['kind'] as String?) ?? 'unknown';
     final title =
         message.notification?.title ?? message.data['title'] as String? ?? '';
     final body =
         message.notification?.body ?? message.data['body'] as String? ?? '';
-    container.read(notificationsProvider.notifier).push(
+    container
+        .read(notificationsProvider.notifier)
+        .push(
           id: message.messageId,
           kind: kind,
           title: title,

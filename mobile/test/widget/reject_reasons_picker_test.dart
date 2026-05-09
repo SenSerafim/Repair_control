@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/selfpurchase/presentation/_widgets/reject_reasons_picker.dart';
 
 void main() {
-  testWidgets('RejectReasonsPicker рендерит 4 причины и обрабатывает выбор',
-      (tester) async {
+  testWidgets('RejectReasonsPicker рендерит 4 причины и обрабатывает выбор', (
+    tester,
+  ) async {
     RejectReason picked = RejectReason.notAgreed;
     await tester.pumpWidget(
       MaterialApp(

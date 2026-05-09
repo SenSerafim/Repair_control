@@ -7,10 +7,7 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: StatusPill(
-            label: 'В работе',
-            semaphore: Semaphore.yellow,
-          ),
+          body: StatusPill(label: 'В работе', semaphore: Semaphore.yellow),
         ),
       ),
     );

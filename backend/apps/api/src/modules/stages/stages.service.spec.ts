@@ -54,8 +54,17 @@ const mkPrisma = () => {
           doneAt: null,
           workBudget: BigInt(data.workBudget ?? 0),
           materialsBudget: BigInt(data.materialsBudget ?? 0),
-          foremanIds: data.foremanIds ?? [],
           ...data,
+          // По умолчанию даём фейкового бригадира, чтобы старые happy-path
+          // тесты для start() не валились на новой проверке STAGE_NO_FOREMAN
+          // (QA-баг #1). Сервис в production пишет `input.foremanIds ?? []`,
+          // поэтому undefined и [] до этого mock'а доходят одинаково ([]).
+          // Чтобы негативный тест мог получить empty foremanIds — он
+          // мутирует stages.get(id).foremanIds = [] напрямую после create.
+          foremanIds:
+            Array.isArray(data.foremanIds) && data.foremanIds.length > 0
+              ? data.foremanIds
+              : ['fm-default'],
         };
         stages.set(s.id, s);
         return s;
@@ -441,6 +450,32 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
     expect(stages.get(s.id).status).toBe('active');
+  });
+
+  it('блокирует старт если на этапе нет бригадира (QA-баг #1)', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', {
+      id: 'p1',
+      status: 'active',
+      requiresPlanApproval: false,
+      planApproved: false,
+    });
+    const clock = new FixedClock(NOW);
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      mkApprovals(),
+      mkChats(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
+    // mkPrisma по умолчанию проставляет foremanIds=['fm-default']; для
+    // негативного сценария бага #1 принудительно убираем бригадира.
+    stages.get(s.id).foremanIds = [];
+    await expect(svc.start(s.id, 'u')).rejects.toThrow(InvalidInputError);
+    await expect(svc.start(s.id, 'u')).rejects.toThrow(/assigned foreman/i);
   });
 
   it('разрешает старт после approval плана (project.planApproved=true)', async () => {

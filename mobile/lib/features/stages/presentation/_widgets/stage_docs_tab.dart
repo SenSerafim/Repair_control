@@ -28,9 +28,7 @@ class StageDocsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stepsAsync = ref.watch(
-      stepsControllerProvider(
-        StepsKey(projectId: projectId, stageId: stageId),
-      ),
+      stepsControllerProvider(StepsKey(projectId: projectId, stageId: stageId)),
     );
     final docsAsync = ref.watch(
       documentsByStageProvider((projectId: projectId, stageId: stageId)),
@@ -101,11 +99,7 @@ class StageDocsTab extends ConsumerWidget {
                   ),
                 )
               else
-                Column(
-                  children: [
-                    for (final d in docs) _DocRow(doc: d),
-                  ],
-                ),
+                Column(children: [for (final d in docs) _DocRow(doc: d)]),
               const SizedBox(height: AppSpacing.x16),
               AppDashedBorder(
                 borderRadius: AppRadius.r16,
@@ -256,40 +250,40 @@ class _DocRow extends StatelessWidget {
   ({IconData icon, Color bg, Color fg}) _iconForCategory(DocumentCategory c) {
     return switch (c) {
       DocumentCategory.contract => (
-          icon: Icons.description_outlined,
-          bg: AppColors.redBg,
-          fg: AppColors.redText,
-        ),
+        icon: Icons.description_outlined,
+        bg: AppColors.redBg,
+        fg: AppColors.redText,
+      ),
       DocumentCategory.estimate => (
-          icon: Icons.calculate_outlined,
-          bg: AppColors.greenLight,
-          fg: AppColors.greenDark,
-        ),
+        icon: Icons.calculate_outlined,
+        bg: AppColors.greenLight,
+        fg: AppColors.greenDark,
+      ),
       DocumentCategory.act => (
-          icon: Icons.assignment_turned_in_outlined,
-          bg: AppColors.greenLight,
-          fg: AppColors.greenDark,
-        ),
+        icon: Icons.assignment_turned_in_outlined,
+        bg: AppColors.greenLight,
+        fg: AppColors.greenDark,
+      ),
       DocumentCategory.warranty => (
-          icon: Icons.shield_outlined,
-          bg: AppColors.yellowBg,
-          fg: AppColors.yellowText,
-        ),
+        icon: Icons.shield_outlined,
+        bg: AppColors.yellowBg,
+        fg: AppColors.yellowText,
+      ),
       DocumentCategory.photo => (
-          icon: Icons.image_outlined,
-          bg: AppColors.brandLight,
-          fg: AppColors.brand,
-        ),
+        icon: Icons.image_outlined,
+        bg: AppColors.brandLight,
+        fg: AppColors.brand,
+      ),
       DocumentCategory.blueprint => (
-          icon: Icons.architecture_outlined,
-          bg: AppColors.brandLight,
-          fg: AppColors.brand,
-        ),
+        icon: Icons.architecture_outlined,
+        bg: AppColors.brandLight,
+        fg: AppColors.brand,
+      ),
       DocumentCategory.other => (
-          icon: Icons.folder_open_outlined,
-          bg: AppColors.n100,
-          fg: AppColors.n600,
-        ),
+        icon: Icons.folder_open_outlined,
+        bg: AppColors.n100,
+        fg: AppColors.n600,
+      ),
     };
   }
 }

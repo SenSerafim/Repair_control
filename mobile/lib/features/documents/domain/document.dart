@@ -33,34 +33,34 @@ enum DocumentCategory {
   }
 
   String get apiValue => switch (this) {
-        DocumentCategory.contract => 'contract',
-        DocumentCategory.act => 'act',
-        DocumentCategory.estimate => 'estimate',
-        DocumentCategory.warranty => 'warranty',
-        DocumentCategory.photo => 'photo',
-        DocumentCategory.blueprint => 'blueprint',
-        DocumentCategory.other => 'other',
-      };
+    DocumentCategory.contract => 'contract',
+    DocumentCategory.act => 'act',
+    DocumentCategory.estimate => 'estimate',
+    DocumentCategory.warranty => 'warranty',
+    DocumentCategory.photo => 'photo',
+    DocumentCategory.blueprint => 'blueprint',
+    DocumentCategory.other => 'other',
+  };
 
   String get displayName => switch (this) {
-        DocumentCategory.contract => 'Договор',
-        DocumentCategory.act => 'Акт',
-        DocumentCategory.estimate => 'Смета',
-        DocumentCategory.warranty => 'Гарантия',
-        DocumentCategory.photo => 'Фото',
-        DocumentCategory.blueprint => 'Чертёж',
-        DocumentCategory.other => 'Прочее',
-      };
+    DocumentCategory.contract => 'Договор',
+    DocumentCategory.act => 'Акт',
+    DocumentCategory.estimate => 'Смета',
+    DocumentCategory.warranty => 'Гарантия',
+    DocumentCategory.photo => 'Фото',
+    DocumentCategory.blueprint => 'Чертёж',
+    DocumentCategory.other => 'Прочее',
+  };
 
   IconData get icon => switch (this) {
-        DocumentCategory.contract => Icons.description_outlined,
-        DocumentCategory.act => Icons.fact_check_outlined,
-        DocumentCategory.estimate => Icons.calculate_outlined,
-        DocumentCategory.warranty => Icons.verified_user_outlined,
-        DocumentCategory.photo => Icons.image_outlined,
-        DocumentCategory.blueprint => Icons.architecture_outlined,
-        DocumentCategory.other => Icons.folder_open_outlined,
-      };
+    DocumentCategory.contract => Icons.description_outlined,
+    DocumentCategory.act => Icons.fact_check_outlined,
+    DocumentCategory.estimate => Icons.calculate_outlined,
+    DocumentCategory.warranty => Icons.verified_user_outlined,
+    DocumentCategory.photo => Icons.image_outlined,
+    DocumentCategory.blueprint => Icons.architecture_outlined,
+    DocumentCategory.other => Icons.folder_open_outlined,
+  };
 }
 
 @freezed
@@ -85,28 +85,28 @@ class Document with _$Document {
   }) = _Document;
 
   static Document parse(Map<String, dynamic> json) => Document(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        stepId: json['stepId'] as String?,
-        category:
-            DocumentCategory.fromString(json['category'] as String?),
-        title: json['title'] as String,
-        fileKey: json['fileKey'] as String? ?? '',
-        thumbKey: json['thumbKey'] as String?,
-        mimeType: json['mimeType'] as String,
-        sizeBytes: (json['sizeBytes'] as num).toInt(),
-        // Бекенд хранит uploadedById; oldest snapshots/спеки иногда отдают
-        // uploadedBy. Принимаем оба.
-        uploadedBy: (json['uploadedById'] as String?) ??
-            (json['uploadedBy'] as String?) ??
-            '',
-        confirmed: json['confirmed'] as bool? ?? true,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        url: (json['url'] as String?) ?? (json['downloadUrl'] as String?),
-        thumbUrl: json['thumbUrl'] as String?,
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    stepId: json['stepId'] as String?,
+    category: DocumentCategory.fromString(json['category'] as String?),
+    title: json['title'] as String,
+    fileKey: json['fileKey'] as String? ?? '',
+    thumbKey: json['thumbKey'] as String?,
+    mimeType: json['mimeType'] as String,
+    sizeBytes: (json['sizeBytes'] as num).toInt(),
+    // Бекенд хранит uploadedById; oldest snapshots/спеки иногда отдают
+    // uploadedBy. Принимаем оба.
+    uploadedBy:
+        (json['uploadedById'] as String?) ??
+        (json['uploadedBy'] as String?) ??
+        '',
+    confirmed: json['confirmed'] as bool? ?? true,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    url: (json['url'] as String?) ?? (json['downloadUrl'] as String?),
+    thumbUrl: json['thumbUrl'] as String?,
+  );
 }
 
 extension DocumentX on Document {

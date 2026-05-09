@@ -122,11 +122,7 @@ class NoteDetailScreen extends ConsumerWidget {
     if (!context.mounted) return;
     if (failure == null) {
       Navigator.of(context).pop();
-      AppToast.show(
-        context,
-        message: 'Удалено',
-        kind: AppToastKind.success,
-      );
+      AppToast.show(context, message: 'Удалено', kind: AppToastKind.success);
     } else {
       AppToast.show(
         context,

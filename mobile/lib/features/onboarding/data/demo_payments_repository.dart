@@ -72,8 +72,7 @@ class DemoPaymentsRepository extends PaymentsRepository {
     String? stageId,
     String? comment,
     String? photoKey,
-  }) async =>
-      DemoData.payments.first;
+  }) async => DemoData.payments.first;
 
   @override
   Future<Payment> distribute({
@@ -83,8 +82,7 @@ class DemoPaymentsRepository extends PaymentsRepository {
     String? stageId,
     String? comment,
     String? photoKey,
-  }) async =>
-      DemoData.payments.first;
+  }) async => DemoData.payments.first;
 
   @override
   Future<Payment> confirm(String id) async => DemoData.paymentById(id);
@@ -97,14 +95,12 @@ class DemoPaymentsRepository extends PaymentsRepository {
     required String id,
     required String reason,
     List<String>? photoKeys,
-  }) async =>
-      DemoData.paymentById(id);
+  }) async => DemoData.paymentById(id);
 
   @override
   Future<Payment> resolve({
     required String id,
     required String resolution,
     int? adjustAmount,
-  }) async =>
-      DemoData.paymentById(id);
+  }) async => DemoData.paymentById(id);
 }

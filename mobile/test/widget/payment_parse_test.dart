@@ -120,8 +120,7 @@ void main() {
     });
 
     test('overSpent → progress clamped к 1.0', () {
-      const b =
-          BudgetBucket(planned: 100_00, spent: 150_00, remaining: -50_00);
+      const b = BudgetBucket(planned: 100_00, spent: 150_00, remaining: -50_00);
       expect(b.progress, 1.0);
       expect(b.overSpent, isTrue);
     });
@@ -141,16 +140,36 @@ void main() {
   group('ProjectBudget.parse', () {
     test('с несколькими этапами', () {
       final pb = ProjectBudget.parse({
-        'work': {'planned': 1_000_000_00, 'spent': 250_000_00, 'remaining': 750_000_00},
-        'materials': {'planned': 500_000_00, 'spent': 100_000_00, 'remaining': 400_000_00},
-        'total': {'planned': 1_500_000_00, 'spent': 350_000_00, 'remaining': 1_150_000_00},
+        'work': {
+          'planned': 1_000_000_00,
+          'spent': 250_000_00,
+          'remaining': 750_000_00,
+        },
+        'materials': {
+          'planned': 500_000_00,
+          'spent': 100_000_00,
+          'remaining': 400_000_00,
+        },
+        'total': {
+          'planned': 1_500_000_00,
+          'spent': 350_000_00,
+          'remaining': 1_150_000_00,
+        },
         'stages': [
           {
             'stageId': 's1',
             'title': 'Демонтаж',
-            'work': {'planned': 100_000_00, 'spent': 100_000_00, 'remaining': 0},
+            'work': {
+              'planned': 100_000_00,
+              'spent': 100_000_00,
+              'remaining': 0,
+            },
             'materials': {'planned': 0, 'spent': 0, 'remaining': 0},
-            'total': {'planned': 100_000_00, 'spent': 100_000_00, 'remaining': 0},
+            'total': {
+              'planned': 100_000_00,
+              'spent': 100_000_00,
+              'remaining': 0,
+            },
           },
         ],
       });

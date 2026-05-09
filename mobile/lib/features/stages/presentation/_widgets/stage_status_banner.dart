@@ -26,15 +26,17 @@ class StageStatusBanner extends StatelessWidget {
       PausedDeadlineShiftBanner(:final originalEnd, :final newEnd) =>
         _PausedShift(originalEnd: originalEnd, newEnd: newEnd),
       ReviewBanner() => const _Review(),
-      OverdueBanner(:final daysLate) =>
-        _Overdue(daysLate: daysLate, onContact: onContact),
+      OverdueBanner(:final daysLate) => _Overdue(
+        daysLate: daysLate,
+        onContact: onContact,
+      ),
       LateStartBanner(:final startedDue) => _LateStart(startedDue: startedDue),
-      RejectedBanner(
-        :final reasonText,
-        :final actorName,
-        :final attempt,
-      ) =>
-        _Rejected(reasonText: reasonText, actorName: actorName, attempt: attempt),
+      RejectedBanner(:final reasonText, :final actorName, :final attempt) =>
+        _Rejected(
+          reasonText: reasonText,
+          actorName: actorName,
+          attempt: attempt,
+        ),
       WaitingNoContractorBanner() => const _WaitingNoContractor(),
       DoneBanner() => const _Done(),
     };
@@ -337,11 +339,17 @@ class _Rejected extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.close_rounded, size: 20, color: AppColors.redText),
+              const Icon(
+                Icons.close_rounded,
+                size: 20,
+                color: AppColors.redText,
+              ),
               const SizedBox(width: AppSpacing.x8),
               Text(
                 'Причина отклонения',
-                style: AppTextStyles.subtitle.copyWith(color: AppColors.redText),
+                style: AppTextStyles.subtitle.copyWith(
+                  color: AppColors.redText,
+                ),
               ),
             ],
           ),

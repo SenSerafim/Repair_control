@@ -12,8 +12,10 @@ import '../domain/step.dart';
 /// Шаги одного этапа + мутации. После каждого мутирующего действия
 /// invalidate stagesController и projectController — progressCache этапа
 /// и светофор проекта пересчитываются бекендом.
-final stepsControllerProvider = AsyncNotifierProvider.family<
-    StepsController, List<Step>, StepsKey>(StepsController.new);
+final stepsControllerProvider =
+    AsyncNotifierProvider.family<StepsController, List<Step>, StepsKey>(
+      StepsController.new,
+    );
 
 @immutable
 class StepsKey {
@@ -52,10 +54,11 @@ class StepsController extends FamilyAsyncNotifier<List<Step>, StepsKey> {
   void _replace(Step s) {
     final current = state.value ?? const <Step>[];
     final exists = current.any((x) => x.id == s.id);
-    final next = exists
-        ? current.map((x) => x.id == s.id ? s : x).toList()
-        : [...current, s]
-      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    final next =
+        exists
+              ? current.map((x) => x.id == s.id ? s : x).toList()
+              : [...current, s]
+          ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
     state = AsyncData(next);
   }
 
@@ -63,25 +66,23 @@ class StepsController extends FamilyAsyncNotifier<List<Step>, StepsKey> {
     required String title,
     String? description,
     List<String>? assigneeIds,
-  }) =>
-      _doCreate(
-        title: title,
-        type: StepType.regular,
-        description: description,
-        assigneeIds: assigneeIds,
-      );
+  }) => _doCreate(
+    title: title,
+    type: StepType.regular,
+    description: description,
+    assigneeIds: assigneeIds,
+  );
 
   Future<AuthFailure?> createExtra({
     required String title,
     required int priceKopecks,
     String? description,
-  }) =>
-      _doCreate(
-        title: title,
-        type: StepType.extra,
-        price: priceKopecks,
-        description: description,
-      );
+  }) => _doCreate(
+    title: title,
+    type: StepType.extra,
+    price: priceKopecks,
+    description: description,
+  );
 
   Future<AuthFailure?> _doCreate({
     required String title,
@@ -178,12 +179,16 @@ class StepsController extends FamilyAsyncNotifier<List<Step>, StepsKey> {
   bool _isOffline() =>
       ref.read(connectivityProvider).value == ConnectivityStatus.offline;
 
-  Future<void> _enqueueStepToggle(String stepId,
-      {required bool complete}) async {
-    await ref.read(offlineQueueProvider).enqueue(
-      kind: OfflineActionKind.stepToggle,
-      payload: {'stepId': stepId, 'complete': complete},
-    );
+  Future<void> _enqueueStepToggle(
+    String stepId, {
+    required bool complete,
+  }) async {
+    await ref
+        .read(offlineQueueProvider)
+        .enqueue(
+          kind: OfflineActionKind.stepToggle,
+          payload: {'stepId': stepId, 'complete': complete},
+        );
   }
 
   void _markLocally(String stepId, {required bool completed}) {
@@ -206,8 +211,9 @@ class StepsController extends FamilyAsyncNotifier<List<Step>, StepsKey> {
     final byId = {for (final s in current) s.id: s};
     final reordered = <Step>[
       for (var i = 0; i < newOrder.length; i++)
-        (byId[newOrder[i]] ?? (throw StateError('unknown step')))
-            .copyWith(orderIndex: i),
+        (byId[newOrder[i]] ?? (throw StateError('unknown step'))).copyWith(
+          orderIndex: i,
+        ),
     ];
     state = AsyncData(reordered);
     try {

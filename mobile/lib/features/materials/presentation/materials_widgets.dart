@@ -46,8 +46,9 @@ class MaterialRequestCard extends StatelessWidget {
                 if (request.items.isNotEmpty)
                   Text(
                     '${request.boughtItemsCount}/${request.items.length}',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.brand),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.brand,
+                    ),
                   ),
               ],
             ),

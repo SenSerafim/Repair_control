@@ -65,8 +65,7 @@ class _PickerBody extends StatelessWidget {
             const Divider(height: 1, thickness: 1, color: AppColors.n100),
           _ReasonRow(
             reason: PauseReason.values[i],
-            onTap: () =>
-                Navigator.of(context).pop(PauseReason.values[i]),
+            onTap: () => Navigator.of(context).pop(PauseReason.values[i]),
           ),
         ],
       ],
@@ -109,10 +108,7 @@ class _ReasonRow extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.n300,
-            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
           ],
         ),
       ),
@@ -189,8 +185,7 @@ class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
         .pause(
           stageId: widget.stageId,
           reason: widget.reason,
-          comment:
-              _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+          comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -261,8 +256,7 @@ class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide:
-                    const BorderSide(color: AppColors.n200, width: 1.5),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.r12),
@@ -281,10 +275,9 @@ class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
                 return 'осталось $remaining';
               }(),
               style: AppTextStyles.caption.copyWith(
-                color:
-                    _comment.text.trim().length >= _otherCommentMinChars
-                        ? AppColors.greenDark
-                        : AppColors.n400,
+                color: _comment.text.trim().length >= _otherCommentMinChars
+                    ? AppColors.greenDark
+                    : AppColors.n400,
               ),
             ),
           ),
@@ -322,7 +315,9 @@ class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
         AppButton(
           label: 'Назад',
           variant: AppButtonVariant.ghost,
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting
+              ? null
+              : () => Navigator.of(context).pop(false),
         ),
       ],
     );
@@ -331,21 +326,9 @@ class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
 
 ({Color bg, Color fg}) _palette(PauseReason r) {
   return switch (r) {
-    PauseReason.materials => (
-        bg: AppColors.yellowBg,
-        fg: AppColors.yellowText,
-      ),
-    PauseReason.approval => (
-        bg: AppColors.purpleBg,
-        fg: AppColors.purple,
-      ),
-    PauseReason.forceMajeure => (
-        bg: AppColors.redBg,
-        fg: AppColors.redText,
-      ),
-    PauseReason.other => (
-        bg: AppColors.n100,
-        fg: AppColors.n600,
-      ),
+    PauseReason.materials => (bg: AppColors.yellowBg, fg: AppColors.yellowText),
+    PauseReason.approval => (bg: AppColors.purpleBg, fg: AppColors.purple),
+    PauseReason.forceMajeure => (bg: AppColors.redBg, fg: AppColors.redText),
+    PauseReason.other => (bg: AppColors.n100, fg: AppColors.n600),
   };
 }

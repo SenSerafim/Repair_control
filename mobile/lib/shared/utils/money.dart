@@ -20,9 +20,9 @@ class Money {
   }) {
     final rubles = kopecks ~/ 100;
     final remainder = kopecks.remainder(100).abs();
-    final integerFormatted = NumberFormat.decimalPattern(locale)
-        .format(rubles)
-        .replaceAll(_nbsp, ' ');
+    final integerFormatted = NumberFormat.decimalPattern(
+      locale,
+    ).format(rubles).replaceAll(_nbsp, ' ');
     final suffix = currency.isEmpty ? '' : ' $currency';
     if (decimals == 0) {
       return '$integerFormatted$suffix';
@@ -36,9 +36,9 @@ class Money {
   /// без дробей. Возвращает только целое в рублях с разделителями.
   static String formatCompact(int kopecks, {String locale = 'ru_RU'}) {
     final rubles = kopecks ~/ 100;
-    return NumberFormat.decimalPattern(locale)
-        .format(rubles)
-        .replaceAll(_nbsp, ' ');
+    return NumberFormat.decimalPattern(
+      locale,
+    ).format(rubles).replaceAll(_nbsp, ' ');
   }
 
   /// Парсит пользовательский ввод в копейки. Поддерживает:
