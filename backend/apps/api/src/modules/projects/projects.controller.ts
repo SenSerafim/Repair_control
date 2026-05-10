@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -171,7 +172,16 @@ export class ProjectsController {
   // ---- Memberships ----
 
   @Get(':projectId/members')
-  async listMembers(@Param('projectId') projectId: string) {
+  async listMembers(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+  ) {
+    // QA-баг #12: эндпоинт отдавал состав команды любого проекта любому
+    // авторизованному юзеру. Разрешаем только активным участникам проекта.
+    const callerMembership = await this.members.findActive(projectId, req.user.userId);
+    if (!callerMembership) {
+      throw new ForbiddenException('not a project member');
+    }
     return this.members.list(projectId);
   }
 

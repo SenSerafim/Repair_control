@@ -399,6 +399,14 @@ export class MembersService {
     });
   }
 
+  /** QA-баг #12: используется контроллером для проверки доступа к /members. */
+  async findActive(projectId: string, userId: string) {
+    return this.prisma.membership.findFirst({
+      where: { projectId, userId, removedAt: null },
+      select: { id: true, role: true },
+    });
+  }
+
   async searchUser(params: { phone?: string; email?: string }) {
     if (!params.phone && !params.email) return null;
     return this.prisma.user.findFirst({
