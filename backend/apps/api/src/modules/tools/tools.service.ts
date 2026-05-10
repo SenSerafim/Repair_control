@@ -105,10 +105,21 @@ export class ToolsService {
   async getTool(id: string, actorUserId: string): Promise<ToolItem> {
     const t = await this.prisma.toolItem.findUnique({ where: { id } });
     if (!t) throw new NotFoundError(ErrorCodes.TOOL_NOT_FOUND, 'tool not found');
-    if (t.ownerId !== actorUserId) {
-      throw new ForbiddenError(ErrorCodes.TOOL_ACCESS_DENIED, 'only owner can read');
+    if (t.ownerId === actorUserId) return t;
+    // QA-баг #11: tool из совместного проекта виден в реестре, но карточка
+    // падала 403. Разрешаем read-доступ участникам проекта, к которому
+    // привязан инструмент (write-операции остаются только у owner'а).
+    if (t.projectId) {
+      const membership = await this.prisma.membership.findFirst({
+        where: { projectId: t.projectId, userId: actorUserId, removedAt: null },
+        select: { id: true },
+      });
+      if (membership) return t;
     }
-    return t;
+    throw new ForbiddenError(
+      ErrorCodes.TOOL_ACCESS_DENIED,
+      'only owner or project member can read',
+    );
   }
 
   async deleteToolItem(id: string, actorUserId: string): Promise<void> {
