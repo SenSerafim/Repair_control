@@ -150,6 +150,11 @@ export class ToolsController {
    * Используется на mobile в новой вкладке «Инструменты».
    */
   @Get('projects/:projectId/tool-registry')
+  @RequireAccess({
+    action: 'tools.view_project',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
   async registry(@Param('projectId') projectId: string) {
     return this.tools.listProjectRegistry(projectId);
   }

@@ -113,11 +113,15 @@ services:
     build:
       context: ./apps/admin-web
       dockerfile: Dockerfile
+      args:
+        # Vite инлайнит VITE_* при билде. Передавать через `args:`, не `environment:`,
+        # иначе env-переменная появится только в рантайме nginx-стадии и в бандл
+        # не попадёт. Пустая строка → SPA шлёт relative `/api/...` и работает на любом
+        # хосте (через nginx-проксю), без CORS.
+        VITE_API_BASE_URL: ${ADMIN_API_URL:-}
     image: repair-control/admin-web:${ADMIN_IMAGE_TAG:-staging}
     restart: unless-stopped
     depends_on:
       - api
-    environment:
-      VITE_API_BASE_URL: ${ADMIN_API_URL:-http://localhost:3000}
     ports:
       - "${ADMIN_PORT:-8080}:80"

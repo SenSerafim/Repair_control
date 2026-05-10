@@ -36,7 +36,7 @@ class ProfileScreen extends ConsumerWidget {
           onRefresh: () =>
               ref.read(profileControllerProvider.notifier).refresh(),
           child: ListView(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.only(bottom: 24),
             children: [
               ProfileHero(
                 profile: profile,
