@@ -7,6 +7,8 @@ import '../../../core/error/api_error.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../chat/application/chats_controller.dart';
+import '../application/projects_list_controller.dart';
 import '../data/invitations_repository.dart';
 
 /// P2: ввод 6-значного кода приглашения для присоединения к проекту.
@@ -53,6 +55,13 @@ class _JoinByCodeScreenState extends ConsumerState<JoinByCodeScreen> {
     try {
       final repo = ref.read(invitationsRepositoryProvider);
       final result = await repo.joinByCode(code);
+      // Мгновенный UX-фидбек: WS-broadcast `project:membership_changed` тоже
+      // прилетит (см. membership_sync.dart), но локальная инвалидация даёт
+      // нулевую задержку — пользователь, нажав «Назад», сразу видит проект
+      // в списке без pull-to-refresh.
+      ref
+        ..invalidate(activeProjectsProvider)
+        ..invalidate(myChatsProvider);
       if (!mounted) return;
       AppToast.show(
         context,

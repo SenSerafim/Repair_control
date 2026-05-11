@@ -1,8 +1,26 @@
 import { ConflictException, GoneException, NotFoundException } from '@nestjs/common';
 import { FixedClock, NotFoundError, PrismaService } from '@app/common';
+import { ChatsService } from '../chats/chats.service';
+import { FeedService } from '../feed/feed.service';
 import { InvitationsService } from './invitations.service';
+import { MembersService } from './members.service';
 
 const NOW = new Date('2026-04-26T10:00:00Z');
+
+const mkChats = (): ChatsService =>
+  ({
+    ensureProjectChat: jest.fn().mockResolvedValue({ id: 'chat-mock' }),
+    addProjectChatParticipant: jest.fn().mockResolvedValue(undefined),
+  }) as any;
+
+const mkFeed = (): FeedService =>
+  ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
+
+const mkMembers = (): MembersService =>
+  ({
+    collectRecipientUserIds: jest.fn().mockResolvedValue([]),
+    emitMembershipChanged: jest.fn(),
+  }) as any;
 
 interface InvRow {
   id: string;
@@ -104,7 +122,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
   it('generateCode: создаёт 6-значный pending invitation', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1' });
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     const inv = await svc.generateCode({
       projectId: 'p1',
       byUserId: 'owner1',
@@ -117,7 +141,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
 
   it('generateCode: проект не найден → NotFoundError', async () => {
     const st = mkPrisma();
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     await expect(
       svc.generateCode({ projectId: 'nope', byUserId: 'u1', role: 'master' }),
     ).rejects.toThrow(NotFoundError);
@@ -126,7 +156,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
   it('joinByCode: успех — создаёт membership, статус accepted', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1' });
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     const inv = await svc.generateCode({
       projectId: 'p1',
       byUserId: 'owner1',
@@ -147,7 +183,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
   it('joinByCode: код не найден → NotFoundException', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1' });
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     await expect(svc.joinByCode('user', '999999')).rejects.toThrow(NotFoundException);
   });
 
@@ -170,7 +212,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
       createdAt: past,
       expiresAt: past,
     });
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     await expect(svc.joinByCode('user', '111111')).rejects.toThrow(GoneException);
     expect(st.invitations.get('inv1')!.status).toBe('expired');
   });
@@ -179,7 +227,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1' });
     st.memberships.push({ projectId: 'p1', userId: 'u1', role: 'master' });
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     const inv = await svc.generateCode({
       projectId: 'p1',
       byUserId: 'owner1',
@@ -191,7 +245,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
   it('generateCode: сохраняет permissions и stageIds для representative', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1' });
-    const svc = new InvitationsService(st.prisma, new FixedClock(NOW));
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
     const inv = await svc.generateCode({
       projectId: 'p1',
       byUserId: 'owner1',
@@ -203,5 +263,45 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     const stored = [...st.invitations.values()][0];
     expect(stored.permissions).toEqual({ canApprove: true, canSeeBudget: true });
     expect(stored.stageIds).toEqual(['s1', 's2']);
+  });
+
+  it('joinByCode: эмитит feed.membership_added и project.membership.changed (ТЗ §10.1/§13.2)', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1' });
+    const chats = mkChats();
+    const feed = mkFeed();
+    const members = mkMembers();
+    (members.collectRecipientUserIds as jest.Mock).mockResolvedValue([
+      'newUser',
+      'owner1',
+    ]);
+    const svc = new InvitationsService(st.prisma, new FixedClock(NOW), chats, feed, members);
+    const inv = await svc.generateCode({
+      projectId: 'p1',
+      byUserId: 'owner1',
+      role: 'master',
+    });
+
+    await svc.joinByCode('newUser', inv.token);
+
+    // 1) feed.emit('membership_added') внутри транзакции → push новому участнику.
+    const feedCalls = (feed.emit as jest.Mock).mock.calls;
+    const addedKind = feedCalls.find((c) => c[0].kind === 'membership_added');
+    expect(addedKind).toBeDefined();
+    expect(addedKind[0].payload).toMatchObject({ userId: 'newUser', role: 'master' });
+
+    // 2) chats.addProjectChatParticipant → новый участник в project-чате (ТЗ §10.1).
+    expect(chats.addProjectChatParticipant).toHaveBeenCalledWith('p1', 'newUser');
+
+    // 3) members.emitMembershipChanged → тихий WS-broadcast всем участникам.
+    expect(members.emitMembershipChanged).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'p1',
+        userId: 'newUser',
+        role: 'master',
+        action: 'added',
+        recipientUserIds: ['newUser', 'owner1'],
+      }),
+    );
   });
 });

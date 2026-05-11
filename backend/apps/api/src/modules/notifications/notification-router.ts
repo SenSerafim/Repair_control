@@ -108,6 +108,17 @@ const addresseeFromPayload: RecipientResolver = async (ev) => {
   return ids;
 };
 
+/**
+ * Резолвер для membership_added/removed/left. Members-feed-события несут
+ * `userId` (затронутого участника), а не `addresseeId` — это исторически
+ * разная конвенция payload-полей. Без этого резолвера push по «вас добавили
+ * в проект» / «вас удалили из проекта» вообще не дошёл бы до пользователя.
+ */
+const membershipUserFromPayload: RecipientResolver = async (ev) => {
+  const u = (ev.payload as any)?.userId;
+  return typeof u === 'string' ? [u] : [];
+};
+
 const requesterFromPayload: RecipientResolver = async (ev) => {
   const r = (ev.payload as any)?.requestedById;
   return typeof r === 'string' ? [r] : [];
@@ -187,7 +198,13 @@ const MAPPINGS: Partial<Record<FeedEventKind, RoutingRule>> = {
   note_created: { kind: 'note_created_for_me', recipients: addresseeFromPayload },
   question_asked: { kind: 'question_asked', recipients: addresseeFromPayload },
   project_archived: { kind: 'project_archived', recipients: projectMembers },
-  membership_added: { kind: 'membership_added', recipients: addresseeFromPayload },
+  membership_added: { kind: 'membership_added', recipients: membershipUserFromPayload },
+  // ТЗ §13.2 — push при удалении/выходе адресуется самому удалённому,
+  // а не всей команде (у команды есть тихий `project:membership_changed`).
+  // Шаблон NotificationKind переиспользуем — текст может быть специализирован
+  // позже через payload, чтобы не плодить новые kind'ы и не ломать клиентов.
+  membership_removed: { kind: 'membership_added', recipients: membershipUserFromPayload },
+  membership_left: { kind: 'membership_added', recipients: membershipUserFromPayload },
   export_completed: { kind: 'export_completed', recipients: exportRequester },
   export_failed: { kind: 'export_failed', recipients: exportRequester },
   // ---- 2026-05-04: новые события П1.11 / П2.4-2.6 / П2.15 / П2.18 ----

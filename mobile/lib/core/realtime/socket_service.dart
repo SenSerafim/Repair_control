@@ -29,6 +29,12 @@ class SocketEvents {
   static const exportReady = 'export:ready';
   static const exportFailed = 'export:failed';
   static const notificationNew = 'notification:new';
+  /// project:membership_changed — тихий broadcast «состав команды изменился».
+  /// Эмитится бэкендом в `user:{X}` комнаты всех участников проекта (включая
+  /// нового/удалённого). Payload: `{ projectId, userId, role, action }`.
+  /// `membership_sync_provider` использует событие для инвалидации списков
+  /// проектов / команды / чатов без pull-to-refresh.
+  static const projectMembershipChanged = 'project:membership_changed';
 }
 
 /// Обёртка над socket_io_client с авто-подключением через JWT и
@@ -149,6 +155,7 @@ class SocketService {
       SocketEvents.exportReady,
       SocketEvents.exportFailed,
       SocketEvents.notificationNew,
+      SocketEvents.projectMembershipChanged,
     ]) {
       socket.on(event, (payload) {
         _eventsController.add((event, payload));

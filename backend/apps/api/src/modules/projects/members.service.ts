@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import {
   ConflictError,
@@ -23,13 +24,58 @@ export interface AddMembershipInput {
   stageIds?: string[];
 }
 
+/**
+ * Event-emitter событие тихой UI-синхронизации (без push). Слушает
+ * `ChatsGateway` и бродкастит `project:membership_changed` в `user:{X}`
+ * комнаты — это закрывает realtime-инвалидацию списков проектов/команды/
+ * чатов у ВСЕХ участников, а не только у адресата push (ТЗ §13.2).
+ */
+export const PROJECT_MEMBERSHIP_CHANGED_EVENT = 'project.membership.changed';
+
+export type MembershipChangeAction = 'added' | 'removed';
+
+export interface ProjectMembershipChangedPayload {
+  projectId: string;
+  userId: string;
+  role: string;
+  action: MembershipChangeAction;
+  /** userId-ы клиентов, которым нужна синхронизация UI (включая затронутого). */
+  recipientUserIds: string[];
+}
+
 @Injectable()
 export class MembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
     private readonly chats: ChatsService,
+    private readonly events: EventEmitter2,
   ) {}
+
+  /**
+   * Собирает userId клиентов для тихого WS-broadcast. Включает owner, всех
+   * active-членов и `includeUserId` (затронутого — на случай removed/leave,
+   * когда юзера уже вычеркнули, но ему всё равно нужно убрать проект из списка).
+   */
+  async collectRecipientUserIds(projectId: string, includeUserId?: string): Promise<string[]> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        ownerId: true,
+        memberships: { where: { removedAt: null }, select: { userId: true } },
+      },
+    });
+    if (!project) return includeUserId ? [includeUserId] : [];
+    const ids = new Set<string>();
+    ids.add(project.ownerId);
+    for (const m of project.memberships) ids.add(m.userId);
+    if (includeUserId) ids.add(includeUserId);
+    return Array.from(ids);
+  }
+
+  emitMembershipChanged(payload: ProjectMembershipChangedPayload): void {
+    this.events.emit(PROJECT_MEMBERSHIP_CHANGED_EVENT, payload);
+  }
 
   async addMembership(input: AddMembershipInput) {
     const project = await this.prisma.project.findUnique({ where: { id: input.projectId } });
@@ -97,6 +143,19 @@ export class MembersService {
     } catch (e) {
       // logger из FeedService ловит; membership уже создан — не откатываем
     }
+
+    // Тихий WS-broadcast всем участникам — `ChatsGateway` шлёт
+    // `project:membership_changed` в `user:{X}` комнаты, мобайл инвалидирует
+    // список проектов / команду / чаты у всех затронутых клиентов.
+    // Push при этом не плодится — он идёт отдельным каналом только адресату.
+    const recipientUserIds = await this.collectRecipientUserIds(input.projectId, input.userId);
+    this.emitMembershipChanged({
+      projectId: input.projectId,
+      userId: input.userId,
+      role: input.role,
+      action: 'added',
+      recipientUserIds,
+    });
 
     return created;
   }
@@ -242,6 +301,18 @@ export class MembersService {
       });
     });
 
+    // Тихий WS-broadcast: проект исчезает у вышедшего, состав обновляется
+    // у остальных. recipientUserIds включает ушедшего, чтобы он сам убрал
+    // проект из списка без pull-to-refresh.
+    const recipientUserIds = await this.collectRecipientUserIds(projectId, userId);
+    this.emitMembershipChanged({
+      projectId,
+      userId,
+      role: membership.role,
+      action: 'removed',
+      recipientUserIds,
+    });
+
     return { ok: true };
   }
 
@@ -383,6 +454,17 @@ export class MembersService {
         actorId: actorUserId,
         payload: { userId: membership.userId, role: membership.role },
       });
+    });
+
+    // Тихий WS-broadcast всем оставшимся + удалённому (чтобы он сам убрал
+    // проект из своего списка).
+    const recipientUserIds = await this.collectRecipientUserIds(projectId, membership.userId);
+    this.emitMembershipChanged({
+      projectId,
+      userId: membership.userId,
+      role: membership.role,
+      action: 'removed',
+      recipientUserIds,
     });
   }
 

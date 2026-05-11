@@ -17,7 +17,22 @@ const mkPrisma = () => {
   let id = 0;
   const prisma: any = {
     project: {
-      findUnique: jest.fn(({ where }: any) => projects.get(where.id) ?? null),
+      // `collectRecipientUserIds` запрашивает `select: { ownerId, memberships }`
+      // — мок должен подмешивать в результат активные memberships, иначе
+      // tests на real-time broadcast падают на `for (m of project.memberships)`.
+      findUnique: jest.fn(({ where, select }: any) => {
+        const p = projects.get(where.id) ?? null;
+        if (!p) return null;
+        if (select?.memberships) {
+          return {
+            ...p,
+            memberships: memberships
+              .filter((m) => m.projectId === where.id && !m.removedAt)
+              .map((m) => ({ userId: m.userId })),
+          };
+        }
+        return p;
+      }),
       update: jest.fn(({ where, data }: any) => {
         const p = projects.get(where.id);
         if (p) Object.assign(p, data);
@@ -110,13 +125,22 @@ const mkPrisma = () => {
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
-const mkChats = () => ({ ensureProjectChat: jest.fn().mockResolvedValue({}) }) as any;
+const mkChats = () =>
+  ({
+    ensureProjectChat: jest.fn().mockResolvedValue({}),
+    addProjectChatParticipant: jest.fn().mockResolvedValue(undefined),
+    removeProjectChatParticipant: jest.fn().mockResolvedValue(undefined),
+    leaveAllChats: jest.fn().mockResolvedValue(undefined),
+  }) as any;
+// Минимальный stub EventEmitter2: фиксируем emit-вызовы, чтобы тест мог
+// проверить, что MembersService шлёт `project.membership.changed`.
+const mkEvents = () => ({ emit: jest.fn() }) as any;
 
 describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('нельзя назначить владельца бригадиром на его же проект', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await expect(
       svc.addMembership({
         projectId: 'p1',
@@ -130,7 +154,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('добавление обычного бригадира работает', async () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await svc.addMembership({
       projectId: 'p1',
       actorUserId: 'u-owner',
@@ -143,7 +167,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('роль customer может быть только у владельца проекта', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await expect(
       svc.addMembership({
         projectId: 'p1',
@@ -157,7 +181,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('повторное добавление → конфликт', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await svc.addMembership({
       projectId: 'p1',
       actorUserId: 'u-owner',
@@ -176,7 +200,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
 
   it('несуществующий проект → 404', async () => {
     const { prisma } = mkPrisma();
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await expect(
       svc.addMembership({
         projectId: 'p-missing',
@@ -190,7 +214,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('санитизирует permissions для representative (только известные ключи, только boolean)', async () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await svc.addMembership({
       projectId: 'p1',
       actorUserId: 'u-owner',
@@ -213,12 +237,12 @@ describe('MembersService.searchUser', () => {
   it('находит по телефону', async () => {
     const { prisma, users } = mkPrisma();
     users.push({ id: 'u1', phone: '+79991112233', email: 'x@y.z' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await expect(svc.searchUser({ phone: '+79991112233' })).resolves.toMatchObject({ id: 'u1' });
   });
   it('null если не передали ни phone, ни email', async () => {
     const { prisma } = mkPrisma();
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await expect(svc.searchUser({})).resolves.toBeNull();
   });
 });
@@ -228,7 +252,7 @@ describe('MembersService.removeMembership', () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
     memberships.push({ id: 'm1', projectId: 'p1', userId: 'u-owner', role: 'customer' });
-    const svc = new MembersService(prisma, mkFeed(), mkChats());
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
     await expect(svc.removeMembership('p1', 'm1', 'u-owner')).rejects.toThrow(InvalidInputError);
   });
 
@@ -250,7 +274,7 @@ describe('MembersService.removeMembership', () => {
       requiresReassign: false,
     });
     const feed = mkFeed();
-    const svc = new MembersService(prisma, feed, mkChats());
+    const svc = new MembersService(prisma, feed, mkChats(), mkEvents());
     await svc.removeMembership('p1', 'mf', 'u-owner');
     expect(approvals[0].requiresReassign).toBe(true);
     const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
@@ -258,5 +282,58 @@ describe('MembersService.removeMembership', () => {
     expect(kinds).toContain('membership_removed');
     // Мастера не должны быть автоматически удалены (не добавлялись в этом тесте — просто проверяем что foreman исчез)
     expect(memberships.find((m) => m.id === 'mf')).toBeUndefined();
+  });
+});
+
+describe('MembersService — real-time membership broadcast (ТЗ §13.2)', () => {
+  it('addMembership эмитит project.membership.changed со списком recipients', async () => {
+    const { prisma, projects, memberships } = mkPrisma();
+    projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
+    // У проекта уже есть owner-membership + бригадир: имитируем «добавляем
+    // мастера в существующую команду».
+    memberships.push({ id: 'm0', projectId: 'p1', userId: 'u-owner', role: 'customer' });
+    memberships.push({ id: 'm1', projectId: 'p1', userId: 'u-foreman1', role: 'foreman' });
+    const events = mkEvents();
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), events);
+
+    await svc.addMembership({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      userId: 'u-master',
+      role: 'master',
+    });
+
+    const calls = (events.emit as jest.Mock).mock.calls;
+    const changed = calls.find((c) => c[0] === 'project.membership.changed');
+    expect(changed).toBeDefined();
+    const payload = changed![1];
+    expect(payload.projectId).toBe('p1');
+    expect(payload.userId).toBe('u-master');
+    expect(payload.action).toBe('added');
+    expect(payload.role).toBe('master');
+    // recipients: owner + foreman1 + новый master (тихий WS летит всем сразу).
+    expect(payload.recipientUserIds).toEqual(
+      expect.arrayContaining(['u-owner', 'u-foreman1', 'u-master']),
+    );
+  });
+
+  it('removeMembership эмитит project.membership.changed с action=removed', async () => {
+    const { prisma, projects, memberships } = mkPrisma();
+    projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
+    memberships.push({ id: 'm0', projectId: 'p1', userId: 'u-owner', role: 'customer' });
+    memberships.push({ id: 'mr', projectId: 'p1', userId: 'u-rep', role: 'representative' });
+    const events = mkEvents();
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), events);
+
+    await svc.removeMembership('p1', 'mr', 'u-owner');
+
+    const changed = (events.emit as jest.Mock).mock.calls.find(
+      (c) => c[0] === 'project.membership.changed',
+    );
+    expect(changed).toBeDefined();
+    const payload = changed![1];
+    expect(payload.userId).toBe('u-rep');
+    expect(payload.action).toBe('removed');
+    expect(payload.recipientUserIds).toEqual(expect.arrayContaining(['u-rep', 'u-owner']));
   });
 });

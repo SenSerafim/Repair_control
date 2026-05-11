@@ -11,6 +11,10 @@ import {
 import { OnEvent } from '@nestjs/event-emitter';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '@app/common';
+import {
+  PROJECT_MEMBERSHIP_CHANGED_EVENT,
+  ProjectMembershipChangedPayload,
+} from '../projects/members.service';
 import { WsAuthService, WsUser } from './ws-auth.service';
 
 /**
@@ -19,7 +23,8 @@ import { WsAuthService, WsUser } from './ws-auth.service';
  *
  * Комнаты:
  * - `chat:{chatId}` — участники конкретного чата (после rooms:join)
- * - `user:{userId}` — персональные уведомления (export:ready, notification:new)
+ * - `user:{userId}` — персональные уведомления (export:ready, notification:new,
+ *   project:membership_changed)
  *
  * Эмит-события (server → client):
  *  - `message:new`, `message:edited`, `message:deleted`, `message:read`
@@ -28,6 +33,10 @@ import { WsAuthService, WsUser } from './ws-auth.service';
  *  - `chat:visibility_toggled`
  *  - `export:ready`, `export:failed`
  *  - `notification:new`
+ *  - `project:membership_changed` — тихая UI-синхронизация (без push) о
+ *    добавлении/удалении участника. Шлётся всем `recipientUserIds` из
+ *    `MembersService.collectRecipientUserIds`, чтобы мобайл инвалидировал
+ *    активные проекты / команду / список чатов у каждого участника.
  */
 @WebSocketGateway({ namespace: '/chats' })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -162,6 +171,27 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     deepLink?: string;
   }): void {
     this.server.to(this.userRoom(payload.userId)).emit('notification:new', payload);
+  }
+
+  /**
+   * Тихая UI-синхронизация состава команды проекта. Source:
+   * `MembersService` (add/remove/leave) и `InvitationsService.joinByCode`.
+   * Шлём в `user:{X}` комнаты всех `recipientUserIds`, чтобы у каждого
+   * затронутого клиента мобайл инвалидировал список проектов / команды /
+   * чатов без pull-to-refresh. Push не плодим — он идёт отдельным каналом
+   * (`notification:new`) только адресату согласно ТЗ §13.2.
+   */
+  @OnEvent(PROJECT_MEMBERSHIP_CHANGED_EVENT)
+  onProjectMembershipChanged(payload: ProjectMembershipChangedPayload): void {
+    const wire = {
+      projectId: payload.projectId,
+      userId: payload.userId,
+      role: payload.role,
+      action: payload.action,
+    };
+    for (const uid of payload.recipientUserIds) {
+      this.server.to(this.userRoom(uid)).emit('project:membership_changed', wire);
+    }
   }
 
   // ---------- helpers ----------

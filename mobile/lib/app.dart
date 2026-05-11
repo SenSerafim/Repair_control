@@ -12,6 +12,9 @@ import 'core/routing/app_router.dart';
 import 'core/storage/offline_handlers.dart';
 import 'core/storage/offline_queue.dart';
 import 'core/theme/app_theme.dart';
+import 'features/chat/application/chats_controller.dart';
+import 'features/projects/application/membership_sync.dart';
+import 'features/projects/application/projects_list_controller.dart';
 import 'shared/widgets/widgets.dart';
 
 class RepairControlApp extends ConsumerStatefulWidget {
@@ -21,12 +24,14 @@ class RepairControlApp extends ConsumerStatefulWidget {
   ConsumerState<RepairControlApp> createState() => _RepairControlAppState();
 }
 
-class _RepairControlAppState extends ConsumerState<RepairControlApp> {
+class _RepairControlAppState extends ConsumerState<RepairControlApp>
+    with WidgetsBindingObserver {
   FcmService? _fcm;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServices());
   }
 
@@ -41,6 +46,10 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
       ..read(offlineQueueDrainProvider)
       // Автоподключение WebSocket при authenticated.
       ..read(socketAutoconnectProvider)
+      // Real-time membership-sync: при добавлении/удалении участника
+      // (на любом устройстве) WS-broadcast инвалидирует списки проектов,
+      // команды и чатов. Должен быть зарегистрирован ПОСЛЕ socketAutoconnect.
+      ..read(membershipSyncProvider)
       // Cross-session invalidation: на logout сбрасываем все user-scoped
       // провайдеры (см. core/access/user_scoped_providers.dart).
       ..read(userScopedInvalidationProvider);
@@ -57,7 +66,23 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Backfill при возврате из background: iOS/Android могут «убить» WS-
+    // соединение, и события за время offline теряются. socketAutoconnect
+    // сам поднимет коннект, а здесь дополнительно инвалидируем главные
+    // списки, чтобы пользователь увидел все изменения, произошедшие в фоне
+    // (новые проекты в команде, новые чаты, изменения состава).
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref
+        ..invalidate(activeProjectsProvider)
+        ..invalidate(myChatsProvider);
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fcm?.dispose();
     super.dispose();
   }
