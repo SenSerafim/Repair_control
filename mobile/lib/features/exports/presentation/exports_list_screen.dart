@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -56,7 +57,9 @@ class ExportsListScreen extends ConsumerWidget {
           if (jobs.isEmpty) {
             return AppEmptyState(
               title: 'Экспортов ещё нет',
-              subtitle: 'Создайте PDF-отчёт ленты или ZIP всего проекта.',
+              subtitle:
+                  'Сформируйте полный PDF-отчёт проекта, PDF-ленту за период '
+                  'или ZIP со всеми файлами.',
               icon: Icons.cloud_download_outlined,
               actionLabel: 'Создать',
               onAction: () async {
@@ -117,9 +120,12 @@ class _ExportCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.r12),
                 ),
                 child: Icon(
-                  job.kind == ExportKind.feedPdf
-                      ? Icons.picture_as_pdf_outlined
-                      : Icons.folder_zip_outlined,
+                  switch (job.kind) {
+                    ExportKind.feedPdf => Icons.picture_as_pdf_outlined,
+                    ExportKind.projectReportPdf =>
+                      Icons.description_outlined,
+                    ExportKind.projectZip => Icons.folder_zip_outlined,
+                  },
                   color: job.status.semaphore.text,
                   size: 20,
                 ),
@@ -163,6 +169,12 @@ class _ExportCard extends StatelessWidget {
               (job.downloadUrl?.isNotEmpty ?? false)) ...[
             const SizedBox(height: AppSpacing.x10),
             AppButton(
+              label: 'Скачать',
+              icon: Icons.download_rounded,
+              onPressed: () => _download(context),
+            ),
+            const SizedBox(height: AppSpacing.x6),
+            AppButton(
               label: 'Скопировать ссылку',
               icon: Icons.link_rounded,
               variant: AppButtonVariant.secondary,
@@ -192,5 +204,22 @@ class _ExportCard extends StatelessWidget {
       message: 'Ссылка на файл скопирована',
       kind: AppToastKind.success,
     );
+  }
+
+  Future<void> _download(BuildContext context) async {
+    final url = job.downloadUrl;
+    if (url == null) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!context.mounted) return;
+    if (!launched) {
+      AppToast.show(
+        context,
+        message: 'Не удалось открыть ссылку. Скопировали в буфер обмена.',
+        kind: AppToastKind.error,
+      );
+      await Clipboard.setData(ClipboardData(text: url));
+    }
   }
 }

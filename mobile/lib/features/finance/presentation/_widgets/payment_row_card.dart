@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/utils/money.dart';
-import '../../../../shared/widgets/status_pill.dart';
 import '../../domain/payment.dart';
 
 /// Строка выплаты в списке (e-budget Выплаты-tab):
-/// [icon-bg по статусу] [name + meta] [amount + status-text].
+/// [icon-bg по типу] [name + meta] [amount].
 /// Compact-card (radius 16) с лёгкой тенью sh1.
+///
+/// В упрощённой модели (2026-05-12) платёж = факт передачи денег, без
+/// статусов/подтверждений. Иконка и фон выбираются по `PaymentKind`.
 class PaymentRowCard extends StatelessWidget {
   const PaymentRowCard({
     required this.payment,
@@ -23,9 +25,7 @@ class PaymentRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final semaphore = payment.status.semaphore;
-    final statusColor = semaphore.text;
-    final iconBg = semaphore.bg;
+    final (iconColor, iconBg) = _kindStyle(payment.kind);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -43,18 +43,20 @@ class PaymentRowCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: iconBg,
                 borderRadius: BorderRadius.circular(AppRadius.r12),
+                border: const Border(
+                  top: BorderSide(
+                    color: AppShadows.innerHighlight,
+                    width: 1,
+                  ),
+                ),
               ),
-              child: Icon(
-                _iconForStatus(payment.status),
-                size: 18,
-                color: statusColor,
-              ),
+              child: Icon(payment.kind.icon, size: 18, color: iconColor),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
@@ -81,28 +83,14 @@ class PaymentRowCard extends StatelessWidget {
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  Money.format(payment.effectiveAmount),
-                  style: AppTextStyles.subtitle.copyWith(
-                    color: AppColors.n900,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  payment.status.displayName,
-                  style: AppTextStyles.tiny.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
+            Text(
+              Money.format(payment.amount),
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.n900,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+              ),
             ),
           ],
         ),
@@ -119,12 +107,10 @@ class PaymentRowCard extends StatelessWidget {
       'Корректировка${payment.comment == null ? '' : ': ${payment.comment}'}',
   };
 
-  IconData _iconForStatus(PaymentStatus s) => switch (s) {
-    PaymentStatus.pending => Icons.schedule_rounded,
-    PaymentStatus.confirmed => Icons.check_rounded,
-    PaymentStatus.disputed => Icons.error_outline_rounded,
-    PaymentStatus.resolved => Icons.gavel_rounded,
-    PaymentStatus.cancelled => Icons.close_rounded,
+  (Color, Color) _kindStyle(PaymentKind k) => switch (k) {
+    PaymentKind.advance => (AppColors.brand, AppColors.brandLight),
+    PaymentKind.distribution => (AppColors.greenDark, AppColors.greenLight),
+    PaymentKind.correction => (AppColors.n700, AppColors.n100),
   };
 
   String _fmtDate(DateTime d) {

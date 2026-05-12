@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/realtime/socket_service.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../finance/application/budget_controller.dart';
 import '../data/selfpurchase_repository.dart';
@@ -14,15 +17,80 @@ final selfpurchasesControllerProvider =
 
 class SelfpurchasesController
     extends FamilyAsyncNotifier<List<SelfPurchase>, String> {
+  // notification:new fallback на случай если approval:changed потерян
+  // (старый backend / гонка). Перекрывает основные lifecycle-события самозакупа.
+  static const _selfPurchaseNotificationKinds = <String>{
+    'selfpurchase_created',
+    'selfpurchase_forwarded',
+    'selfpurchase_approved',
+    'selfpurchase_rejected',
+  };
+
+  StreamSubscription<dynamic>? _approvalSub;
+  StreamSubscription<dynamic>? _notificationSub;
+  Timer? _refreshDebounce;
+
   @override
   Future<List<SelfPurchase>> build(String projectId) async {
-    final raw = await ref
-        .read(selfPurchaseRepositoryProvider)
-        .list(projectId: projectId);
+    // Real-time: бекенд эмитит approval:changed для всех selfpurchase_* feed-kinds
+    // (см. chats.gateway.ts → APPROVAL_FEED_KINDS). Адресат и инициатор получают
+    // событие в свою user:{id} комнату → мобайл тихо перетягивает список без
+    // pull-to-refresh, чтобы новый pending сразу появился с кнопкой принять/отклонить.
+    final socket = ref.read(socketServiceProvider);
+    _approvalSub = socket.on(SocketEvents.approvalChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != projectId) return;
+      // Прочие scope (plan / extra_work / stage_accept / material_purchase)
+      // нам не интересны — отсеиваем, чтобы не дёргать GET.
+      final scope = payload['scope']?.toString();
+      if (scope != null && scope != 'self_purchase') return;
+      _scheduleRefresh();
+    });
+    _notificationSub = socket.on(SocketEvents.notificationNew).listen((
+      payload,
+    ) {
+      if (payload is! Map) return;
+      final kind = payload['kind']?.toString();
+      if (kind == null || !_selfPurchaseNotificationKinds.contains(kind)) {
+        return;
+      }
+      _scheduleRefresh();
+    });
+    ref.onDispose(() {
+      _approvalSub?.cancel();
+      _notificationSub?.cancel();
+      _refreshDebounce?.cancel();
+    });
+
+    final raw = await _repo.list(projectId: projectId);
     return [...raw]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   SelfPurchaseRepository get _repo => ref.read(selfPurchaseRepositoryProvider);
+
+  /// Тихий refresh без перевода state в loading — дебаунс 400ms на случай
+  /// шторма событий (create → forward → approve приходят серией).
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final raw = await _repo.list(projectId: arg);
+        final sorted = [...raw]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        state = AsyncData(sorted);
+        // Если в свежем списке появился approved foreman→customer самозакуп,
+        // которого раньше не было approved-ом — это списание в бюджет, обновим.
+        if (sorted.any(
+          (sp) =>
+              sp.status == SelfPurchaseStatus.approved &&
+              sp.byRole == SelfPurchaseBy.foreman,
+        )) {
+          ref.invalidate(projectBudgetProvider(arg));
+        }
+      } on SelfPurchaseException {
+        // Тихий refresh: оставляем последнее успешное состояние.
+      }
+    });
+  }
 
   void _upsert(SelfPurchase r) {
     final cur = state.value ?? const <SelfPurchase>[];
@@ -83,10 +151,10 @@ class SelfpurchasesController
       final r = await fn();
       _upsert(r);
       // После forward оригинал master→foreman остался в списке как approved,
-      // плюс должен подтянуться новый foreman→customer pending. Перезапросим
-      // список целиком, чтобы UI показал обе записи.
+      // плюс должен подтянуться новый foreman→customer pending. Тихий refresh
+      // (без loading-стейта), чтобы UI показал обе записи без мигания.
       if (forwardedFromMaster) {
-        ref.invalidateSelf();
+        _scheduleRefresh();
       }
       // Одобренный foreman→customer самозакуп попадает в бюджет.
       if (r.status == SelfPurchaseStatus.approved && !forwardedFromMaster) {

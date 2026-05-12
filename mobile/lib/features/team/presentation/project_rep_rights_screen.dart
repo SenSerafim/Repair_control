@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/access/representative_rights.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/domain/membership.dart';
 import '../data/team_repository.dart';
+import '../domain/representative_rights_l10n.dart';
 
-/// s-rep-rights — экран настройки прав представителя в проекте.
+/// s-rep-rights — экран настройки прав представителя при добавлении в проект.
 ///
-/// Содержит карточку представителя сверху и две секции тоглов:
-/// «Просмотр» (always-on Этапы и шаги, плюс Бюджет проекта/этапов и Лента
-/// финансов) и «Действия» (Добавление этапов, Назначение бригадиров,
-/// Принятие/отклонение работ, Добавление подшагов).
+/// Все 10 флагов `RepresentativeRights` (см.
+/// `backend/libs/rbac/src/rbac.types.ts`) разнесены в две секции:
+///   • «Просмотр» — права без побочных эффектов (бюджет).
+///   • «Действия» — write-операции (создание этапов, согласования, команда,
+///     финансы, материалы и инструмент).
+/// Ключи отправляемого JSON — это `RepresentativeRight.jsonKey`, которые
+/// принимает backend `sanitizeRepresentativeRights`.
 class ProjectRepRightsScreen extends ConsumerStatefulWidget {
   const ProjectRepRightsScreen({
     required this.projectId,
@@ -31,39 +36,31 @@ class ProjectRepRightsScreen extends ConsumerStatefulWidget {
 
 class _ProjectRepRightsScreenState
     extends ConsumerState<ProjectRepRightsScreen> {
-  // Просмотр.
-  bool _viewBudgetProject = true;
-  bool _viewBudgetStages = true;
-  bool _viewFinanceFeed = false;
-  // Действия.
-  bool _addStages = false;
-  bool _assignContractors = false;
-  bool _approveWorks = true;
-  bool _addSubsteps = true;
+  late final Map<RepresentativeRight, bool> _rights = {
+    for (final r in RepresentativeRight.values) r: false,
+  };
 
   bool _busy = false;
 
-  Map<String, bool> _permissions() => {
-    'canSeeProjectBudget': _viewBudgetProject,
-    'canSeeStageBudget': _viewBudgetStages,
-    'canSeeFinanceFeed': _viewFinanceFeed,
-    'canAddStages': _addStages,
-    'canAssignContractors': _assignContractors,
-    'canApproveWorks': _approveWorks,
-    'canAddSubsteps': _addSubsteps,
+  // Какие права попадают в секцию «Просмотр». Остальные — в «Действия».
+  static const _viewRights = <RepresentativeRight>{
+    RepresentativeRight.canSeeBudget,
+  };
+
+  Map<String, bool> _toPermissionsJson() => <String, bool>{
+    for (final entry in _rights.entries) entry.key.jsonKey: entry.value,
   };
 
   Future<void> _save() async {
     setState(() => _busy = true);
     try {
-      // Сначала добавляем как representative с правами.
       await ref
           .read(teamRepositoryProvider)
           .addMember(
             projectId: widget.projectId,
             userId: widget.user.id,
             role: MembershipRole.representative,
-            permissions: _permissions(),
+            permissions: _toPermissionsJson(),
           );
       if (!mounted) return;
       AppToast.show(
@@ -87,6 +84,12 @@ class _ProjectRepRightsScreenState
   Widget build(BuildContext context) {
     final fullName = '${widget.user.firstName} ${widget.user.lastName}'.trim();
 
+    final viewRights = <RepresentativeRight>[];
+    final actionRights = <RepresentativeRight>[];
+    for (final r in RepresentativeRight.values) {
+      (_viewRights.contains(r) ? viewRights : actionRights).add(r);
+    }
+
     return AppScaffold(
       showBack: true,
       title: 'Права представителя',
@@ -94,7 +97,6 @@ class _ProjectRepRightsScreenState
       padding: EdgeInsets.zero,
       body: ListView(
         children: [
-          // Карточка представителя.
           Padding(
             padding: const EdgeInsets.all(AppSpacing.x16),
             child: Row(
@@ -135,90 +137,32 @@ class _ProjectRepRightsScreenState
               ],
             ),
           ),
-          // Секция «Просмотр».
-          _SectionLabel(text: 'Просмотр'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-            child: AppMenuGroup(
-              children: [
-                AppMenuRow(
-                  label: 'Этапы и шаги',
-                  sub: 'Всегда включено',
-                  disabled: true,
-                  trailing: const _Toggle(value: true, disabled: true),
+          const _SectionLabel(text: 'Просмотр'),
+          _RightsGroup(
+            children: [
+              const _ReadOnlyRow(
+                title: 'Этапы и шаги',
+                sub: 'Всегда включено',
+              ),
+              for (final right in viewRights)
+                _RightToggleRow(
+                  right: right,
+                  value: _rights[right] ?? false,
+                  onChanged: (v) => setState(() => _rights[right] = v),
                 ),
-                AppMenuRow(
-                  label: 'Бюджет проекта',
-                  trailing: _Toggle(
-                    value: _viewBudgetProject,
-                    onChanged: (v) => setState(() => _viewBudgetProject = v),
-                  ),
-                  onTap: () =>
-                      setState(() => _viewBudgetProject = !_viewBudgetProject),
-                ),
-                AppMenuRow(
-                  label: 'Бюджет этапов',
-                  trailing: _Toggle(
-                    value: _viewBudgetStages,
-                    onChanged: (v) => setState(() => _viewBudgetStages = v),
-                  ),
-                  onTap: () =>
-                      setState(() => _viewBudgetStages = !_viewBudgetStages),
-                ),
-                AppMenuRow(
-                  label: 'Лента событий (финансы)',
-                  trailing: _Toggle(
-                    value: _viewFinanceFeed,
-                    onChanged: (v) => setState(() => _viewFinanceFeed = v),
-                  ),
-                  onTap: () =>
-                      setState(() => _viewFinanceFeed = !_viewFinanceFeed),
-                ),
-              ],
-            ),
+            ],
           ),
           const SizedBox(height: AppSpacing.x12),
-          // Секция «Действия».
-          _SectionLabel(text: 'Действия'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-            child: AppMenuGroup(
-              children: [
-                AppMenuRow(
-                  label: 'Добавление этапов',
-                  trailing: _Toggle(
-                    value: _addStages,
-                    onChanged: (v) => setState(() => _addStages = v),
-                  ),
-                  onTap: () => setState(() => _addStages = !_addStages),
+          const _SectionLabel(text: 'Действия'),
+          _RightsGroup(
+            children: [
+              for (final right in actionRights)
+                _RightToggleRow(
+                  right: right,
+                  value: _rights[right] ?? false,
+                  onChanged: (v) => setState(() => _rights[right] = v),
                 ),
-                AppMenuRow(
-                  label: 'Назначение бригадиров',
-                  trailing: _Toggle(
-                    value: _assignContractors,
-                    onChanged: (v) => setState(() => _assignContractors = v),
-                  ),
-                  onTap: () =>
-                      setState(() => _assignContractors = !_assignContractors),
-                ),
-                AppMenuRow(
-                  label: 'Принятие / отклонение работ',
-                  trailing: _Toggle(
-                    value: _approveWorks,
-                    onChanged: (v) => setState(() => _approveWorks = v),
-                  ),
-                  onTap: () => setState(() => _approveWorks = !_approveWorks),
-                ),
-                AppMenuRow(
-                  label: 'Добавление подшагов',
-                  trailing: _Toggle(
-                    value: _addSubsteps,
-                    onChanged: (v) => setState(() => _addSubsteps = v),
-                  ),
-                  onTap: () => setState(() => _addSubsteps = !_addSubsteps),
-                ),
-              ],
-            ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.x16),
@@ -230,6 +174,60 @@ class _ProjectRepRightsScreenState
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RightsGroup extends StatelessWidget {
+  const _RightsGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      child: AppMenuGroup(children: children),
+    );
+  }
+}
+
+class _RightToggleRow extends StatelessWidget {
+  const _RightToggleRow({
+    required this.right,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final RepresentativeRight right;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = kRepresentativeRightLabels[right];
+    return AppMenuRow(
+      label: label?.title ?? right.jsonKey,
+      sub: label?.description,
+      trailing: _Toggle(value: value, onChanged: onChanged),
+      onTap: () => onChanged(!value),
+    );
+  }
+}
+
+class _ReadOnlyRow extends StatelessWidget {
+  const _ReadOnlyRow({required this.title, required this.sub});
+
+  final String title;
+  final String sub;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppMenuRow(
+      label: title,
+      sub: sub,
+      disabled: true,
+      trailing: const _Toggle(value: true, disabled: true),
     );
   }
 }

@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/finance/data/payments_repository.dart';
-import '../../features/materials/data/materials_repository.dart';
 import '../../features/notes/data/notes_repository.dart';
 import '../../features/notes/domain/note.dart';
 import '../../features/selfpurchase/data/selfpurchase_repository.dart';
@@ -22,9 +20,7 @@ void registerOfflineHandlers(ProviderContainer container) {
   final stepsRepo = container.read(stepsRepositoryProvider);
   final notesRepo = container.read(notesRepositoryProvider);
   final stagesRepo = container.read(stagesRepositoryProvider);
-  final paymentsRepo = container.read(paymentsRepositoryProvider);
   final selfpurchaseRepo = container.read(selfPurchaseRepositoryProvider);
-  final materialsRepo = container.read(materialsRepositoryProvider);
 
   queue
     ..registerHandler(OfflineActionKind.stepToggle, (a) async {
@@ -74,25 +70,12 @@ void registerOfflineHandlers(ProviderContainer container) {
         stageId: a.payload['stageId'] as String,
       );
     })
-    ..registerHandler(OfflineActionKind.paymentDispute, (a) async {
-      await paymentsRepo.dispute(
-        id: a.payload['paymentId'] as String,
-        reason: a.payload['reason'] as String,
-      );
-    })
     ..registerHandler(OfflineActionKind.selfpurchaseCreate, (a) async {
       await selfpurchaseRepo.create(
         projectId: a.payload['projectId'] as String,
         amount: (a.payload['amount'] as num).toInt(),
         stageId: a.payload['stageId'] as String?,
         comment: a.payload['comment'] as String?,
-      );
-    })
-    ..registerHandler(OfflineActionKind.materialMarkBought, (a) async {
-      await materialsRepo.markBought(
-        requestId: a.payload['requestId'] as String,
-        itemId: a.payload['itemId'] as String,
-        pricePerUnit: (a.payload['pricePerUnit'] as num).toInt(),
       );
     });
 }

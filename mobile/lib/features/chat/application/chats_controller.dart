@@ -24,15 +24,98 @@ final projectChatsProvider =
     );
 
 /// Агрегированные чаты пользователя через все активные проекты —
-/// для mobile-таба «Чаты». Возвращает items с project-context'ом
-/// для группировки UI.
+/// для mobile-таба «Чаты». Live-update через WS: при notification:new
+/// (kind=chat_message_new / membership_added) или project:membership_changed
+/// инвалидируется сам провайдер — список и unread-бейдж обновляются
+/// без pull-to-refresh.
 final myChatsProvider = FutureProvider<List<MyChatItem>>((ref) async {
+  final socket = ref.read(socketServiceProvider);
+  Timer? debounce;
+  final notifSub = socket.on(SocketEvents.notificationNew).listen((payload) {
+    if (payload is! Map) return;
+    final kind = payload['kind']?.toString();
+    if (kind != 'chat_message_new' && kind != 'membership_added') return;
+    debounce?.cancel();
+    debounce = Timer(const Duration(milliseconds: 600), ref.invalidateSelf);
+  });
+  final membershipSub = socket
+      .on(SocketEvents.projectMembershipChanged)
+      .listen((_) {
+        debounce?.cancel();
+        debounce = Timer(const Duration(milliseconds: 400), ref.invalidateSelf);
+      });
+  // chat:added — личный сигнал «тебя добавили в чат». Минимальная задержка,
+  // потому что пользователь только что попал в команду и ждёт увидеть чат.
+  final chatAddedSub = socket.on(SocketEvents.chatAdded).listen((_) {
+    debounce?.cancel();
+    debounce = Timer(const Duration(milliseconds: 200), ref.invalidateSelf);
+  });
+  ref.onDispose(() {
+    debounce?.cancel();
+    notifSub.cancel();
+    membershipSub.cancel();
+    chatAddedSub.cancel();
+  });
   return ref.read(chatsRepositoryProvider).listMine();
 });
 
 class ProjectChatsController extends FamilyAsyncNotifier<List<Chat>, String> {
+  StreamSubscription<dynamic>? _liveSub;
+  StreamSubscription<dynamic>? _chatAddedSub;
+  StreamSubscription<dynamic>? _membershipSub;
+  Timer? _liveDebounce;
+
   @override
   Future<List<Chat>> build(String projectId) async {
+    final socket = ref.read(socketServiceProvider);
+
+    Future<void> reload() async {
+      try {
+        final raw = await ref.read(chatsRepositoryProvider).listProject(arg);
+        state = AsyncData(_sortChats(raw));
+      } on ChatsException {
+        /* silent */
+      }
+    }
+
+    void scheduleReload(Duration delay) {
+      _liveDebounce?.cancel();
+      _liveDebounce = Timer(delay, reload);
+    }
+
+    _liveSub = socket.on(SocketEvents.notificationNew).listen((payload) {
+      if (payload is! Map) return;
+      final kind = payload['kind']?.toString();
+      if (kind != 'chat_message_new') return;
+      scheduleReload(const Duration(milliseconds: 600));
+    });
+    // chat:added — пришёл личный сигнал о новом чате. Перезагружаем список
+    // только если чат относится к этому проекту, иначе игнорируем (другой
+    // экран обновит свой список через myChatsProvider).
+    _chatAddedSub = socket.on(SocketEvents.chatAdded).listen((payload) {
+      if (payload is! Map) return;
+      final pid = payload['projectId']?.toString();
+      if (pid != null && pid != arg) return;
+      scheduleReload(const Duration(milliseconds: 200));
+    });
+    // project:membership_changed — состав изменился, кто-то мог войти/выйти.
+    // На project-чат это влияет (список participants для UI «кто в чате»);
+    // также сам факт появления нового project-чата для нового участника.
+    _membershipSub = socket
+        .on(SocketEvents.projectMembershipChanged)
+        .listen((payload) {
+      if (payload is! Map) return;
+      final pid = payload['projectId']?.toString();
+      if (pid != null && pid != arg) return;
+      scheduleReload(const Duration(milliseconds: 400));
+    });
+    ref.onDispose(() {
+      _liveDebounce?.cancel();
+      _liveSub?.cancel();
+      _chatAddedSub?.cancel();
+      _membershipSub?.cancel();
+    });
+
     final raw = await ref.read(chatsRepositoryProvider).listProject(projectId);
     return _sortChats(raw);
   }

@@ -86,6 +86,11 @@ const mkPrisma = () => {
       // Тесты которым нужна обратная ситуация переопределяют моком.
       count: jest.fn().mockResolvedValue(0),
     },
+    approval: {
+      // submitPlan() проверяет «нет ли уже pending plan-approval» —
+      // дефолтно нет, тест может переопределить.
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     pause: {
       create: jest.fn(({ data }: any) => {
         const p = { id: `ps${++pauseSeq}`, startedAt: new Date(NOW), endedAt: null, ...data };
@@ -635,6 +640,80 @@ describe('StagesService.sendToReview — создаёт Approval scope=stage_acc
         requestedById: 'f1',
       }),
     );
+  });
+
+  it('submitPlan создаёт approval scope=plan c stageId, addresseeId=ownerId', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    await svc.submitPlan(s.id, 'f1');
+    expect(approvals.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'plan',
+        projectId: 'p1',
+        stageId: s.id,
+        addresseeId: 'cust-owner',
+        requestedById: 'f1',
+      }),
+    );
+    // На самом этапе пока planApproved=false (выставится при approve).
+    expect(stages.get(s.id).planApproved).toBeFalsy();
+  });
+
+  it('submitPlan идемпотентен: повторный вызов возвращает существующий pending approval', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    (prisma as any).approval.findFirst = jest.fn().mockResolvedValue({
+      id: 'a-existing',
+      scope: 'plan',
+      status: 'pending',
+    });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    const result = await svc.submitPlan(s.id, 'f1');
+    expect((result as any).id).toBe('a-existing');
+    expect(approvals.request).not.toHaveBeenCalled();
+  });
+
+  it('submitPlan на уже одобренном плане → ConflictError', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    stages.get(s.id).planApproved = true;
+    await expect(svc.submitPlan(s.id, 'f1')).rejects.toThrow(ConflictError);
+    expect(approvals.request).not.toHaveBeenCalled();
   });
 
   it('блокирует sendToReview если есть незавершённые шаги (ТЗ §2.4)', async () => {

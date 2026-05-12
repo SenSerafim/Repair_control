@@ -25,6 +25,7 @@ class MaterialMetaCard extends StatelessWidget {
         color: AppColors.n0,
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200),
+        boxShadow: AppShadows.shCard,
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: widgets),
     );

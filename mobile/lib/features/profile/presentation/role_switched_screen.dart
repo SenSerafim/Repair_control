@@ -26,18 +26,29 @@ class RoleSwitchedScreen extends StatelessWidget {
         children: [
           const Spacer(flex: 2),
           Container(
-            width: 72,
-            height: 72,
+            width: 80,
+            height: 80,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               gradient: AppGradients.successHero,
               borderRadius: BorderRadius.circular(AppRadius.r24),
-              boxShadow: AppShadows.shGreen,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x6610B981),
+                  offset: Offset(0, 12),
+                  blurRadius: 32,
+                ),
+                BoxShadow(
+                  color: Color(0x33059669),
+                  offset: Offset(0, 2),
+                  blurRadius: 6,
+                ),
+              ],
             ),
-            child: Icon(
+            child: const Icon(
               PhosphorIconsFill.usersThree,
               color: AppColors.n0,
-              size: 32,
+              size: 36,
             ),
           ),
           const SizedBox(height: AppSpacing.x16),

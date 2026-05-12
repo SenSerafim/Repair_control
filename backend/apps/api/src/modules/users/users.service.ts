@@ -7,6 +7,7 @@ import {
   PrismaService,
 } from '@app/common';
 import { SystemRole } from '@app/rbac';
+import { MembersService } from '../projects/members.service';
 
 export interface UpdateProfileInput {
   firstName?: string;
@@ -23,7 +24,10 @@ export interface RegisterDeviceInput {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly members: MembersService,
+  ) {}
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -42,6 +46,11 @@ export class UsersService {
    * «Команда» (агрегированный inbox), чтобы пользователь не открывал
    * каждый проект по отдельности.
    *
+   * ТЗ §1.4: видимость иерархическая. Каждый проект фильтруется через
+   * `MembersService.applyVisibility` — единый источник правды, общий с
+   * `GET /projects/:id/members`. Без этого заказчик мог через обходной
+   * /api/me/teammates получить имена и телефоны мастеров своего бригадира.
+   *
    * Возвращает список групп `{ project, owner, members[] }` —
    * клиент группирует UI по проекту.
    */
@@ -49,7 +58,7 @@ export class UsersService {
     const projects = await this.prisma.project.findMany({
       where: {
         archivedAt: null,
-        OR: [{ ownerId: userId }, { memberships: { some: { userId } } }],
+        OR: [{ ownerId: userId }, { memberships: { some: { userId, removedAt: null } } }],
       },
       select: {
         id: true,
@@ -65,11 +74,14 @@ export class UsersService {
           },
         },
         memberships: {
+          // П2.16: soft-removed (removedAt!=null) не показываем в команде.
+          where: { removedAt: null },
           select: {
             id: true,
             userId: true,
             role: true,
             stageIds: true,
+            invitedById: true,
             permissions: true,
             user: {
               select: {
@@ -85,11 +97,22 @@ export class UsersService {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return projects.map((p) => ({
-      project: { id: p.id, title: p.title, ownerId: p.ownerId },
-      owner: p.owner,
-      members: p.memberships,
-    }));
+
+    return Promise.all(
+      projects.map(async (p) => {
+        // Дедуп: owner отдаём отдельным полем, дубликат через явную
+        // customer-membership на ownerId не рендерим повторно.
+        const deduped = p.memberships.filter(
+          (m) => !(m.userId === p.ownerId && m.role === 'customer'),
+        );
+        const visibleMembers = await this.members.applyVisibility(deduped, userId, p.ownerId, p.id);
+        return {
+          project: { id: p.id, title: p.title, ownerId: p.ownerId },
+          owner: p.owner,
+          members: visibleMembers,
+        };
+      }),
+    );
   }
 
   async updateProfile(userId: string, input: UpdateProfileInput) {

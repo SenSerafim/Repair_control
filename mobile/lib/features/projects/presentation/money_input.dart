@@ -33,6 +33,7 @@ class MoneyInput extends StatelessWidget {
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[\d\s]')),
+            const _ThousandsFormatter(),
           ],
           decoration: InputDecoration(
             hintText: hint ?? '0',
@@ -77,5 +78,56 @@ class MoneyInput extends StatelessWidget {
   /// Устанавливает значение из копеек.
   static void setFromKopecks(TextEditingController c, int kopecks) {
     c.text = Money.format(kopecks, currency: '').trim();
+  }
+}
+
+/// Live thousand-grouping formatter. На каждом keystroke перегруппирует
+/// цифры в "350 000". Курсор сохраняем по числу цифр слева от курсора, а
+/// не по абсолютному offset — иначе вставка пробела сдвигает каретку и
+/// пользователь печатает «не туда».
+class _ThousandsFormatter extends TextInputFormatter {
+  const _ThousandsFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digitsOnly = newValue.text.replaceAll(RegExp(r'\s'), '');
+    if (digitsOnly.isEmpty) {
+      return TextEditingValue.empty;
+    }
+    // Считаем сколько цифр (без пробелов) было слева от курсора до форматирования.
+    final selOffset = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    final digitsBeforeCursor = newValue.text
+        .substring(0, selOffset)
+        .replaceAll(RegExp(r'\s'), '')
+        .length;
+    final grouped = _group(digitsOnly);
+
+    // Восстанавливаем позицию каретки по числу цифр слева.
+    var seen = 0;
+    var cursor = grouped.length;
+    for (var i = 0; i < grouped.length; i++) {
+      if (grouped[i] != ' ') seen++;
+      if (seen == digitsBeforeCursor) {
+        cursor = i + 1;
+        break;
+      }
+    }
+    return TextEditingValue(
+      text: grouped,
+      selection: TextSelection.collapsed(offset: cursor),
+    );
+  }
+
+  static String _group(String digits) {
+    final buf = StringBuffer();
+    final n = digits.length;
+    for (var i = 0; i < n; i++) {
+      if (i > 0 && (n - i) % 3 == 0) buf.write(' ');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
   }
 }

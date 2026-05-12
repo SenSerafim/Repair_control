@@ -22,10 +22,22 @@ class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
 
   PaymentsRepository get _repo => ref.read(paymentsRepositoryProvider);
 
-  void _invalidateBudgetAndProject() {
+  /// После любого изменения платежей нужно обновить:
+  /// 1) бюджет проекта (planned/spent),
+  /// 2) карточку проекта (списки/индикаторы),
+  /// 3) money-flow (кассу бригадира, историю движений) — family invalidate
+  ///    сбрасывает все варианты date-range,
+  /// 4) деталь конкретного платежа, если он передан (parent advance после
+  ///    distribute должен пересчитать `children` / `remainingToDistribute`).
+  void _invalidateAfterMutation({String? paymentDetailId}) {
     ref
       ..invalidate(projectBudgetProvider(arg))
-      ..invalidate(projectControllerProvider(arg));
+      ..invalidate(projectControllerProvider(arg))
+      ..invalidate(moneyFlowProvider(arg))
+      ..invalidate(moneyFlowFilteredProvider);
+    if (paymentDetailId != null) {
+      ref.invalidate(paymentDetailProvider(paymentDetailId));
+    }
   }
 
   void _upsert(Payment p) {
@@ -54,7 +66,7 @@ class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
         photoKey: photoKey,
       );
       _upsert(p);
-      _invalidateBudgetAndProject();
+      _invalidateAfterMutation();
       return null;
     } on PaymentsException catch (e) {
       return e.failure;
@@ -77,67 +89,31 @@ class PaymentsController extends FamilyAsyncNotifier<List<Payment>, String> {
         comment: comment,
       );
       _upsert(p);
-      _invalidateBudgetAndProject();
+      _invalidateAfterMutation(paymentDetailId: parentPaymentId);
       return null;
     } on PaymentsException catch (e) {
       return e.failure;
     }
   }
 
-  Future<AuthFailure?> confirm(String id) async {
-    try {
-      final p = await _repo.confirm(id);
-      _upsert(p);
-      _invalidateBudgetAndProject();
-      return null;
-    } on PaymentsException catch (e) {
-      return e.failure;
-    }
-  }
-
-  Future<AuthFailure?> cancel(String id) async {
-    try {
-      final p = await _repo.cancel(id);
-      _upsert(p);
-      _invalidateBudgetAndProject();
-      return null;
-    } on PaymentsException catch (e) {
-      return e.failure;
-    }
-  }
-
-  Future<AuthFailure?> dispute({
-    required String id,
-    required String reason,
-    List<String>? photoKeys,
+  /// Простая выплата мастеру из кассы бригадира — без выбора parent-аванса.
+  /// Кнопка-сценарий по умолчанию на BudgetScreen для роли foreman.
+  Future<AuthFailure?> distributeFromWallet({
+    required String toUserId,
+    required int amount,
+    String? stageId,
+    String? comment,
   }) async {
     try {
-      final p = await _repo.dispute(
-        id: id,
-        reason: reason,
-        photoKeys: photoKeys,
+      final p = await _repo.distributeFromWallet(
+        projectId: arg,
+        toUserId: toUserId,
+        amount: amount,
+        stageId: stageId,
+        comment: comment,
       );
       _upsert(p);
-      _invalidateBudgetAndProject();
-      return null;
-    } on PaymentsException catch (e) {
-      return e.failure;
-    }
-  }
-
-  Future<AuthFailure?> resolve({
-    required String id,
-    required String resolution,
-    int? adjustAmount,
-  }) async {
-    try {
-      final p = await _repo.resolve(
-        id: id,
-        resolution: resolution,
-        adjustAmount: adjustAmount,
-      );
-      _upsert(p);
-      _invalidateBudgetAndProject();
+      _invalidateAfterMutation();
       return null;
     } on PaymentsException catch (e) {
       return e.failure;

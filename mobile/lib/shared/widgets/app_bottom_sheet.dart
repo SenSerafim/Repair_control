@@ -46,9 +46,16 @@ class _AppBottomSheetBody extends StatelessWidget {
           decoration: const BoxDecoration(
             color: AppColors.n0,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppRadius.r28),
-              topRight: Radius.circular(AppRadius.r28),
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x330D1229),
+                offset: Offset(0, -10),
+                blurRadius: 40,
+              ),
+            ],
           ),
           padding: AppSpacing.bottomSheet,
           // ConstrainedBox + Column[Flexible] позволяет content'у sheet'а
@@ -62,12 +69,12 @@ class _AppBottomSheetBody extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.x16),
+                  width: 44,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.x20),
                   decoration: BoxDecoration(
                     color: AppColors.n200,
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
                 Flexible(child: child),

@@ -326,16 +326,19 @@ class _InfoBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Дизайн HTML `.info-box`: нейтральный n100 фон + n600 текст
+    // (не brand-цветной). Раньше использовали brandLight/brandDark —
+    // карточка слишком сильно конкурировала с содержимым архива.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.brandLight,
+        color: AppColors.n100,
         borderRadius: BorderRadius.circular(AppRadius.r12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.brand),
+          Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.n500),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -343,7 +346,7 @@ class _InfoBox extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.brandDark,
+                color: AppColors.n600,
                 height: 1.45,
               ),
             ),

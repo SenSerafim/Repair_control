@@ -12,10 +12,13 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
+import '../../projects/data/projects_repository.dart';
+import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
 import '../../team/data/team_repository.dart';
 import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
+import '../domain/chat.dart';
 import '../domain/message.dart';
 
 /// Telegram-стиль чат проекта (П1.5).
@@ -63,11 +66,15 @@ class _ChatConversationScreenState
       ..removeListener(_onInputChanged)
       ..dispose();
     _typingDebounce?.cancel();
-    if (_isTyping) {
-      ref.read(socketServiceProvider).typing(widget.chatId, typing: false);
-    }
     final container = _containerCache;
     final chatId = widget.chatId;
+    // ref в dispose() стреляет _assertNotDisposed — берём провайдеры из кэша
+    // контейнера, он переживает виджет.
+    if (_isTyping && container != null) {
+      container
+          .read(socketServiceProvider)
+          .typing(chatId, typing: false);
+    }
     if (container != null) {
       Future.microtask(() {
         if (container.read(currentChatIdProvider) == chatId) {
@@ -122,12 +129,27 @@ class _ChatConversationScreenState
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(messagesProvider(widget.chatId));
-    final chatAsync = ref.watch(_chatTitleProvider(widget.chatId));
+    final chatAsync = ref.watch(_chatDetailProvider(widget.chatId));
     final me = ref.read(authControllerProvider).userId;
+    final chat = chatAsync.asData?.value;
+    final projectId = chat?.projectId;
+    // Подгружаем участников + owner, чтобы рендерить реальные имена и фото
+    // в bubble вместо «6-символьного хвостика UUID».
+    final teamAsync = projectId == null
+        ? null
+        : ref.watch(teamControllerProvider(projectId));
+    final ownerAsync = projectId == null
+        ? null
+        : ref.watch(_projectOwnerProvider(projectId));
+    final senders = _SenderIndex.build(
+      team: teamAsync?.value,
+      owner: ownerAsync?.value,
+      chat: chat,
+    );
 
     return AppScaffold(
       showBack: true,
-      title: chatAsync.maybeWhen(data: (title) => title, orElse: () => 'Чат'),
+      title: _resolveTitle(chat, ownerAsync?.value),
       padding: EdgeInsets.zero,
       body: Column(
         children: [
@@ -147,9 +169,11 @@ class _ChatConversationScreenState
                   );
                 }
                 final canWrite = ref.watch(canProvider(DomainAction.chatWrite));
-                final isGroupChat =
-                    chatAsync.asData != null &&
-                    _isGroupChatTitle(chatAsync.asData!.value);
+                // Sender labels во всех чатах кроме personal. Раньше эвристика
+                // по тексту title ('чат'/'проект'/'этап') давала ложные
+                // срабатывания для project-чата с title=null.
+                final showSenderLabels =
+                    chat == null || chat.type != ChatType.personal;
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -160,6 +184,9 @@ class _ChatConversationScreenState
                     final showDateSeparator =
                         prev == null ||
                         !_sameDay(prev.createdAt, msg.createdAt);
+                    final sender = senders.byId(msg.authorId);
+                    final prevSameAuthor =
+                        prev != null && prev.authorId == msg.authorId;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -180,7 +207,14 @@ class _ChatConversationScreenState
                         _Bubble(
                           message: msg,
                           isMine: msg.authorId == me,
-                          showSenderLabel: isGroupChat && msg.authorId != me,
+                          sender: sender,
+                          showSenderLabel:
+                              showSenderLabels &&
+                              msg.authorId != me &&
+                              !prevSameAuthor,
+                          showAvatar:
+                              msg.authorId != me &&
+                              (showDateSeparator || !prevSameAuthor),
                           onEdit: canWrite ? () => _promptEdit(msg) : null,
                           onDelete: canWrite
                               ? () => ref
@@ -189,7 +223,7 @@ class _ChatConversationScreenState
                                     )
                                     .delete(msg.id)
                               : null,
-                          onTap: msg.authorId == me
+                          onTapAvatar: msg.authorId == me
                               ? null
                               : () => _showMemberCard(msg.authorId),
                         ),
@@ -208,10 +242,19 @@ class _ChatConversationScreenState
     );
   }
 
-  bool _isGroupChatTitle(String title) {
-    return title.toLowerCase().contains('чат') ||
-        title.toLowerCase().contains('проект') ||
-        title.toLowerCase().contains('этап');
+  String _resolveTitle(Chat? chat, _OwnerUser? owner) {
+    if (chat == null) return 'Чат';
+    if (chat.title != null && chat.title!.isNotEmpty) return chat.title!;
+    switch (chat.type) {
+      case ChatType.project:
+        return 'Общий чат проекта';
+      case ChatType.stage:
+        return 'Чат этапа';
+      case ChatType.group:
+        return 'Группа';
+      case ChatType.personal:
+        return owner?.fullName ?? 'Личный чат';
+    }
   }
 
   bool _sameDay(DateTime a, DateTime b) {
@@ -228,33 +271,59 @@ class _ChatConversationScreenState
     return DateFormat('d MMMM y', 'ru').format(t);
   }
 
-  /// П1.4 — карточка собеседника при тапе на чужое сообщение.
+  /// П1.4 — карточка собеседника при тапе на кружок-аватар.
+  /// Раньше fallback'или на `team.members.first` если автор не найден →
+  /// открывалась карточка случайного человека или тихо ничего. Теперь
+  /// корректно покрываем owner-customer'а через `_projectOwnerProvider`;
+  /// при отсутствии данных — toast, а не молчание.
   Future<void> _showMemberCard(String authorUserId) async {
-    final chat = await ref.read(chatsRepositoryProvider).get(widget.chatId);
-    final projectId = chat.projectId;
-    if (projectId == null || !mounted) return;
-    final teamAsync = ref.read(teamControllerProvider(projectId));
-    final team = teamAsync.value;
-    if (team == null || !mounted) return;
-    final m = team.members.firstWhere(
-      (mm) => mm.userId == authorUserId,
-      orElse: () => team.members.first,
-    );
-    if (m.userId != authorUserId) return; // не нашли — молча
-    final user = m.user;
-    if (user == null || !mounted) return;
+    final chat = ref.read(_chatDetailProvider(widget.chatId)).asData?.value;
+    final projectId = chat?.projectId;
+    if (chat == null || projectId == null || !mounted) return;
+    final team = ref.read(teamControllerProvider(projectId)).asData?.value;
+    final owner = ref.read(_projectOwnerProvider(projectId)).asData?.value;
+
+    String firstName;
+    String lastName;
+    String? phone;
+    String? avatarUrl;
+    String roleLabel;
+
+    final m = team?.members.where((mm) => mm.userId == authorUserId).firstOrNull;
+    final mu = m?.user;
+    if (mu != null) {
+      firstName = mu.firstName;
+      lastName = mu.lastName;
+      phone = mu.phone;
+      avatarUrl = mu.avatarUrl;
+      roleLabel = m!.role.displayName;
+    } else if (owner != null && owner.id == authorUserId) {
+      firstName = owner.firstName;
+      lastName = owner.lastName;
+      phone = owner.phone;
+      avatarUrl = owner.avatarUrl;
+      roleLabel = 'Заказчик';
+    } else {
+      AppToast.show(
+        context,
+        message: 'Информация об участнике не загружена',
+        kind: AppToastKind.info,
+      );
+      return;
+    }
+
     final commonProjects = await _loadCommonProjects(authorUserId, projectId);
     if (!mounted) return;
     await showMemberCardSheet(
       context,
       data: MemberCardData(
-        userId: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        roleInCurrentProject: m.role.displayName,
-        currentProjectTitle: chat.title ?? 'Проект',
-        phone: user.phone,
-        avatarUrl: user.avatarUrl,
+        userId: authorUserId,
+        firstName: firstName,
+        lastName: lastName,
+        roleInCurrentProject: roleLabel,
+        currentProjectTitle: owner?.projectTitle ?? chat.title ?? 'Проект',
+        phone: phone,
+        avatarUrl: avatarUrl,
         commonProjects: commonProjects,
       ),
     );
@@ -329,34 +398,159 @@ class _ChatConversationScreenState
   }
 }
 
-final _chatTitleProvider = FutureProvider.family.autoDispose<String, String>((
+/// Полный Chat — для заголовка, projectId и chat.type (sender-labels стратегия).
+final _chatDetailProvider = FutureProvider.family.autoDispose<Chat, String>((
   ref,
   chatId,
 ) async {
-  try {
-    final c = await ref.read(chatsRepositoryProvider).get(chatId);
-    return c.title ?? 'Чат';
-  } on ChatsException {
-    return 'Чат';
-  }
+  return ref.read(chatsRepositoryProvider).get(chatId);
 });
+
+/// Owner-customer проекта — отдельный провайдер, т.к. owner иногда не виден в
+/// team-listing у бригадира/мастера (иерархия §1.4). Сначала пробуем
+/// myTeammates (агрегат с готовым `owner`), потом fallback на project.get.
+final _projectOwnerProvider = FutureProvider.family
+    .autoDispose<_OwnerUser?, String>((ref, projectId) async {
+      try {
+        final groups = await ref.read(myTeammatesProvider.future);
+        final g = groups.where((x) => x.projectId == projectId).firstOrNull;
+        final o = g?.owner;
+        if (o != null) {
+          return _OwnerUser(
+            id: o.id,
+            firstName: o.firstName,
+            lastName: o.lastName,
+            phone: o.phone,
+            avatarUrl: o.avatarUrl,
+            projectTitle: g?.projectTitle ?? '',
+          );
+        }
+      } on Object {
+        /* fallback ниже */
+      }
+      try {
+        final p = await ref.read(projectsRepositoryProvider).get(projectId);
+        return _OwnerUser(
+          id: p.ownerId,
+          firstName: '',
+          lastName: '',
+          phone: null,
+          avatarUrl: null,
+          projectTitle: p.title,
+        );
+      } on Object {
+        return null;
+      }
+    });
+
+class _OwnerUser {
+  const _OwnerUser({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.phone,
+    required this.avatarUrl,
+    required this.projectTitle,
+  });
+
+  final String id;
+  final String firstName;
+  final String lastName;
+  final String? phone;
+  final String? avatarUrl;
+  final String projectTitle;
+
+  String get fullName => '$firstName $lastName'.trim();
+}
+
+class _SenderInfo {
+  const _SenderInfo({
+    required this.userId,
+    required this.displayName,
+    required this.shortLabel,
+    required this.isActive,
+    this.avatarUrl,
+  });
+
+  final String userId;
+  final String displayName;
+  final String shortLabel;
+  final String? avatarUrl;
+
+  /// false — участник был удалён из команды (Chat.participants.leftAt != null).
+  /// ТЗ §10.3 — рядом с именем показываем «удалён из команды».
+  final bool isActive;
+}
+
+class _SenderIndex {
+  const _SenderIndex(this._byId);
+  final Map<String, _SenderInfo> _byId;
+
+  static _SenderIndex build({TeamState? team, _OwnerUser? owner, Chat? chat}) {
+    final leftIds = <String>{};
+    for (final p in chat?.participants ?? const <ChatParticipant>[]) {
+      if (p.leftAt != null) leftIds.add(p.userId);
+    }
+    final out = <String, _SenderInfo>{};
+    if (owner != null && (owner.firstName.isNotEmpty || owner.lastName.isNotEmpty)) {
+      out[owner.id] = _SenderInfo(
+        userId: owner.id,
+        displayName: owner.fullName,
+        shortLabel: _shorten(owner.firstName, owner.lastName),
+        avatarUrl: owner.avatarUrl,
+        isActive: !leftIds.contains(owner.id),
+      );
+    }
+    for (final m in team?.members ?? const <Membership>[]) {
+      final u = m.user;
+      if (u == null) continue;
+      out[u.id] = _SenderInfo(
+        userId: u.id,
+        displayName: '${u.firstName} ${u.lastName}'.trim().isEmpty
+            ? 'Участник'
+            : '${u.firstName} ${u.lastName}'.trim(),
+        shortLabel: _shorten(u.firstName, u.lastName),
+        avatarUrl: u.avatarUrl,
+        isActive: !leftIds.contains(u.id),
+      );
+    }
+    return _SenderIndex(out);
+  }
+
+  _SenderInfo? byId(String userId) => _byId[userId];
+
+  static String _shorten(String first, String last) {
+    final f = first.trim();
+    final l = last.trim();
+    if (f.isEmpty && l.isEmpty) return 'Участник';
+    if (f.isEmpty) return l;
+    if (l.isEmpty) return f;
+    return '$f ${l.characters.first}.';
+  }
+}
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
     required this.message,
     required this.isMine,
+    required this.sender,
     required this.showSenderLabel,
+    required this.showAvatar,
     required this.onEdit,
     required this.onDelete,
-    this.onTap,
+    this.onTapAvatar,
   });
 
   final Message message;
   final bool isMine;
+  final _SenderInfo? sender;
   final bool showSenderLabel;
+  final bool showAvatar;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-  final VoidCallback? onTap;
+
+  /// Тап по кружку-аватару — открывает MemberCardSheet (П1.4).
+  final VoidCallback? onTapAvatar;
 
   bool get _editWindowOpen =>
       message.canEdit(byUserId: message.authorId, now: DateTime.now());
@@ -366,35 +560,80 @@ class _Bubble extends StatelessWidget {
     final body = message.isDeleted ? 'Сообщение удалено' : (message.text ?? '');
     final time = DateFormat('HH:mm', 'ru').format(message.createdAt);
     final senderColor = _seedColor(message.authorId);
+    final baseLabel = sender?.shortLabel ?? _fallbackName(message.authorId);
+    // ТЗ §10.3 — пометка «удалён из команды» для покинувшего участника.
+    final senderLabel = sender != null && !sender!.isActive
+        ? '$baseLabel · удалён из команды'
+        : baseLabel;
+
+    // Слот аватара — всегда зарезервированные 32px, чтобы серия сообщений
+    // от одного автора выравнивалась. Без аватара — пустая шкафа той же ширины.
+    final avatarSlot = isMine
+        ? const SizedBox.shrink()
+        : SizedBox(
+            width: 32,
+            child: showAvatar
+                ? GestureDetector(
+                    onTap: onTapAvatar,
+                    behavior: HitTestBehavior.opaque,
+                    child: Semantics(
+                      button: true,
+                      label: sender?.displayName ?? 'Открыть карточку участника',
+                      child: AppAvatar(
+                        seed: message.authorId,
+                        name: sender?.displayName,
+                        imageUrl: sender?.avatarUrl,
+                        size: 32,
+                      ),
+                    ),
+                  )
+                : null,
+          );
 
     final bubbleAndAvatar = Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (!isMine) ...[
-          GestureDetector(
-            onTap: onTap,
-            child: AppAvatar(seed: message.authorId, size: 32),
-          ),
-          const SizedBox(width: 6),
-        ],
+        if (!isMine) ...[avatarSlot, const SizedBox(width: 6)],
         Flexible(
-          child: AppMessageBubble(
-            text: body.isEmpty ? '—' : body,
-            isMine: isMine,
-            italic: message.isDeleted,
-            dimmed: message.isDeleted,
-            senderLabel: showSenderLabel
-                ? _displaySenderName(message.authorId)
-                : null,
-            senderColor: senderColor,
-            time: time,
-            editedMark: message.isEdited && !message.isDeleted,
-            // П1.2 — forwardedLabel и forward action удалены из UI.
-            forwardedLabel: null,
-            // П1.4 — короткий тап на чужой бабл показывает карточку участника.
-            onTap: onTap,
-            onLongPress: message.isDeleted ? null : () => _showActions(context),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(AppRadius.r16),
+                topRight: const Radius.circular(AppRadius.r16),
+                bottomLeft: Radius.circular(isMine ? AppRadius.r16 : 4),
+                bottomRight: Radius.circular(isMine ? 4 : AppRadius.r16),
+              ),
+              boxShadow: isMine
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x524F6EF7),
+                        offset: Offset(0, 5),
+                        blurRadius: 14,
+                        spreadRadius: -3,
+                      ),
+                    ]
+                  : const [
+                      BoxShadow(
+                        color: Color(0x140D1229),
+                        offset: Offset(0, 3),
+                        blurRadius: 10,
+                        spreadRadius: -4,
+                      ),
+                    ],
+            ),
+            child: AppMessageBubble(
+              text: body.isEmpty ? '—' : body,
+              isMine: isMine,
+              italic: message.isDeleted,
+              dimmed: message.isDeleted,
+              senderLabel: showSenderLabel ? senderLabel : null,
+              senderColor: senderColor,
+              time: time,
+              editedMark: message.isEdited && !message.isDeleted,
+              forwardedLabel: null,
+              onLongPress: message.isDeleted ? null : () => _showActions(context),
+            ),
           ),
         ),
       ],
@@ -420,7 +659,9 @@ class _Bubble extends StatelessWidget {
     return palette[userId.hashCode.abs() % palette.length];
   }
 
-  String _displaySenderName(String userId) {
+  /// Fallback на случай если team-controller ещё не загружен — короткий
+  /// 6-символьный префикс UUID, чтобы хоть как-то различать авторов.
+  String _fallbackName(String userId) {
     if (userId.length <= 6) return userId;
     return '${userId.substring(0, 6)}…';
   }
@@ -505,10 +746,18 @@ class _ComposeBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
         decoration: const BoxDecoration(
           color: AppColors.n0,
           border: Border(top: BorderSide(color: AppColors.n200)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x0F0D1229),
+              offset: Offset(0, -2),
+              blurRadius: 8,
+              spreadRadius: -4,
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -518,11 +767,11 @@ class _ComposeBar extends StatelessWidget {
               child: TourAnchor(
                 id: 'chat_conversation.input',
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 40),
+                  constraints: const BoxConstraints(minHeight: 42),
                   decoration: BoxDecoration(
                     color: AppColors.n50,
                     border: Border.all(color: AppColors.n200, width: 1.5),
-                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   alignment: Alignment.center,
@@ -570,12 +819,24 @@ class _SendButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          gradient: AppGradients.brandButton,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: AppShadows.shBlue,
+        width: 42,
+        height: 42,
+        decoration: const BoxDecoration(
+          gradient: AppGradients.bubbleOut,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x6B4F6EF7),
+              offset: Offset(0, 6),
+              blurRadius: 18,
+              spreadRadius: -2,
+            ),
+            BoxShadow(
+              color: Color(0x333A56D4),
+              offset: Offset(0, 2),
+              blurRadius: 4,
+            ),
+          ],
         ),
         alignment: Alignment.center,
         child: sending

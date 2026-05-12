@@ -171,7 +171,25 @@ class _FeedRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          AppFeedDot(tone: event.dotTone),
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xE6FFFFFF),
+                  blurRadius: 0,
+                  spreadRadius: 3,
+                ),
+                BoxShadow(
+                  color: Color(0x260D1229),
+                  offset: Offset(0, 2),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: AppFeedDot(tone: event.dotTone),
+          ),
           const SizedBox(height: 8),
           Text(
             event.summary,
@@ -196,7 +214,20 @@ class _FeedRow extends StatelessWidget {
           ),
           if (event.isImmutable) ...[
             const SizedBox(height: 6),
-            const AppImmutableBadge(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.n200, width: 1),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x080D1229),
+                    offset: Offset(0, 1),
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+              child: const AppImmutableBadge(),
+            ),
           ],
         ],
       ),

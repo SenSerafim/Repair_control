@@ -34,9 +34,10 @@ class _CopyBody extends ConsumerStatefulWidget {
 
 class _CopyBodyState extends ConsumerState<_CopyBody> {
   late final TextEditingController _title;
-  bool _copyStages = true;
-  bool _copyTemplates = true;
-  bool _copyTeam = false;
+  // Раньше здесь были три Switch'а (этапы / шаблоны / команда), которые
+  // ничего не делали: бекенд `copy()` всегда переносит этапы + members
+  // + pending-инвайты, отдельных флагов в API нет. Чтобы UI не врал
+  // пользователю, заменили на read-only-список «что будет скопировано».
   bool _submitting = false;
   String? _error;
 
@@ -149,39 +150,36 @@ class _CopyBodyState extends ConsumerState<_CopyBody> {
           ),
         ),
         const SizedBox(height: 6),
-        AppMenuGroup(
-          children: [
-            AppMenuRow(
-              label: 'Этапы',
-              sub: 'Структура: список этапов без статусов',
-              trailing: Switch.adaptive(
-                value: _copyStages,
-                onChanged: (v) => setState(() => _copyStages = v),
-                activeColor: AppColors.brand,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.n50,
+            border: Border.all(color: AppColors.n200),
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CopyBullet(
+                icon: PhosphorIconsRegular.listChecks,
+                title: 'Этапы',
+                sub: 'Структура без статусов и фотографий',
               ),
-              onTap: () => setState(() => _copyStages = !_copyStages),
-            ),
-            AppMenuRow(
-              label: 'Пользовательские шаблоны',
-              sub: 'Сохранённые шаблоны этапов',
-              trailing: Switch.adaptive(
-                value: _copyTemplates,
-                onChanged: (v) => setState(() => _copyTemplates = v),
-                activeColor: AppColors.brand,
+              SizedBox(height: 8),
+              _CopyBullet(
+                icon: PhosphorIconsRegular.usersThree,
+                title: 'Команда и приглашения',
+                sub: 'Все участники + pending-инвайты переедут на копию',
               ),
-              onTap: () => setState(() => _copyTemplates = !_copyTemplates),
-            ),
-            AppMenuRow(
-              label: 'Команда',
-              sub: 'Текущие участники получат приглашения',
-              trailing: Switch.adaptive(
-                value: _copyTeam,
-                onChanged: (v) => setState(() => _copyTeam = v),
-                activeColor: AppColors.brand,
+              SizedBox(height: 8),
+              _CopyBullet(
+                icon: PhosphorIconsRegular.currencyRub,
+                title: 'Бюджеты и сроки',
+                sub: 'Стартовая дата / дедлайн / суммы по работам и материалам',
               ),
-              onTap: () => setState(() => _copyTeam = !_copyTeam),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.x20),
         AppButton(
@@ -195,6 +193,63 @@ class _CopyBodyState extends ConsumerState<_CopyBody> {
           label: 'Отмена',
           variant: AppButtonVariant.secondary,
           onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+}
+
+class _CopyBullet extends StatelessWidget {
+  const _CopyBullet({
+    required this.icon,
+    required this.title,
+    required this.sub,
+  });
+
+  final IconData icon;
+  final String title;
+  final String sub;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.brandLight,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 14, color: AppColors.brand),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.n800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                sub,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.n500,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

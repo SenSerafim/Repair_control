@@ -45,8 +45,8 @@ class MaterialsListScreen extends ConsumerWidget {
             return AppEmptyState(
               title: 'Заявок ещё нет',
               subtitle:
-                  'Создайте заявку на материалы — бригадир либо заказчик '
-                  'пометит позиции как купленные.',
+                  'Создайте заявку — заказчик согласует её или отклонит. '
+                  'Все участники проекта видят решение сразу.',
               icon: Icons.inventory_2_outlined,
               actionLabel: canCreate ? 'Создать заявку' : null,
               onAction: canCreate
@@ -57,13 +57,12 @@ class MaterialsListScreen extends ConsumerWidget {
           // shared (stageId=null) + perStage.
           final shared = items.where((r) => r.stageId == null).toList();
           final perStage = items.where((r) => r.stageId != null).toList();
-          // Hero-summary: общая сумма куплено + кол-во заявок и доставок.
-          final totalSpent = items.fold<int>(
-            0,
-            (acc, r) => acc + r.totalBoughtPrice,
-          );
-          final delivered = items
-              .where((r) => r.status == MaterialRequestStatus.delivered)
+          // Hero-summary: сумма по согласованным + счётчики.
+          final totalSpent = items
+              .where((r) => r.status == MaterialRequestStatus.approved)
+              .fold<int>(0, (acc, r) => acc + r.totalEstimatedPrice);
+          final approved = items
+              .where((r) => r.status == MaterialRequestStatus.approved)
               .length;
 
           return RefreshIndicator(
@@ -75,7 +74,7 @@ class MaterialsListScreen extends ConsumerWidget {
                 _SummaryChip(
                   totalSpent: totalSpent,
                   count: items.length,
-                  delivered: delivered,
+                  approved: approved,
                 ),
                 const SizedBox(height: AppSpacing.x12),
                 if (shared.isNotEmpty) ...[
@@ -129,12 +128,12 @@ class _SummaryChip extends StatelessWidget {
   const _SummaryChip({
     required this.totalSpent,
     required this.count,
-    required this.delivered,
+    required this.approved,
   });
 
   final int totalSpent;
   final int count;
-  final int delivered;
+  final int approved;
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +163,7 @@ class _SummaryChip extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$count заявок · $delivered доставлено',
+                  '$count заявок · $approved согласовано',
                   style: AppTextStyles.tiny.copyWith(
                     color: AppColors.n500,
                     fontWeight: FontWeight.w700,

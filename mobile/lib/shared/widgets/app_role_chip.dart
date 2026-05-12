@@ -21,38 +21,46 @@ class AppRoleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.whiteGhost,
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: InkWell(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0x33FFFFFF)),
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.x14,
-            vertical: AppSpacing.x8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: AppColors.n0),
-              const SizedBox(width: AppSpacing.x6),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.n0,
-                  letterSpacing: -0.1,
+      ),
+      child: Material(
+        color: AppColors.whiteGhost,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          onTap: onTap,
+          splashColor: const Color(0x33FFFFFF),
+          highlightColor: const Color(0x1AFFFFFF),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x14,
+              vertical: AppSpacing.x8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: AppColors.n0),
+                const SizedBox(width: AppSpacing.x6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.n0,
+                    letterSpacing: -0.1,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.x4),
-              const Icon(
-                PhosphorIconsRegular.caretDown,
-                size: 12,
-                color: AppColors.n0,
-              ),
-            ],
+                const SizedBox(width: AppSpacing.x4),
+                const Icon(
+                  PhosphorIconsRegular.caretDown,
+                  size: 12,
+                  color: Color(0xCCFFFFFF),
+                ),
+              ],
+            ),
           ),
         ),
       ),

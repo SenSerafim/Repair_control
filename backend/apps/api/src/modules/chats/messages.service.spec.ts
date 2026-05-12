@@ -86,6 +86,9 @@ const mkPrisma = (
     project: {
       findUnique: jest.fn(() => null),
     },
+    user: {
+      findUnique: jest.fn(() => null),
+    },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
   return { prisma: prisma as unknown as PrismaService, messages, participants, chats };

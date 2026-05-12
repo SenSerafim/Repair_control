@@ -72,6 +72,8 @@ class Document with _$Document {
     String? stepId,
     required DocumentCategory category,
     required String title,
+    String? description,
+    DateTime? documentDate,
     required String fileKey,
     String? thumbKey,
     required String mimeType,
@@ -91,6 +93,10 @@ class Document with _$Document {
     stepId: json['stepId'] as String?,
     category: DocumentCategory.fromString(json['category'] as String?),
     title: json['title'] as String,
+    description: json['description'] as String?,
+    documentDate: json['documentDate'] != null
+        ? DateTime.parse(json['documentDate'] as String)
+        : null,
     fileKey: json['fileKey'] as String? ?? '',
     thumbKey: json['thumbKey'] as String?,
     mimeType: json['mimeType'] as String,

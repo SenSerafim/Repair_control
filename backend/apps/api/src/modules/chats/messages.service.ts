@@ -37,11 +37,15 @@ export class MessagesService {
     actorUserId: string,
     opts: { cursor?: string; limit?: number } = {},
   ): Promise<{ items: SerializedMessage[]; nextCursor: string | null }> {
-    // Проверяем участие
+    // Проверяем участие: soft-left (leftAt != null) теряет доступ моментально
+    // — инвариант ТЗ §10.3 «удалённый не получает новых сообщений и не
+    // читает дальше». Раньше проверка была только на наличие записи →
+    // пожизненный read-доступ после soft-remove. Совпадает с chats.service.get.
     const participant = await this.prisma.chatParticipant.findUnique({
       where: { chatId_userId: { chatId, userId: actorUserId } },
     });
-    if (!participant) {
+    const isActive = participant !== null && participant.leftAt === null;
+    if (!isActive) {
       // Customer может видеть если visibleToCustomer (RBAC сам разрешил)
       const chat = await this.prisma.chat.findUnique({
         where: { id: chatId },
@@ -111,13 +115,28 @@ export class MessagesService {
       where: { id: chatId },
       select: { projectId: true },
     });
+    // Имя автора + project title для push-уведомлений. Без preview шаблон
+    // chat_message_new рендерил пустое тело: `String(p.preview ?? '')` → ''.
+    const author = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+      select: { firstName: true, lastName: true },
+    });
+    const project = chat?.projectId
+      ? await this.prisma.project.findUnique({
+          where: { id: chat.projectId },
+          select: { title: true },
+        })
+      : null;
+    const trimmedText = input.text!.trim();
+    const preview = buildPreview(author, project, trimmedText);
+    const authorName = formatAuthorName(author);
 
     const message = await this.prisma.$transaction(async (tx) => {
       const m = await tx.chatMessage.create({
         data: {
           chatId,
           authorId: actorUserId,
-          text: input.text!.trim(),
+          text: trimmedText,
           attachmentKeys: [],
           createdAt: this.clock.now(),
         },
@@ -126,7 +145,13 @@ export class MessagesService {
         kind: 'chat_message_sent',
         projectId: chat?.projectId ?? null,
         actorId: actorUserId,
-        payload: { chatId, messageId: m.id },
+        payload: {
+          chatId,
+          messageId: m.id,
+          preview,
+          authorName,
+          projectTitle: project?.title ?? null,
+        },
         tx,
       });
       return m;
@@ -224,6 +249,18 @@ export class MessagesService {
       where: { id: toChatId },
       select: { projectId: true },
     });
+    const author = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+      select: { firstName: true, lastName: true },
+    });
+    const project = chat?.projectId
+      ? await this.prisma.project.findUnique({
+          where: { id: chat.projectId },
+          select: { title: true },
+        })
+      : null;
+    const preview = buildPreview(author, project, src.text ?? '');
+    const authorName = formatAuthorName(author);
     const message = await this.prisma.$transaction(async (tx) => {
       const m = await tx.chatMessage.create({
         data: {
@@ -239,7 +276,14 @@ export class MessagesService {
         kind: 'chat_message_sent',
         projectId: chat?.projectId ?? null,
         actorId: actorUserId,
-        payload: { chatId: toChatId, messageId: m.id, forwardedFromId: src.id },
+        payload: {
+          chatId: toChatId,
+          messageId: m.id,
+          forwardedFromId: src.id,
+          preview,
+          authorName,
+          projectTitle: project?.title ?? null,
+        },
         tx,
       });
       return m;
@@ -266,4 +310,26 @@ export class MessagesService {
       createdAt: m.createdAt,
     };
   }
+}
+
+function formatAuthorName(
+  author: { firstName: string | null; lastName: string | null } | null,
+): string {
+  if (!author) return 'Участник';
+  const parts = [author.firstName?.trim(), author.lastName?.trim()].filter(
+    (s): s is string => !!s && s.length > 0,
+  );
+  return parts.length > 0 ? parts.join(' ') : 'Участник';
+}
+
+function buildPreview(
+  author: { firstName: string | null; lastName: string | null } | null,
+  project: { title: string | null } | null,
+  text: string,
+): string {
+  const name = formatAuthorName(author);
+  const prefix = project?.title ? `${name} (${project.title})` : name;
+  const oneLine = text.replace(/\s+/g, ' ').trim();
+  const trimmed = oneLine.length > 120 ? `${oneLine.slice(0, 117)}...` : oneLine;
+  return trimmed ? `${prefix}: ${trimmed}` : prefix;
 }

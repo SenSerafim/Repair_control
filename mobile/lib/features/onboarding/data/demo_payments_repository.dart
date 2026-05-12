@@ -46,12 +46,10 @@ class DemoPaymentsRepository extends PaymentsRepository {
   @override
   Future<List<Payment>> list({
     required String projectId,
-    PaymentStatus? status,
     PaymentKind? kind,
     String? userId,
   }) async {
     Iterable<Payment> result = DemoData.payments;
-    if (status != null) result = result.where((p) => p.status == status);
     if (kind != null) result = result.where((p) => p.kind == kind);
     if (userId != null) {
       result = result.where(
@@ -83,24 +81,4 @@ class DemoPaymentsRepository extends PaymentsRepository {
     String? comment,
     String? photoKey,
   }) async => DemoData.payments.first;
-
-  @override
-  Future<Payment> confirm(String id) async => DemoData.paymentById(id);
-
-  @override
-  Future<Payment> cancel(String id) async => DemoData.paymentById(id);
-
-  @override
-  Future<Payment> dispute({
-    required String id,
-    required String reason,
-    List<String>? photoKeys,
-  }) async => DemoData.paymentById(id);
-
-  @override
-  Future<Payment> resolve({
-    required String id,
-    required String resolution,
-    int? adjustAmount,
-  }) async => DemoData.paymentById(id);
 }

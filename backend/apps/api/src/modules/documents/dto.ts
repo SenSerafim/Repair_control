@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
+import { IsEnum, IsInt, IsISO8601, IsOptional, IsString, Length, Min } from 'class-validator';
 import { DocumentCategory } from '@prisma/client';
 
 export class PresignUploadDto {
@@ -31,6 +31,19 @@ export class PresignUploadDto {
   @IsOptional()
   @IsString()
   stepId?: string;
+
+  /** Произвольное описание — что это за документ и зачем загружен. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  description?: string;
+
+  /** Дата самого документа (договора/акта/чека) в ISO 8601. Опционально. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsISO8601()
+  documentDate?: string;
 }
 
 export class ConfirmUploadDto {
@@ -60,6 +73,17 @@ export class PatchDocumentDto {
   @IsOptional()
   @IsString()
   stepId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsISO8601()
+  documentDate?: string;
 }
 
 export class ListDocumentsQueryDto {

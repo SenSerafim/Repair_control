@@ -91,7 +91,19 @@ class _AppButtonState extends State<AppButton> {
         color: spec.background,
         gradient: spec.gradient,
         borderRadius: AppRadius.buttonSm,
-        border: spec.border,
+        // 1px-top inset highlight для градиентных enabled-кнопок —
+        // имитирует CSS `inset 0 1px 0 rgba(255,255,255,0.25)`,
+        // даёт глянцевую вершину без переделки самого градиента.
+        border:
+            spec.border ??
+            (_enabled && spec.gradient != null
+                ? Border(
+                    top: BorderSide(
+                      color: AppColors.n0.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                  )
+                : null),
         boxShadow: _enabled ? spec.shadow : null,
       ),
       child: showSpinner
@@ -174,11 +186,7 @@ class _AppButtonState extends State<AppButton> {
     switch (v) {
       case AppButtonVariant.primary:
         return const _ButtonSpec(
-          gradient: LinearGradient(
-            colors: [Color(0xFF5B7EF8), AppColors.brandDark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppGradients.brandButton,
           textColor: AppColors.n0,
           shadow: AppShadows.shBlue,
         );
@@ -187,6 +195,7 @@ class _AppButtonState extends State<AppButton> {
           background: AppColors.n0,
           textColor: AppColors.brand,
           border: Border.all(color: AppColors.n200, width: 1.5),
+          shadow: AppShadows.sh1,
         );
       case AppButtonVariant.ghost:
         return _ButtonSpec(
@@ -202,7 +211,7 @@ class _AppButtonState extends State<AppButton> {
         );
       case AppButtonVariant.success:
         return const _ButtonSpec(
-          background: AppColors.greenDark,
+          gradient: AppGradients.successHero,
           textColor: AppColors.n0,
           shadow: AppShadows.shGreen,
         );
@@ -210,6 +219,7 @@ class _AppButtonState extends State<AppButton> {
         return const _ButtonSpec(
           background: AppColors.n0,
           textColor: AppColors.brand,
+          shadow: AppShadows.sh2,
         );
       case AppButtonVariant.outlineWhite:
         return _ButtonSpec(

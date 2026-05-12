@@ -4,7 +4,6 @@ import 'package:repair_control/features/finance/domain/payment.dart';
 import 'package:repair_control/features/finance/presentation/_widgets/payment_row_card.dart';
 
 Payment _payment({
-  required PaymentStatus status,
   PaymentKind kind = PaymentKind.advance,
   String? comment,
 }) {
@@ -15,7 +14,6 @@ Payment _payment({
     fromUserId: 'u-from',
     toUserId: 'u-to',
     amount: 50_000_00,
-    status: status,
     comment: comment,
     createdAt: DateTime(2025, 1, 15),
     updatedAt: DateTime(2025, 1, 15),
@@ -23,14 +21,12 @@ Payment _payment({
 }
 
 void main() {
-  testWidgets('PaymentRowCard рендерит сумму, имя получателя и статус', (
-    tester,
-  ) async {
+  testWidgets('PaymentRowCard рендерит сумму и имя получателя', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: PaymentRowCard(
-            payment: _payment(status: PaymentStatus.confirmed),
+            payment: _payment(),
             recipientName: 'Петров С.',
             onTap: () {},
           ),
@@ -38,25 +34,24 @@ void main() {
       ),
     );
     expect(find.text('50 000 ₽'), findsOneWidget);
-    expect(find.text('Подтверждено'), findsOneWidget);
     expect(find.textContaining('Петров С.'), findsOneWidget);
   });
 
-  testWidgets('PaymentRowCard в pending — иконка часы, цвет статуса жёлтый', (
+  testWidgets('PaymentRowCard distribution-kind рендерится без статус-pill', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: PaymentRowCard(
-            payment: _payment(status: PaymentStatus.pending),
+            payment: _payment(kind: PaymentKind.distribution),
             recipientName: 'Иванов А.',
             onTap: () {},
           ),
         ),
       ),
     );
-    expect(find.text('Ожидает'), findsOneWidget);
+    expect(find.textContaining('Распределение'), findsOneWidget);
   });
 
   testWidgets('PaymentRowCard вызывает onTap', (tester) async {
@@ -65,7 +60,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: PaymentRowCard(
-            payment: _payment(status: PaymentStatus.confirmed),
+            payment: _payment(),
             recipientName: 'X',
             onTap: () => tapped = true,
           ),

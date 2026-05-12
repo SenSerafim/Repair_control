@@ -57,7 +57,14 @@ class _DetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canDelete = ref.watch(canProvider(DomainAction.documentDelete));
+    // Удалять может только заказчик (owner) или представитель с canEditStages.
+    // Author/foreman/master НЕ могут удалить документы из общей папки.
+    final canDelete = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.documentDelete,
+        projectId: doc.projectId,
+      )),
+    );
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -424,6 +431,7 @@ class _MetaCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.r16),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _row('Файл', doc.title),
           _row('Размер', _size(doc.sizeBytes)),
@@ -432,10 +440,32 @@ class _MetaCard extends StatelessWidget {
             doc.category.displayName,
             valueColor: AppColors.brand,
           ),
+          if (doc.documentDate != null)
+            _row(
+              'Дата документа',
+              DateFormat('dd.MM.yyyy', 'ru').format(doc.documentDate!),
+            ),
           _row(
-            'Дата',
+            'Загружено',
             DateFormat('dd.MM.yyyy, HH:mm', 'ru').format(doc.createdAt),
           ),
+          if (doc.description != null && doc.description!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Divider(color: AppColors.n100, height: 1),
+            const SizedBox(height: 8),
+            Text(
+              'Описание',
+              style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              doc.description!,
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.n800,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );

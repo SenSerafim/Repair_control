@@ -48,29 +48,53 @@ class MethodologySectionScreen extends ConsumerWidget {
               Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 56,
+                    height: 56,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: tone.bg,
-                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color.lerp(tone.bg, AppColors.n0, 0.15) ?? tone.bg,
+                          tone.bg,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.r16),
+                      boxShadow: [
+                        const BoxShadow(
+                          color: Color(0xCCFFFFFF),
+                          offset: Offset(0, 1),
+                          blurRadius: 0,
+                        ),
+                        BoxShadow(
+                          color: tone.fg.withValues(alpha: 0.15),
+                          offset: const Offset(0, 8),
+                          blurRadius: 18,
+                        ),
+                      ],
                     ),
-                    child: Icon(tone.icon, color: tone.fg, size: 22),
+                    child: Icon(tone.icon, color: tone.fg, size: 26),
                   ),
-                  const SizedBox(width: AppSpacing.x12),
+                  const SizedBox(width: AppSpacing.x14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           section.title,
-                          style: AppTextStyles.h1.copyWith(fontSize: 22),
+                          style: AppTextStyles.h1.copyWith(
+                            fontSize: 22,
+                            letterSpacing: -0.5,
+                          ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           '${section.articles.length} '
                           '${_articlesWord(section.articles.length)}',
                           style: AppTextStyles.tiny.copyWith(
                             color: AppColors.n500,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -132,16 +156,36 @@ class _ArticleRow extends StatelessWidget {
           color: AppColors.n0,
           borderRadius: AppRadius.card,
           border: Border.all(color: AppColors.n200),
+          boxShadow: AppShadows.sh1,
         ),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: tone.bg,
-                borderRadius: BorderRadius.circular(AppRadius.r8),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.lerp(tone.bg, AppColors.n0, 0.10) ?? tone.bg,
+                    tone.bg,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  const BoxShadow(
+                    color: Color(0x99FFFFFF),
+                    offset: Offset(0, 1),
+                    blurRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: tone.fg.withValues(alpha: 0.10),
+                    offset: const Offset(0, 4),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
               child: Icon(Icons.article_outlined, color: tone.fg, size: 18),
             ),
@@ -156,6 +200,7 @@ class _ArticleRow extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.n900,
+                      letterSpacing: -0.1,
                     ),
                   ),
                   const SizedBox(height: 2),

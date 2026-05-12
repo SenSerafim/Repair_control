@@ -56,6 +56,8 @@ export class DocumentsService {
         stepId: dto.stepId ?? null,
         category: dto.category,
         title: dto.title,
+        description: dto.description?.trim() ? dto.description.trim() : null,
+        documentDate: dto.documentDate ? new Date(dto.documentDate) : null,
         fileKey: up.key,
         mimeType: dto.mimeType,
         sizeBytes: dto.sizeBytes,
@@ -182,7 +184,14 @@ export class DocumentsService {
   async patch(
     id: string,
     actorUserId: string,
-    input: { title?: string; category?: DocumentCategory; stageId?: string; stepId?: string },
+    input: {
+      title?: string;
+      category?: DocumentCategory;
+      stageId?: string;
+      stepId?: string;
+      description?: string;
+      documentDate?: string;
+    },
   ): Promise<Document> {
     const doc = await this.get(id);
     const updated = await this.prisma.document.update({
@@ -192,6 +201,12 @@ export class DocumentsService {
         ...(input.category !== undefined ? { category: input.category } : {}),
         ...(input.stageId !== undefined ? { stageId: input.stageId } : {}),
         ...(input.stepId !== undefined ? { stepId: input.stepId } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description.trim() ? input.description.trim() : null }
+          : {}),
+        ...(input.documentDate !== undefined
+          ? { documentDate: input.documentDate ? new Date(input.documentDate) : null }
+          : {}),
       },
     });
     await this.feed.emit({

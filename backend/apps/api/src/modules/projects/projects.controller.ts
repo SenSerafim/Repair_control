@@ -177,12 +177,22 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
   ) {
     // QA-баг #12: эндпоинт отдавал состав команды любого проекта любому
-    // авторизованному юзеру. Разрешаем только активным участникам проекта.
+    // авторизованному юзеру. Разрешаем только активным участникам проекта
+    // или владельцу (owner может не иметь явной customer-membership).
     const callerMembership = await this.members.findActive(projectId, req.user.userId);
-    if (!callerMembership) {
+    const ownerCheck = await this.prismaForRoleLookup.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const isOwner = ownerCheck?.ownerId === req.user.userId;
+    if (!callerMembership && !isOwner) {
       throw new ForbiddenException('not a project member');
     }
-    return this.members.list(projectId);
+    // ТЗ §1.4 / §8 — иерархическая видимость для ВСЕХ ролей, включая
+    // заказчика: мастера, нанятого бригадиром, он не видит ни по имени,
+    // ни по контактам. Логика целиком в сервисе — обойти прямым API-вызовом
+    // нельзя.
+    return this.members.listVisibleForViewer(projectId, req.user.userId);
   }
 
   @Post(':projectId/members')

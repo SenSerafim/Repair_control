@@ -13,8 +13,7 @@ const mkChats = (): ChatsService =>
     addProjectChatParticipant: jest.fn().mockResolvedValue(undefined),
   }) as any;
 
-const mkFeed = (): FeedService =>
-  ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
+const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
 
 const mkMembers = (): MembersService =>
   ({
@@ -261,7 +260,21 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     });
     expect(inv.stageIds).toEqual(['s1', 's2']);
     const stored = [...st.invitations.values()][0];
-    expect(stored.permissions).toEqual({ canApprove: true, canSeeBudget: true });
+    // sanitizeRepresentativeRights раскладывает входной partial в полный
+    // объект из 10 флагов с дефолтом false — это новое поведение после
+    // унификации формата permissions (см. RepresentativeRight enum в mobile).
+    expect(stored.permissions).toMatchObject({
+      canApprove: true,
+      canSeeBudget: true,
+      canEditStages: false,
+      canCreateStages: false,
+      canCreatePayments: false,
+      canManageMaterials: false,
+      canManageTools: false,
+      canInviteMembers: false,
+      canManageTeam: false,
+      canAddRepresentative: false,
+    });
     expect(stored.stageIds).toEqual(['s1', 's2']);
   });
 
@@ -271,10 +284,7 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     const chats = mkChats();
     const feed = mkFeed();
     const members = mkMembers();
-    (members.collectRecipientUserIds as jest.Mock).mockResolvedValue([
-      'newUser',
-      'owner1',
-    ]);
+    (members.collectRecipientUserIds as jest.Mock).mockResolvedValue(['newUser', 'owner1']);
     const svc = new InvitationsService(st.prisma, new FixedClock(NOW), chats, feed, members);
     const inv = await svc.generateCode({
       projectId: 'p1',

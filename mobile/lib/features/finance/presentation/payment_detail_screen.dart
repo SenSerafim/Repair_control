@@ -18,9 +18,10 @@ import '_widgets/payment_amount_hero.dart';
 import '_widgets/payment_info_card.dart';
 import 'payment_sheets.dart';
 
-/// e-pay-pending / e-pay-confirmed / e-pay-disputed — унифицированный экран
-/// детали выплаты. Layout: status-pill в header, centered amount-hero, dl-rows
-/// info-card, опциональная dispute-banner, distribution-section, action-bar.
+/// Унифицированный экран детали выплаты. В упрощённой модели (2026-05-12)
+/// платёж = факт передачи денег: нет статусов, нет подтверждений/споров.
+/// Layout: centered amount-hero → info-card → optional parent-link / comment /
+/// distribution-section → action-bar (только distribute для бригадира-получателя).
 class PaymentDetailScreen extends ConsumerWidget {
   const PaymentDetailScreen({required this.paymentId, super.key});
 
@@ -54,20 +55,7 @@ class PaymentDetailScreen extends ConsumerWidget {
                     AppSpacing.x20,
                   ),
                   children: [
-                    // Top status-pill (в дизайне — справа в header).
-                    Center(
-                      child: StatusPill(
-                        label: p.status.displayName,
-                        semaphore: p.status.semaphore,
-                      ),
-                    ),
                     PaymentAmountHero(payment: p),
-                    if (p.status == PaymentStatus.disputed &&
-                        p.disputes.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.x12),
-                        child: _DisputeBanner(dispute: p.disputes.first),
-                      ),
                     PaymentInfoCard(rows: _infoRows(p)),
                     if (p.parentPaymentId != null) ...[
                       const SizedBox(height: AppSpacing.x12),
@@ -77,11 +65,11 @@ class PaymentDetailScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.x12),
                       _CommentCard(comment: p.comment!),
                     ],
-                    if (p.activeChildren.isNotEmpty) ...[
+                    if (p.children.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x16),
                       _DistributionHeader(parent: p),
                       const SizedBox(height: AppSpacing.x8),
-                      for (final c in p.activeChildren) ...[
+                      for (final c in p.children) ...[
                         _ChildRow(payment: c),
                         const SizedBox(height: AppSpacing.x6),
                       ],
@@ -107,74 +95,12 @@ class PaymentDetailScreen extends ConsumerWidget {
       ),
       PaymentInfoRow('Тип', p.kind.displayName),
       PaymentInfoRow('Дата отправки', fmt.format(p.createdAt)),
-      if (p.confirmedAt != null)
-        PaymentInfoRow(
-          'Подтверждена',
-          '${fmt.format(p.confirmedAt!)} (неизменяемая)',
-          valueColor: AppColors.greenDark,
-        ),
-      PaymentInfoRow(
-        'Статус',
-        p.status.displayName,
-        valueColor: p.status.semaphore.text,
-      ),
       if (p.children.isNotEmpty)
         PaymentInfoRow(
           'Остаток к распределению',
           Money.format(p.remainingToDistribute),
         ),
     ];
-  }
-
-  String _shorten(String id) =>
-      id.length <= 12 ? id : '${id.substring(0, 12)}…';
-}
-
-class _DisputeBanner extends StatelessWidget {
-  const _DisputeBanner({required this.dispute});
-
-  final PaymentDispute dispute;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x14),
-      decoration: BoxDecoration(
-        color: AppColors.redBg,
-        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.3)),
-        borderRadius: AppRadius.card,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Причина',
-            style: AppTextStyles.subtitle.copyWith(
-              color: AppColors.redText,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            dispute.reason,
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.redText,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Открыл: ${_shorten(dispute.openedById)} · '
-            '${DateFormat('dd.MM.yyyy').format(dispute.createdAt)}',
-            style: AppTextStyles.tiny.copyWith(
-              color: AppColors.redText.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String _shorten(String id) =>
@@ -226,6 +152,7 @@ class _ChildRow extends StatelessWidget {
           color: AppColors.n0,
           border: Border.all(color: AppColors.n200),
           borderRadius: BorderRadius.circular(AppRadius.r12),
+          boxShadow: AppShadows.shCard,
         ),
         child: Row(
           children: [
@@ -236,14 +163,14 @@ class _ChildRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    Money.format(payment.effectiveAmount),
+                    Money.format(payment.amount),
                     style: AppTextStyles.subtitle,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    payment.status.displayName,
+                    payment.kind.displayName,
                     style: AppTextStyles.caption.copyWith(
-                      color: payment.status.semaphore.text,
+                      color: AppColors.n500,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -271,8 +198,15 @@ class _ParentLink extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.x12),
         decoration: BoxDecoration(
-          color: AppColors.brandLight,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF1F4FE), AppColors.brandLight],
+          ),
           borderRadius: BorderRadius.circular(AppRadius.r12),
+          border: Border.all(
+            color: AppColors.brand.withValues(alpha: 0.18),
+          ),
         ),
         child: const Row(
           children: [
@@ -334,78 +268,31 @@ class _Actions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buttons = <Widget>[];
-    final hasConfirm = ref.watch(
+    // В упрощённой модели единственное действие на детали платежа для
+    // бригадира-получателя — распределить полученный аванс мастеру.
+    final hasDistribute = ref.watch(
       canInProjectProvider((
-        action: DomainAction.financePaymentConfirm,
+        action: DomainAction.financePaymentDistribute,
         projectId: payment.projectId,
       )),
-    );
-    final hasCreate = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.financePaymentCreate,
-        projectId: payment.projectId,
-      )),
-    );
-    final hasDispute = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.financePaymentDispute,
-        projectId: payment.projectId,
-      )),
-    );
-    final hasResolve = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.financePaymentResolve,
-        projectId: payment.projectId,
-      )),
-    );
-
-    // Все вычисления допустимости вынесены в PaymentPolicy — единая точка
-    // истины. См. таблицу матрицы прав в payment_policy.dart.
-    final canConfirm = PaymentPolicy.canConfirm(
-      payment: payment,
-      meId: meId,
-      hasConfirm: hasConfirm,
-    );
-    final canCancel = PaymentPolicy.canCancel(payment: payment, meId: meId);
-    final canDispute = PaymentPolicy.canDispute(
-      payment: payment,
-      meId: meId,
-      hasDispute: hasDispute,
-    );
-    final canResolve = PaymentPolicy.canResolve(
-      payment: payment,
-      hasResolve: hasResolve,
     );
     final canDistribute = PaymentPolicy.canDistribute(
       payment: payment,
       meId: meId,
-      hasCreate: hasCreate,
+      hasDistribute: hasDistribute,
     );
     final canViewDistribution = PaymentPolicy.canViewDistribution(
       payment: payment,
       meId: meId,
     );
 
-    if (canConfirm) {
+    if (canDistribute) {
       buttons.add(
         AppButton(
-          label: 'Подтвердить получение',
-          variant: AppButtonVariant.success,
-          onPressed: () => ref
-              .read(paymentsControllerProvider(payment.projectId).notifier)
-              .confirm(payment.id),
+          label: 'Распределить мастеру',
+          onPressed: () => showDistributeSheet(context, ref, parent: payment),
         ),
       );
-    }
-    if (canDistribute) {
-      buttons
-        ..add(const SizedBox(height: AppSpacing.x8))
-        ..add(
-          AppButton(
-            label: 'Распределить мастеру',
-            onPressed: () => showDistributeSheet(context, ref, parent: payment),
-          ),
-        );
     }
     if (canViewDistribution) {
       buttons
@@ -416,44 +303,10 @@ class _Actions extends ConsumerWidget {
             variant: AppButtonVariant.secondary,
             icon: Icons.account_tree_outlined,
             // Bottom sheet вместо push — go_router 14 при пуше поверх
-            // PaymentDetailScreen ловил `!keyReservation.contains(key)` →
-            // `_debugLocked`, и Navigator залипал так, что back не работал.
+            // PaymentDetailScreen ловил `!keyReservation.contains(key)`
+            // и Navigator залипал.
             onPressed: () =>
                 showAdvanceDistributionSheet(context, parent: payment),
-          ),
-        );
-    }
-    if (canDispute) {
-      buttons
-        ..add(const SizedBox(height: AppSpacing.x8))
-        ..add(
-          AppButton(
-            label: 'Открыть спор',
-            variant: AppButtonVariant.destructive,
-            onPressed: () =>
-                showDisputePaymentSheet(context, ref, payment: payment),
-          ),
-        );
-    }
-    if (canResolve) {
-      buttons.add(
-        AppButton(
-          label: 'Разрешить спор',
-          onPressed: () =>
-              showResolvePaymentSheet(context, ref, payment: payment),
-        ),
-      );
-    }
-    if (canCancel) {
-      buttons
-        ..add(const SizedBox(height: AppSpacing.x8))
-        ..add(
-          AppButton(
-            label: 'Отменить',
-            variant: AppButtonVariant.ghost,
-            onPressed: () => ref
-                .read(paymentsControllerProvider(payment.projectId).notifier)
-                .cancel(payment.id),
           ),
         );
     }

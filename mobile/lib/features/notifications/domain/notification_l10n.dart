@@ -29,19 +29,7 @@ const Map<String, NotifTemplate> kNotifRu = {
   ),
   'payment_created': NotifTemplate(
     title: 'Новая оплата',
-    body: 'Создан платёж на {amount} ₽ — ожидает подтверждения',
-  ),
-  'payment_confirmed': NotifTemplate(
-    title: 'Оплата подтверждена',
-    body: 'Получатель подтвердил получение {amount} ₽',
-  ),
-  'payment_disputed': NotifTemplate(
-    title: 'Открыт спор по оплате',
-    body: '{actorName} открыл диспут по платежу {amount} ₽',
-  ),
-  'payment_resolved': NotifTemplate(
-    title: 'Спор по оплате закрыт',
-    body: 'Решение принято — {resolution}',
+    body: 'Создан платёж на {amount} ₽',
   ),
   'stage_rejected_by_customer': NotifTemplate(
     title: 'Этап не принят',
@@ -62,10 +50,6 @@ const Map<String, NotifTemplate> kNotifRu = {
   'material_delivered': NotifTemplate(
     title: 'Материал доставлен',
     body: 'Получено: {materialName}',
-  ),
-  'material_disputed': NotifTemplate(
-    title: 'Спор по материалу',
-    body: 'Бригада оспаривает доставку: {materialName}',
   ),
   'selfpurchase_created': NotifTemplate(
     title: 'Заявка на самозакуп',
@@ -159,15 +143,11 @@ const Set<String> kCriticalNotifKinds = {
   'approval_approved',
   'approval_rejected',
   'payment_created',
-  'payment_confirmed',
-  'payment_disputed',
-  'payment_resolved',
   'stage_rejected_by_customer',
   'stage_overdue',
   'stage_deadline_exceeds_project',
   'material_request_created',
   'material_delivered',
-  'material_disputed',
   'selfpurchase_created',
   'tool_issued',
   'export_completed',

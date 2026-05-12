@@ -17,6 +17,8 @@ type MembershipRow = {
   userId: string;
   role: 'customer' | 'representative' | 'foreman' | 'master';
   stageIds?: string[];
+  permissions?: Record<string, boolean>;
+  removedAt?: Date | null;
 };
 
 const mkPrisma = () => {
@@ -24,7 +26,6 @@ const mkPrisma = () => {
   const stages = new Map<string, any>();
   const requests = new Map<string, any>();
   const items = new Map<string, any>();
-  const disputes: any[] = [];
   const memberships: MembershipRow[] = [];
   let rSeq = 0;
   let iSeq = 0;
@@ -35,6 +36,15 @@ const mkPrisma = () => {
   const prisma: any = {
     project: {
       findUnique: jest.fn(({ where }: any) => projects.get(where.id) ?? null),
+      update: jest.fn(({ where, data }: any) => {
+        const p = projects.get(where.id);
+        if (!p) throw new Error('project not found');
+        if (data.materialsBudget?.decrement != null) {
+          const cur = BigInt(p.materialsBudget ?? 0);
+          p.materialsBudget = cur - BigInt(data.materialsBudget.decrement);
+        }
+        return p;
+      }),
     },
     stage: {
       findUnique: jest.fn(({ where }: any) => stages.get(where.id) ?? null),
@@ -47,7 +57,9 @@ const mkPrisma = () => {
               m.projectId === where.projectId &&
               m.userId === where.userId &&
               (!where.role || m.role === where.role) &&
-              (!where.stageIds?.has || (m.stageIds ?? []).includes(where.stageIds.has)),
+              (where.removedAt === undefined || where.removedAt === null
+                ? (m.removedAt ?? null) === null
+                : true),
           ) ?? null,
       ),
     },
@@ -61,8 +73,8 @@ const mkPrisma = () => {
           recipient: data.recipient,
           title: data.title,
           comment: data.comment ?? null,
-          status: data.status ?? 'draft',
-          finalizedAt: null,
+          status: data.status ?? 'pending_approval',
+          finalizedAt: data.finalizedAt ?? null,
           deliveredAt: null,
           deliveredById: null,
           idempotencyKey: data.idempotencyKey ?? null,
@@ -81,7 +93,7 @@ const mkPrisma = () => {
               note: it.note ?? null,
               pricePerUnit: it.pricePerUnit ?? null,
               totalPrice: it.totalPrice ?? null,
-              isBought: it.isBought ?? false,
+              isBought: false,
               boughtAt: null,
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -97,7 +109,6 @@ const mkPrisma = () => {
         if (!r) return null;
         const out: any = { ...r };
         if (include?.items) out.items = itemsOf(r.id);
-        if (include?.disputes) out.disputes = disputes.filter((d) => d.requestId === r.id);
         if (include?.stage) out.stage = r.stageId ? (stages.get(r.stageId) ?? null) : null;
         if (include?.project) out.project = projects.get(r.projectId) ?? null;
         return out;
@@ -117,43 +128,8 @@ const mkPrisma = () => {
       }),
     },
     materialItem: {
-      findUnique: jest.fn(({ where, include }: any) => {
-        const it = items.get(where.id);
-        if (!it) return null;
-        if (include?.request) {
-          const r = requests.get(it.requestId);
-          return {
-            ...it,
-            request: {
-              ...r,
-              items: itemsOf(r.id),
-              project: projects.get(r.projectId) ?? null,
-            },
-          };
-        }
-        return it;
-      }),
+      findUnique: jest.fn(({ where }: any) => items.get(where.id) ?? null),
       findMany: jest.fn(({ where }: any) => itemsOf(where.requestId)),
-      update: jest.fn(({ where, data }: any) => {
-        const it = items.get(where.id);
-        if (!it) throw new Error('not found');
-        Object.assign(it, data);
-        return it;
-      }),
-    },
-    materialDispute: {
-      create: jest.fn(({ data }: any) => {
-        const d = { id: `d${disputes.length + 1}`, ...data, status: 'open', createdAt: new Date() };
-        disputes.push(d);
-        return d;
-      }),
-      updateMany: jest.fn(({ where, data }: any) => {
-        const candidates = disputes.filter(
-          (d) => d.requestId === where.requestId && d.status === where.status,
-        );
-        for (const d of candidates) Object.assign(d, data);
-        return { count: candidates.length };
-      }),
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
@@ -164,40 +140,146 @@ const mkPrisma = () => {
     requests,
     items,
     memberships,
-    disputes,
   };
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
 
+/**
+ * Тестовый сетап:
+ *   project p1, owner=c1 (customer), materialsBudget=1_000_000 копеек
+ *   stage s1, foreman=foreman1
+ *   master1 — мастер, назначен на s1
+ *   stranger — не в проекте
+ */
+const baseSetup = () => {
+  const st = mkPrisma();
+  st.projects.set('p1', {
+    id: 'p1',
+    status: 'active',
+    ownerId: 'c1',
+    materialsBudget: BigInt(1_000_000),
+  });
+  st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
+  st.memberships.push({ projectId: 'p1', userId: 'c1', role: 'customer' });
+  st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
+  st.memberships.push({
+    projectId: 'p1',
+    userId: 'master1',
+    role: 'master',
+    stageIds: ['s1'],
+  });
+  const approvalsMock = {
+    request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
+  };
+  const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), approvalsMock as any);
+  return { st, svc, approvalsMock };
+};
+
 describe('MaterialsService.createRequest', () => {
-  it('draft с items, stageId=null → «Общие материалы» (gaps §5.1)', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', status: 'active', ownerId: 'c1' });
-    const feed = mkFeed();
-    const svc = new MaterialsService(st.prisma, feed, new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+  it('foreman создаёт → status=pending_approval + Approval(material_purchase)', async () => {
+    const { st, svc, approvalsMock } = baseSetup();
+    const r = await svc.createRequest({
+      projectId: 'p1',
+      stageId: 's1',
+      recipient: 'foreman',
+      title: 'Электрика',
+      items: [{ name: 'Кабель', qty: 10, unit: 'м', pricePerUnit: 50 }],
+      actorUserId: 'foreman1',
+    });
+    expect(r.status).toBe('pending_approval');
+    expect(approvalsMock.request).toHaveBeenCalledTimes(1);
+    const arg = approvalsMock.request.mock.calls[0][0];
+    expect(arg.scope).toBe('material_purchase');
+    expect(arg.addresseeId).toBe('c1');
+    expect((arg.payload as any).materialRequestId).toBe(r.id);
+    expect((arg.payload as any).amount).toBe(500);
+    // Бюджет не тронут до согласования
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
+  });
+
+  it('customer-owner создаёт → сразу status=open + бюджет декрементится', async () => {
+    const { st, svc, approvalsMock } = baseSetup();
     const r = await svc.createRequest({
       projectId: 'p1',
       recipient: 'foreman',
       title: 'Общий список',
-      items: [{ name: 'Плитка', qty: 10, unit: 'м²' }],
+      items: [
+        { name: 'Плитка', qty: 10, unit: 'м²', pricePerUnit: 1000 },
+        { name: 'Клей', qty: 5, unit: 'кг', pricePerUnit: 200 },
+      ],
       actorUserId: 'c1',
     });
-    expect(r.status).toBe('draft');
-    expect(r.stageId).toBeNull();
-    expect(feed.emit).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'material_request_created' }),
-    );
+    expect(r.status).toBe('open');
+    expect(r.finalizedAt).toEqual(NOW);
+    expect(approvalsMock.request).not.toHaveBeenCalled();
+    // 10*1000 + 5*200 = 11_000 копеек
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000 - 11_000));
+  });
+
+  it('representative.canApprove создаёт → сразу open + бюджет декрементится', async () => {
+    const { st, svc, approvalsMock } = baseSetup();
+    st.memberships.push({
+      projectId: 'p1',
+      userId: 'rep1',
+      role: 'representative',
+      permissions: { canApprove: true },
+    });
+    const r = await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'rep request',
+      items: [{ name: 'a', qty: 1, pricePerUnit: 333 }],
+      actorUserId: 'rep1',
+    });
+    expect(r.status).toBe('open');
+    expect(approvalsMock.request).not.toHaveBeenCalled();
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000 - 333));
+  });
+
+  it('master создаёт → pending_approval + Approval, бюджет не тронут', async () => {
+    const { svc, approvalsMock, st } = baseSetup();
+    const r = await svc.createRequest({
+      projectId: 'p1',
+      stageId: 's1',
+      recipient: 'foreman',
+      title: 'm',
+      items: [{ name: 'a', qty: 1, pricePerUnit: 100 }],
+      actorUserId: 'master1',
+    });
+    expect(r.status).toBe('pending_approval');
+    expect(approvalsMock.request).toHaveBeenCalled();
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
+  });
+
+  it('items без цены — заявка создаётся, бюджет не тронут (auto-approve без декремента)', async () => {
+    const { svc, st } = baseSetup();
+    const r = await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'неоценённая',
+      items: [{ name: 'мелочёвка', qty: 1 }],
+      actorUserId: 'c1',
+    });
+    expect(r.status).toBe('open');
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
+  });
+
+  it('не участник → 403', async () => {
+    const { svc } = baseSetup();
+    await expect(
+      svc.createRequest({
+        projectId: 'p1',
+        recipient: 'foreman',
+        title: 'x',
+        items: [{ name: 'a', qty: 1 }],
+        actorUserId: 'stranger',
+      }),
+    ).rejects.toThrow(ForbiddenError);
   });
 
   it('пустой items → InvalidInputError', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', status: 'active', ownerId: 'c1' });
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+    const { svc } = baseSetup();
     await expect(
       svc.createRequest({
         projectId: 'p1',
@@ -210,11 +292,8 @@ describe('MaterialsService.createRequest', () => {
   });
 
   it('archived project → Conflict', async () => {
-    const st = mkPrisma();
+    const { st, svc } = baseSetup();
     st.projects.set('p1', { id: 'p1', status: 'archived', ownerId: 'c1' });
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
     await expect(
       svc.createRequest({
         projectId: 'p1',
@@ -227,121 +306,119 @@ describe('MaterialsService.createRequest', () => {
   });
 });
 
-describe('MaterialsService FSM', () => {
-  const setup = async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', status: 'active', ownerId: 'c1' });
-    st.stages.set('s1', { id: 's1', projectId: 'p1', foremanIds: ['foreman1'] });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    st.memberships.push({
-      projectId: 'p1',
-      userId: 'master1',
-      role: 'master',
-      stageIds: ['s1'],
-    });
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+describe('MaterialsService.resolvePurchaseApproval', () => {
+  const prepare = async () => {
+    const { st, svc } = baseSetup();
     const r = await svc.createRequest({
       projectId: 'p1',
       stageId: 's1',
       recipient: 'foreman',
-      title: 'Электрика',
+      title: 'x',
       items: [
-        { name: 'Кабель', qty: 100, unit: 'м', pricePerUnit: 50 },
-        { name: 'Розетки', qty: 20, unit: 'шт', pricePerUnit: 300 },
-        { name: 'Выключатели', qty: 10, unit: 'шт', pricePerUnit: 250 },
-        { name: 'Коробки', qty: 15, unit: 'шт', pricePerUnit: 100 },
-        { name: 'Клеммы', qty: 50, unit: 'шт', pricePerUnit: 20 },
+        { name: 'a', qty: 1, pricePerUnit: 100 },
+        { name: 'b', qty: 2, pricePerUnit: 200 },
       ],
       actorUserId: 'foreman1',
     });
     return { st, svc, requestId: r.id };
   };
 
-  it('send: draft → open, emit material_request_sent', async () => {
-    const { svc, requestId } = await setup();
-    const sent = await svc.send(requestId, 'foreman1');
-    expect(sent.status).toBe('open');
+  it('approve → status=open + finalizedAt + бюджет декрементится на сумму всех items', async () => {
+    const { svc, requestId, st } = await prepare();
+    await svc.resolvePurchaseApproval(requestId, {
+      decision: 'approved',
+      actorUserId: 'c1',
+      actorSystemRole: 'customer',
+    });
+    const r = st.requests.get(requestId);
+    expect(r.status).toBe('open');
+    expect(r.finalizedAt).toEqual(NOW);
+    // 100*1 + 200*2 = 500 копеек
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000 - 500));
   });
 
-  it('send чужой → 403', async () => {
-    const { svc, requestId } = await setup();
-    await expect(svc.send(requestId, 'stranger')).rejects.toThrow(ForbiddenError);
+  it('reject → status=cancelled, бюджет не трогается', async () => {
+    const { svc, requestId, st } = await prepare();
+    await svc.resolvePurchaseApproval(requestId, {
+      decision: 'rejected',
+      comment: 'нет',
+      actorUserId: 'c1',
+      actorSystemRole: 'customer',
+    });
+    expect(st.requests.get(requestId).status).toBe('cancelled');
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
   });
 
-  it('markItemBought: 4 из 5 → partially_bought; затем 5-й → bought', async () => {
-    const { svc, requestId, st } = await setup();
-    await svc.send(requestId, 'foreman1');
-    const items = [...st.items.values()].filter((it) => it.requestId === requestId);
-    for (let i = 0; i < 4; i++) {
-      await svc.markItemBought(items[i].id, { pricePerUnit: 100 }, 'foreman1');
-    }
-    const partial = st.requests.get(requestId);
-    expect(partial.status).toBe('partially_bought');
-    await svc.markItemBought(items[4].id, { pricePerUnit: 100 }, 'foreman1');
-    const all = st.requests.get(requestId);
-    expect(all.status).toBe('bought');
+  it('повторное resolve уже cancelled → ConflictError', async () => {
+    const { svc, requestId } = await prepare();
+    await svc.resolvePurchaseApproval(requestId, {
+      decision: 'rejected',
+      comment: 'нет',
+      actorUserId: 'c1',
+      actorSystemRole: 'customer',
+    });
+    await expect(
+      svc.resolvePurchaseApproval(requestId, {
+        decision: 'approved',
+        actorUserId: 'c1',
+        actorSystemRole: 'customer',
+      }),
+    ).rejects.toThrow(ConflictError);
   });
 
-  it('finalize партии → status=bought, finalizedAt, emit budget_updated', async () => {
-    const { svc, requestId, st } = await setup();
-    await svc.send(requestId, 'foreman1');
-    const items = [...st.items.values()].filter((it) => it.requestId === requestId);
-    await svc.markItemBought(items[0].id, { pricePerUnit: 100 }, 'foreman1');
-    const feed = mkFeed();
-    // Создаём новый svc с пойманным feed — для утверждения
-    const svc2 = new MaterialsService(st.prisma, feed, new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const finalized = await svc2.finalize(requestId, 'foreman1');
-    expect(finalized.status).toBe('bought');
-    expect(finalized.finalizedAt).toEqual(NOW);
-    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
-    expect(kinds).toContain('material_request_finalized');
-    expect(kinds).toContain('budget_updated');
+  it('повторное approve уже open → ConflictError', async () => {
+    const { svc, requestId } = await prepare();
+    await svc.resolvePurchaseApproval(requestId, {
+      decision: 'approved',
+      actorUserId: 'c1',
+      actorSystemRole: 'customer',
+    });
+    await expect(
+      svc.resolvePurchaseApproval(requestId, {
+        decision: 'approved',
+        actorUserId: 'c1',
+        actorSystemRole: 'customer',
+      }),
+    ).rejects.toThrow(ConflictError);
   });
 
-  it('confirmDelivery master стадии → delivered', async () => {
-    const { svc, requestId, st } = await setup();
-    await svc.send(requestId, 'foreman1');
-    const items = [...st.items.values()].filter((it) => it.requestId === requestId);
-    await svc.markItemBought(items[0].id, { pricePerUnit: 100 }, 'foreman1');
-    await svc.finalize(requestId, 'foreman1');
-    const delivered = await svc.confirmDelivery(requestId, 'master1');
-    expect(delivered.status).toBe('delivered');
+  it('resolve несуществующей заявки → NotFoundError', async () => {
+    const { svc } = baseSetup();
+    await expect(
+      svc.resolvePurchaseApproval('missing', {
+        decision: 'approved',
+        actorUserId: 'c1',
+        actorSystemRole: 'customer',
+      }),
+    ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe('MaterialsService.get / listForProject', () => {
+  it('get: 404 при отсутствии', async () => {
+    const { svc } = baseSetup();
+    await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
   });
 
-  it('confirmDelivery чужой master → 403', async () => {
-    const { svc, requestId, st } = await setup();
-    await svc.send(requestId, 'foreman1');
-    const items = [...st.items.values()].filter((it) => it.requestId === requestId);
-    await svc.markItemBought(items[0].id, { pricePerUnit: 100 }, 'foreman1');
-    await svc.finalize(requestId, 'foreman1');
-    await expect(svc.confirmDelivery(requestId, 'stranger')).rejects.toThrow(ForbiddenError);
-  });
-
-  it('dispute → resolve: status transitions', async () => {
-    const { svc, requestId, st } = await setup();
-    await svc.send(requestId, 'foreman1');
-    const items = [...st.items.values()].filter((it) => it.requestId === requestId);
-    await svc.markItemBought(items[0].id, { pricePerUnit: 100 }, 'foreman1');
-    await svc.finalize(requestId, 'foreman1');
-    await svc.confirmDelivery(requestId, 'master1');
-    const disputed = await svc.dispute(requestId, 'не всё пришло', 'master1');
-    expect(disputed.status).toBe('disputed');
-    const resolved = await svc.resolve(requestId, {
-      resolution: 'компенсация',
+  it('listForProject возвращает заявки всех статусов проекта', async () => {
+    const { svc } = baseSetup();
+    await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'a',
+      items: [{ name: 'x', qty: 1, pricePerUnit: 10 }],
       actorUserId: 'c1',
     });
-    expect(resolved.status).toBe('resolved');
-  });
-
-  it('get 404', async () => {
-    const st = mkPrisma();
-    const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
+    await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'b',
+      items: [{ name: 'y', qty: 1, pricePerUnit: 20 }],
+      actorUserId: 'foreman1',
+    });
+    const all = await svc.listForProject('p1');
+    expect(all).toHaveLength(2);
+    const statuses = all.map((r) => r.status).sort();
+    expect(statuses).toEqual(['open', 'pending_approval']);
   });
 });

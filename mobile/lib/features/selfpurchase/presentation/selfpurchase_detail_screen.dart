@@ -252,9 +252,20 @@ class _ApprovedBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.x12),
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: AppColors.greenLight,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFE7FBF1), AppColors.greenLight],
+        ),
         border: Border.all(color: const Color(0xFFA7F3D0)),
         borderRadius: AppRadius.card,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F10B981),
+            offset: Offset(0, 4),
+            blurRadius: 16,
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,7 +273,7 @@ class _ApprovedBanner extends StatelessWidget {
           const Icon(
             Icons.task_alt_rounded,
             color: AppColors.greenDark,
-            size: 18,
+            size: 20,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -305,14 +316,25 @@ class _RejectedBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.x12),
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: AppColors.redBg,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFEECEC), AppColors.redBg],
+        ),
         border: Border.all(color: const Color(0xFFFECACA)),
         borderRadius: AppRadius.card,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1FDC2626),
+            offset: Offset(0, 4),
+            blurRadius: 16,
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.close_rounded, color: AppColors.redDot, size: 18),
+          const Icon(Icons.close_rounded, color: AppColors.redDot, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

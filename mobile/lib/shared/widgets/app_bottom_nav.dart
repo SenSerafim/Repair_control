@@ -6,7 +6,7 @@ import '../../core/theme/tokens.dart';
 /// Нижняя навигация по мотивам `.bnav` из HTML-макетов:
 /// - фон с полупрозрачным blur
 /// - активная иконка brand, неактивная — n400
-/// - индикатор-точка под активным табом
+/// - индикатор-точка под активным табом (gradient + glow)
 /// - опциональный бэйдж непрочитанных (красный dot с цифрой)
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
@@ -26,6 +26,18 @@ class AppBottomNav extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppColors.n0,
         border: Border(top: BorderSide(color: AppColors.n200)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0A0D1229),
+            offset: Offset(0, -1),
+            blurRadius: 0,
+          ),
+          BoxShadow(
+            color: Color(0x0A0D1229),
+            offset: Offset(0, -8),
+            blurRadius: 24,
+          ),
+        ],
       ),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: SafeArea(
@@ -80,7 +92,12 @@ class _Item extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(item.icon, size: 22, color: color),
+                AnimatedSlide(
+                  duration: AppDurations.normal,
+                  curve: AppCurves.spring,
+                  offset: active ? const Offset(0, -0.04) : Offset.zero,
+                  child: Icon(item.icon, size: 22, color: color),
+                ),
                 if (item.badgeCount > 0)
                   Positioned(
                     right: -8,
@@ -121,15 +138,32 @@ class _Item extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             AnimatedScale(
-              duration: const Duration(milliseconds: 150),
+              duration: AppDurations.normal,
+              curve: AppCurves.spring,
               scale: active ? 1.0 : 0.0,
               alignment: Alignment.center,
               child: Container(
-                width: 5,
-                height: 5,
+                width: 6,
+                height: 6,
                 decoration: const BoxDecoration(
-                  color: AppColors.brand,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.brandMid, AppColors.brand],
+                  ),
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x294F6EF7),
+                      blurRadius: 0,
+                      spreadRadius: 3,
+                    ),
+                    BoxShadow(
+                      color: Color(0x4D4F6EF7),
+                      offset: Offset(0, 2),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
             ),

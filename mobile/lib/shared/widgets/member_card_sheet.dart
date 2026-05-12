@@ -50,12 +50,17 @@ class MemberCardData {
 /// появляется кнопка «Убрать из команды» (П2.12 — только для заказчика
 /// и представителя с canManageTeam, проверка на caller-side).
 /// [onOpenChat] — открыть чат проекта.
+/// [onOpenRepRights] — открыть лист прав представителя (ROLES §11.8). Если
+/// задан, в карточке появляется строка «Настроить права». Caller-side должен
+/// сам проверить, что участник = representative и наблюдатель имеет
+/// права на управление командой.
 Future<void> showMemberCardSheet(
   BuildContext context, {
   required MemberCardData data,
   VoidCallback? onRemoveFromTeam,
   VoidCallback? onOpenChat,
   VoidCallback? onOpenProfile,
+  VoidCallback? onOpenRepRights,
   ValueChanged<String>? onOpenProject,
 }) {
   return showAppBottomSheet<void>(
@@ -66,6 +71,7 @@ Future<void> showMemberCardSheet(
       onRemoveFromTeam: onRemoveFromTeam,
       onOpenChat: onOpenChat,
       onOpenProfile: onOpenProfile,
+      onOpenRepRights: onOpenRepRights,
       onOpenProject: onOpenProject,
     ),
   );
@@ -77,6 +83,7 @@ class _MemberCardSheet extends StatelessWidget {
     this.onRemoveFromTeam,
     this.onOpenChat,
     this.onOpenProfile,
+    this.onOpenRepRights,
     this.onOpenProject,
   });
 
@@ -84,6 +91,7 @@ class _MemberCardSheet extends StatelessWidget {
   final VoidCallback? onRemoveFromTeam;
   final VoidCallback? onOpenChat;
   final VoidCallback? onOpenProfile;
+  final VoidCallback? onOpenRepRights;
   final ValueChanged<String>? onOpenProject;
 
   @override
@@ -178,6 +186,22 @@ class _MemberCardSheet extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).pop();
                 onOpenProfile!();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // ─── Действие: настройка прав представителя (ROLES §11.8) ───
+          if (onOpenRepRights != null) ...[
+            AppOptionRow(
+              icon: Icons.tune_rounded,
+              iconBg: AppColors.brandLight,
+              iconFg: AppColors.brand,
+              title: 'Настроить права',
+              subtitle: 'Чек-листы DomainAction для представителя',
+              onTap: () {
+                Navigator.of(context).pop();
+                onOpenRepRights!();
               },
             ),
             const SizedBox(height: 8),

@@ -19,23 +19,26 @@ class TourAnchorRegistry extends ChangeNotifier {
 
   final Map<String, GlobalKey> _anchors = {};
 
-  /// Зарегистрировать anchor. Возвращает уже существующий GlobalKey, если
-  /// он есть (так wrapper может пере-render-нуться без потери ключа), либо
-  /// создаёт новый.
-  GlobalKey register(String id) {
-    final existing = _anchors[id];
-    if (existing != null) return existing;
-    final key = GlobalKey(debugLabel: 'tour_anchor:$id');
+  /// Зарегистрировать anchor. Сохраняет (id → key)-маппинг, перезаписывая
+  /// любой существующий — «победитель — последний». Каждый `TourAnchor`
+  /// владеет собственным `GlobalKey`, поэтому когда два инстанса с одним id
+  /// транзитно живут одновременно (route transition, hot reload, rebuild
+  /// в одном кадре), Flutter не получает duplicate GlobalKey assertion.
+  void registerKey(String id, GlobalKey key) {
     _anchors[id] = key;
     // Сообщаем подписчикам, что появился новый anchor — TourOverlay
     // перерисуется и пересчитает rect.
     notifyListeners();
-    return key;
   }
 
-  /// Снять регистрацию. Вызывается из `dispose` `TourAnchor`-а.
-  void unregister(String id) {
-    if (_anchors.remove(id) != null) notifyListeners();
+  /// Снять регистрацию. Удаляет запись только если в реестре всё ещё
+  /// записан именно наш ключ — иначе игнор (более новый `TourAnchor`
+  /// уже перерегистрировал id).
+  void unregister(String id, GlobalKey ownKey) {
+    if (identical(_anchors[id], ownKey)) {
+      _anchors.remove(id);
+      notifyListeners();
+    }
   }
 
   /// Получить ключ по id (или `null`, если anchor не смонтирован).

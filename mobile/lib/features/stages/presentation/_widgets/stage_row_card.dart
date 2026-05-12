@@ -40,19 +40,25 @@ class StageRowCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
           decoration: BoxDecoration(
-            color: AppColors.n0,
+            gradient: AppGradients.surfaceCard,
             borderRadius: AppRadius.card,
             border: Border.all(color: AppColors.n200),
-            boxShadow: AppShadows.sh1,
+            boxShadow: AppShadows.shCard,
           ),
           child: Row(
             children: [
               Container(
-                width: 4,
-                height: 40,
+                width: 5,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: display.semaphore.dot,
-                  borderRadius: BorderRadius.circular(2),
+                  gradient: display.semaphore.stripe,
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: display.semaphore.dot.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: AppSpacing.x12),

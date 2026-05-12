@@ -91,15 +91,31 @@ class _ActiveTimerState extends State<_ActiveTimer> {
         gradient: AppGradients.brandButton,
         borderRadius: AppRadius.card,
         boxShadow: AppShadows.shBlue,
+        // 1px белый top-border имитирует CSS inset highlight — кнопка
+        // получает чуть более «премиальный» objём.
+        border: Border(
+          top: BorderSide(
+            color: AppColors.n0.withValues(alpha: 0.22),
+            width: 1,
+          ),
+        ),
       ),
       child: Row(
         children: [
+          // Pulsing live-dot — таймер визуально «дышит».
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.n0,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.n0.withValues(alpha: 0.55),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
           ),
           const SizedBox(width: AppSpacing.x10),
@@ -188,11 +204,18 @@ class _Review extends StatelessWidget {
           colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
         ),
         borderRadius: AppRadius.card,
+        // 1px inset highlight сверху + ambient drop под банером.
+        border: Border(
+          top: BorderSide(
+            color: AppColors.n0.withValues(alpha: 0.22),
+            width: 1,
+          ),
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x4D6D28D9),
-            offset: Offset(0, 4),
-            blurRadius: 16,
+            offset: Offset(0, 6),
+            blurRadius: 20,
           ),
         ],
       ),
@@ -330,9 +353,23 @@ class _Rejected extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
-        color: AppColors.redBg,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.redBg.withValues(alpha: 0.86),
+            AppColors.redBg,
+          ],
+        ),
         borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.4)),
+        border: Border.all(color: AppColors.redDot.withValues(alpha: 0.40)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.redDot.withValues(alpha: 0.08),
+            offset: const Offset(0, 2),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,14 +487,41 @@ class _BaseBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: bg,
+        // Subtle vertical gradient (на 6% светлее сверху) — банер «оживает»
+        // и не выглядит как плоская плашка. Для всех статусов окрашен в
+        // тон bg, поэтому работает универсально.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [bg.withValues(alpha: 0.86), bg],
+        ),
         borderRadius: AppRadius.card,
         border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(
+            color: iconColor.withValues(alpha: 0.06),
+            offset: const Offset(0, 2),
+            blurRadius: 10,
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 22, color: iconColor),
+          // 32×32 icon-tile с inner highlight — фокусирует внимание.
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.n0.withValues(alpha: 0.50),
+              borderRadius: BorderRadius.circular(AppRadius.r8),
+              border: Border.all(
+                color: iconColor.withValues(alpha: 0.18),
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
           const SizedBox(width: AppSpacing.x10),
           Expanded(
             child: Column(

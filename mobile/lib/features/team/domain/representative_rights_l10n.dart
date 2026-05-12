@@ -1,4 +1,5 @@
 import '../../../core/access/domain_actions.dart';
+import '../../../core/access/representative_rights.dart';
 
 /// Человекочитаемая метка для DomainAction (P1.1).
 /// Используется в `rep_rights_sheet` (Команда) и `rep_rights_screen` (Профиль)
@@ -8,6 +9,112 @@ class RightLabel {
   final String title;
   final String description;
 }
+
+/// Карта `RepresentativeRight` → русское название и пояснение.
+///
+/// Источник истины для 10 флагов `RepresentativeRights` (см.
+/// `backend/libs/rbac/src/rbac.types.ts`). Тексты согласованы с
+/// дизайном `design/Кластер B` и матрицей прав ТЗ §1.5.
+///
+/// `kRightsRu` (по `DomainAction`) исторически использовался как «список
+/// всех возможных действий» в info-экране профиля; для UI выдачи прав
+/// представителю используется именно эта карта.
+const Map<RepresentativeRight, RightLabel> kRepresentativeRightLabels = {
+  RepresentativeRight.canEditStages: RightLabel(
+    title: 'Редактировать этапы и шаги',
+    description:
+        'Менять состав этапов, шаги, фото, документы. Без права создания '
+        'этапов с нуля — для этого есть отдельное право ниже.',
+  ),
+  RepresentativeRight.canCreateStages: RightLabel(
+    title: 'Создавать этапы без согласования',
+    description:
+        'Новый этап появляется сразу, как у заказчика. Без этого права '
+        'создание этапа недоступно представителю.',
+  ),
+  RepresentativeRight.canApprove: RightLabel(
+    title: 'Принимать решения по согласованиям',
+    description:
+        'Одобрять и отклонять планы, шаги, приёмки, диспуты — от имени '
+        'заказчика.',
+  ),
+  RepresentativeRight.canSeeBudget: RightLabel(
+    title: 'Видеть бюджет проекта',
+    description: 'Полный бюджет, сметы по этапам, экспорт ленты финансов.',
+  ),
+  RepresentativeRight.canCreatePayments: RightLabel(
+    title: 'Создавать и подтверждать выплаты',
+    description: 'Авансы бригадиру и оплаты, диспуты по платежам.',
+  ),
+  RepresentativeRight.canManageMaterials: RightLabel(
+    title: 'Управлять материалами',
+    description: 'Создавать заявки на материалы, отмечать получение, закрывать.',
+  ),
+  RepresentativeRight.canManageTools: RightLabel(
+    title: 'Управлять инструментом',
+    description: 'Реестр инструмента, выдача мастерам, приёмка возвратов.',
+  ),
+  RepresentativeRight.canInviteMembers: RightLabel(
+    title: 'Приглашать участников',
+    description: 'Добавлять в проект бригадира, мастера, представителя.',
+  ),
+  RepresentativeRight.canManageTeam: RightLabel(
+    title: 'Удалять участников',
+    description:
+        'Снимать участника из команды через карточку «Команда». Без права '
+        'кнопка «Убрать из команды» скрыта.',
+  ),
+  RepresentativeRight.canAddRepresentative: RightLabel(
+    title: 'Добавлять других представителей',
+    description:
+        'Делегировать часть полномочий ещё одному представителю — например, '
+        'на время отъезда.',
+  ),
+};
+
+/// Группировка делегированных прав для UI экрана/шита настройки.
+/// Порядок и тексты согласованы с design/Кластер B (раздел «Команда»).
+class RepresentativeRightGroup {
+  const RepresentativeRightGroup({required this.title, required this.rights});
+  final String title;
+  final List<RepresentativeRight> rights;
+}
+
+const List<RepresentativeRightGroup> kRepresentativeRightGroups = [
+  RepresentativeRightGroup(
+    title: 'Управление проектом',
+    rights: [
+      RepresentativeRight.canEditStages,
+      RepresentativeRight.canCreateStages,
+    ],
+  ),
+  RepresentativeRightGroup(
+    title: 'Команда',
+    rights: [
+      RepresentativeRight.canInviteMembers,
+      RepresentativeRight.canAddRepresentative,
+      RepresentativeRight.canManageTeam,
+    ],
+  ),
+  RepresentativeRightGroup(
+    title: 'Согласования',
+    rights: [RepresentativeRight.canApprove],
+  ),
+  RepresentativeRightGroup(
+    title: 'Финансы',
+    rights: [
+      RepresentativeRight.canSeeBudget,
+      RepresentativeRight.canCreatePayments,
+    ],
+  ),
+  RepresentativeRightGroup(
+    title: 'Материалы и инструмент',
+    rights: [
+      RepresentativeRight.canManageMaterials,
+      RepresentativeRight.canManageTools,
+    ],
+  ),
+];
 
 /// Карта DomainAction → русское название и пояснение.
 /// Источник: ТЗ §1.5, дизайн design/Кластер B/A.
@@ -73,21 +180,13 @@ const Map<DomainAction, RightLabel> kRightsRu = {
     title: 'Менять бюджет',
     description: 'Корректировать суммы и распределение средств.',
   ),
-  DomainAction.financePaymentCreate: RightLabel(
-    title: 'Создавать платежи',
-    description: 'Авансы бригадиру, оплаты мастерам и поставщикам.',
+  DomainAction.financePaymentCreateAdvance: RightLabel(
+    title: 'Отправлять авансы',
+    description: 'Создавать общий аванс из бюджета — бригадиру или напрямую мастеру.',
   ),
-  DomainAction.financePaymentConfirm: RightLabel(
-    title: 'Подтверждать платежи',
-    description: 'Закрывать платёж после фактического получения.',
-  ),
-  DomainAction.financePaymentDispute: RightLabel(
-    title: 'Открывать споры по платежам',
-    description: 'Если получатель не получил оплату — открыть диспут.',
-  ),
-  DomainAction.financePaymentResolve: RightLabel(
-    title: 'Разрешать споры по платежам',
-    description: 'Закрывать диспуты с решением о возврате/доплате.',
+  DomainAction.financePaymentDistribute: RightLabel(
+    title: 'Распределять авансы',
+    description: 'Бригадир распределяет свой полученный аванс между мастерами. Представителю не делегируется.',
   ),
   DomainAction.materialsManage: RightLabel(
     title: 'Управлять материалами',
@@ -106,17 +205,13 @@ const Map<DomainAction, RightLabel> kRightsRu = {
     title: 'Подтверждать самозакуп',
     description: 'Одобрять заявки на самозакуп от мастеров.',
   ),
-  DomainAction.toolsManage: RightLabel(
-    title: 'Управлять инструментами',
-    description: 'Раздел «Мои инструменты» — создание, изменение.',
+  DomainAction.toolsAddToProject: RightLabel(
+    title: 'Добавлять инструменты в проект',
+    description: 'Создавать новый инструмент в проекте или привязывать из «Моих».',
   ),
-  DomainAction.toolsIssue: RightLabel(
-    title: 'Выдавать инструменты',
-    description: 'Передавать инструмент мастеру в работу.',
-  ),
-  DomainAction.toolsReturn: RightLabel(
-    title: 'Возвращать инструменты',
-    description: 'Принимать инструмент обратно от мастера.',
+  DomainAction.toolsClaim: RightLabel(
+    title: 'Забирать инструмент',
+    description: 'Отмечать «инструмент у меня». Никто не назначает за другого.',
   ),
   DomainAction.chatRead: RightLabel(
     title: 'Читать чаты',
@@ -193,13 +288,11 @@ const Map<String, List<DomainAction>> kRightsGrouped = {
   'Согласования': [DomainAction.approvalRequest, DomainAction.approvalDecide],
   'Финансы': [
     DomainAction.financeBudgetView,
-    DomainAction.financePaymentCreate,
-    DomainAction.financePaymentConfirm,
-    DomainAction.financePaymentDispute,
+    DomainAction.financePaymentCreateAdvance,
   ],
   'Материалы и инструменты': [
     DomainAction.materialsManage,
-    DomainAction.toolsManage,
-    DomainAction.toolsIssue,
+    DomainAction.toolsAddToProject,
+    DomainAction.toolsClaim,
   ],
 };

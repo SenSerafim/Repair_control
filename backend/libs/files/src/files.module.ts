@@ -14,6 +14,38 @@ const DEFAULT_SCOPE_POLICIES: ScopePolicy[] = [
     allowedMimes: ['application/pdf'],
     maxSizeMb: 25,
   },
+  {
+    // Общая папка документов проекта: пользователи кладут «любое» —
+    // фото, видео, PDF, договоры, чеки. Удаление — только заказчик.
+    prefix: 'docs/',
+    allowedMimes: [
+      'image/jpeg',
+      'image/png',
+      'image/heic',
+      'image/heif',
+      'image/webp',
+      'video/mp4',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-matroska',
+      'video/webm',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/csv',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+      'application/octet-stream',
+    ],
+    maxSizeMb: 200,
+  },
 ];
 
 function parseScopePolicies(raw: string | undefined): ScopePolicy[] {
@@ -50,7 +82,7 @@ export class FilesModule {
             accessKey: cfg.get<string>('MINIO_ACCESS_KEY', 'minioadmin'),
             secretKey: cfg.get<string>('MINIO_SECRET_KEY', 'minioadmin'),
             bucket: cfg.get<string>('MINIO_BUCKET', 'repair-control'),
-            presignTtlSeconds: cfg.get<number>('MINIO_PRESIGN_TTL_SECONDS', 300),
+            presignTtlSeconds: cfg.get<number>('MINIO_PRESIGN_TTL_SECONDS', 900),
             region: cfg.get<string>('MINIO_REGION', 'us-east-1'),
             pathStyle: cfg.get<boolean>('MINIO_PATH_STYLE', true),
           }),

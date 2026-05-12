@@ -97,7 +97,7 @@ describe('Sprint 4 DoD — Payments + Materials', () => {
       })
       .expect(201);
     const advanceId = advance.body.id as string;
-    expect(advance.body.status).toBe('pending');
+    expect(advance.body.kind).toBe('advance');
 
     // Идемпотентность: повторный запрос с тем же ключом → тот же ответ
     const replay = await request(server())
@@ -113,14 +113,7 @@ describe('Sprint 4 DoD — Payments + Materials', () => {
       .expect(201);
     expect(replay.body.id).toBe(advanceId);
 
-    // Foreman подтверждает
-    await request(server())
-      .post(`/api/payments/${advanceId}/confirm`)
-      .set(fAuth)
-      .set(idem('adv-500k-confirm'))
-      .expect(200);
-
-    // Распределение 3×100k
+    // Foreman распределяет 3×100k мастерам — без какого-либо подтверждения.
     for (const [idx, master] of [m1, m2, m3].entries()) {
       await request(server())
         .post(`/api/payments/${advanceId}/distribute`)
@@ -130,22 +123,13 @@ describe('Sprint 4 DoD — Payments + Materials', () => {
         .expect(201);
     }
 
-    // Мастера подтверждают
     const all = await ctx.prisma.payment.findMany({
       where: { projectId, kind: 'distribution' },
       orderBy: { createdAt: 'asc' },
     });
     expect(all).toHaveLength(3);
-    const masterTokens = [m1, m2, m3].map((m) => m.token);
-    for (let i = 0; i < 3; i++) {
-      await request(server())
-        .post(`/api/payments/${all[i].id}/confirm`)
-        .set({ Authorization: `Bearer ${masterTokens[i]}` })
-        .set(idem(`confirm-${i}`))
-        .expect(200);
-    }
 
-    // Проверяем бюджет со стороны customer (owner видит всё)
+    // Бюджет: advance уменьшает spent, distributions не учитываются повторно.
     const budget = await request(server())
       .get(`/api/projects/${projectId}/budget`)
       .set(cAuth)
@@ -154,12 +138,11 @@ describe('Sprint 4 DoD — Payments + Materials', () => {
     expect(budget.body.work.spent).toBe(500_000_00);
     expect(budget.body.work.remaining).toBe(0);
 
-    // В ленте должны быть budget_updated события
+    // В ленте должны быть события создания и распределения + budget_updated.
     const kinds = (
       await ctx.prisma.feedEvent.findMany({ where: { projectId }, orderBy: { createdAt: 'asc' } })
     ).map((e) => e.kind);
     expect(kinds).toContain('payment_created');
-    expect(kinds).toContain('payment_confirmed');
     expect(kinds).toContain('payment_distributed');
     expect(kinds).toContain('budget_updated');
   });
@@ -250,44 +233,5 @@ describe('Sprint 4 DoD — Payments + Materials', () => {
     expect(budget.body.materials.spent).toBe(expectedSpent);
     expect(budget.body.materials.planned).toBe(50_000_00);
     expect(budget.body.materials.remaining).toBe(50_000_00 - expectedSpent);
-  });
-
-  it('ROAD_TO_100: PaymentDispute сохраняет photoKeys[]', async () => {
-    const customer = await reg('+79990002001', 'customer');
-    const foreman = await reg('+79990002002', 'contractor');
-    const cAuth = { Authorization: `Bearer ${customer.token}` };
-    const fAuth = { Authorization: `Bearer ${foreman.token}` };
-
-    const proj = await request(server())
-      .post('/api/projects')
-      .set(cAuth)
-      .send({ title: 'Спор', plannedStart: '2026-07-01', plannedEnd: '2026-12-31' })
-      .expect(201);
-    const projectId = proj.body.id as string;
-    await request(server())
-      .post(`/api/projects/${projectId}/members`)
-      .set(cAuth)
-      .send({ userId: foreman.userId, role: 'foreman' })
-      .expect(201);
-
-    const advance = await request(server())
-      .post(`/api/projects/${projectId}/payments`)
-      .set(cAuth)
-      .set(idem('disp-photo-1'))
-      .send({ toUserId: foreman.userId, amount: 100_000_00 })
-      .expect(201);
-
-    const photoKeys = ['payments/dispute/p1.jpg', 'payments/dispute/p2.jpg'];
-    await request(server())
-      .post(`/api/payments/${advance.body.id}/dispute`)
-      .set(fAuth)
-      .send({ reason: 'Сумма меньше договорённой', photoKeys })
-      .expect(200);
-
-    const dispute = await ctx.prisma.paymentDispute.findFirst({
-      where: { paymentId: advance.body.id },
-    });
-    expect(dispute).not.toBeNull();
-    expect(dispute!.photoKeys).toEqual(photoKeys);
   });
 });

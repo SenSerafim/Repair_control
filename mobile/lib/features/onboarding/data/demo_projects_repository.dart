@@ -29,6 +29,7 @@ class DemoProjectsRepository extends ProjectsRepository {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
+    List<String>? initialStages,
   }) async => DemoData.project;
 
   @override

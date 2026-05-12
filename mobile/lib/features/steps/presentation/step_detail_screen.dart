@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +8,6 @@ import 'package:intl/intl.dart';
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/access/system_role.dart';
-import '../data/steps_repository.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -120,20 +121,59 @@ class StepDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _openMiniMenu(BuildContext context, WidgetRef ref) async {
+    // Решения по правам в КОНКРЕТНОМ проекте (один аккаунт может быть foreman
+    // тут и customer там). canInProjectProvider учитывает membership-role
+    // + делегированные права представителя.
+    final canAddSubstep = ref.read(
+      canInProjectProvider((
+        action: DomainAction.stepAddSubstep,
+        projectId: projectId,
+      )),
+    );
+    final canAddPhoto = ref.read(
+      canInProjectProvider((
+        action: DomainAction.stepPhotoUpload,
+        projectId: projectId,
+      )),
+    );
+    // Доп.работу инициируют foreman / master через approval.request;
+    // у заказчика её НЕТ — он только принимает решение.
+    final canRequest = ref.read(
+      canInProjectProvider((
+        action: DomainAction.approvalRequest,
+        projectId: projectId,
+      )),
+    );
+    // Вопрос — note.manage / question.manage (любой участник проекта).
+    final canQuestion = ref.read(
+      canInProjectProvider((
+        action: DomainAction.questionManage,
+        projectId: projectId,
+      )),
+    );
     await showAppBottomSheet<void>(
       context: context,
       child: StepMiniMenu(
-        onAddSubstep: () => showAddSubstepSheet(context, ref, key: _key),
-        onAddPhoto: () => showAddPhotoSheet(context, ref, key: _key),
-        onAskQuestion: () =>
-            showAskQuestionSheet(context, ref, detailKey: _key),
-        onSendForApproval: () => _sendForApproval(context, ref),
-        onExtraWork: () => showExtraWorkSheet(
-          context,
-          ref,
-          projectId: projectId,
-          stageId: stageId,
-        ),
+        onAddSubstep: canAddSubstep
+            ? () => showAddSubstepSheet(context, ref, key: _key)
+            : null,
+        onAddPhoto: canAddPhoto
+            ? () => showAddPhotoSheet(context, ref, key: _key)
+            : null,
+        onAskQuestion: canQuestion
+            ? () => showAskQuestionSheet(context, ref, detailKey: _key)
+            : null,
+        onSendForApproval: canRequest
+            ? () => _sendForApproval(context, ref)
+            : null,
+        onExtraWork: canRequest
+            ? () => showExtraWorkSheet(
+                context,
+                ref,
+                projectId: projectId,
+                stageId: stageId,
+              )
+            : null,
       ),
     );
   }
@@ -707,7 +747,16 @@ class _ActionCtas extends ConsumerWidget {
       label: completeLabel,
       variant: AppButtonVariant.success,
       onPressed: () async {
-        final failure = await controller.complete(step.id);
+        // ТЗ §4.1 — текущий черновик отчёта летит вместе с complete; пустые
+        // строки бэкенд не пишет (поля опциональны).
+        final draft = ref.read(stepReportDraftProvider(step.id));
+        final whatTrim = draft.whatDid?.trim() ?? '';
+        final howTrim = draft.howDid?.trim() ?? '';
+        final failure = await controller.complete(
+          step.id,
+          whatDid: whatTrim.isNotEmpty ? whatTrim : null,
+          howDid: howTrim.isNotEmpty ? howTrim : null,
+        );
         if (!context.mounted) return;
         AppToast.show(
           context,
@@ -738,40 +787,80 @@ class _ReportSection extends ConsumerStatefulWidget {
   ConsumerState<_ReportSection> createState() => _ReportSectionState();
 }
 
+enum _ReportSaveStatus { idle, saving, saved, error }
+
 class _ReportSectionState extends ConsumerState<_ReportSection> {
   late final TextEditingController _whatDid;
   late final TextEditingController _howDid;
-  bool _saving = false;
-  String _initialWhat = '';
-  String _initialHow = '';
+  late final FocusNode _whatFocus;
+  late final FocusNode _howFocus;
+  Timer? _debounce;
+  static const _debounceWindow = Duration(milliseconds: 1200);
+
+  String _savedWhat = '';
+  String _savedHow = '';
+  _ReportSaveStatus _status = _ReportSaveStatus.idle;
+  String? _errorMessage;
+  // Кэш контейнера: ref в dispose() стрелять нельзя — ConsumerStatefulElement
+  // помечен disposed к моменту вызова, а контейнер живёт до конца приложения.
+  ProviderContainer? _containerCache;
 
   @override
   void initState() {
     super.initState();
-    _initialWhat = widget.step.whatDid ?? '';
-    _initialHow = widget.step.howDid ?? '';
-    _whatDid = TextEditingController(text: _initialWhat);
-    _howDid = TextEditingController(text: _initialHow);
+    _savedWhat = widget.step.whatDid ?? '';
+    _savedHow = widget.step.howDid ?? '';
+    _whatDid = TextEditingController(text: _savedWhat);
+    _howDid = TextEditingController(text: _savedHow);
+    _whatFocus = FocusNode()..addListener(_onFocusChange);
+    _howFocus = FocusNode()..addListener(_onFocusChange);
+    // Публикуем стартовый draft, чтобы Complete-CTA получил даже текст без
+    // правок (например, заполненный мастером ранее и подтянутый из API).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _publishDraft();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _containerCache = ProviderScope.containerOf(context, listen: false);
   }
 
   @override
   void didUpdateWidget(covariant _ReportSection old) {
     super.didUpdateWidget(old);
-    // Re-sync если step обновился из-вне (например, после save).
-    if ((widget.step.whatDid ?? '') != _initialWhat) {
-      _initialWhat = widget.step.whatDid ?? '';
-      _whatDid.text = _initialWhat;
+    // Re-sync если step обновился из-вне (refresh / другое окно).
+    final remoteWhat = widget.step.whatDid ?? '';
+    final remoteHow = widget.step.howDid ?? '';
+    if (remoteWhat != _savedWhat && _whatDid.text == _savedWhat) {
+      _savedWhat = remoteWhat;
+      _whatDid.text = remoteWhat;
+    } else if (remoteWhat != _savedWhat) {
+      _savedWhat = remoteWhat;
     }
-    if ((widget.step.howDid ?? '') != _initialHow) {
-      _initialHow = widget.step.howDid ?? '';
-      _howDid.text = _initialHow;
+    if (remoteHow != _savedHow && _howDid.text == _savedHow) {
+      _savedHow = remoteHow;
+      _howDid.text = remoteHow;
+    } else if (remoteHow != _savedHow) {
+      _savedHow = remoteHow;
     }
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _whatFocus
+      ..removeListener(_onFocusChange)
+      ..dispose();
+    _howFocus
+      ..removeListener(_onFocusChange)
+      ..dispose();
     _whatDid.dispose();
     _howDid.dispose();
+    // Сбрасываем общий draft, чтобы следующий экран шага открылся с чистым
+    // состоянием (provider.family кэширует значение по stepId).
+    _containerCache?.invalidate(stepReportDraftProvider(widget.step.id));
     super.dispose();
   }
 
@@ -780,40 +869,104 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
       widget.step.status != StepStatus.done;
 
   bool get _isDirty =>
-      _whatDid.text.trim() != _initialWhat.trim() ||
-      _howDid.text.trim() != _initialHow.trim();
+      _whatDid.text.trim() != _savedWhat.trim() ||
+      _howDid.text.trim() != _savedHow.trim();
 
-  Future<void> _save() async {
-    if (!_isDirty || _saving) return;
-    setState(() => _saving = true);
-    final repo = ref.read(stepsRepositoryProvider);
-    try {
-      await repo.updateStep(
-        stepId: widget.step.id,
-        whatDid: _whatDid.text.trim(),
-        howDid: _howDid.text.trim(),
-      );
-      _initialWhat = _whatDid.text.trim();
-      _initialHow = _howDid.text.trim();
-      // Re-fetch detail чтобы поля шага в state обновились.
-      ref.read(stepDetailProvider(widget.detailKey).notifier).refresh();
-      if (mounted) {
-        AppToast.show(
-          context,
-          message: 'Отчёт сохранён',
-          kind: AppToastKind.success,
-        );
+  void _publishDraft() {
+    ref.read(stepReportDraftProvider(widget.step.id).notifier).state =
+        StepReportDraft(whatDid: _whatDid.text, howDid: _howDid.text);
+  }
+
+  void _onTextChanged() {
+    _publishDraft();
+    // «Сохранено» сбрасываем, чтобы пользователь видел реакцию на новый ввод.
+    if (_status == _ReportSaveStatus.saved) {
+      setState(() => _status = _ReportSaveStatus.idle);
+    }
+    _debounce?.cancel();
+    if (!_canManage) return;
+    _debounce = Timer(_debounceWindow, _autoSave);
+  }
+
+  void _onFocusChange() {
+    // Любой blur — финализируем правки, чтобы не терять последний фрагмент,
+    // если debounce ещё не выстрелил.
+    if (!_whatFocus.hasFocus && !_howFocus.hasFocus) {
+      _debounce?.cancel();
+      if (_canManage && _isDirty) {
+        _autoSave();
       }
-    } catch (e) {
-      if (mounted) {
-        AppToast.show(
-          context,
-          message: 'Не удалось сохранить отчёт',
-          kind: AppToastKind.error,
+    }
+  }
+
+  Future<void> _autoSave() async {
+    if (!_isDirty || _status == _ReportSaveStatus.saving) return;
+    setState(() {
+      _status = _ReportSaveStatus.saving;
+      _errorMessage = null;
+    });
+    final controller = ref.read(stepDetailProvider(widget.detailKey).notifier);
+    final whatToSend = _whatDid.text.trim();
+    final howToSend = _howDid.text.trim();
+    final failure = await controller.updateReport(
+      whatDid: whatToSend,
+      howDid: howToSend,
+    );
+    if (!mounted) return;
+    if (failure == null) {
+      _savedWhat = whatToSend;
+      _savedHow = howToSend;
+      setState(() => _status = _ReportSaveStatus.saved);
+    } else {
+      setState(() {
+        _status = _ReportSaveStatus.error;
+        _errorMessage = failure.userMessage;
+      });
+    }
+  }
+
+  Widget _statusIndicator() {
+    switch (_status) {
+      case _ReportSaveStatus.idle:
+        if (_isDirty) {
+          return Text(
+            'Не сохранено',
+            style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+          );
+        }
+        return Text(
+          'Сохраняется автоматически',
+          style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
         );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      case _ReportSaveStatus.saving:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 10,
+              height: 10,
+              child: CircularProgressIndicator(strokeWidth: 1.4),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Сохраняется…',
+              style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+            ),
+          ],
+        );
+      case _ReportSaveStatus.saved:
+        return Text(
+          '✓ Сохранено',
+          style: AppTextStyles.tiny.copyWith(color: AppColors.greenDark),
+        );
+      case _ReportSaveStatus.error:
+        return InkWell(
+          onTap: _autoSave,
+          child: Text(
+            '⚠ ${_errorMessage ?? 'Не сохранилось — нажмите чтобы повторить'}',
+            style: AppTextStyles.tiny.copyWith(color: AppColors.redText),
+          ),
+        );
     }
   }
 
@@ -831,10 +984,17 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Отчёт', style: AppTextStyles.h2),
+          Row(
+            children: [
+              const Text('Отчёт', style: AppTextStyles.h2),
+              const Spacer(),
+              if (!readOnly) _statusIndicator(),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(
-            'Опционально опишите ход работы. Поля можно оставить пустыми.',
+            'Опционально опишите ход работы. Поля можно оставить пустыми — '
+            'шаг закроется и без отчёта.',
             style: AppTextStyles.caption.copyWith(color: AppColors.n500),
           ),
           const SizedBox(height: AppSpacing.x12),
@@ -842,9 +1002,11 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
             label: 'Что делал',
             child: TextField(
               controller: _whatDid,
+              focusNode: _whatFocus,
               readOnly: readOnly,
               maxLines: 4,
               minLines: 2,
+              onChanged: (_) => _onTextChanged(),
               decoration: const InputDecoration(
                 filled: true,
                 fillColor: AppColors.n50,
@@ -858,9 +1020,11 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
             label: 'Как делал',
             child: TextField(
               controller: _howDid,
+              focusNode: _howFocus,
               readOnly: readOnly,
               maxLines: 4,
               minLines: 2,
+              onChanged: (_) => _onTextChanged(),
               decoration: const InputDecoration(
                 filled: true,
                 fillColor: AppColors.n50,
@@ -869,14 +1033,6 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
               ),
             ),
           ),
-          if (!readOnly) ...[
-            const SizedBox(height: AppSpacing.x12),
-            AppButton(
-              label: _saving ? 'Сохранение…' : 'Сохранить отчёт',
-              onPressed: _isDirty && !_saving ? _save : null,
-              variant: AppButtonVariant.ghost,
-            ),
-          ],
         ],
       ),
     );

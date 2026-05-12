@@ -140,8 +140,6 @@ extension FeedEventX on FeedEvent {
   AppFeedDotTone get dotTone {
     if (kind == 'approval_rejected' ||
         kind == 'stage_rejected_by_customer' ||
-        kind == 'payment_disputed' ||
-        kind == 'material_disputed' ||
         kind.endsWith('_failed')) {
       return AppFeedDotTone.danger;
     }
@@ -150,7 +148,6 @@ extension FeedEventX on FeedEvent {
         kind == 'stage_accepted' ||
         kind == 'step_completed' ||
         kind == 'stage_completed' ||
-        kind == 'payment_confirmed' ||
         kind == 'material_delivered' ||
         kind == 'export_ready' ||
         kind.endsWith('_resolved')) {
@@ -181,7 +178,6 @@ extension FeedEventX on FeedEvent {
       'stage_accepted',
       'stage_completed',
       'step_completed',
-      'payment_confirmed',
       'material_delivered',
       'material_partially_bought',
       'deadline_changed',
@@ -217,8 +213,6 @@ extension FeedEventX on FeedEvent {
       'plan_approved': 'План согласован',
       'deadline_changed': 'Изменён дедлайн',
       'payment_created': 'Новая выплата',
-      'payment_confirmed': 'Выплата подтверждена',
-      'payment_disputed': 'Спор по выплате',
       'material_request_sent': 'Заявка на материалы',
       'document_uploaded': 'Загружен документ',
       'export_ready': 'Экспорт готов',

@@ -84,13 +84,23 @@ final membershipSyncProvider = Provider<void>((ref) {
       }),
     )
     // Backfill при reconnect: WS-события за время disconnect навсегда потеряны
-    // (на бекенде нет outbox-доставки). Поэтому каждый раз при подключении
-    // (включая первый и все последующие reconnect) перезагружаем основные
-    // списки. Без этого «iOS убил WS в фоне» снова приводил бы к stale-UI.
+    // (на бекенде нет outbox-доставки). Инвалидируем после disconnect→connect
+    // цикла; первый `connected=true` после подписки пропускаем, т.к. list-
+    // провайдеры только что отработали build() — дубль был бы пустой запрос
+    // (наблюдалось на старте: GET /projects?role=master летел 2–3 раза).
     ..add(
-      socket.connectedStream.listen((connected) {
-        if (connected) invalidateGlobal();
-      }),
+      () {
+        var sawDisconnect = false;
+        return socket.connectedStream.listen((connected) {
+          if (!connected) {
+            sawDisconnect = true;
+            return;
+          }
+          if (!sawDisconnect) return;
+          sawDisconnect = false;
+          invalidateGlobal();
+        });
+      }(),
     );
 
   ref.onDispose(() {

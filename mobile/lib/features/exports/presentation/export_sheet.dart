@@ -29,7 +29,7 @@ class _Body extends ConsumerStatefulWidget {
 }
 
 class _BodyState extends ConsumerState<_Body> {
-  ExportKind _kind = ExportKind.feedPdf;
+  ExportKind _kind = ExportKind.projectReportPdf;
   DateTime? _from;
   DateTime? _to;
   bool _submitting = false;
@@ -72,8 +72,12 @@ class _BodyState extends ConsumerState<_Body> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const AppBottomSheetHeader(
-          title: 'Экспорт',
-          subtitle: 'PDF-ленту или ZIP со всеми файлами проекта.',
+          title: 'Экспорт проекта',
+          subtitle:
+              'Полный PDF-отчёт по проекту (команда, бюджет, движение средств, '
+              'этапы и шаги с фото, материалы, инструменты, документы, лента '
+              'событий), PDF-ленту за период или ZIP со всеми файлами и фото '
+              'плюс полный отчёт.',
         ),
         if (_error != null) ...[
           Container(
@@ -100,6 +104,8 @@ class _BodyState extends ConsumerState<_Body> {
               ),
           ],
         ),
+        const SizedBox(height: AppSpacing.x8),
+        Text(_kind.subtitle, style: AppTextStyles.caption),
         const SizedBox(height: AppSpacing.x12),
         if (_kind == ExportKind.feedPdf) ...[
           _DateTile(

@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/tokens.dart';
 
-enum StageTab { checklist, approvals, docs, chat }
+enum StageTab { checklist, approvals, docs }
 
 extension StageTabX on StageTab {
   String get label => switch (this) {
     StageTab.checklist => 'Чек-лист',
     StageTab.approvals => 'Согл.',
     StageTab.docs => 'Докум.',
-    StageTab.chat => 'Чат',
   };
 }
 
-/// 4-таб панель в детали этапа.
+/// 3-таб панель в детали этапа.
 ///
 /// Дизайн c-stage-active: 2.5px brand-underline на active, brand text на active,
 /// n400 на остальных. На вкладке «Согл.» — 16×16 красный badge с числом, если
@@ -76,7 +75,8 @@ class _TabItem extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppDurations.fast,
           height: 44,
           alignment: Alignment.center,
           decoration: active
@@ -89,8 +89,8 @@ class _TabItem extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                label,
+              AnimatedDefaultTextStyle(
+                duration: AppDurations.fast,
                 style: TextStyle(
                   fontFamily: 'Manrope',
                   fontSize: 13,
@@ -98,15 +98,22 @@ class _TabItem extends StatelessWidget {
                   color: color,
                   letterSpacing: -0.1,
                 ),
+                child: Text(label),
               ),
               if (badge != null) ...[
                 const SizedBox(width: AppSpacing.x6),
                 Container(
                   width: 16,
                   height: 16,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.redDot,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.redDot.withValues(alpha: 0.45),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                   alignment: Alignment.center,
                   child: Text(

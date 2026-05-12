@@ -142,6 +142,9 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (pendingApproval != null && !planApproved) {
+      return const _PendingHero();
+    }
     final (icon, title, subtitle, color) = () {
       if (planApproved) {
         return (
@@ -149,14 +152,6 @@ class _StatusBanner extends StatelessWidget {
           'План согласован',
           'Бригадир может запускать этапы по графику.',
           AppColors.greenDark,
-        );
-      }
-      if (pendingApproval != null) {
-        return (
-          Icons.pending_actions_outlined,
-          'Ждёт решения заказчика',
-          'Заказчик может одобрить план или запросить корректировку.',
-          AppColors.blueDot,
         );
       }
       if (!requiresPlanApproval) {
@@ -200,6 +195,99 @@ class _StatusBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// d-plan-approval rich-banner: 3-stop brand-gradient, frosted icon-tile,
+/// декоративный radial-блик.
+class _PendingHero extends StatelessWidget {
+  const _PendingHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.r20),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: const BoxDecoration(
+          gradient: AppGradients.planInfoRich,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x4D4F6EF7),
+              offset: Offset(0, 12),
+              blurRadius: 28,
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -40,
+              right: -30,
+              child: IgnorePointer(
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [Color(0x2EFFFFFF), Color(0x00FFFFFF)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0x2EFFFFFF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0x33FFFFFF)),
+                  ),
+                  child: const Icon(
+                    Icons.assignment_outlined,
+                    color: AppColors.n0,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Бригадир предлагает план',
+                        style: AppTextStyles.subtitle.copyWith(
+                          color: AppColors.n0,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Заказчик может одобрить план целиком или '
+                        'запросить корректировку этапов.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: const Color(0xC7FFFFFF),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

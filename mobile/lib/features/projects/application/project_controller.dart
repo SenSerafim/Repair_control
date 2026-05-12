@@ -90,6 +90,7 @@ class ProjectCreator {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
+    List<String>? initialStages,
   }) async {
     final p = await _ref
         .read(projectsRepositoryProvider)
@@ -101,6 +102,7 @@ class ProjectCreator {
           plannedEnd: plannedEnd,
           workBudget: workBudget,
           materialsBudget: materialsBudget,
+          initialStages: initialStages,
         );
     _ref.read(activeProjectsProvider.notifier).prependCreated(p);
     return p;

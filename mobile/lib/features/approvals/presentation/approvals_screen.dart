@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/realtime/socket_service.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -21,22 +24,62 @@ class ApprovalsScreen extends ConsumerStatefulWidget {
 }
 
 class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   // initState вместо `late final` — поздняя инициализация падает при
   // dispose-before-build (бывает в /tour при быстром переключении экранов).
   TabController? _tabs;
   String _scopeId = 'all';
 
+  // Polling safety-net: пока экран открыт, каждые 30s тихо обновляем список
+  // ТОЛЬКО если WS-соединение упало. Это страховка для случаев Doze mode,
+  // переключения mobile data, отозванного notification permission и т.п.
+  // При живом WS — 0 запросов (real-time через approval:changed).
+  static const _pollInterval = Duration(seconds: 30);
+  Timer? _pollTimer;
+
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
+    _startPolling();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
     _tabs?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Из background — push мог не дойти, socket ещё переподключается.
+      // Дёргаем refresh явно, чтобы пользователь сразу увидел актуальный список.
+      _refresh();
+      _startPolling();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _pollTimer?.cancel();
+    }
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
+      final socket = ref.read(socketServiceProvider);
+      if (socket.isConnected) return;
+      _refresh();
+    });
+  }
+
+  Future<void> _refresh() {
+    return ref
+        .read(approvalsControllerProvider(widget.projectId).notifier)
+        .refresh();
   }
 
   @override
@@ -76,6 +119,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                           'Согласования появятся когда бригадир '
                           'отправит шаг или этап на проверку.',
                       withTourAnchor: true,
+                      onRefresh: _refresh,
                     ),
                     _ListBody(
                       projectId: widget.projectId,
@@ -84,6 +128,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                       emptyHint:
                           'Решённые и отклонённые согласования '
                           'сохранятся здесь.',
+                      onRefresh: _refresh,
                     ),
                   ],
                 ),
@@ -199,6 +244,7 @@ class _ListBody extends StatelessWidget {
     required this.items,
     required this.emptyTitle,
     required this.emptyHint,
+    required this.onRefresh,
     this.withTourAnchor = false,
   });
 
@@ -206,38 +252,56 @@ class _ListBody extends StatelessWidget {
   final List<Approval> items;
   final String emptyTitle;
   final String emptyHint;
+  final Future<void> Function() onRefresh;
   // TabBarView держит обе вкладки одновременно — чтобы не получить
   // дубль GlobalKey, anchor подключаем только в активной вкладке (pending).
   final bool withTourAnchor;
 
   @override
   Widget build(BuildContext context) {
+    // RefreshIndicator работает и над AppEmptyState (через AlwaysScrollable),
+    // и над списком: жест pull-to-refresh — стандартный для всех вкладок.
     if (items.isEmpty) {
-      return AppEmptyState(
-        title: emptyTitle,
-        subtitle: emptyHint,
-        icon: Icons.verified_outlined,
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: AppEmptyState(
+                title: emptyTitle,
+                subtitle: emptyHint,
+                icon: Icons.verified_outlined,
+              ),
+            ),
+          ],
+        ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x16,
-        AppSpacing.x10,
-        AppSpacing.x16,
-        AppSpacing.x20,
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x16,
+          AppSpacing.x10,
+          AppSpacing.x16,
+          AppSpacing.x20,
+        ),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
+        itemBuilder: (_, i) {
+          final card = ApprovalCard(
+            approval: items[i],
+            onTap: () =>
+                context.push('/projects/$projectId/approvals/${items[i].id}'),
+          );
+          return (i == 0 && withTourAnchor)
+              ? TourAnchor(id: 'approvals.first_approval', child: card)
+              : card;
+        },
       ),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
-      itemBuilder: (_, i) {
-        final card = ApprovalCard(
-          approval: items[i],
-          onTap: () =>
-              context.push('/projects/$projectId/approvals/${items[i].id}'),
-        );
-        return (i == 0 && withTourAnchor)
-            ? TourAnchor(id: 'approvals.first_approval', child: card)
-            : card;
-      },
     );
   }
 }

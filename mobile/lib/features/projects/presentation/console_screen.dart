@@ -10,11 +10,15 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/status_pill.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../finance/application/budget_controller.dart';
+import '../../finance/domain/budget.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/domain/traffic_light.dart';
+import '../../team/application/team_controller.dart';
+import '../domain/membership.dart';
 import '../application/project_controller.dart';
 import '../domain/project.dart';
 import 'card_menu_sheet.dart';
@@ -113,6 +117,12 @@ class _BodyState extends ConsumerState<_Body> {
         projectId: projectId,
       )),
     );
+    final canInviteMember = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectInviteMember,
+        projectId: projectId,
+      )),
+    );
     final unread = ref
         .watch(notificationsProvider)
         .where((n) => !n.read)
@@ -137,6 +147,8 @@ class _BodyState extends ConsumerState<_Body> {
         _ConHeader(
           project: p,
           unreadNotifications: unread,
+          canInviteMember: canInviteMember,
+          onAddMember: () => context.push('/projects/$projectId/team'),
           onMenu: () => showCardMenuSheet(context, ref, project: p),
         ),
         Expanded(
@@ -169,16 +181,7 @@ class _BodyState extends ConsumerState<_Body> {
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.x16,
                     ),
-                    child: AppBudgetCard(
-                      totalLabel: 'Бюджет проекта',
-                      totalValue:
-                          '${_formatRubles(p.workBudget + p.materialsBudget)} ₽',
-                      workSpent: '0',
-                      workTotal: _formatRubles(p.workBudget),
-                      materialsSpent: '0',
-                      materialsTotal: _formatRubles(p.materialsBudget),
-                      onTap: () => context.push('/projects/$projectId/budget'),
-                    ),
+                    child: _BudgetSlot(project: p, projectId: projectId),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.x16),
@@ -222,7 +225,10 @@ class _BodyState extends ConsumerState<_Body> {
             'Заказчик ещё не одобрил план этапов. До одобрения '
             'старт работ заблокирован.',
         actionLabel: 'Показать план целиком',
-        onAction: () {},
+        // Раньше onAction был no-op — кнопка казалась рабочей, но ничего
+        // не делала. Шлём на глобальный список согласований, отфильтрованный
+        // по этому проекту его scope.
+        onAction: () => context.push(AppRoutes.approvals),
       );
     }
     return switch (p.semaphore) {
@@ -250,22 +256,21 @@ class _BodyState extends ConsumerState<_Body> {
       _ => null,
     };
   }
-
-  static String _formatRubles(int kopecks) {
-    final rubles = kopecks ~/ 100;
-    return NumberFormat.decimalPattern('ru').format(rubles);
-  }
 }
 
 class _ConHeader extends StatelessWidget {
   const _ConHeader({
     required this.project,
     required this.unreadNotifications,
+    required this.canInviteMember,
+    required this.onAddMember,
     required this.onMenu,
   });
 
   final Project project;
   final int unreadNotifications;
+  final bool canInviteMember;
+  final VoidCallback onAddMember;
   final VoidCallback onMenu;
 
   @override
@@ -301,6 +306,13 @@ class _ConHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (canInviteMember) ...[
+                  _IconShellBtn(
+                    icon: PhosphorIconsRegular.plus,
+                    onTap: onAddMember,
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -375,12 +387,39 @@ class _ConHeader extends StatelessWidget {
             const SizedBox(height: AppSpacing.x10),
             Align(
               alignment: Alignment.centerLeft,
-              child: _TrafficBadge(semaphore: project.semaphore),
+              child: _TrafficBadge(
+                semaphore: project.semaphore,
+                delta: _deltaFor(project),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Дельта дней рядом со статусом: «−6 дн» / «+8 дн». Возвращаем `null`,
+  /// если для текущего semaphore дельта не имеет смысла (например, для
+  /// `green/plan/blue` мы её не показываем — дизайн рисует пустой бейдж).
+  static String? _deltaFor(Project p) {
+    final end = p.plannedEnd;
+    if (end == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(end.year, end.month, end.day);
+    final diff = today.difference(due).inDays;
+    return switch (p.semaphore) {
+      Semaphore.red when diff > 0 => '+$diff ${_dayWord(diff)}',
+      Semaphore.yellow when diff < 0 => '$diff ${_dayWord(-diff)}',
+      _ => null,
+    };
+  }
+
+  static String _dayWord(int n) {
+    final mod10 = n.abs() % 10;
+    final mod100 = n.abs() % 100;
+    if (mod10 == 1 && mod100 != 11) return 'дн';
+    return 'дн';
   }
 
   static String _addrAndDates(Project p) {
@@ -425,9 +464,13 @@ class _IconShellBtn extends StatelessWidget {
 }
 
 class _TrafficBadge extends StatelessWidget {
-  const _TrafficBadge({required this.semaphore});
+  const _TrafficBadge({required this.semaphore, this.delta});
 
   final Semaphore semaphore;
+
+  /// «−6 дн» / «+8 дн» рядом с лейблом для yellow/red (см. HTML
+  /// `.chip-warn`/`.tlabel-yellow` с дельтой). null — дельта не нужна.
+  final String? delta;
 
   @override
   Widget build(BuildContext context) {
@@ -465,6 +508,26 @@ class _TrafficBadge extends StatelessWidget {
               letterSpacing: -0.1,
             ),
           ),
+          if (delta != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              width: 3,
+              height: 3,
+              decoration: BoxDecoration(
+                color: semaphore.text.withValues(alpha: 0.45),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              delta!,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: semaphore.text,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -514,10 +577,143 @@ class _HouseSection extends StatelessWidget {
                 ? 'Этап $stageNo из $total · $statusLabel'
                 : 'План пока не построен',
           ),
+          if (percent == 0) ...[
+            const SizedBox(height: AppSpacing.x12),
+            const _HouseGrowsHint(),
+          ],
         ],
       ),
     );
   }
+}
+
+/// Подсказка-«пилюля» под пустым контуром дома: появляется только когда
+/// прогресс 0% — объясняет, что дом начнёт «достраиваться» по мере
+/// закрытия этапов. Мягкий brand-фон + домик-иконка вместо безликого
+/// «0% Этап 0 из 4 · Планирование» (UX-feedback заказчика).
+class _HouseGrowsHint extends StatelessWidget {
+  const _HouseGrowsHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 320),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF5F8FF), AppColors.brandLight],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        border: Border.all(color: AppColors.brand.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.n0,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.brand.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              PhosphorIconsFill.house,
+              size: 16,
+              color: AppColors.brand,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Flexible(
+            child: Text(
+              'Дом будет достраиваться\nпо мере выполнения этапов',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.brandDark,
+                height: 1.35,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Бюджет проекта — берёт фактические траты из projectBudgetProvider.
+/// Пока данные не пришли — показывает skeleton, чтобы не отображать
+/// «0 ₽ потрачено» как факт (раньше это было захардкожено).
+class _BudgetSlot extends ConsumerWidget {
+  const _BudgetSlot({required this.project, required this.projectId});
+
+  final Project project;
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(projectBudgetProvider(projectId));
+    final workTotal = _formatRubles(project.workBudget);
+    final materialsTotal = _formatRubles(project.materialsBudget);
+    final totalValue =
+        '${_formatRubles(project.workBudget + project.materialsBudget)} ₽';
+
+    return async.when(
+      data: (ProjectBudget b) => AppBudgetCard(
+        totalLabel: 'Бюджет проекта',
+        totalValue: totalValue,
+        workSpent: _formatRubles(b.work.spent),
+        workTotal: workTotal,
+        materialsSpent: _formatRubles(b.materials.spent),
+        materialsTotal: materialsTotal,
+        onTap: () => context.push('/projects/$projectId/budget'),
+      ),
+      loading: () => const AppSkeletonRow(height: 132, radius: 16),
+      // Если факты недоступны — рисуем карточку с прочерками вместо вранья
+      // «потрачено 0 ₽». Тап остаётся живым — пользователь увидит детали.
+      error: (_, __) => AppBudgetCard(
+        totalLabel: 'Бюджет проекта',
+        totalValue: totalValue,
+        workSpent: '—',
+        workTotal: workTotal,
+        materialsSpent: '—',
+        materialsTotal: materialsTotal,
+        onTap: () => context.push('/projects/$projectId/budget'),
+      ),
+    );
+  }
+
+  static String _formatRubles(int kopecks) {
+    final rubles = kopecks ~/ 100;
+    return NumberFormat.decimalPattern('ru').format(rubles);
+  }
+}
+
+/// 0..1 — какая доля периода старт→дедлайн уже прошла. NaN-guard:
+/// без plannedStart/plannedEnd возвращаем 0. После дедлайна — 1 (бар
+/// заполнен полностью, цвет StatCard сам переключится на red).
+double _deadlineProgress(DateTime? start, DateTime? end) {
+  if (start == null || end == null) return 0;
+  final s = DateTime(start.year, start.month, start.day);
+  final e = DateTime(end.year, end.month, end.day);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final total = e.difference(s).inDays;
+  if (total <= 0) return today.isBefore(e) ? 0 : 1;
+  final passed = today.difference(s).inDays;
+  if (passed <= 0) return 0;
+  if (passed >= total) return 1;
+  return passed / total;
 }
 
 class _StatsRow extends StatelessWidget {
@@ -537,6 +733,13 @@ class _StatsRow extends StatelessWidget {
     final daysToDeadline = project.plannedEnd == null
         ? null
         : project.plannedEnd!.difference(DateTime.now()).inDays;
+    // Доля прошедшего периода для индикатора «До дедлайна». Раньше было
+    // захардкожено 0.5 (всегда «середина»), теперь считаем календарными
+    // днями: 0 — старт ещё впереди, 1 — дедлайн пройден.
+    final deadlineProgress = _deadlineProgress(
+      project.plannedStart,
+      project.plannedEnd,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
@@ -566,7 +769,7 @@ class _StatsRow extends StatelessWidget {
                   : daysToDeadline >= 0
                   ? 'дней'
                   : 'дн просрочено',
-              progress: 0.5,
+              progress: deadlineProgress,
               semaphore: daysToDeadline != null && daysToDeadline < 0
                   ? Semaphore.red
                   : Semaphore.green,
@@ -639,14 +842,14 @@ class _StagesCarouselHeader extends StatelessWidget {
   }
 }
 
-class _StagesCarousel extends StatelessWidget {
+class _StagesCarousel extends ConsumerWidget {
   const _StagesCarousel({required this.projectId, required this.stages});
 
   final String projectId;
   final List<Stage> stages;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (stages.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
@@ -690,7 +893,7 @@ class _StagesCarousel extends StatelessWidget {
             title: s.title,
             statusLabel: _statusLabel(s.status),
             statusKind: _statusKind(s.status),
-            assigneeName: s.foremanIds.isEmpty ? 'Не назначен' : 'Бригадир',
+            assigneeName: _assigneeNameFor(ref, s),
             stepsLabel: '${s.progressCache}% шагов',
             questionsLabel: 'Вопросов нет',
             deadlineLabel: s.plannedEnd != null
@@ -705,6 +908,28 @@ class _StagesCarousel extends StatelessWidget {
         },
       ),
     );
+  }
+
+  /// «Фамилия И.» бригадира этапа. Раньше было захардкожено «Бригадир» —
+  /// не давало понять, чей этап. Берём первого foreman из foremanIds,
+  /// мапим в участники проекта (teamControllerProvider) и режем имя до
+  /// «Иванов И.». Если списка ещё нет — fallback «Бригадир».
+  String _assigneeNameFor(WidgetRef ref, Stage s) {
+    if (s.foremanIds.isEmpty) return 'Не назначен';
+    final foremanId = s.foremanIds.first;
+    final team = ref.watch(teamControllerProvider(projectId)).value;
+    if (team == null) return 'Бригадир';
+    Membership? m;
+    for (final x in team.members) {
+      if (x.userId == foremanId) {
+        m = x;
+        break;
+      }
+    }
+    final u = m?.user;
+    if (u == null) return 'Бригадир';
+    final initial = u.firstName.isEmpty ? '' : '${u.firstName[0]}.';
+    return [u.lastName, initial].where((p) => p.isNotEmpty).join(' ');
   }
 
   static String _statusLabel(StageStatus s) => switch (s) {
@@ -811,16 +1036,16 @@ class _NavSections extends ConsumerWidget {
         projectId: projectId,
       )),
     );
-    // П2.15 — плитка «Инструмент» видна всем активным участникам проекта,
-    // включая customer/representative (их инструменты тоже могут быть на
-    // объекте). Write-действия (выдать/принять) внутри экрана уже гейтятся
-    // отдельно через toolsIssue/toolsReturn.
+    // Self-custody модель (2026-05-12): единая плитка «Инструмент» для всех
+    // ролей. Любой member видит доску инструментов проекта, может добавить
+    // свой или self-claim. Никто не назначает инструмент другому.
     final canTools = ref.watch(
       canInProjectProvider((
         action: DomainAction.toolsViewProject,
         projectId: projectId,
       )),
     );
+    final toolsRoute = '/projects/$projectId/tools';
     final canApprovals = ref.watch(
       canInProjectProvider((
         action: DomainAction.approvalList,
@@ -893,7 +1118,7 @@ class _NavSections extends ConsumerWidget {
           icon: PhosphorIconsFill.wrench,
           iconColor: AppColors.n700,
           label: 'Инструмент',
-          onTap: () => context.push('/projects/$projectId/tools'),
+          onTap: () => context.push(toolsRoute),
         ),
     ];
 

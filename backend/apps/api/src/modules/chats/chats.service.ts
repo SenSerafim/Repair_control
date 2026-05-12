@@ -160,6 +160,16 @@ export class ChatsService {
       update: { leftAt: null, joinedAt: this.clock.now() },
     });
     this.events.emit('chat.participant.added', { chatId: chat.id, userId });
+    // Личный сигнал в user:{id} комнату нового участника — `chat.participant.added`
+    // бродкастится только в `chat:{chatId}` (см. ChatsGateway), а нового
+    // участника там ещё нет: он не делал rooms:join. Без этого сигнала mobile
+    // не узнает о чате до pull-to-refresh.
+    this.events.emit('chat.user.joined', {
+      userId,
+      chatId: chat.id,
+      projectId,
+      type: chat.type,
+    });
   }
 
   /**
@@ -217,14 +227,21 @@ export class ChatsService {
       where: {
         projectId,
         archivedAt: null,
+        // По решению заказчика — один общий чат проекта на всех. Stage-чаты
+        // остаются в БД для совместимости, но в inbox не показываем —
+        // иначе foreman/master видит дубль project+stage по одному и тому
+        // же поводу. Personal/group — оставляем.
+        type: { in: [ChatType.project, ChatType.personal, ChatType.group] },
         participants: { some: { userId: actorUserId, leftAt: null } },
       },
       include: {
-        participants: { select: { userId: true, joinedAt: true, leftAt: true } },
+        participants: {
+          select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
-    return chats.map((c) => this.serialize(c));
+    return this.enrichManyWithLastMessageAndUnread(chats, actorUserId);
   }
 
   /**
@@ -243,29 +260,34 @@ export class ChatsService {
         archivedAt: null,
         // только проекты, которые ещё активны (не в архиве)
         project: { archivedAt: null },
+        type: { in: [ChatType.project, ChatType.personal, ChatType.group] },
         participants: { some: { userId: actorUserId, leftAt: null } },
       },
       include: {
-        participants: { select: { userId: true, joinedAt: true, leftAt: true } },
+        participants: {
+          select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
+        },
         project: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
-    // Prisma типизирует relation как nullable, но WHERE-фильтр выше
-    // гарантирует наличие проекта — narrow через filter.
-    return chats
-      .filter((c): c is typeof c & { project: { id: string; title: string } } => c.project !== null)
-      .map((c) => ({
-        ...this.serialize(c),
-        project: { id: c.project.id, title: c.project.title },
-      }));
+    const filtered = chats.filter(
+      (c): c is typeof c & { project: { id: string; title: string } } => c.project !== null,
+    );
+    const enriched = await this.enrichManyWithLastMessageAndUnread(filtered, actorUserId);
+    return enriched.map((s, i) => ({
+      ...s,
+      project: { id: filtered[i].project.id, title: filtered[i].project.title },
+    }));
   }
 
   async get(chatId: string, actorUserId: string): Promise<SerializedChat> {
     const chat = await this.prisma.chat.findUnique({
       where: { id: chatId },
       include: {
-        participants: { select: { userId: true, joinedAt: true, leftAt: true } },
+        participants: {
+          select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
+        },
       },
     });
     if (!chat) throw new NotFoundError(ErrorCodes.CHAT_NOT_FOUND, 'chat not found');
@@ -280,7 +302,8 @@ export class ChatsService {
       // guard подхватит; здесь — защитный layer
       throw new ForbiddenError(ErrorCodes.CHAT_NOT_PARTICIPANT, 'not a chat participant');
     }
-    return this.serialize(chat);
+    const [enriched] = await this.enrichManyWithLastMessageAndUnread([chat], actorUserId);
+    return enriched;
   }
 
   // ---------- createPersonal ----------
@@ -494,6 +517,16 @@ export class ChatsService {
       update: { leftAt: null, joinedAt: this.clock.now() },
     });
     this.events.emit('chat.participant.added', { chatId, userId });
+    const full = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      select: { type: true, projectId: true },
+    });
+    this.events.emit('chat.user.joined', {
+      userId,
+      chatId,
+      projectId: full?.projectId ?? chat.projectId ?? null,
+      type: full?.type ?? null,
+    });
     await this.feed.emit({
       kind: 'chat_participant_added',
       projectId: chat.projectId,
@@ -531,7 +564,20 @@ export class ChatsService {
   // ---------- helpers ----------
 
   private serialize(
-    chat: Chat & { participants: { userId: string; joinedAt: Date; leftAt: Date | null }[] },
+    chat: Chat & {
+      participants: {
+        userId: string;
+        joinedAt: Date;
+        leftAt: Date | null;
+        lastReadAt?: Date | null;
+      }[];
+    },
+    extras?: {
+      lastMessageAt?: Date | null;
+      lastMessagePreview?: string | null;
+      lastMessageAuthorId?: string | null;
+      unreadCount?: number;
+    },
   ): SerializedChat {
     return {
       id: chat.id,
@@ -542,8 +588,90 @@ export class ChatsService {
       visibleToCustomer: chat.visibleToCustomer,
       createdById: chat.createdById,
       createdAt: chat.createdAt,
-      participants: chat.participants,
+      participants: chat.participants.map(({ userId, joinedAt, leftAt }) => ({
+        userId,
+        joinedAt,
+        leftAt,
+      })),
+      lastMessageAt: extras?.lastMessageAt ?? null,
+      lastMessagePreview: extras?.lastMessagePreview ?? null,
+      lastMessageAuthorId: extras?.lastMessageAuthorId ?? null,
+      unreadCount: extras?.unreadCount ?? 0,
     };
+  }
+
+  /**
+   * Один батч-запрос на все чаты: DISTINCT ON для последнего сообщения +
+   * GROUP BY для unread. Cutoff = max(joinedAt, lastReadAt) — новый
+   * участник видит всю историю (через messages.list), но «непрочитанным»
+   * считается только то, что появилось после его вступления, чтобы не
+   * получать спам «247 непрочитанных» на новом проекте.
+   */
+  private async enrichManyWithLastMessageAndUnread<
+    T extends Chat & {
+      participants: {
+        userId: string;
+        joinedAt: Date;
+        leftAt: Date | null;
+        lastReadAt?: Date | null;
+      }[];
+    },
+  >(chats: T[], actorUserId: string): Promise<SerializedChat[]> {
+    if (chats.length === 0) return [];
+    const chatIds = chats.map((c) => c.id);
+
+    type LastRow = {
+      chatId: string;
+      id: string;
+      authorId: string;
+      text: string | null;
+      deletedAt: Date | null;
+      createdAt: Date;
+    };
+    const lastRows = await this.prisma.$queryRaw<LastRow[]>`
+      SELECT DISTINCT ON ("chatId") "chatId", "id", "authorId", "text", "deletedAt", "createdAt"
+      FROM "ChatMessage"
+      WHERE "chatId" IN (${Prisma.join(chatIds)})
+      ORDER BY "chatId", "createdAt" DESC, "id" DESC
+    `;
+    const lastByChat = new Map<string, LastRow>();
+    for (const r of lastRows) lastByChat.set(r.chatId, r);
+
+    type UnreadRow = { chatId: string; count: bigint };
+    const unreadRows = await this.prisma.$queryRaw<UnreadRow[]>`
+      SELECT "chatId", COUNT(*)::bigint AS count
+      FROM "ChatMessage"
+      WHERE "chatId" IN (${Prisma.join(chatIds)})
+        AND "authorId" <> ${actorUserId}
+        AND "deletedAt" IS NULL
+        AND "createdAt" > (
+          SELECT GREATEST(
+                   COALESCE("lastReadAt", to_timestamp(0)),
+                   COALESCE("joinedAt", to_timestamp(0))
+                 )
+          FROM "ChatParticipant"
+          WHERE "chatId" = "ChatMessage"."chatId" AND "userId" = ${actorUserId}
+          LIMIT 1
+        )
+      GROUP BY "chatId"
+    `;
+    const unreadByChat = new Map<string, number>();
+    for (const r of unreadRows) unreadByChat.set(r.chatId, Number(r.count));
+
+    return chats.map((c) => {
+      const last = lastByChat.get(c.id);
+      const preview = last
+        ? last.deletedAt
+          ? '(сообщение удалено)'
+          : (last.text ?? '').slice(0, 200) || null
+        : null;
+      return this.serialize(c, {
+        lastMessageAt: last?.createdAt ?? null,
+        lastMessagePreview: preview,
+        lastMessageAuthorId: last?.authorId ?? null,
+        unreadCount: unreadByChat.get(c.id) ?? 0,
+      });
+    });
   }
 
   // Helper: убедиться что actor — участник чата (используется в messages.service)

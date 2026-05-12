@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/realtime/socket_service.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../projects/application/project_controller.dart';
 import '../data/stages_repository.dart';
@@ -15,10 +18,53 @@ final stagesControllerProvider =
     );
 
 class StagesController extends FamilyAsyncNotifier<List<Stage>, String> {
+  StreamSubscription<dynamic>? _stageSub;
+  StreamSubscription<dynamic>? _stepSub;
+  Timer? _refreshDebounce;
+
   @override
   Future<List<Stage>> build(String projectId) async {
+    // Real-time: бекенд эмитит `stage:changed` для всех STAGE_FEED_KINDS
+    // (stage_created/started/paused/resumed/sent_to_review/accepted/...).
+    // Перезагружаем список этапов проекта, чтобы у других ролей сразу
+    // отобразились новые статусы, новые этапы, переназначения бригадира.
+    // `step:changed` влияет на `progressCache` этапа → тоже триггерит refresh.
+    final socket = ref.read(socketServiceProvider);
+    _stageSub = socket.on(SocketEvents.stageChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != projectId) return;
+      _scheduleRefresh();
+    });
+    _stepSub = socket.on(SocketEvents.stepChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != projectId) return;
+      // step_completed / step_uncompleted / step_created / step_deleted —
+      // влияют на progressCache этапа. recalcStage на бэке отдаст новые
+      // числа при следующем GET /stages.
+      _scheduleRefresh();
+    });
+    ref.onDispose(() {
+      _stageSub?.cancel();
+      _stepSub?.cancel();
+      _refreshDebounce?.cancel();
+    });
+
     final raw = await ref.read(stagesRepositoryProvider).list(projectId);
     return _sorted(raw);
+  }
+
+  /// Дебаунс 400ms — несколько событий подряд (например, step_completed +
+  /// progress_recalculated) не приводят к серии повторных GET'ов.
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final raw = await _repo.list(arg);
+        state = AsyncData(_sorted(raw));
+      } on StagesException {
+        // тихий refresh: оставляем последнее успешное состояние
+      }
+    });
   }
 
   List<Stage> _sorted(List<Stage> list) =>

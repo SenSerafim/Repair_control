@@ -181,12 +181,17 @@ void main() {
   );
 
   test(
-    'reconnect (connectedStream=true) → backfill активных проектов',
+    'reconnect (disconnect→connect) → backfill активных проектов',
     () async {
       container.read(membershipSyncProvider);
       await warmUpProviders();
 
-      socket.injectConnected(value: true);
+      // Реальный reconnect = false → true. Первый `true` сразу после
+      // подписки backfill НЕ триггерит (build() уже отработал), чтобы не
+      // дублировать запросы на старте.
+      socket
+        ..injectConnected(value: false)
+        ..injectConnected(value: true);
       await Future<void>.delayed(Duration.zero);
 
       await container.read(activeProjectsProvider.future);
@@ -196,6 +201,27 @@ void main() {
         reason:
             'события за время disconnect потеряны → при reconnect обязательно '
             'перезагружаем основные списки',
+      );
+    },
+  );
+
+  test(
+    'первый connectedStream=true после подписки backfill не вызывает',
+    () async {
+      container.read(membershipSyncProvider);
+      await warmUpProviders();
+
+      // На старте app: WS подключается впервые → но list-провайдеры уже
+      // отработали build() с актуальным auth-стейтом. Лишний invalidate
+      // = дубль `GET /projects` (наблюдалось на проде, 2–3 запроса подряд).
+      socket.injectConnected(value: true);
+      await Future<void>.delayed(Duration.zero);
+
+      await container.read(activeProjectsProvider.future);
+      expect(
+        projectsRepo.listCalls,
+        1,
+        reason: 'первый connect после подписки — не backfill, дубль не нужен',
       );
     },
   );

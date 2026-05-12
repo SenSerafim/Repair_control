@@ -11,7 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
@@ -52,10 +52,17 @@ export class NotesController {
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
+  @ApiQuery({
+    name: 'scope',
+    required: false,
+    enum: ['personal', 'for_me', 'stage', 'team_broadcast'],
+  })
+  @ApiQuery({ name: 'stageId', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
   async list(
     @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
-    @Query('scope') scope?: 'personal' | 'for_me' | 'stage',
+    @Query('scope') scope?: 'personal' | 'for_me' | 'stage' | 'team_broadcast',
     @Query('stageId') stageId?: string,
     @Query('search') search?: string,
   ) {

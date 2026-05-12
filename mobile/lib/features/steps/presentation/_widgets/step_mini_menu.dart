@@ -18,66 +18,85 @@ class StepMiniMenu extends StatelessWidget {
     super.key,
   });
 
-  final VoidCallback onAddSubstep;
-  final VoidCallback onAddPhoto;
-  final VoidCallback onAskQuestion;
-  final VoidCallback onSendForApproval;
-  final VoidCallback onExtraWork;
+  /// Любой callback может быть `null` — соответствующий пункт меню
+  /// тогда не рендерится. Решения по правам делает вызывающий
+  /// (StepDetailScreen) через canInProjectProvider — здесь только рендер.
+  final VoidCallback? onAddSubstep;
+  final VoidCallback? onAddPhoto;
+  final VoidCallback? onAskQuestion;
+  final VoidCallback? onSendForApproval;
+  final VoidCallback? onExtraWork;
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      _MiniMenuItem(
-        icon: Icons.format_list_bulleted_rounded,
-        label: 'Добавить подшаг',
-        bg: AppColors.brandLight,
-        fg: AppColors.brand,
-        onTap: () {
-          Navigator.of(context).pop();
-          onAddSubstep();
-        },
-      ),
-      _MiniMenuItem(
-        icon: Icons.camera_alt_outlined,
-        label: 'Добавить фото',
-        bg: AppColors.brandLight,
-        fg: AppColors.brand,
-        onTap: () {
-          Navigator.of(context).pop();
-          onAddPhoto();
-        },
-      ),
-      _MiniMenuItem(
-        icon: Icons.help_outline_rounded,
-        label: 'Задать вопрос',
-        bg: AppColors.purpleBg,
-        fg: AppColors.purple,
-        onTap: () {
-          Navigator.of(context).pop();
-          onAskQuestion();
-        },
-      ),
-      _MiniMenuItem(
-        icon: Icons.check_circle_outline_rounded,
-        label: 'Отправить на согласование',
-        bg: AppColors.yellowBg,
-        fg: AppColors.yellowDot,
-        onTap: () {
-          Navigator.of(context).pop();
-          onSendForApproval();
-        },
-      ),
-      _MiniMenuItem(
-        icon: Icons.attach_money_rounded,
-        label: 'Доп. работа с ценой',
-        bg: AppColors.yellowBg,
-        fg: AppColors.yellowDot,
-        onTap: () {
-          Navigator.of(context).pop();
-          onExtraWork();
-        },
-      ),
-    ];
+    final items = <Widget>[];
+    void add({
+      required IconData icon,
+      required String label,
+      required Color bg,
+      required Color fg,
+      required VoidCallback? cb,
+    }) {
+      if (cb == null) return;
+      items.add(
+        _MiniMenuItem(
+          icon: icon,
+          label: label,
+          bg: bg,
+          fg: fg,
+          onTap: () {
+            Navigator.of(context).pop();
+            cb();
+          },
+        ),
+      );
+    }
+
+    add(
+      icon: Icons.format_list_bulleted_rounded,
+      label: 'Добавить подшаг',
+      bg: AppColors.brandLight,
+      fg: AppColors.brand,
+      cb: onAddSubstep,
+    );
+    add(
+      icon: Icons.camera_alt_outlined,
+      label: 'Добавить фото',
+      bg: AppColors.brandLight,
+      fg: AppColors.brand,
+      cb: onAddPhoto,
+    );
+    add(
+      icon: Icons.help_outline_rounded,
+      label: 'Задать вопрос',
+      bg: AppColors.purpleBg,
+      fg: AppColors.purple,
+      cb: onAskQuestion,
+    );
+    add(
+      icon: Icons.check_circle_outline_rounded,
+      label: 'Отправить на согласование',
+      bg: AppColors.yellowBg,
+      fg: AppColors.yellowDot,
+      cb: onSendForApproval,
+    );
+    add(
+      icon: Icons.attach_money_rounded,
+      label: 'Доп. работа с ценой',
+      bg: AppColors.yellowBg,
+      fg: AppColors.yellowDot,
+      cb: onExtraWork,
+    );
+    if (items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Text(
+          'Действий нет — нужны права на управление шагом.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF656b7a)),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

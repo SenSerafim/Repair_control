@@ -93,34 +93,12 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       // Только админ правит методичку. Admin обрабатывается в блоке выше → сюда не доходит.
       return false;
 
-    case 'finance.payment.confirm':
-      // Подтверждение — любой участник проекта; точечная проверка toUserId === actor — в сервисе.
-      return !!ctx.membershipRole;
-
-    case 'finance.payment.dispute':
-      // Спор может открыть любой участник; точечная проверка fromUserId|toUserId — в сервисе.
-      return !!ctx.membershipRole;
-
-    case 'finance.payment.resolve':
-      // Резолвит спор — customer-owner или representative.canApprove.
-      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
-      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canApprove;
-      return false;
-
     case 'finance.budget.view':
       // Бюджет видят customer-owner, representative.canSeeBudget, foreman и master — объём по RBAC matrix.
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canSeeBudget;
       if (ctx.membershipRole === 'foreman') return true;
       if (ctx.membershipRole === 'master') return true;
-      return false;
-
-    case 'material.finalize':
-      // Финализируют бригадир/заказчик. Master не может.
-      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
-      if (ctx.membershipRole === 'representative')
-        return !!ctx.representativeRights?.canManageMaterials;
-      if (ctx.membershipRole === 'foreman') return true;
       return false;
 
     case 'approval.request':
@@ -143,11 +121,23 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
       return false;
 
-    case 'finance.payment.create':
+    case 'finance.payment.create_advance':
+      // Аванс из общего бюджета проекта (заказчик→бригадир / заказчик→мастер).
+      // Только заказчик-владелец или представитель с canCreatePayments.
+      // Бригадир НЕ может создать общий аванс себе или кому-либо ещё —
+      // у него только distribute из родительского аванса.
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative')
         return !!ctx.representativeRights?.canCreatePayments;
-      if (ctx.membershipRole === 'foreman') return true; // распределение аванса
+      return false;
+
+    case 'finance.payment.distribute':
+      // Распределение из своего родительского аванса мастерам.
+      // Только бригадир-получатель. Точечная проверка
+      // (parent.toUserId === actor) — в PaymentsService.createDistribution.
+      // Представитель с canCreatePayments сюда не попадает: он создаёт авансы,
+      // а распределение — обязанность бригадира.
+      if (ctx.membershipRole === 'foreman') return true;
       return false;
 
     case 'materials.manage':
@@ -158,34 +148,16 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       if (ctx.membershipRole === 'master') return true;
       return false;
 
-    case 'tools.manage':
-      // заказчик инструменты не видит (ТЗ §1.4) — явный return false
-      if (ctx.membershipRole === 'customer') return false;
-      if (ctx.membershipRole === 'foreman') return true;
-      if (ctx.membershipRole === 'master') return true;
-      if (ctx.membershipRole === 'representative')
-        return !!ctx.representativeRights?.canManageTools;
-      return false;
-
-    case 'tools.issue':
-      // Инструмент выдаёт только бригадир-владелец (ownerId совпадает в сервисе).
-      return ctx.membershipRole === 'foreman';
-
     case 'tools.view_project':
-      // Read-only видимость инструмента в проекте: реестр + список выдач.
-      // Видна любому активному участнику проекта (customer-owner /
-      // representative / foreman / master) — даже у заказчика инструмент
-      // может быть на объекте (П2.15). Write-операции (issue/return/manage)
-      // остаются под более узкими правами.
+    case 'tools.add_to_project':
+    case 'tools.claim':
+      // Self-custody модель (2026-05-12): любой активный участник проекта
+      // (включая customer-owner-а — это его объект, он тоже может приносить
+      // инструменты) видит инструменты, добавляет свои, и сам себе claim-ит.
+      // Никто не назначает инструмент другому участнику.
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'customer') return true;
       if (ctx.membershipRole === 'representative') return true;
-      if (ctx.membershipRole === 'foreman') return true;
-      if (ctx.membershipRole === 'master') return true;
-      return false;
-
-    case 'tools.return':
-      // Возврат: мастер инициирует, бригадир подтверждает. Customer не видит (ТЗ §1.4).
-      if (ctx.membershipRole === 'customer') return false;
       if (ctx.membershipRole === 'foreman') return true;
       if (ctx.membershipRole === 'master') return true;
       return false;
@@ -268,19 +240,23 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
     }
 
     case 'document.delete': {
-      // Удалить — автор документа, owner проекта, rep.canEditStages, либо admin.
+      // Удалить может только заказчик (владелец проекта) или представитель
+      // с canEditStages. Автор документа НЕ может удалить — общая папка
+      // (P2.16, 2026-05-11): мастер/бригадир складывают сюда документы,
+      // заказчик решает что хранить.
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
       if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canEditStages;
-      if (ctx.documentUploadedById && ctx.documentUploadedById === ctx.userId) return true;
       return false;
     }
 
     case 'feed.export': {
-      // Экспорт ленты/архива — owner проекта или rep.canSeeBudget (содержит финансы, materials).
-      // Foreman-у даём feed_pdf, но НЕ project_zip (выбор kind проверяется в сервисе).
+      // Экспорт ленты/архива/сводки — любой участник проекта. Объём данных в TXT-сводке
+      // фильтруется по роли в сервисе (бюджет видят owner / rep.canSeeBudget / foreman).
       if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
-      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canSeeBudget;
+      if (ctx.membershipRole === 'representative') return true;
       if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      if (ctx.membershipRole === 'customer') return true;
       return false;
     }
 

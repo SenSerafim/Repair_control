@@ -33,16 +33,13 @@ void main() {
   });
 
   group('AccessGuard — customer (заказчик)', () {
-    test('может projectCreate / approvalDecide / financePaymentResolve', () {
+    test('может projectCreate / approvalDecide / payments', () {
       for (final a in [
         DomainAction.projectCreate,
         DomainAction.projectEdit,
         DomainAction.projectInviteMember,
         DomainAction.approvalDecide,
-        DomainAction.financePaymentCreate,
-        DomainAction.financePaymentConfirm,
-        DomainAction.financePaymentDispute,
-        DomainAction.financePaymentResolve,
+        DomainAction.financePaymentCreateAdvance,
         DomainAction.financeBudgetView,
         DomainAction.financeBudgetEdit,
         DomainAction.documentRead,
@@ -56,6 +53,14 @@ void main() {
       }
     });
 
+    test('заказчик НЕ имеет права distribute (это эксклюзив бригадира)', () {
+      expect(
+        AccessGuard.can(SystemRole.customer, DomainAction.financePaymentDistribute),
+        isFalse,
+        reason: 'customer не должен иметь distribute — он не получатель аванса',
+      );
+    });
+
     test('заказчик имеет полный доступ к производственным actions', () {
       // Заказчик — владелец проекта: этапы, шаги, материалы, документы.
       // Инструмент (`tools.*`) и самозакуп (`selfpurchase.create`) НЕ его
@@ -67,7 +72,6 @@ void main() {
         DomainAction.stepManage,
         DomainAction.stepPhotoUpload,
         DomainAction.materialsManage,
-        DomainAction.materialFinalize,
         DomainAction.documentDelete,
       ]) {
         expect(
@@ -78,11 +82,8 @@ void main() {
       }
     });
 
-    test('заказчик НЕ имеет инструмента / самозакупа (ТЗ §1.4)', () {
+    test('заказчик не создаёт самозакуп (но инструмент — self-custody модель доступна всем)', () {
       for (final a in [
-        DomainAction.toolsManage,
-        DomainAction.toolsIssue,
-        DomainAction.toolsReturn,
         DomainAction.selfPurchaseCreate,
       ]) {
         expect(
@@ -104,14 +105,11 @@ void main() {
         DomainAction.stepPhotoUpload,
         DomainAction.approvalRequest,
         DomainAction.approvalDecide, // одобряет master-шаги
-        DomainAction.financePaymentCreate,
-        DomainAction.financePaymentConfirm,
-        DomainAction.financePaymentDispute,
+        DomainAction.financePaymentDistribute,
         DomainAction.materialsManage,
-        DomainAction.materialFinalize,
-        DomainAction.toolsManage,
-        DomainAction.toolsIssue,
-        DomainAction.toolsReturn,
+        DomainAction.toolsViewProject,
+        DomainAction.toolsAddToProject,
+        DomainAction.toolsClaim,
         DomainAction.chatCreateGroup,
         DomainAction.chatToggleCustomerVisibility,
         DomainAction.chatModerate,
@@ -126,13 +124,14 @@ void main() {
       }
     });
 
-    test('НЕ имеет projectCreate / projectArchive / payment.resolve / '
+    test('НЕ имеет projectCreate / projectArchive / createAdvance / '
         'budgetEdit / documentDelete', () {
       for (final a in [
         DomainAction.projectCreate,
         DomainAction.projectEdit,
         DomainAction.projectArchive,
-        DomainAction.financePaymentResolve,
+        // Бригадир НЕ создаёт общий аванс из бюджета — это эксклюзив заказчика.
+        DomainAction.financePaymentCreateAdvance,
         DomainAction.financeBudgetEdit,
         DomainAction.documentDelete,
       ]) {
@@ -151,10 +150,9 @@ void main() {
         DomainAction.stepManage,
         DomainAction.stepPhotoUpload,
         DomainAction.approvalRequest,
-        DomainAction.financePaymentConfirm,
-        DomainAction.financePaymentDispute,
         DomainAction.selfPurchaseCreate,
-        DomainAction.toolsReturn,
+        DomainAction.toolsViewProject,
+        DomainAction.toolsClaim,
         DomainAction.chatRead,
         DomainAction.chatWrite,
         DomainAction.documentRead,
@@ -167,16 +165,15 @@ void main() {
       }
     });
 
-    test('НЕ имеет stage-management / payment-create / approval-decide', () {
+    test('НЕ имеет stage-management / payment-create / distribute / approval-decide', () {
       for (final a in [
         DomainAction.stageManage,
         DomainAction.stageStart,
         DomainAction.stagePause,
-        DomainAction.financePaymentCreate,
-        DomainAction.financePaymentResolve,
+        DomainAction.financePaymentCreateAdvance,
+        DomainAction.financePaymentDistribute,
         DomainAction.approvalDecide,
         DomainAction.materialsManage,
-        DomainAction.toolsIssue,
         DomainAction.chatCreateGroup,
         DomainAction.documentWrite,
         DomainAction.documentDelete,
@@ -196,14 +193,23 @@ void main() {
       // Раунд 2026-05-03: представитель read-only + чат-write. Любое write
       // действие выдаётся только через явные представительские права
       // (см. canInProjectProvider в access_guard.dart).
+      //
+      // ВАЖНО: набор должен один-в-один соответствовать веткам
+      // `backend/libs/rbac/src/rbac.matrix.ts`, которые возвращают true для
+      // representative без проверки representativeRights. Любое расхождение
+      // даёт 403 на клик/при загрузке: клиент уверен, что плитка/кнопка
+      // доступна — фетчит данные — бэкенд режет (так был баг с
+      // financeBudgetView, см. логи 2026-05-12).
       for (final a in [
         DomainAction.chatRead,
         DomainAction.chatWrite,
         DomainAction.documentRead,
-        DomainAction.financeBudgetView,
         DomainAction.approvalList,
         DomainAction.noteManage,
         DomainAction.methodologyRead,
+        // feed.export — бэкенд разрешает representative безусловно,
+        // объём данных в TXT-сводке фильтруется по роли в сервисе.
+        DomainAction.feedExport,
       ]) {
         expect(
           AccessGuard.can(SystemRole.representative, a),
@@ -216,17 +222,19 @@ void main() {
     test('НЕ имеет write-действий без делегирования', () {
       // Архивирование никогда не выдаётся (П7.1, П10.4 — эксклюзив заказчика).
       // Все остальные write-actions — только через RepresentativeRights.
+      // financeBudgetView — read-action, но тоже требует canSeeBudget
+      // (бэкенд rbac.matrix.ts: ветка 'finance.budget.view').
       for (final a in [
         DomainAction.projectArchive,
         DomainAction.projectInviteMember,
         DomainAction.projectEdit,
         DomainAction.stageManage,
         DomainAction.stepManage,
-        DomainAction.financePaymentCreate,
-        DomainAction.financePaymentResolve,
+        DomainAction.financeBudgetView,
+        DomainAction.financePaymentCreateAdvance,
+        DomainAction.financePaymentDistribute,
         DomainAction.financeBudgetEdit,
         DomainAction.materialsManage,
-        DomainAction.toolsManage,
         DomainAction.documentDelete,
         DomainAction.approvalDecide,
       ]) {
@@ -240,38 +248,6 @@ void main() {
   });
 
   group('Кросс-роль: финансы', () {
-    test('financePaymentResolve — только customer + admin', () {
-      expect(
-        AccessGuard.can(
-          SystemRole.customer,
-          DomainAction.financePaymentResolve,
-        ),
-        isTrue,
-      );
-      expect(
-        AccessGuard.can(SystemRole.admin, DomainAction.financePaymentResolve),
-        isTrue,
-      );
-      expect(
-        AccessGuard.can(
-          SystemRole.contractor,
-          DomainAction.financePaymentResolve,
-        ),
-        isFalse,
-      );
-      expect(
-        AccessGuard.can(SystemRole.master, DomainAction.financePaymentResolve),
-        isFalse,
-      );
-      expect(
-        AccessGuard.can(
-          SystemRole.representative,
-          DomainAction.financePaymentResolve,
-        ),
-        isFalse,
-      );
-    });
-
     test(
       'approvalDecide — customer/contractor/admin; representative — только с canApprove',
       () {

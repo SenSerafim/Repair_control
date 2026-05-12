@@ -2,12 +2,11 @@ import request from 'supertest';
 import { bootTestApp, closeTestApp, E2EContext, truncateAll } from './setup-e2e';
 
 /**
- * E2E Спринта 4 DoD (ТЗ §8 спринт 4 день 8):
- *  Сценарий 3 (инструмент): foreman createToolItem 10шт -> issue master 10 ->
- *    master confirm -> requestReturn 8 -> foreman confirmReturn -> issuedQty=2.
- *    customer GET /tool-issuances -> 403.
- *  Бонус (selfpurchase): foreman selfpurchase 8000 с фото -> customer approve ->
- *    budget.materials.spent увеличен на 8000.
+ * E2E Tools (self-custody модель, 2026-05-12) + SelfPurchase:
+ *  Сценарий «инструмент»: любой member project-а создаёт инструмент в проекте,
+ *    другой member self-claim-ит его, owner получает custody history,
+ *    customer тоже видит реестр (self-custody — для всех ролей).
+ *  Бонус: foreman selfpurchase 8000 → customer approve → budget.materials.spent += 8000.
  */
 describe('Sprint 4 DoD — Tools + SelfPurchase', () => {
   let ctx: E2EContext;
@@ -36,7 +35,7 @@ describe('Sprint 4 DoD — Tools + SelfPurchase', () => {
 
   const idem = (n: string) => ({ 'Idempotency-Key': n });
 
-  it('Сценарий 3: инструмент issue 10 → confirm → return 8 → issuedQty=2', async () => {
+  it('Сценарий self-custody: создаём в проекте → master self-claim → history фиксируется', async () => {
     const customer = await reg('+79990003001', 'customer');
     const foreman = await reg('+79990003002', 'contractor');
     const master = await reg('+79990003003', 'master');
@@ -61,69 +60,58 @@ describe('Sprint 4 DoD — Tools + SelfPurchase', () => {
       .send({ userId: master.userId, role: 'master' })
       .expect(201);
 
-    // Foreman создаёт ToolItem на своём профиле
+    // Foreman создаёт инструмент сразу в проекте — owner=foreman, holder=foreman
     const tool = await request(server())
-      .post('/api/me/tools')
+      .post(`/api/projects/${projectId}/tools`)
       .set(fAuth)
-      .send({ name: 'Перфоратор Makita', totalQty: 10 })
+      .send({ name: 'Перфоратор Makita' })
       .expect(201);
     const toolId = tool.body.id as string;
-    expect(tool.body.issuedQty).toBe(0);
+    expect(tool.body.ownerId).toBe(foreman.userId);
+    expect(tool.body.currentHolderId).toBe(foreman.userId);
 
-    // Foreman выдаёт 10шт мастеру
-    const iss = await request(server())
-      .post(`/api/projects/${projectId}/tool-issuances`)
-      .set(fAuth)
-      .send({ toolItemId: toolId, toUserId: master.userId, qty: 10 })
-      .expect(201);
-    const issuanceId = iss.body.id as string;
-    expect(iss.body.status).toBe('issued');
-
-    // ToolItem.issuedQty = 10
-    let toolDb = await ctx.prisma.toolItem.findUnique({ where: { id: toolId } });
-    expect(toolDb!.issuedQty).toBe(10);
-
-    // Мастер подтверждает приёмку
-    await request(server())
-      .post(`/api/tool-issuances/${issuanceId}/confirm`)
+    // Master видит инструмент в списке проекта
+    const projectTools = await request(server())
+      .get(`/api/projects/${projectId}/tools`)
       .set(mAuth)
       .expect(200);
+    expect(projectTools.body).toHaveLength(1);
+    expect(projectTools.body[0].currentHolderId).toBe(foreman.userId);
 
-    // Мастер инициирует возврат 8шт
-    const retReq = await request(server())
-      .post(`/api/tool-issuances/${issuanceId}/return`)
+    // Master self-claim → holder теперь master
+    const claimed = await request(server())
+      .post(`/api/tools/${toolId}/claim`)
       .set(mAuth)
-      .send({ returnedQty: 8 })
+      .send({ note: 'забрал на 3 этаж' })
       .expect(200);
-    expect(retReq.body.status).toBe('return_requested');
-    expect(retReq.body.returnedQty).toBe(8);
+    expect(claimed.body.currentHolderId).toBe(master.userId);
 
-    // issuedQty ещё 10 (пока бригадир не подтвердил)
-    toolDb = await ctx.prisma.toolItem.findUnique({ where: { id: toolId } });
-    expect(toolDb!.issuedQty).toBe(10);
+    // Повторный self-claim того же мастера — 409
+    await request(server()).post(`/api/tools/${toolId}/claim`).set(mAuth).send({}).expect(409);
 
-    // Бригадир подтверждает возврат
-    const confirmedReturn = await request(server())
-      .post(`/api/tool-issuances/${issuanceId}/return-confirm`)
+    // Customer тоже видит реестр (self-custody модель — для всех ролей)
+    const customerTools = await request(server())
+      .get(`/api/projects/${projectId}/tools`)
+      .set(cAuth)
+      .expect(200);
+    expect(customerTools.body[0].currentHolderId).toBe(master.userId);
+
+    // История передач: 2 события (initial owner + claim by master)
+    const history = await request(server())
+      .get(`/api/tools/${toolId}/custody-history`)
       .set(fAuth)
       .expect(200);
-    expect(confirmedReturn.body.status).toBe('returned');
+    expect(history.body).toHaveLength(2);
+    expect(history.body[0].holderId).toBe(master.userId);
+    expect(history.body[0].previousHolderId).toBe(foreman.userId);
+    expect(history.body[1].previousHolderId).toBeNull();
 
-    // issuedQty = 10 - 8 = 2 (2шт ещё у мастера)
-    toolDb = await ctx.prisma.toolItem.findUnique({ where: { id: toolId } });
-    expect(toolDb!.issuedQty).toBe(2);
-
-    // customer GET /tool-issuances → 403 (ТЗ §1.4, инструмент невидим customer-у)
-    await request(server()).get(`/api/projects/${projectId}/tool-issuances`).set(cAuth).expect(403);
-
-    // feedEvent содержит tool_*
+    // Feed event
     const kinds = (
       await ctx.prisma.feedEvent.findMany({ where: { projectId }, orderBy: { createdAt: 'asc' } })
     ).map((e) => e.kind);
-    expect(kinds).toContain('tool_issued');
-    expect(kinds).toContain('tool_issuance_confirmed');
-    expect(kinds).toContain('tool_return_requested');
-    expect(kinds).toContain('tool_returned');
+    expect(kinds).toContain('tool_added_to_project');
+    expect(kinds).toContain('tool_custody_changed');
   });
 
   it('SelfPurchase foreman 8000 → customer approve → budget.materials.spent += 8000', async () => {

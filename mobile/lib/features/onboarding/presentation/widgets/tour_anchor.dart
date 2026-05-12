@@ -22,7 +22,11 @@ class TourAnchor extends ConsumerStatefulWidget {
 }
 
 class _TourAnchorState extends ConsumerState<TourAnchor> {
-  GlobalKey? _key;
+  // Свой ключ на инстанс. Делим со списком/реестром только маппинг id→key,
+  // но НЕ сам GlobalKey — иначе два транзитно сосуществующих TourAnchor
+  // (route transition, hot reload) кладут один и тот же ключ в дерево и
+  // ловят duplicate-GlobalKey assertion.
+  late final GlobalKey _key = GlobalKey(debugLabel: 'tour_anchor:${widget.id}');
   // Кэшируем registry, чтобы вызывать unregister в dispose без `ref.read`
   // (на disposed-элементе ref недоступен — будет StateError).
   TourAnchorRegistry? _registry;
@@ -32,15 +36,15 @@ class _TourAnchorState extends ConsumerState<TourAnchor> {
     super.didChangeDependencies();
     final registry = ref.read(tourAnchorRegistryProvider);
     if (!identical(registry, _registry)) {
-      _registry?.unregister(widget.id);
+      _registry?.unregister(widget.id, _key);
       _registry = registry;
-      _key = registry.register(widget.id);
+      _registry!.registerKey(widget.id, _key);
     }
   }
 
   @override
   void dispose() {
-    _registry?.unregister(widget.id);
+    _registry?.unregister(widget.id, _key);
     super.dispose();
   }
 

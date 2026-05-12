@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +18,13 @@ import 'features/chat/application/chats_controller.dart';
 import 'features/projects/application/membership_sync.dart';
 import 'features/projects/application/projects_list_controller.dart';
 import 'shared/widgets/widgets.dart';
+
+/// Root-level ScaffoldMessenger key. Переживает навигацию между экранами,
+/// поэтому SnackBar, показанный перед pop()/push(), не падает в
+/// _updateScaffolds (lookup ancestor unsafe) и не цепляется за уже
+/// отмонтированный Scaffold.
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 class RepairControlApp extends ConsumerStatefulWidget {
   const RepairControlApp({super.key});
@@ -54,15 +63,22 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp>
       // провайдеры (см. core/access/user_scoped_providers.dart).
       ..read(userScopedInvalidationProvider);
     // Инициализируем FCM (soft-fail — работает без Firebase на dev).
+    // Не блокируем критический путь startup: на эмуляторах без Google Play
+    // Firebase валится ~8с, всё это время висит fcm.init() и задерживает
+    // первую регистрацию роутера/подписок. Присваиваем _fcm сразу — чтобы
+    // dispose() мог его освободить, даже если init ещё в полёте.
     final fcm = FcmService(
       logger: ref.read(loggerProvider),
       container: container,
     );
-    final ok = await fcm.init();
-    if (ok && mounted) {
-      fcm.router = ref.read(routerProvider);
-      _fcm = fcm;
-    }
+    _fcm = fcm;
+    unawaited(
+      fcm.init().then((ok) {
+        if (ok && mounted) {
+          fcm.router = ref.read(routerProvider);
+        }
+      }),
+    );
   }
 
   @override
@@ -110,6 +126,7 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp>
     return MaterialApp.router(
       title: 'Repair Control',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/access/access_guard.dart';
-import '../../../../core/access/system_role.dart';
-
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/widgets.dart';
@@ -32,7 +29,11 @@ class StageChecklistTab extends ConsumerWidget {
   final Stage stage;
   final StageDisplayStatus display;
   final void Function(Step step) onStepTap;
-  final VoidCallback onAddStep;
+  /// `null` означает, что у текущей роли нет права создавать шаги.
+  /// Источник истины — StageDetailScreen, который вычисляет это через
+  /// canInProjectProvider(stepManage). Здесь только рендерим CTA при
+  /// non-null. Никакой дополнительной фильтрации.
+  final VoidCallback? onAddStep;
   final void Function(Step step) onToggleStep;
 
   @override
@@ -41,11 +42,7 @@ class StageChecklistTab extends ConsumerWidget {
     final async = ref.watch(stepsControllerProvider(key));
     final locked =
         display == StageDisplayStatus.pending && stage.foremanIds.isEmpty;
-    // Master имеет step.manage только для своих шагов (rbac.matrix.ts:42).
-    // Создание новых шагов — прерогатива бригадира/customer-owner. Скрываем
-    // кнопку «Добавить шаг» если активная роль — master, чтобы не получать
-    // 403 после тапа.
-    final canAddStep = ref.watch(activeRoleProvider) != SystemRole.master;
+    final canAddStep = onAddStep != null;
 
     return async.when(
       loading: () => const AppLoadingState(),
@@ -55,17 +52,25 @@ class StageChecklistTab extends ConsumerWidget {
       ),
       data: (steps) {
         if (steps.isEmpty) {
+          // Внутри IndexedStack (StackFit.loose + AlignmentDirectional.topStart)
+          // SingleChildScrollView сжимается до интринзик-ширины контента и
+          // прижимается к левому краю. SizedBox(width: double.infinity)
+          // принудительно растягивает на всю ширину таба, чтобы
+          // crossAxisAlignment.center внутри AppEmptyState реально центрировал.
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.x16),
-            child: AppEmptyState(
-              title: 'Шагов пока нет',
-              subtitle: canAddStep
-                  ? 'Добавьте основной шаг — именно они определяют '
-                        'прогресс этапа.'
-                  : 'Шаги добавит бригадир этого этапа.',
-              icon: Icons.checklist_rounded,
-              actionLabel: canAddStep ? 'Добавить шаг' : null,
-              onAction: canAddStep ? onAddStep : null,
+            child: SizedBox(
+              width: double.infinity,
+              child: AppEmptyState(
+                title: 'Шагов пока нет',
+                subtitle: canAddStep
+                    ? 'Добавьте основной шаг — именно они определяют '
+                          'прогресс этапа.'
+                    : 'Шаги добавит бригадир этого этапа.',
+                icon: Icons.checklist_rounded,
+                actionLabel: canAddStep ? 'Добавить шаг' : null,
+                onAction: onAddStep,
+              ),
             ),
           );
         }

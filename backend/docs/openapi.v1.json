@@ -2664,15 +2664,21 @@
           },
           {
             "name": "scope",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "personal",
+                "for_me",
+                "stage",
+                "team_broadcast"
+              ]
             }
           },
           {
             "name": "stageId",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -2680,7 +2686,7 @@
           },
           {
             "name": "search",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3372,138 +3378,6 @@
         ]
       }
     },
-    "/api/payments/{id}/confirm": {
-      "post": {
-        "operationId": "PaymentsController_confirm",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "payments"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/payments/{id}/cancel": {
-      "post": {
-        "operationId": "PaymentsController_cancel",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "payments"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/payments/{id}/dispute": {
-      "post": {
-        "operationId": "PaymentsController_dispute",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DisputePaymentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "payments"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/payments/{id}/resolve": {
-      "post": {
-        "operationId": "PaymentsController_resolve",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolvePaymentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "payments"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/api/payments/{id}": {
       "get": {
         "operationId": "PaymentsController_get",
@@ -3696,34 +3570,6 @@
         ]
       }
     },
-    "/api/materials/{id}/send": {
-      "post": {
-        "operationId": "MaterialsController_send",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "materials"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/api/materials/{id}/items/{itemId}/bought": {
       "post": {
         "operationId": "MaterialsController_markBought",
@@ -3755,34 +3601,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "materials"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/materials/{id}/finalize": {
-      "post": {
-        "operationId": "MaterialsController_finalize",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": ""
@@ -6188,8 +6006,8 @@
   },
   "info": {
     "title": "Repair Control API",
-    "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта Cluster A; v1.2 (S18) — Knowledge Base, Legal PDF publications, контакты поддержки, broadcast по платформе.",
-    "version": "1.2.0",
+    "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта Cluster A; v1.2 (S18) — Knowledge Base, Legal PDF publications, контакты поддержки, broadcast по платформе; v1.2.1 — общая папка документов (description/documentDate, любые типы файлов 200MB, delete только заказчик+rep.canEditStages); v1.3.0 — упрощённый FSM материалов: enum MaterialRequestStatus теряет draft/partially_bought, получает pending_approval; удалены endpoints /materials/:id/send и /materials/:id/finalize (последняя купленная позиция автоматически переводит заявку в bought и тратит бюджет один раз); единственная точка создания заявки — POST /projects/:id/materials (foreman/master → pending_approval + Approval material_purchase, customer-owner/representative.canApprove → сразу open); confirm-delivery доступен любому активному участнику проекта. v1.4.0 — упрощённый FSM платежей: enum PaymentStatus удалён (платёж = факт передачи денег), удалены endpoints /payments/:id/{confirm,cancel,dispute,resolve}, удалены модель PaymentDispute и scope payment_dispute, удалены notification kinds payment_{confirmed,disputed,resolved,dispute_requested}; бюджет = sum(advance.amount) — distributions не уменьшают бюджет повторно.",
+    "version": "1.4.0",
     "contact": {}
   },
   "tags": [],
@@ -6982,7 +6800,8 @@
             "enum": [
               "personal",
               "for_me",
-              "stage"
+              "stage",
+              "team_broadcast"
             ]
           },
           "text": {
@@ -7149,34 +6968,6 @@
         "required": [
           "toUserId",
           "amount"
-        ]
-      },
-      "DisputePaymentDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "maxLength": 2000
-          }
-        },
-        "required": [
-          "reason"
-        ]
-      },
-      "ResolvePaymentDto": {
-        "type": "object",
-        "properties": {
-          "resolution": {
-            "type": "string",
-            "maxLength": 2000
-          },
-          "adjustAmount": {
-            "type": "number",
-            "description": "Корректирующая сумма в копейках"
-          }
-        },
-        "required": [
-          "resolution"
         ]
       },
       "MaterialItemInputDto": {
@@ -7412,6 +7203,16 @@
           },
           "stepId": {
             "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Произвольное описание документа."
+          },
+          "documentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата самого документа (договора/акта/чека). ISO 8601."
           }
         },
         "required": [
@@ -7444,6 +7245,14 @@
           },
           "stepId": {
             "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "documentDate": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -7457,9 +7266,6 @@
               "approval_approved",
               "approval_rejected",
               "payment_created",
-              "payment_confirmed",
-              "payment_disputed",
-              "payment_resolved",
               "stage_rejected_by_customer",
               "stage_overdue",
               "stage_deadline_exceeds_project",
@@ -7496,7 +7302,9 @@
             "type": "string",
             "enum": [
               "feed_pdf",
-              "project_zip"
+              "project_zip",
+              "project_summary_txt",
+              "project_report_pdf"
             ]
           },
           "kinds": {

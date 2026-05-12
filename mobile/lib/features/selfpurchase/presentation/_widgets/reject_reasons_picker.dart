@@ -67,7 +67,8 @@ class _Tile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.r12),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.x14,
           vertical: AppSpacing.x12,
@@ -79,6 +80,15 @@ class _Tile extends StatelessWidget {
             width: 2,
           ),
           borderRadius: BorderRadius.circular(AppRadius.r12),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x1FDC2626),
+                    offset: Offset(0, 2),
+                    blurRadius: 10,
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           children: [

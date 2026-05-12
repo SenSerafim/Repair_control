@@ -40,9 +40,21 @@ type MembershipRow = {
   role: 'customer' | 'representative' | 'foreman' | 'master';
 };
 
+type SubstepRow = {
+  id: string;
+  stepId: string;
+  text: string;
+  authorId: string;
+  isDone: boolean;
+  doneAt: Date | null;
+  doneById: string | null;
+  createdAt: Date;
+};
+
 const mkPrisma = () => {
   const stages = new Map<string, StageRow>();
   const steps = new Map<string, StepRow>();
+  const substeps: SubstepRow[] = [];
   const memberships: MembershipRow[] = [];
   let stepSeq = 0;
 
@@ -58,20 +70,35 @@ const mkPrisma = () => {
       findUnique: jest.fn(({ where, include }: any) => {
         const s = steps.get(where.id);
         if (!s) return null;
+        const result: any = { ...s };
         if (include?.stage) {
-          return {
-            ...s,
-            stage: {
-              projectId: stages.get(s.stageId)?.projectId,
-              status: stages.get(s.stageId)?.status,
-            },
+          result.stage = {
+            projectId: stages.get(s.stageId)?.projectId,
+            status: stages.get(s.stageId)?.status,
           };
         }
-        return s;
+        if (include?.substeps) {
+          result.substeps = substeps
+            .filter((x) => x.stepId === s.id)
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        }
+        if (include?.photos) result.photos = [];
+        return result;
       }),
-      findMany: jest.fn(({ where }: any) =>
-        [...steps.values()].filter((s) => s.stageId === where.stageId),
-      ),
+      findMany: jest.fn(({ where, include }: any) => {
+        const rows = [...steps.values()].filter((s) => s.stageId === where.stageId);
+        if (!include) return rows;
+        return rows.map((s) => {
+          const r: any = { ...s };
+          if (include.substeps) {
+            r.substeps = substeps
+              .filter((x) => x.stepId === s.id)
+              .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+          }
+          if (include.photos) r.photos = [];
+          return r;
+        });
+      }),
       count: jest.fn(({ where }: any) => {
         const list = [...steps.values()].filter((s) => {
           if (where.stageId && s.stageId !== where.stageId) return false;
@@ -140,7 +167,7 @@ const mkPrisma = () => {
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
-  return { prisma: prisma as unknown as PrismaService, stages, steps, memberships };
+  return { prisma: prisma as unknown as PrismaService, stages, steps, substeps, memberships };
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
@@ -408,6 +435,118 @@ describe('StepsService.reorder', () => {
     await expect(svc.reorder('stage1', [{ id: 'unknown', orderIndex: 0 }], 'u')).rejects.toThrow(
       InvalidInputError,
     );
+  });
+});
+
+// RBAC-инвариант: GET-методы шага не принимают роль/контекст вызывающего;
+// подшаги в include — упорядоченный массив без фильтрации.
+// customer / foreman / master / representative всегда получают одинаковую картину.
+describe('StepsService.get / listForStage — единый список подшагов для всех ролей', () => {
+  it('get возвращает все подшаги шага в порядке createdAt asc (без фильтра по роли)', async () => {
+    const state = mkPrisma();
+    setupStage(state, 'stage1', 'p1');
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
+    const step = await svc.create({
+      stageId: 'stage1',
+      title: 'Снять плинтусы',
+      actorUserId: 'u1',
+    });
+    // 4 подшага от 4 разных авторов (имитация всех ролей)
+    state.substeps.push(
+      {
+        id: 's1',
+        stepId: step.id,
+        text: 'А',
+        authorId: 'customer-u',
+        isDone: false,
+        doneAt: null,
+        doneById: null,
+        createdAt: new Date('2026-06-10T10:00:00Z'),
+      },
+      {
+        id: 's2',
+        stepId: step.id,
+        text: 'Б',
+        authorId: 'foreman-u',
+        isDone: false,
+        doneAt: null,
+        doneById: null,
+        createdAt: new Date('2026-06-10T10:01:00Z'),
+      },
+      {
+        id: 's3',
+        stepId: step.id,
+        text: 'В',
+        authorId: 'master-u',
+        isDone: true,
+        doneAt: new Date('2026-06-10T11:00:00Z'),
+        doneById: 'master-u',
+        createdAt: new Date('2026-06-10T10:02:00Z'),
+      },
+      {
+        id: 's4',
+        stepId: step.id,
+        text: 'Г',
+        authorId: 'representative-u',
+        isDone: false,
+        doneAt: null,
+        doneById: null,
+        createdAt: new Date('2026-06-10T10:03:00Z'),
+      },
+    );
+
+    const result: any = await svc.get(step.id);
+    expect(result.substeps).toHaveLength(4);
+    expect(result.substeps.map((s: any) => s.id)).toEqual(['s1', 's2', 's3', 's4']);
+  });
+
+  it('listForStage возвращает все подшаги без фильтрации по роли', async () => {
+    const state = mkPrisma();
+    setupStage(state, 'stage1', 'p1');
+    const svc = new StepsService(
+      state.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      mkApprovals(),
+    );
+    const step = await svc.create({ stageId: 'stage1', title: 'Шаг', actorUserId: 'u1' });
+    state.substeps.push(
+      {
+        id: 's1',
+        stepId: step.id,
+        text: 'А',
+        authorId: 'customer-u',
+        isDone: false,
+        doneAt: null,
+        doneById: null,
+        createdAt: new Date('2026-06-10T10:00:00Z'),
+      },
+      {
+        id: 's2',
+        stepId: step.id,
+        text: 'Б',
+        authorId: 'master-u',
+        isDone: false,
+        doneAt: null,
+        doneById: null,
+        createdAt: new Date('2026-06-10T10:01:00Z'),
+      },
+    );
+    const list: any[] = await svc.listForStage('stage1');
+    expect(list).toHaveLength(1);
+    expect(list[0].substeps).toHaveLength(2);
+  });
+
+  it('сигнатуры StepsService.get / listForStage принимают только id — нет параметра роли', () => {
+    expect(StepsService.prototype.get.length).toBe(1);
+    expect(StepsService.prototype.listForStage.length).toBe(1);
   });
 });
 

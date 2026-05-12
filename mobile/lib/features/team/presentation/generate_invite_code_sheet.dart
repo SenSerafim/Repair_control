@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/access/access_guard.dart';
-import '../../../core/access/domain_actions.dart';
+import '../../../core/access/representative_rights.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -41,7 +41,12 @@ class _Body extends ConsumerStatefulWidget {
 
 class _BodyState extends ConsumerState<_Body> {
   MembershipRole? _role;
-  final Map<DomainAction, bool> _permissions = {};
+  // Ключ — `RepresentativeRight` (десять флагов из `rbac.types.ts:RepresentativeRights`).
+  // На бекенд отправляем `right.jsonKey: true` — `sanitizeRepresentativeRights`
+  // отбрасывает любые другие ключи (раньше тут лежали `DomainAction.value`
+  // вроде `approval.decide` — все молча терялись, представитель получал
+  // дефолтное all-false и ловил 403 на любом действии).
+  final Map<RepresentativeRight, bool> _permissions = {};
   final Set<String> _selectedStageIds = {};
   bool _busy = false;
   String? _error;
@@ -63,7 +68,7 @@ class _BodyState extends ConsumerState<_Body> {
       if (role == MembershipRole.representative) {
         perms = {
           for (final entry in _permissions.entries.where((e) => e.value))
-            entry.key.value: true,
+            entry.key.jsonKey: true,
         };
         // Если ничего не выбрано — представитель только наблюдает.
         // Это валидно: бекенд примет пустой объект.
@@ -173,21 +178,22 @@ class _Form extends ConsumerWidget {
                 if (state._role == MembershipRole.representative) ...[
                   const SizedBox(height: AppSpacing.x16),
                   const _SectionLabel('Какие действия делегируем?'),
-                  for (final groupEntry in kRightsGrouped.entries) ...[
+                  for (final group in kRepresentativeRightGroups) ...[
                     const SizedBox(height: AppSpacing.x8),
-                    Text(groupEntry.key, style: AppTextStyles.micro),
-                    for (final action in groupEntry.value)
+                    Text(group.title, style: AppTextStyles.micro),
+                    for (final right in group.rights)
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         dense: true,
-                        value: state._permissions[action] ?? false,
+                        value: state._permissions[right] ?? false,
                         title: Text(
-                          kRightsRu[action]?.title ?? action.value,
+                          kRepresentativeRightLabels[right]?.title ??
+                              right.jsonKey,
                           style: AppTextStyles.body,
                         ),
-                        subtitle: kRightsRu[action] != null
+                        subtitle: kRepresentativeRightLabels[right] != null
                             ? Text(
-                                kRightsRu[action]!.description,
+                                kRepresentativeRightLabels[right]!.description,
                                 style: AppTextStyles.micro.copyWith(
                                   color: AppColors.n400,
                                 ),
@@ -197,7 +203,7 @@ class _Form extends ConsumerWidget {
                         onChanged: (v) {
                           // ignore: invalid_use_of_protected_member
                           state.setState(
-                            () => state._permissions[action] = v ?? false,
+                            () => state._permissions[right] = v ?? false,
                           );
                         },
                       ),

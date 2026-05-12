@@ -208,9 +208,10 @@ class _DocRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.x6),
       padding: const EdgeInsets.all(AppSpacing.x10),
       decoration: BoxDecoration(
-        color: AppColors.n0,
+        gradient: AppGradients.surfaceCard,
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200),
+        boxShadow: AppShadows.shCard,
       ),
       child: Row(
         children: [
@@ -218,8 +219,13 @@ class _DocRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: spec.bg,
               borderRadius: BorderRadius.circular(AppRadius.r8),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [spec.bg.withValues(alpha: 0.82), spec.bg],
+              ),
+              border: Border.all(color: spec.fg.withValues(alpha: 0.10)),
             ),
             child: Icon(spec.icon, size: 18, color: spec.fg),
           ),

@@ -44,7 +44,7 @@ void main() {
       );
     });
 
-    test('foreman — управление этапами и выплатами мастерам', () {
+    test('foreman — управление этапами и distribute мастерам', () {
       expect(
         AccessGuard.can(SystemRole.contractor, DomainAction.stageStart),
         isTrue,
@@ -53,12 +53,21 @@ void main() {
         AccessGuard.can(SystemRole.contractor, DomainAction.stagePause),
         isTrue,
       );
+      // Бригадир распределяет аванс мастерам, но НЕ создаёт общий аванс
+      // из бюджета — это эксклюзив заказчика.
       expect(
         AccessGuard.can(
           SystemRole.contractor,
-          DomainAction.financePaymentCreate,
+          DomainAction.financePaymentDistribute,
         ),
         isTrue,
+      );
+      expect(
+        AccessGuard.can(
+          SystemRole.contractor,
+          DomainAction.financePaymentCreateAdvance,
+        ),
+        isFalse,
       );
       expect(
         AccessGuard.can(SystemRole.contractor, DomainAction.projectCreate),
@@ -97,12 +106,16 @@ void main() {
         AccessGuard.can(SystemRole.representative, DomainAction.chatWrite),
         isTrue,
       );
+      // financeBudgetView — НЕ в дефолтах: бэкенд (rbac.matrix.ts:
+      // 'finance.budget.view') требует representativeRights.canSeeBudget.
+      // Раньше клиент держал его в дефолтах — это давало серию 403 на
+      // `GET /projects/:id/budget` у представителя без флага.
       expect(
         AccessGuard.can(
           SystemRole.representative,
           DomainAction.financeBudgetView,
         ),
-        isTrue,
+        isFalse,
       );
       // Write-actions — без делегирования НЕТ.
       expect(
@@ -112,7 +125,7 @@ void main() {
       expect(
         AccessGuard.can(
           SystemRole.representative,
-          DomainAction.financePaymentCreate,
+          DomainAction.financePaymentCreateAdvance,
         ),
         isFalse,
       );
@@ -123,13 +136,6 @@ void main() {
       // Архивирование — никогда (П7.1, П10.4).
       expect(
         AccessGuard.can(SystemRole.representative, DomainAction.projectArchive),
-        isFalse,
-      );
-      expect(
-        AccessGuard.can(
-          SystemRole.representative,
-          DomainAction.financePaymentResolve,
-        ),
         isFalse,
       );
       expect(

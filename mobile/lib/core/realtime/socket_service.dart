@@ -29,12 +29,40 @@ class SocketEvents {
   static const exportReady = 'export:ready';
   static const exportFailed = 'export:failed';
   static const notificationNew = 'notification:new';
+  /// chat:added — личное уведомление «тебя добавили в чат». Эмитится бэкендом
+  /// в `user:{id}` комнату нового участника (см. ChatsGateway.onChatUserJoined).
+  /// Payload: `{ chatId, projectId, type }`. Mobile инвалидирует список чатов,
+  /// чтобы новый чат появился в inbox без pull-to-refresh.
+  static const chatAdded = 'chat:added';
   /// project:membership_changed — тихий broadcast «состав команды изменился».
   /// Эмитится бэкендом в `user:{X}` комнаты всех участников проекта (включая
   /// нового/удалённого). Payload: `{ projectId, userId, role, action }`.
   /// `membership_sync_provider` использует событие для инвалидации списков
   /// проектов / команды / чатов без pull-to-refresh.
   static const projectMembershipChanged = 'project:membership_changed';
+  /// approval:changed — точечный сигнал «обнови approvals», эмитится бэкендом
+  /// для всех approval-родственных feed-событий (request/decide/escalate/cancel
+  /// + mirror-approval lifecycle: selfpurchase/material/payment_dispute).
+  /// Payload: `{ kind, projectId, approvalId, scope }`.
+  static const approvalChanged = 'approval:changed';
+
+  /// stage:changed / step:changed / substep:changed — широковещание изменений
+  /// этапов / шагов / подшагов всем активным участникам проекта. Эмитятся
+  /// бекендом для всех STAGE_FEED_KINDS / STEP_FEED_KINDS / SUBSTEP_FEED_KINDS
+  /// (см. chats.gateway.ts). Payload: `{ kind, projectId, stageId?, stepId?,
+  /// substepId? }`. Мобайл по событию инвалидирует затронутые провайдеры
+  /// (stagesController, stepsController, stepDetailController) — без
+  /// pull-to-refresh у других пользователей.
+  static const stageChanged = 'stage:changed';
+  static const stepChanged = 'step:changed';
+  static const substepChanged = 'substep:changed';
+
+  /// tool:changed — широковещание инструментов проекта всем участникам.
+  /// Self-custody модель (2026-05-12): event эмитится для tool_added_to_project,
+  /// tool_removed_from_project, tool_custody_changed. Payload:
+  /// `{ kind, projectId, toolItemId?, holderId? }`. Mobile инвалидирует
+  /// projectToolsBoardProvider + toolCustodyHistoryProvider.
+  static const toolChanged = 'tool:changed';
 }
 
 /// Обёртка над socket_io_client с авто-подключением через JWT и
@@ -155,7 +183,13 @@ class SocketService {
       SocketEvents.exportReady,
       SocketEvents.exportFailed,
       SocketEvents.notificationNew,
+      SocketEvents.chatAdded,
       SocketEvents.projectMembershipChanged,
+      SocketEvents.approvalChanged,
+      SocketEvents.stageChanged,
+      SocketEvents.stepChanged,
+      SocketEvents.toolChanged,
+      SocketEvents.substepChanged,
     ]) {
       socket.on(event, (payload) {
         _eventsController.add((event, payload));

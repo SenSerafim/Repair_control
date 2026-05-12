@@ -52,14 +52,12 @@ class PaymentsRepository {
 
   Future<List<Payment>> list({
     required String projectId,
-    PaymentStatus? status,
     PaymentKind? kind,
     String? userId,
   }) => _call(() async {
     final r = await _dio.get<List<dynamic>>(
       '/api/projects/$projectId/payments',
       queryParameters: {
-        if (status != null) 'status': status.apiValue,
         if (kind != null) 'kind': kind.apiValue,
         if (userId != null) 'userId': userId,
       },
@@ -116,43 +114,24 @@ class PaymentsRepository {
     return Payment.parse(r.data!);
   });
 
-  Future<Payment> confirm(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/payments/$id/confirm',
-    );
-    return Payment.parse(r.data!);
-  });
-
-  Future<Payment> cancel(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>('/api/payments/$id/cancel');
-    return Payment.parse(r.data!);
-  });
-
-  Future<Payment> dispute({
-    required String id,
-    required String reason,
-    List<String>? photoKeys,
+  /// Простая выплата мастеру из кассы бригадира — без выбора parent-аванса.
+  /// Баланс кассы считается агрегатом (advancesReceived − distributed).
+  Future<Payment> distributeFromWallet({
+    required String projectId,
+    required String toUserId,
+    required int amount,
+    String? stageId,
+    String? comment,
+    String? photoKey,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
-      '/api/payments/$id/dispute',
+      '/api/projects/$projectId/payments/distribute',
       data: {
-        'reason': reason,
-        if (photoKeys != null && photoKeys.isNotEmpty) 'photoKeys': photoKeys,
-      },
-    );
-    return Payment.parse(r.data!);
-  });
-
-  Future<Payment> resolve({
-    required String id,
-    required String resolution,
-    int? adjustAmount,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/payments/$id/resolve',
-      data: {
-        'resolution': resolution,
-        if (adjustAmount != null) 'adjustAmount': adjustAmount,
+        'toUserId': toUserId,
+        'amount': amount,
+        if (stageId != null) 'stageId': stageId,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (photoKey != null) 'photoKey': photoKey,
       },
     );
     return Payment.parse(r.data!);

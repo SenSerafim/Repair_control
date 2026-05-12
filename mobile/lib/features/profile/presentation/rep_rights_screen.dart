@@ -27,14 +27,12 @@ class RepRightsScreen extends StatelessWidget {
     'Согласования': [DomainAction.approvalRequest, DomainAction.approvalDecide],
     'Финансы': [
       DomainAction.financeBudgetView,
-      DomainAction.financePaymentCreate,
-      DomainAction.financePaymentConfirm,
-      DomainAction.financePaymentDispute,
+      DomainAction.financePaymentCreateAdvance,
     ],
     'Материалы и инструмент': [
       DomainAction.materialsManage,
       DomainAction.selfPurchaseCreate,
-      DomainAction.toolsIssue,
+      DomainAction.toolsClaim,
     ],
   };
 

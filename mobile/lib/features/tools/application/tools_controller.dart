@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/realtime/socket_service.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../data/tools_repository.dart';
 import '../domain/tool.dart';
+
+// ───────────────────────── My Tools (профиль) ─────────────────────────
 
 final myToolsProvider =
     AsyncNotifierProvider<MyToolsController, List<ToolItem>>(
@@ -15,10 +20,8 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     return ref.read(toolsRepositoryProvider).myTools();
   }
 
-  /// Сброс state до AsyncLoading() без previous. Вызывается при logout
-  /// (см. [userScopedInvalidationProvider]). Без этого .when(data:) в
-  /// my_tools_screen рендерит кеш предыдущей сессии до прихода свежего
-  /// API-ответа — это и есть мерцание чужих инструментов из QA-доки.
+  /// Сброс state до AsyncLoading() — вызывается при logout, чтобы не мерцал
+  /// кеш предыдущего пользователя (см. [userScopedInvalidationProvider]).
   void resetForLogout() {
     state = const AsyncValue.loading();
   }
@@ -35,24 +38,14 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
 
   Future<AuthFailure?> create({
     required String name,
-    required int totalQty,
-    String? unit,
     String? photoKey,
-
-    /// П2.14 — серийный номер.
     String? serial,
-
-    /// П2.15 — сразу привязать к проекту (опц.).
-    String? projectId,
   }) async {
     try {
-      final t = await _repo.createTool(
+      final t = await _repo.createMyTool(
         name: name,
-        totalQty: totalQty,
-        unit: unit,
         photoKey: photoKey,
         serial: serial,
-        projectId: projectId,
       );
       _upsert(t);
       return null;
@@ -64,15 +57,15 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
   Future<AuthFailure?> saveUpdate({
     required String id,
     String? name,
-    int? totalQty,
-    String? unit,
+    String? serial,
+    String? photoKey,
   }) async {
     try {
       final t = await _repo.updateTool(
         id: id,
         name: name,
-        totalQty: totalQty,
-        unit: unit,
+        serial: serial,
+        photoKey: photoKey,
       );
       _upsert(t);
       return null;
@@ -98,169 +91,130 @@ final toolDetailProvider = FutureProvider.family<ToolItem, String>((ref, id) {
   return ref.read(toolsRepositoryProvider).getTool(id);
 });
 
-final toolIssuancesProvider =
-    AsyncNotifierProvider.family<
-      ToolIssuancesController,
-      List<ToolIssuance>,
-      String
-    >(ToolIssuancesController.new);
+// ───────────────────────── Project Tools (доска проекта) ─────────────────────────
 
-class ToolIssuancesController
-    extends FamilyAsyncNotifier<List<ToolIssuance>, String> {
+/// Список инструментов проекта с обогащением owner/holder. Виден ВСЕМ
+/// участникам (self-custody модель). Все операции (create / attach / claim)
+/// инвалидируют этот provider; realtime `tool:changed` тоже инвалидирует.
+final projectToolsBoardProvider = AsyncNotifierProvider.family<
+  ProjectToolsBoardController,
+  List<ToolItem>,
+  String
+>(ProjectToolsBoardController.new);
+
+class ProjectToolsBoardController
+    extends FamilyAsyncNotifier<List<ToolItem>, String> {
+  StreamSubscription<dynamic>? _toolSub;
+  Timer? _refreshDebounce;
+
   @override
-  Future<List<ToolIssuance>> build(String projectId) async {
-    final raw = await ref
-        .read(toolsRepositoryProvider)
-        .listIssuances(projectId);
-    return [...raw]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  Future<List<ToolItem>> build(String projectId) async {
+    // Real-time: бекенд эмитит `tool:changed` всем участникам проекта при
+    // create/attach/detach/claim. Перезагружаем доску, чтобы у всех ролей
+    // сразу обновлялся «У кого сейчас».
+    final socket = ref.read(socketServiceProvider);
+    _toolSub = socket.on(SocketEvents.toolChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != projectId) return;
+      _scheduleRefresh();
+      final toolId = payload['toolItemId']?.toString();
+      if (toolId != null && toolId.isNotEmpty) {
+        ref.invalidate(toolCustodyHistoryProvider(toolId));
+        ref.invalidate(toolDetailProvider(toolId));
+      }
+    });
+    ref.onDispose(() {
+      _toolSub?.cancel();
+      _refreshDebounce?.cancel();
+    });
+
+    return ref.read(toolsRepositoryProvider).listProjectTools(projectId);
+  }
+
+  /// Дебаунс 300ms — несколько подряд событий (claim + добавление) не
+  /// провоцируют серию GET'ов.
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        final list = await ref.read(toolsRepositoryProvider).listProjectTools(arg);
+        state = AsyncData(list);
+      } catch (_) {
+        // Игнорируем: основной flow сделает invalidate при next mutation.
+      }
+    });
   }
 
   ToolsRepository get _repo => ref.read(toolsRepositoryProvider);
 
-  void _upsert(ToolIssuance i) {
-    final cur = state.value ?? const <ToolIssuance>[];
-    final exists = cur.any((x) => x.id == i.id);
+  void _upsert(ToolItem t) {
+    final cur = state.value ?? const <ToolItem>[];
+    final exists = cur.any((x) => x.id == t.id);
     state = AsyncData(
-      exists ? cur.map((x) => x.id == i.id ? i : x).toList() : [i, ...cur],
+      exists ? cur.map((x) => x.id == t.id ? t : x).toList() : [t, ...cur],
     );
   }
 
-  Future<AuthFailure?> issue({
-    required String toolItemId,
-    required String toUserId,
-    required int qty,
-    String? stageId,
+  /// Создать новый инструмент сразу в проекте.
+  Future<AuthFailure?> createInProject({
+    required String name,
+    String? ownerId,
+    String? photoKey,
+    String? serial,
   }) async {
     try {
-      final iss = await _repo.issue(
+      final t = await _repo.createInProject(
         projectId: arg,
-        toolItemId: toolItemId,
-        toUserId: toUserId,
-        qty: qty,
-        stageId: stageId,
+        name: name,
+        ownerId: ownerId,
+        photoKey: photoKey,
+        serial: serial,
       );
-      _upsert(iss);
-      ref.invalidate(myToolsProvider); // issuedQty меняется
+      _upsert(t);
       return null;
     } on ToolsException catch (e) {
       return e.failure;
     }
   }
 
-  Future<AuthFailure?> confirm(String id) => _run(() => _repo.confirm(id));
-
-  Future<AuthFailure?> requestReturn({
-    required String id,
-    required int returnedQty,
-  }) => _run(() => _repo.requestReturn(id: id, returnedQty: returnedQty));
-
-  Future<AuthFailure?> returnConfirm(String id) async {
-    final failure = await _run(() => _repo.returnConfirm(id));
-    if (failure == null) ref.invalidate(myToolsProvider);
-    return failure;
-  }
-
-  Future<AuthFailure?> _run(Future<ToolIssuance> Function() fn) async {
+  /// Bulk attach «из моих инструментов в проект».
+  Future<AuthFailure?> attachFromMy(List<String> toolItemIds) async {
     try {
-      final i = await fn();
-      _upsert(i);
-      return null;
-    } on ToolsException catch (e) {
-      return e.failure;
-    }
-  }
-}
-
-/// П2.15 — реестр инструментов проекта (виден всем участникам).
-/// Каждая запись — это ToolItem + currentHolderId + hasActiveRequest.
-class ProjectToolEntry {
-  const ProjectToolEntry({
-    required this.tool,
-    required this.currentHolderId,
-    required this.hasActiveRequest,
-  });
-
-  final ToolItem tool;
-  final String currentHolderId;
-  final bool hasActiveRequest;
-
-  bool get isHeldByOwner => currentHolderId == tool.ownerId;
-}
-
-final projectToolRegistryProvider =
-    AsyncNotifierProvider.family<
-      ProjectToolRegistryController,
-      List<ProjectToolEntry>,
-      String
-    >(ProjectToolRegistryController.new);
-
-class ProjectToolRegistryController
-    extends FamilyAsyncNotifier<List<ProjectToolEntry>, String> {
-  @override
-  Future<List<ProjectToolEntry>> build(String projectId) async {
-    final raw = await ref
-        .read(toolsRepositoryProvider)
-        .projectRegistry(projectId);
-    return raw.map((m) {
-      return ProjectToolEntry(
-        tool: ToolItem.parse(m),
-        currentHolderId: m['currentHolderId'] as String? ?? '',
-        hasActiveRequest: m['hasActiveRequest'] as bool? ?? false,
+      final added = await _repo.attachFromMy(
+        projectId: arg,
+        toolItemIds: toolItemIds,
       );
-    }).toList();
-  }
-
-  ToolsRepository get _repo => ref.read(toolsRepositoryProvider);
-
-  /// П2.15 — заявка на инструмент.
-  Future<AuthFailure?> requestTool({
-    required String toolItemId,
-    int qty = 1,
-    String? stageId,
-  }) async {
-    try {
-      await _repo.requestTool(
-        toolItemId: toolItemId,
-        qty: qty,
-        stageId: stageId,
-      );
-      ref.invalidateSelf();
+      for (final t in added) {
+        _upsert(t);
+      }
+      ref.invalidate(myToolsProvider);
       return null;
     } on ToolsException catch (e) {
       return e.failure;
     }
   }
 
-  Future<AuthFailure?> approveRequest(String issuanceId) async {
+  /// Self-claim: текущий пользователь становится holder-ом.
+  Future<AuthFailure?> claim({required String toolId, String? note}) async {
     try {
-      await _repo.approveRequest(issuanceId);
-      ref.invalidateSelf();
-      ref.invalidate(toolIssuancesProvider(arg));
+      final t = await _repo.claim(toolId: toolId, note: note);
+      _upsert(t);
+      // Custody-history и detail тоже поменялись — инвалидируем,
+      // чтобы tool_detail_screen и timeline сразу показали актуальное.
+      ref.invalidate(toolCustodyHistoryProvider(toolId));
+      ref.invalidate(toolDetailProvider(toolId));
       return null;
     } on ToolsException catch (e) {
       return e.failure;
     }
   }
 
-  Future<AuthFailure?> rejectRequest(
-    String issuanceId, {
-    String? comment,
-  }) async {
+  /// Открепить инструмент от проекта (owner only).
+  Future<AuthFailure?> detach(String toolId) async {
     try {
-      await _repo.rejectRequest(issuanceId: issuanceId, comment: comment);
-      ref.invalidateSelf();
-      ref.invalidate(toolIssuancesProvider(arg));
-      return null;
-    } on ToolsException catch (e) {
-      return e.failure;
-    }
-  }
-
-  /// П3.2 — bulk-add «из моих инструментов в проект».
-  Future<AuthFailure?> addFromMy(List<String> toolItemIds) async {
-    try {
-      await _repo.addToolsFromMy(projectId: arg, toolItemIds: toolItemIds);
-      ref.invalidateSelf();
+      await _repo.detachFromProject(projectId: arg, toolId: toolId);
+      final cur = state.value ?? const <ToolItem>[];
+      state = AsyncData(cur.where((t) => t.id != toolId).toList());
       ref.invalidate(myToolsProvider);
       return null;
     } on ToolsException catch (e) {
@@ -268,3 +222,11 @@ class ProjectToolRegistryController
     }
   }
 }
+
+/// Timeline передач инструмента (для tool detail screen).
+final toolCustodyHistoryProvider = FutureProvider.family<
+  List<ToolCustodyEvent>,
+  String
+>((ref, toolId) {
+  return ref.read(toolsRepositoryProvider).custodyHistory(toolId);
+});

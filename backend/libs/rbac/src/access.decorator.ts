@@ -16,10 +16,10 @@ export interface AccessRequirement {
     | 'step'
     | 'material_request'
     | 'selfpurchase'
-    | 'tool_issuance'
     | 'chat'
     | 'document'
     | 'chat_message'
+    | 'payment'
     | 'none';
 }
 

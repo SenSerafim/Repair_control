@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 
-/// 3 таба бюджета: Выплаты (с числовым badge) / По этапам / Материалы.
+/// 3 таба бюджета: Выплаты (с числовым badge) / Материалы / История.
 /// Без анимаций — selected = brand-colored bottom border + brand text.
-enum BudgetTab { payments, stages, materials }
+enum BudgetTab { payments, materials, history }
 
 class BudgetTabsBar extends StatelessWidget {
   const BudgetTabsBar({
@@ -35,14 +35,14 @@ class BudgetTabsBar extends StatelessWidget {
             onTap: () => onChanged(BudgetTab.payments),
           ),
           _Tab(
-            label: 'По этапам',
-            active: selected == BudgetTab.stages,
-            onTap: () => onChanged(BudgetTab.stages),
-          ),
-          _Tab(
             label: 'Материалы',
             active: selected == BudgetTab.materials,
             onTap: () => onChanged(BudgetTab.materials),
+          ),
+          _Tab(
+            label: 'История',
+            active: selected == BudgetTab.history,
+            onTap: () => onChanged(BudgetTab.history),
           ),
         ],
       ),

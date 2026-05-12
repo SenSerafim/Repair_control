@@ -121,21 +121,25 @@ class _SearchBar extends StatelessWidget {
             onSubmitted: onSubmit,
             decoration: InputDecoration(
               hintText: 'Поиск по статьям...',
-              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n300),
               prefixIcon: const Icon(
                 Icons.search_rounded,
                 color: AppColors.n400,
               ),
               filled: true,
-              fillColor: AppColors.n100,
-              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              fillColor: AppColors.n0,
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
               ),
             ),
           ),
@@ -177,31 +181,57 @@ class _SectionRow extends StatelessWidget {
               height: 48,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: tone.bg,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.lerp(tone.bg, AppColors.n0, 0.10) ?? tone.bg,
+                    tone.bg,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x99FFFFFF),
+                    offset: Offset(0, 1),
+                    blurRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: Color(0x0D0D1229),
+                    offset: Offset(0, 4),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
               child: Icon(tone.icon, color: tone.fg, size: 22),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.subtitle.copyWith(
-                      fontSize: 15,
-                      color: AppColors.n900,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _articlesLabel(articleCount),
-                    style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
-                  ),
-                ],
+              child: Text(
+                title,
+                style: AppTextStyles.subtitle.copyWith(
+                  fontSize: 15,
+                  color: AppColors.n900,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
+            const SizedBox(width: AppSpacing.x8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.n100,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Text(
+                _articlesLabel(articleCount),
+                style: AppTextStyles.tiny.copyWith(
+                  color: AppColors.n500,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x6),
             const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
           ],
         ),

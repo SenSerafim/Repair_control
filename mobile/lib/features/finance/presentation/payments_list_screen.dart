@@ -11,9 +11,7 @@ import '../application/payments_controller.dart';
 import '../domain/payment.dart';
 import 'payment_card.dart';
 
-final _statusFilterProvider = StateProvider.autoDispose<PaymentStatus?>(
-  (_) => null,
-);
+final _kindFilterProvider = StateProvider.autoDispose<PaymentKind?>((_) => null);
 
 /// s-budget-payments — список выплат проекта.
 class PaymentsListScreen extends ConsumerWidget {
@@ -24,7 +22,7 @@ class PaymentsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(paymentsControllerProvider(projectId));
-    final filter = ref.watch(_statusFilterProvider);
+    final filter = ref.watch(_kindFilterProvider);
 
     return AppScaffold(
       showBack: true,
@@ -40,8 +38,7 @@ class PaymentsListScreen extends ConsumerWidget {
         children: [
           _FilterChips(
             selected: filter,
-            onChanged: (v) =>
-                ref.read(_statusFilterProvider.notifier).state = v,
+            onChanged: (v) => ref.read(_kindFilterProvider.notifier).state = v,
           ),
           Expanded(
             child: async.when(
@@ -54,15 +51,15 @@ class PaymentsListScreen extends ConsumerWidget {
               data: (items) {
                 final filtered = filter == null
                     ? items
-                    : items.where((p) => p.status == filter).toList();
+                    : items.where((p) => p.kind == filter).toList();
                 if (filtered.isEmpty) {
                   return AppEmptyState(
                     title: filter == null
                         ? 'Выплат ещё нет'
                         : 'Нет по этому фильтру',
                     subtitle: filter == null
-                        ? 'Создайте первый аванс — отсюда запускается '
-                              'цикл «заказчик → бригадир → мастер».'
+                        ? 'Создайте первый платёж — заказчик может платить '
+                              'напрямую бригадиру или мастеру.'
                         : null,
                     icon: Icons.receipt_long_outlined,
                     actionLabel: filter == null ? 'Новая выплата' : null,
@@ -108,14 +105,14 @@ class PaymentsListScreen extends ConsumerWidget {
 class _FilterChips extends StatelessWidget {
   const _FilterChips({required this.selected, required this.onChanged});
 
-  final PaymentStatus? selected;
-  final ValueChanged<PaymentStatus?> onChanged;
+  final PaymentKind? selected;
+  final ValueChanged<PaymentKind?> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final chips = <_ChipSpec>[
       const _ChipSpec('Все', null),
-      for (final s in PaymentStatus.values) _ChipSpec(s.displayName, s),
+      for (final k in PaymentKind.values) _ChipSpec(k.displayName, k),
     ];
     return SizedBox(
       height: 48,
@@ -126,10 +123,10 @@ class _FilterChips extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x8),
         itemBuilder: (_, i) {
           final spec = chips[i];
-          final active = spec.status == selected;
+          final active = spec.kind == selected;
           return Center(
             child: GestureDetector(
-              onTap: () => onChanged(spec.status),
+              onTap: () => onChanged(spec.kind),
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -157,7 +154,7 @@ class _FilterChips extends StatelessWidget {
 }
 
 class _ChipSpec {
-  const _ChipSpec(this.label, this.status);
+  const _ChipSpec(this.label, this.kind);
   final String label;
-  final PaymentStatus? status;
+  final PaymentKind? kind;
 }

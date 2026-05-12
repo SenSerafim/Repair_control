@@ -2,9 +2,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/application/auth_controller.dart';
+import '../../features/projects/application/project_controller.dart';
 import '../../features/projects/domain/membership.dart';
 import '../../features/team/application/team_controller.dart';
 import 'domain_actions.dart';
+import 'representative_rights.dart';
 import 'system_role.dart';
 
 /// Клиентская RBAC-матрица: (роль × действие) → разрешено/нет.
@@ -52,12 +54,11 @@ class AccessGuard {
       DomainAction.approvalDecide,
       DomainAction.financeBudgetView,
       DomainAction.financeBudgetEdit,
-      DomainAction.financePaymentCreate,
-      DomainAction.financePaymentConfirm,
-      DomainAction.financePaymentDispute,
-      DomainAction.financePaymentResolve,
+      // Создание платежа — эксклюзив заказчика. Прямой платёж foreman или
+      // master без согласований. Бригадиру не выдаём: у него distribute из
+      // родительского аванса (см. contractor ниже).
+      DomainAction.financePaymentCreateAdvance,
       DomainAction.materialsManage,
-      DomainAction.materialFinalize,
       DomainAction.selfPurchaseConfirm,
       // tools.* — заказчик write-действия не делает (issue/manage/return),
       // но read-only видимость инструмента в проекте включена: его инструменты
@@ -85,10 +86,18 @@ class AccessGuard {
     //
     // Архивирование проекта представителю НЕ выдаётся ни при каких условиях
     // (см. backend rbac.matrix.ts: project.archive — эксклюзив заказчика).
+    //
+    // ВАЖНО: список дефолтов должен в точности отражать те ветки
+    // `backend/libs/rbac/src/rbac.matrix.ts`, которые возвращают true для
+    // representative БЕЗ проверки representativeRights. Любое расхождение даёт
+    // 403 на клик/при загрузке экрана: UI считает что кнопка/плитка должна
+    // показаться, фетчит данные, бэкенд отдаёт 403. Так было с
+    // `finance.budget.view`: бэкенд требует `canSeeBudget`, клиент считал
+    // дефолтом — отсюда серия 403 на `GET /projects/:id/budget` у
+    // представителя без флага.
     SystemRole.representative: {
-      // Чтения
+      // Чтения (бэкенд: !!ctx.membershipRole / always-true для representative)
       DomainAction.approvalList,
-      DomainAction.financeBudgetView,
       DomainAction.documentRead,
       DomainAction.methodologyRead,
       DomainAction.questionManage,
@@ -99,6 +108,14 @@ class AccessGuard {
       DomainAction.chatWrite,
       // Заметки — read+create без права (modify в сервисе уже ограничен авторством)
       DomainAction.noteManage,
+      // Экспорт ленты — бэкенд (rbac.matrix.ts: 'feed.export') разрешает
+      // representative безусловно, т.к. объём данных в TXT-сводке всё равно
+      // фильтруется по роли в сервисе (бюджетные строки прячутся, если нет
+      // canSeeBudget). Клиентский дефолт должен совпадать.
+      DomainAction.feedExport,
+      // NOTE: `financeBudgetView` намеренно НЕ в дефолтах — бэкенд требует
+      // representativeRights.canSeeBudget. Право подтягивается через
+      // representativeRightToActions[canSeeBudget] в canInProjectProvider.
     },
 
     // Бригадир — управляет работой команды. Меньше прав, чем
@@ -116,17 +133,15 @@ class AccessGuard {
       DomainAction.approvalRequest,
       DomainAction.approvalDecide, // в пределах своих этапов
       DomainAction.financeBudgetView,
-      DomainAction.financePaymentCreate,
-      DomainAction.financePaymentConfirm,
-      DomainAction.financePaymentDispute,
+      // Бригадир НЕ создаёт общий аванс — это эксклюзив заказчика. Из
+      // родительского аванса распределяет мастерам через distribute.
+      DomainAction.financePaymentDistribute,
       DomainAction.materialsManage,
-      DomainAction.materialFinalize,
       DomainAction.selfPurchaseCreate,
       DomainAction.selfPurchaseConfirm,
-      DomainAction.toolsManage,
-      DomainAction.toolsIssue,
-      DomainAction.toolsReturn,
       DomainAction.toolsViewProject,
+      DomainAction.toolsAddToProject,
+      DomainAction.toolsClaim,
       DomainAction.chatRead,
       DomainAction.chatWrite,
       DomainAction.chatCreatePersonal,
@@ -151,11 +166,10 @@ class AccessGuard {
       DomainAction.approvalList,
       DomainAction.approvalRequest, // доп.работа
       DomainAction.financeBudgetView,
-      DomainAction.financePaymentConfirm, // подтверждение получения
-      DomainAction.financePaymentDispute,
       DomainAction.selfPurchaseCreate,
-      DomainAction.toolsReturn,
       DomainAction.toolsViewProject,
+      DomainAction.toolsAddToProject,
+      DomainAction.toolsClaim,
       DomainAction.chatRead,
       DomainAction.chatWrite,
       DomainAction.documentRead,
@@ -217,40 +231,6 @@ final representativeRightsProvider = Provider.autoDispose
       );
     });
 
-/// Маппинг булевых флагов `RepresentativeRights` (бекенд) → набор
-/// `DomainAction`. Источник истины — `backend/libs/rbac/src/rbac.matrix.ts`.
-const _representativeFlagToActions = <String, List<DomainAction>>{
-  'canEditStages': [
-    DomainAction.projectEdit,
-    DomainAction.stageManage,
-    DomainAction.stageStart,
-    DomainAction.stagePause,
-    DomainAction.stepManage,
-    DomainAction.stepAddSubstep,
-    DomainAction.documentWrite,
-    DomainAction.documentDelete,
-  ],
-  'canApprove': [DomainAction.approvalRequest, DomainAction.approvalDecide],
-  'canSeeBudget': [DomainAction.financeBudgetView, DomainAction.feedExport],
-  'canCreatePayments': [
-    DomainAction.financePaymentCreate,
-    DomainAction.financePaymentConfirm,
-    DomainAction.financePaymentDispute,
-    DomainAction.financePaymentResolve,
-  ],
-  'canManageMaterials': [
-    DomainAction.materialsManage,
-    DomainAction.materialFinalize,
-  ],
-  'canManageTools': [
-    DomainAction.toolsManage,
-    DomainAction.toolsIssue,
-    DomainAction.toolsReturn,
-  ],
-  'canInviteMembers': [DomainAction.projectInviteMember],
-  'canAddRepresentative': [DomainAction.projectInviteMember],
-};
-
 DomainAction? _domainActionFromString(String raw) {
   for (final a in DomainAction.values) {
     if (a.name == raw || a.toString().split('.').last == raw) return a;
@@ -258,44 +238,99 @@ DomainAction? _domainActionFromString(String raw) {
   return null;
 }
 
+/// Источник истины — `representativeRightToActions` в
+/// `core/access/representative_rights.dart`, которая зеркалит
+/// `backend/libs/rbac/src/rbac.matrix.ts`. Здесь — конвертация по jsonKey
+/// и graceful return пустого set для незнакомых ключей (на случай legacy
+/// данных в БД до унификации формата permissions).
 Set<DomainAction> _expandFlag(String flag) {
-  return _representativeFlagToActions[flag]?.toSet() ?? const {};
+  final right = RepresentativeRight.fromJsonKey(flag);
+  if (right == null) return const {};
+  return representativeRightToActions[right]?.toSet() ?? const {};
 }
+
+/// Membership-запись текущего пользователя в конкретном проекте.
+///
+/// ТЗ §1.3 — один аккаунт может быть foreman в проекте A и master в проекте B.
+/// Решения по UI должны приниматься по membership-роли (где я в этом проекте),
+/// а не по глобальной активной роли.
+final myMembershipInProjectProvider = Provider.autoDispose
+    .family<Membership?, String>((ref, projectId) {
+      final me = ref.watch(authControllerProvider).userId;
+      if (me == null) return null;
+      final teamAsync = ref.watch(teamControllerProvider(projectId));
+      return teamAsync.maybeWhen(
+        data: (team) {
+          try {
+            return team.members.firstWhere((m) => m.userId == me);
+          } catch (_) {
+            return null;
+          }
+        },
+        orElse: () => null,
+      );
+    });
 
 /// Какие роли участника может пригласить текущий пользователь в проекте.
 ///
-/// Правила (соответствуют backend RBAC):
-/// - admin / customer: представитель + бригадир + мастер (любые, любое количество);
-/// - representative с canInviteMembers: представитель + бригадир + мастер
-///   (любые, любое количество — действует от имени заказчика);
-/// - contractor (бригадир): только мастер;
-/// - master: ничего пригласить не может.
+/// 2026-05 рефактор: решение по membership-роли в конкретном проекте, а не
+/// по глобальной активной (ТЗ §1.3). Синхронизировано с
+/// `backend/libs/rbac/src/rbac.matrix.ts` + service-уровень
+/// `members.service.ts` (foreman → only master).
+///
+/// 2026-05-12 фикс «Недостаточно прав» у заказчика: владелец проекта получает
+/// права заказчика даже если у него нет явной customer-membership (legacy-
+/// проекты, race во время загрузки team-данных). Источник истины —
+/// `project.ownerId`; membership используется только когда me ≠ owner.
 final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
   ref,
   projectId,
 ) {
-  final role = ref.watch(activeRoleProvider);
-  if (role == null) return const [];
-  if (role == SystemRole.admin || role == SystemRole.customer) {
+  final sys = ref.watch(activeRoleProvider);
+  if (sys == SystemRole.admin) {
     return const [
       MembershipRole.representative,
       MembershipRole.foreman,
       MembershipRole.master,
     ];
   }
-  if (role == SystemRole.contractor) {
-    return const [MembershipRole.master];
-  }
-  if (role == SystemRole.representative) {
-    final delegated = ref.watch(representativeRightsProvider(projectId));
-    if (!delegated.contains(DomainAction.projectInviteMember)) return const [];
+  final me = ref.watch(authControllerProvider).userId;
+  final projectAsync = ref.watch(projectControllerProvider(projectId));
+  final ownerId = projectAsync.maybeWhen(
+    data: (p) => p.ownerId,
+    orElse: () => null,
+  );
+  if (me != null && ownerId != null && me == ownerId) {
     return const [
       MembershipRole.representative,
       MembershipRole.foreman,
       MembershipRole.master,
     ];
   }
-  return const [];
+  final my = ref.watch(myMembershipInProjectProvider(projectId));
+  if (my == null) return const [];
+  switch (my.role) {
+    case MembershipRole.customer:
+      return const [
+        MembershipRole.representative,
+        MembershipRole.foreman,
+        MembershipRole.master,
+      ];
+    case MembershipRole.representative:
+      final delegated = ref.watch(representativeRightsProvider(projectId));
+      if (!delegated.contains(DomainAction.projectInviteMember)) {
+        return const [];
+      }
+      return const [
+        MembershipRole.representative,
+        MembershipRole.foreman,
+        MembershipRole.master,
+      ];
+    case MembershipRole.foreman:
+      return const [MembershipRole.master];
+    case MembershipRole.master:
+      return const [];
+  }
 });
 
 /// Тот же `canProvider`, но с учётом делегированных представителю прав

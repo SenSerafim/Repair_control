@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/domain/auth_failure.dart';
-import '../../finance/application/budget_controller.dart';
 import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
 
@@ -23,10 +22,6 @@ class MaterialsController
   }
 
   MaterialsRepository get _repo => ref.read(materialsRepositoryProvider);
-
-  void _invalidateBudget() {
-    ref.invalidate(projectBudgetProvider(arg));
-  }
 
   void _upsert(MaterialRequest r) {
     final cur = state.value ?? const <MaterialRequest>[];
@@ -52,49 +47,6 @@ class MaterialsController
         stageId: stageId,
         comment: comment,
       );
-      _upsert(r);
-      return null;
-    } on MaterialsException catch (e) {
-      return e.failure;
-    }
-  }
-
-  Future<AuthFailure?> send(String id) => _run(() => _repo.send(id));
-  Future<AuthFailure?> markBought({
-    required String requestId,
-    required String itemId,
-    required int pricePerUnit,
-  }) => _run(
-    () => _repo.markBought(
-      requestId: requestId,
-      itemId: itemId,
-      pricePerUnit: pricePerUnit,
-    ),
-  );
-  Future<AuthFailure?> finalizeRequest(String id) async {
-    final failure = await _run(() => _repo.finalizeRequest(id));
-    if (failure == null) _invalidateBudget();
-    return failure;
-  }
-
-  Future<AuthFailure?> confirmDelivery(String id) =>
-      _run(() => _repo.confirmDelivery(id));
-  Future<AuthFailure?> dispute({required String id, required String reason}) =>
-      _run(() => _repo.dispute(id: id, reason: reason));
-  Future<AuthFailure?> resolve({
-    required String id,
-    required String resolution,
-  }) async {
-    final failure = await _run(
-      () => _repo.resolve(id: id, resolution: resolution),
-    );
-    if (failure == null) _invalidateBudget();
-    return failure;
-  }
-
-  Future<AuthFailure?> _run(Future<MaterialRequest> Function() fn) async {
-    try {
-      final r = await fn();
       _upsert(r);
       return null;
     } on MaterialsException catch (e) {

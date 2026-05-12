@@ -28,10 +28,10 @@ class StageStatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.n0,
+        gradient: AppGradients.surfaceCard,
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200),
-        boxShadow: AppShadows.sh1,
+        boxShadow: AppShadows.shCard,
       ),
       child: IntrinsicHeight(
         child: Row(

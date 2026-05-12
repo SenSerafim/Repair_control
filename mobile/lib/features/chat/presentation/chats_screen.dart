@@ -14,11 +14,25 @@ import '../data/chats_repository.dart';
 import '../domain/chat.dart';
 import 'new_chat_sheet.dart';
 
-class ChatsScreen extends ConsumerWidget {
+class ChatsScreen extends ConsumerStatefulWidget {
   const ChatsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatsScreen> createState() => _ChatsScreenState();
+}
+
+class _ChatsScreenState extends ConsumerState<ChatsScreen> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(myChatsProvider);
 
     return AppScaffold(
@@ -54,36 +68,124 @@ class ChatsScreen extends ConsumerWidget {
             if (c.type != ChatType.stage) return true;
             return c.visibleToCustomer;
           }).toList();
+
+          // ТЗ §10.3 — «Поиск по названию чата». Case-insensitive фильтр
+          // в-памяти по title чата, projectTitle и last-message preview.
+          final q = _query.trim().toLowerCase();
+          final filtered = q.isEmpty
+              ? visible
+              : visible.where((it) {
+                  final c = it.chat;
+                  final title = (c.title ?? c.type.displayName).toLowerCase();
+                  final project = it.projectTitle.toLowerCase();
+                  final preview = (c.lastMessagePreview ?? '').toLowerCase();
+                  return title.contains(q) ||
+                      project.contains(q) ||
+                      preview.contains(q);
+                }).toList();
+
           // Группировка по projectId с сохранением исходного порядка.
           final grouped = <String, List<MyChatItem>>{};
           final projectTitles = <String, String>{};
-          for (final it in visible) {
+          for (final it in filtered) {
             grouped.putIfAbsent(it.projectId, () => []).add(it);
             projectTitles[it.projectId] = it.projectTitle;
           }
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(myChatsProvider),
-            child: ListView(
-              padding: EdgeInsets.zero,
+            child: Column(
               children: [
-                for (final entry in grouped.entries) ...[
-                  _ProjectGroupHeader(
-                    title: projectTitles[entry.key] ?? 'Проект',
-                    onTap: () =>
-                        context.push(AppRoutes.projectDetailWith(entry.key)),
-                  ),
-                  for (final it in entry.value)
-                    _ChatRow(
-                      chat: it.chat,
-                      onTap: () =>
-                          context.push(AppRoutes.chatDetailWith(it.chat.id)),
+                _SearchBar(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+                if (filtered.isEmpty && q.isNotEmpty)
+                  const Expanded(
+                    child: AppEmptyState(
+                      title: 'Ничего не найдено',
+                      subtitle: 'Попробуйте другое название',
+                      icon: Icons.search_off_rounded,
                     ),
-                ],
-                const SizedBox(height: AppSpacing.x16),
+                  )
+                else
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        for (final entry in grouped.entries) ...[
+                          _ProjectGroupHeader(
+                            title: projectTitles[entry.key] ?? 'Проект',
+                            onTap: () => context
+                                .push(AppRoutes.projectDetailWith(entry.key)),
+                          ),
+                          for (final it in entry.value)
+                            _ChatRow(
+                              chat: it.chat,
+                              onTap: () => context
+                                  .push(AppRoutes.chatDetailWith(it.chat.id)),
+                            ),
+                        ],
+                        const SizedBox(height: AppSpacing.x16),
+                      ],
+                    ),
+                  ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.n0,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.n50,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+          border: Border.all(color: AppColors.n200, width: 1),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.search_rounded, size: 20, color: AppColors.n400),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                onChanged: onChanged,
+                decoration: const InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: 'Поиск по чатам',
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            if (controller.text.isNotEmpty)
+              GestureDetector(
+                onTap: () {
+                  controller.clear();
+                  onChanged('');
+                },
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppColors.n400,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -255,13 +357,33 @@ class _ChatRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              AppAvatar(
-                seed: chat.id,
-                name: title,
-                size: 48,
-                palette: chat.type == ChatType.personal
-                    ? AvatarPalette.blue
-                    : null,
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x290D1229),
+                      offset: Offset(0, 4),
+                      blurRadius: 10,
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(1.5),
+                  decoration: const BoxDecoration(
+                    color: AppColors.n0,
+                    shape: BoxShape.circle,
+                  ),
+                  child: AppAvatar(
+                    seed: chat.id,
+                    name: title,
+                    size: 45,
+                    palette: chat.type == ChatType.personal
+                        ? AvatarPalette.blue
+                        : null,
+                  ),
+                ),
               ),
               const SizedBox(width: AppSpacing.x12),
               Expanded(

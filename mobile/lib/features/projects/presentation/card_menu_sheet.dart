@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../exports/data/exports_repository.dart';
+import '../../exports/domain/export_job.dart';
 import '../application/projects_list_controller.dart';
 import '../domain/project.dart';
 import 'copy_project_sheet.dart';
@@ -32,6 +36,22 @@ class _CardMenuBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Видимость операций в меню зависит от прав в этом конкретном проекте,
+    // а не от глобальной activeRole (см. ТЗ §1.3 — один пользователь может
+    // быть foreman'ом в A и master'ом в B).
+    final canEdit = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectEdit,
+        projectId: project.id,
+      )),
+    );
+    final canArchive = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectArchive,
+        projectId: project.id,
+      )),
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -41,55 +61,72 @@ class _CardMenuBody extends ConsumerWidget {
           subtitle: 'Выберите действие',
         ),
         if (!project.isArchived) ...[
-          _MenuRow(
-            icon: PhosphorIconsRegular.copy,
-            iconBg: AppColors.brandLight,
-            iconColor: AppColors.brand,
-            label: 'Копировать проект',
-            onTap: () async {
-              Navigator.of(context).pop();
-              await showCopyProjectSheet(context, ref, project: project);
-            },
-          ),
-          _MenuRow(
-            icon: PhosphorIconsRegular.pencilSimple,
-            iconBg: AppColors.n100,
-            iconColor: AppColors.n700,
-            label: 'Редактировать',
-            onTap: () {
-              Navigator.of(context).pop();
-              context.push('/projects/${project.id}/edit');
-            },
-          ),
-          _MenuRow(
-            icon: PhosphorIconsRegular.archive,
-            iconBg: AppColors.yellowBg,
-            iconColor: AppColors.yellowText,
-            label: 'Архивировать',
-            onTap: () async {
-              Navigator.of(context).pop();
-              await _archive(context, ref, project);
-            },
-          ),
+          if (canEdit)
+            _MenuRow(
+              icon: PhosphorIconsRegular.copy,
+              iconBg: AppColors.brandLight,
+              iconColor: AppColors.brand,
+              label: 'Копировать проект',
+              onTap: () async {
+                Navigator.of(context).pop();
+                if (!context.mounted) return;
+                await showCopyProjectSheet(context, ref, project: project);
+              },
+            ),
+          if (canEdit)
+            _MenuRow(
+              icon: PhosphorIconsRegular.pencilSimple,
+              iconBg: AppColors.n100,
+              iconColor: AppColors.n700,
+              label: 'Редактировать',
+              onTap: () {
+                Navigator.of(context).pop();
+                if (!context.mounted) return;
+                context.push('/projects/${project.id}/edit');
+              },
+            ),
+          if (canArchive)
+            _MenuRow(
+              icon: PhosphorIconsRegular.archive,
+              iconBg: AppColors.yellowBg,
+              iconColor: AppColors.yellowText,
+              label: 'Архивировать',
+              onTap: () async {
+                // Захватываем notifier ДО pop'а sheet'а — после Navigator.pop
+                // ConsumerWidget этого шита dispose'нется, и `ref` станет
+                // невалидным. Без захвата здесь следующий ref.read из
+                // confirmAndArchiveProject крашился `Cannot use "ref" after
+                // the widget was disposed.` (Riverpod transcript из jira).
+                final notifier = ref.read(activeProjectsProvider.notifier);
+                Navigator.of(context).pop();
+                if (!context.mounted) return;
+                await confirmAndArchiveProject(context, notifier, project);
+              },
+            ),
         ] else ...[
-          _MenuRow(
-            icon: PhosphorIconsRegular.arrowCounterClockwise,
-            iconBg: AppColors.brandLight,
-            iconColor: AppColors.brand,
-            label: 'Восстановить',
-            onTap: () async {
-              Navigator.of(context).pop();
-              await _restore(context, ref, project);
-            },
-          ),
+          if (canArchive)
+            _MenuRow(
+              icon: PhosphorIconsRegular.arrowCounterClockwise,
+              iconBg: AppColors.brandLight,
+              iconColor: AppColors.brand,
+              label: 'Восстановить',
+              onTap: () async {
+                final notifier = ref.read(archivedProjectsProvider.notifier);
+                Navigator.of(context).pop();
+                if (!context.mounted) return;
+                await _restore(context, notifier, project);
+              },
+            ),
           _MenuRow(
             icon: PhosphorIconsRegular.fileZip,
             iconBg: AppColors.n100,
             iconColor: AppColors.n700,
             label: 'Скачать ZIP',
-            onTap: () {
+            onTap: () async {
+              final repo = ref.read(exportsRepositoryProvider);
               Navigator.of(context).pop();
-              AppToast.show(context, message: 'ZIP-архив запрошен');
+              if (!context.mounted) return;
+              await _requestZipExport(context, repo, project);
             },
           ),
         ],
@@ -98,9 +135,22 @@ class _CardMenuBody extends ConsumerWidget {
   }
 }
 
-Future<void> _archive(
+/// Подтверждение архивации + вызов API. Вынесен в публичный helper,
+/// чтобы его можно было вызвать не только из меню карточки, но и из
+/// «Опасной зоны» на экране редактирования.
+///
+/// Принимает уже-полученный [ActiveProjectsController] вместо `WidgetRef`,
+/// чтобы безопасно работать после `Navigator.pop` родительского sheet'а
+/// (ConsumerWidget этого sheet'а уже dispose'нут — `ref.read` падает с
+/// `Cannot use "ref" after the widget was disposed`). На стороне вызова
+/// notifier берут до pop, потом передают сюда.
+///
+/// Альтернативный путь — из ConsumerStatefulWidget, где widget жив до
+/// финального dispose'а: тогда можно завернуть в локальный helper и
+/// получить notifier через `ref.read` прямо тут.
+Future<bool> confirmAndArchiveProject(
   BuildContext context,
-  WidgetRef ref,
+  ActiveProjectsController notifier,
   Project project,
 ) async {
   final confirmed = await showAppBottomSheet<bool>(
@@ -108,21 +158,51 @@ Future<void> _archive(
     child: _ArchiveConfirmBody(projectTitle: project.title),
   );
   if (confirmed ?? false) {
-    final failure = await ref
-        .read(activeProjectsProvider.notifier)
-        .archiveById(project.id);
-    if (!context.mounted) return;
+    final failure = await notifier.archiveById(project.id);
+    if (!context.mounted) return false;
     AppToast.show(
       context,
       message: failure == null ? 'Проект архивирован' : failure.userMessage,
       kind: failure == null ? AppToastKind.success : AppToastKind.error,
+    );
+    return failure == null;
+  }
+  return false;
+}
+
+/// До этого «Скачать ZIP» в меню карточки только показывал toast
+/// «ZIP-архив запрошен» — реального job'а не создавал. Теперь зовём
+/// `exports.create(projectZip)` как в архивном экране — пользователь
+/// получит уведомление в ленте, когда ZIP будет готов.
+Future<void> _requestZipExport(
+  BuildContext context,
+  ExportsRepository exports,
+  Project project,
+) async {
+  try {
+    await exports.create(
+      projectId: project.id,
+      kind: ExportKind.projectZip,
+    );
+    if (!context.mounted) return;
+    AppToast.show(
+      context,
+      message: 'ZIP-архив запрошен · уведомим в ленте',
+      kind: AppToastKind.success,
+    );
+  } on ExportsException catch (e) {
+    if (!context.mounted) return;
+    AppToast.show(
+      context,
+      message: e.failure.userMessage,
+      kind: AppToastKind.error,
     );
   }
 }
 
 Future<void> _restore(
   BuildContext context,
-  WidgetRef ref,
+  ArchivedProjectsController notifier,
   Project project,
 ) async {
   final confirmed = await showAppBottomSheet<bool>(
@@ -130,9 +210,7 @@ Future<void> _restore(
     child: _RestoreConfirmBody(projectTitle: project.title),
   );
   if (confirmed ?? false) {
-    final failure = await ref
-        .read(archivedProjectsProvider.notifier)
-        .restoreById(project.id);
+    final failure = await notifier.restoreById(project.id);
     if (!context.mounted) return;
     AppToast.show(
       context,

@@ -22,7 +22,18 @@ export interface CreateProjectInput {
   plannedEnd?: string;
   workBudget?: number;
   materialsBudget?: number;
+  /// П1.8 — список названий этапов для атомарного создания вместе с проектом.
+  /// `undefined` (не передан) → создаются 3 дефолтных плейсхолдера. `[]` → ничего
+  /// не создаётся (для API-клиентов, которые сами наполнят этапы потом).
+  /// Любой непустой массив → создаются ровно эти этапы по порядку.
+  initialStages?: string[];
 }
+
+/// Дефолтные этапы при создании проекта без передачи `initialStages`.
+/// Минимальный универсальный каркас ремонта; пользователь переименует/удалит/
+/// добавит позже на экране этапов. Принципиально 3 этапа, чтобы при первом
+/// заходе уже было что показать и не было пустого экрана.
+const DEFAULT_INITIAL_STAGES: ReadonlyArray<string> = ['Подготовка', 'Основные работы', 'Сдача'];
 
 export interface UpdateProjectInput {
   title?: string;
@@ -46,30 +57,64 @@ export class ProjectsService {
 
   async create(input: CreateProjectInput) {
     this.validateDateRange(input.plannedStart, input.plannedEnd);
-    const project = await this.prisma.project.create({
-      data: {
-        ownerId: input.ownerId,
-        title: input.title,
-        address: input.address,
-        description: input.description,
-        plannedStart: input.plannedStart ? new Date(input.plannedStart) : undefined,
-        plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : undefined,
-        workBudget: BigInt(input.workBudget ?? 0),
-        materialsBudget: BigInt(input.materialsBudget ?? 0),
-        memberships: {
-          create: {
-            userId: input.ownerId,
-            role: 'customer',
-            permissions: {} as Prisma.InputJsonValue,
+    // П1.8 — этапы при создании проекта.
+    // `undefined` (не передан в DTO) → 3 дефолтных плейсхолдера, чтобы у
+    //   пользователя при первом заходе было что показать. Источник UX: «всё
+    //   просто, при создании этапы сразу есть».
+    // `[]` → не создаём ничего (API-клиенты, копирование).
+    // Любой непустой → создаём ровно эти, в одной транзакции с проектом —
+    //   чтобы не было состояний «проект есть, этапов нет» при сетевых сбоях.
+    const stageTitles = (
+      input.initialStages === undefined ? [...DEFAULT_INITIAL_STAGES] : input.initialStages
+    )
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    const project = await this.prisma.$transaction(async (tx) => {
+      const p = await tx.project.create({
+        data: {
+          ownerId: input.ownerId,
+          title: input.title,
+          address: input.address,
+          description: input.description,
+          plannedStart: input.plannedStart ? new Date(input.plannedStart) : undefined,
+          plannedEnd: input.plannedEnd ? new Date(input.plannedEnd) : undefined,
+          workBudget: BigInt(input.workBudget ?? 0),
+          materialsBudget: BigInt(input.materialsBudget ?? 0),
+          memberships: {
+            create: {
+              userId: input.ownerId,
+              role: 'customer',
+              permissions: {} as Prisma.InputJsonValue,
+            },
           },
         },
-      },
+      });
+      for (let i = 0; i < stageTitles.length; i++) {
+        const s = await tx.stage.create({
+          data: {
+            projectId: p.id,
+            title: stageTitles[i],
+            orderIndex: i,
+            workBudget: BigInt(0),
+            materialsBudget: BigInt(0),
+            foremanIds: [],
+          },
+        });
+        await this.feed.emit({
+          tx,
+          kind: 'stage_created',
+          projectId: p.id,
+          actorId: input.ownerId,
+          payload: { stageId: s.id, title: s.title, pendingApproval: false },
+        });
+      }
+      return p;
     });
     await this.feed.emit({
       kind: 'project_created',
       projectId: project.id,
       actorId: input.ownerId,
-      payload: { title: project.title },
+      payload: { title: project.title, initialStages: stageTitles.length },
     });
     // П2.10 — общий project-chat создаётся сразу при создании проекта,
     // владелец автоматически становится первым участником. Все, кого добавят

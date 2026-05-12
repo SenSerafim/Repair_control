@@ -151,6 +151,53 @@ describe('ProjectsService.create', () => {
     expect(projects.size).toBe(1);
   });
 
+  it('по умолчанию создаёт 3 этапа-плейсхолдера (Подготовка / Основные работы / Сдача)', async () => {
+    const { prisma, stages } = mkPrisma();
+    const feed = mkFeed();
+    const svc = new ProjectsService(prisma, feed, new FixedClock(NOW), mkChats(), mkCalculator());
+    await svc.create({ ownerId: 'u', title: 'T' });
+    expect(stages).toHaveLength(3);
+    expect(stages.map((s: any) => s.title)).toEqual(['Подготовка', 'Основные работы', 'Сдача']);
+    expect(stages.map((s: any) => s.orderIndex)).toEqual([0, 1, 2]);
+    expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'stage_created' }));
+  });
+
+  it('initialStages=[] → проект создаётся без этапов', async () => {
+    const { prisma, stages } = mkPrisma();
+    const svc = new ProjectsService(
+      prisma,
+      mkFeed(),
+      new FixedClock(NOW),
+      mkChats(),
+      mkCalculator(),
+    );
+    await svc.create({ ownerId: 'u', title: 'T', initialStages: [] });
+    expect(stages).toHaveLength(0);
+  });
+
+  it('initialStages=[титулы] → создаёт ровно эти этапы в нужном порядке', async () => {
+    const { prisma, stages } = mkPrisma();
+    const svc = new ProjectsService(
+      prisma,
+      mkFeed(),
+      new FixedClock(NOW),
+      mkChats(),
+      mkCalculator(),
+    );
+    await svc.create({
+      ownerId: 'u',
+      title: 'T',
+      initialStages: ['Демонтаж', 'Электрика', 'Чистовая', 'Уборка'],
+    });
+    expect(stages.map((s: any) => s.title)).toEqual([
+      'Демонтаж',
+      'Электрика',
+      'Чистовая',
+      'Уборка',
+    ]);
+    expect(stages.map((s: any) => s.orderIndex)).toEqual([0, 1, 2, 3]);
+  });
+
   it('validates plannedStart <= plannedEnd', async () => {
     const { prisma } = mkPrisma();
     const svc = new ProjectsService(
@@ -238,6 +285,9 @@ describe('ProjectsService.copy — ТЗ §4.3', () => {
       ownerId: 'u',
       title: 'Оригинал',
       workBudget: 100_000,
+      // Подавляем дефолтные 3 плейсхолдера — тест проверяет копирование
+      // ровно одного «руками подсаженного» этапа.
+      initialStages: [],
     });
     // подсаживаем этапы в исходник напрямую через мок
     stages.push({
@@ -267,7 +317,7 @@ describe('ProjectsService.copy — ТЗ §4.3', () => {
       mkChats(),
       mkCalculator(),
     );
-    const src = await svc.create({ ownerId: 'u', title: 'Оригинал' });
+    const src = await svc.create({ ownerId: 'u', title: 'Оригинал', initialStages: [] });
     const copy = await svc.copy(src.id, 'u', 'Кастомная копия');
     expect(copy.title).toBe('Кастомная копия');
   });
@@ -281,7 +331,13 @@ describe('ProjectsService.copy — ТЗ §4.3', () => {
       mkChats(),
       mkCalculator(),
     );
-    const src = await svc.create({ ownerId: 'owner', title: 'Оригинал' });
+    const src = await svc.create({
+      ownerId: 'owner',
+      title: 'Оригинал',
+      // Подавляем дефолтные 3 плейсхолдера — тест проверяет копирование
+      // ровно одного руками подсаженного этапа (см. push'и ниже).
+      initialStages: [],
+    });
     // Команда: customer + foreman + master
     memberships.push(
       {

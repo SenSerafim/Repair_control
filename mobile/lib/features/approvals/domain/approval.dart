@@ -5,12 +5,11 @@ import '../../../shared/widgets/status_pill.dart';
 
 part 'approval.freezed.dart';
 
-/// Тип согласования. Изначально 5 scope'ов из ТЗ §4.4; в раунде 2026-05-04
-/// добавлены 4 новых scope (П2.2, см. ПРОБЛЕМЫ_ТЕСТИРОВАНИЯ.md §6.1):
+/// Тип согласования. 8 scope'ов после упрощения платежей (2026-05-12 —
+/// `paymentDispute` удалён, диспуты больше не существуют):
 ///   - stageCreate — этап, созданный бригадиром
 ///   - materialPurchase — закупка материалов бригадиром
 ///   - selfPurchase — самокуп мастера
-///   - paymentDispute — диспут по платежу
 enum ApprovalScope {
   plan,
   step,
@@ -19,8 +18,7 @@ enum ApprovalScope {
   stageAccept,
   stageCreate,
   materialPurchase,
-  selfPurchase,
-  paymentDispute;
+  selfPurchase;
 
   static ApprovalScope fromString(String? raw) {
     switch (raw) {
@@ -40,8 +38,6 @@ enum ApprovalScope {
         return ApprovalScope.materialPurchase;
       case 'self_purchase':
         return ApprovalScope.selfPurchase;
-      case 'payment_dispute':
-        return ApprovalScope.paymentDispute;
       default:
         return ApprovalScope.step;
     }
@@ -56,7 +52,6 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => 'stage_create',
     ApprovalScope.materialPurchase => 'material_purchase',
     ApprovalScope.selfPurchase => 'self_purchase',
-    ApprovalScope.paymentDispute => 'payment_dispute',
   };
 
   String get displayName => switch (this) {
@@ -68,7 +63,6 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => 'Создание этапа',
     ApprovalScope.materialPurchase => 'Закупка материалов',
     ApprovalScope.selfPurchase => 'Самокуп',
-    ApprovalScope.paymentDispute => 'Диспут по платежу',
   };
 
   String get shortHint => switch (this) {
@@ -80,7 +74,6 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => 'Этап от бригадира',
     ApprovalScope.materialPurchase => 'Купить материалы',
     ApprovalScope.selfPurchase => 'Возмещение мастеру',
-    ApprovalScope.paymentDispute => 'Спор по сумме',
   };
 
   IconData get icon => switch (this) {
@@ -92,7 +85,6 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => Icons.layers_outlined,
     ApprovalScope.materialPurchase => Icons.shopping_cart_outlined,
     ApprovalScope.selfPurchase => Icons.payments_outlined,
-    ApprovalScope.paymentDispute => Icons.gavel_outlined,
   };
 }
 

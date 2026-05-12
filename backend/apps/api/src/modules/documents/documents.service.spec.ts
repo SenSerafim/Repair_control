@@ -11,6 +11,8 @@ type Doc = {
   stepId: string | null;
   category: string;
   title: string;
+  description: string | null;
+  documentDate: Date | null;
   fileKey: string;
   thumbKey: string | null;
   thumbStatus: string;
@@ -54,6 +56,8 @@ const mkPrisma = (documents: Doc[] = []) => {
           stepId: data.stepId ?? null,
           category: data.category,
           title: data.title,
+          description: data.description ?? null,
+          documentDate: data.documentDate ?? null,
           fileKey: data.fileKey,
           thumbKey: null,
           thumbStatus: data.thumbStatus ?? 'pending',
@@ -125,6 +129,84 @@ describe('DocumentsService', () => {
     expect(saved?.projectId).toBe('p1');
   });
 
+  it('presignUpload — сохраняет description и documentDate', async () => {
+    const state = mkPrisma();
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    const out = await svc.presignUpload('p1', 'u1', {
+      category: 'other' as any,
+      title: 'Договор',
+      mimeType: 'application/pdf',
+      sizeBytes: 10000,
+      description: '  Договор от Иванова  ',
+      documentDate: '2026-01-15T00:00:00.000Z',
+    });
+    const saved = state.docs.get(out.documentId);
+    expect(saved?.description).toBe('Договор от Иванова');
+    expect(saved?.documentDate?.toISOString()).toBe('2026-01-15T00:00:00.000Z');
+  });
+
+  it('presignUpload — пустое описание → null', async () => {
+    const state = mkPrisma();
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    const out = await svc.presignUpload('p1', 'u1', {
+      category: 'other' as any,
+      title: 't',
+      mimeType: 'application/pdf',
+      sizeBytes: 100,
+      description: '   ',
+    });
+    expect(state.docs.get(out.documentId)?.description).toBeNull();
+  });
+
+  it('patch — description и documentDate обновляются', async () => {
+    const existing: Doc = {
+      id: 'd1',
+      projectId: 'p1',
+      stageId: null,
+      stepId: null,
+      category: 'other',
+      title: 't',
+      description: 'old',
+      documentDate: null,
+      fileKey: 'k',
+      thumbKey: null,
+      thumbStatus: 'done',
+      mimeType: 'application/pdf',
+      sizeBytes: 100,
+      uploadedById: 'u1',
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const state = mkPrisma([existing]);
+    const svc = new DocumentsService(
+      state.prisma,
+      new FixedClock(new Date()),
+      mkFiles(),
+      mkFeed(),
+      mkQueue(),
+    );
+    await svc.patch('d1', 'u1', {
+      description: 'updated',
+      documentDate: '2026-02-20T00:00:00.000Z',
+    });
+    const saved = state.docs.get('d1');
+    expect(saved?.description).toBe('updated');
+    expect(saved?.documentDate?.toISOString()).toBe('2026-02-20T00:00:00.000Z');
+  });
+
   it('confirm — PDF ставит job в thumbnail queue и эмитит document_uploaded', async () => {
     const existing: Doc = {
       id: 'd1',
@@ -139,6 +221,8 @@ describe('DocumentsService', () => {
       mimeType: 'application/pdf',
       sizeBytes: 10000,
       uploadedById: 'u1',
+      description: null,
+      documentDate: null,
       deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -177,6 +261,8 @@ describe('DocumentsService', () => {
       mimeType: 'image/jpeg',
       sizeBytes: 5000,
       uploadedById: 'u1',
+      description: null,
+      documentDate: null,
       deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -210,6 +296,8 @@ describe('DocumentsService', () => {
       mimeType: 'application/pdf',
       sizeBytes: 100,
       uploadedById: 'u1',
+      description: null,
+      documentDate: null,
       deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -240,6 +328,8 @@ describe('DocumentsService', () => {
       mimeType: 'application/pdf',
       sizeBytes: 100,
       uploadedById: 'u1',
+      description: null,
+      documentDate: null,
       deletedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -271,6 +361,8 @@ describe('DocumentsService', () => {
       mimeType: 'application/pdf',
       sizeBytes: 100,
       uploadedById: 'u1',
+      description: null,
+      documentDate: null,
       deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -305,6 +397,8 @@ describe('DocumentsService', () => {
     mimeType: 'application/pdf',
     sizeBytes: 100,
     uploadedById: 'u1',
+    description: null,
+    documentDate: null,
     deletedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),

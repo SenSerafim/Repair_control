@@ -19,8 +19,9 @@ void main() {
     );
     expect(find.text('Выплаты'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
-    expect(find.text('По этапам'), findsOneWidget);
+    expect(find.text('По этапам'), findsNothing);
     expect(find.text('Материалы'), findsOneWidget);
+    expect(find.text('История'), findsOneWidget);
   });
 
   testWidgets('Tap по табу вызывает onChanged', (tester) async {

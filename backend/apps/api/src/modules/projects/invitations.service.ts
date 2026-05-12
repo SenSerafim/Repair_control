@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Clock, ErrorCodes, NotFoundError, PrismaService } from '@app/common';
+import { sanitizeRepresentativeRights } from '@app/rbac';
 import { ChatsService } from '../chats/chats.service';
 import { FeedService } from '../feed/feed.service';
 import { MembersService, MembershipRole } from './members.service';
@@ -54,12 +55,28 @@ export class InvitationsService {
     if (project.ownerId !== params.actorUserId) {
       const actor = await this.prisma.membership.findFirst({
         where: { projectId: params.projectId, userId: params.actorUserId },
-        select: { role: true },
+        select: { role: true, permissions: true },
       });
       if (actor?.role === 'foreman' && params.role !== 'master') {
         throw new ForbiddenException('foreman can invite only master role');
       }
+      if (actor?.role === 'representative' && params.role === 'representative') {
+        const actorPerms = (actor.permissions ?? {}) as Record<string, boolean | undefined>;
+        if (!actorPerms.canAddRepresentative) {
+          throw new ForbiddenException(
+            'representative needs canAddRepresentative to invite another representative',
+          );
+        }
+      }
     }
+
+    // Перед сохранением — sanitize, чтобы фантазийные ключи из старого
+    // клиента (canSeeProjectBudget, canApproveWorks и т.п.) не доезжали до
+    // Membership через joinByCode (см. вторую половину файла).
+    const sanitizedPermissions =
+      params.role === 'representative'
+        ? sanitizeRepresentativeRights(params.permissions)
+        : undefined;
 
     const expiresAt = new Date(
       this.clock.now().getTime() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000,
@@ -77,7 +94,7 @@ export class InvitationsService {
             role: params.role,
             invitedById: params.actorUserId,
             token,
-            permissions: params.permissions ?? undefined,
+            permissions: (sanitizedPermissions ?? undefined) as Record<string, boolean> | undefined,
             stageIds: params.stageIds ?? [],
             expiresAt,
           },
@@ -127,16 +144,27 @@ export class InvitationsService {
     // Бригадир может пригласить только мастера. RBAC matrix допускает
     // foreman→project.invite_member на уровне роли — здесь сужаем до
     // конкретной приглашаемой роли (ТЗ §1.5: foreman не приглашает
-    // representative/foreman).
+    // representative/foreman). Представитель — только с canAddRepresentative.
     if (project.ownerId !== input.byUserId) {
       const actor = await this.prisma.membership.findFirst({
         where: { projectId: input.projectId, userId: input.byUserId },
-        select: { role: true },
+        select: { role: true, permissions: true },
       });
       if (actor?.role === 'foreman' && input.role !== 'master') {
         throw new ForbiddenException('foreman can invite only master role');
       }
+      if (actor?.role === 'representative' && input.role === 'representative') {
+        const actorPerms = (actor.permissions ?? {}) as Record<string, boolean | undefined>;
+        if (!actorPerms.canAddRepresentative) {
+          throw new ForbiddenException(
+            'representative needs canAddRepresentative to invite another representative',
+          );
+        }
+      }
     }
+
+    const sanitizedPermissions =
+      input.role === 'representative' ? sanitizeRepresentativeRights(input.permissions) : undefined;
 
     const expiresAt = new Date(this.clock.now().getTime() + CODE_TTL_DAYS * 24 * 60 * 60 * 1000);
 
@@ -150,7 +178,7 @@ export class InvitationsService {
             role: input.role,
             invitedById: input.byUserId,
             token: code,
-            permissions: input.permissions ?? undefined,
+            permissions: (sanitizedPermissions ?? undefined) as Record<string, boolean> | undefined,
             stageIds: input.stageIds ?? [],
             expiresAt,
           },
@@ -212,13 +240,21 @@ export class InvitationsService {
     });
     if (existing) throw new ConflictException('already a member with this role');
 
+    // Защита от legacy invitations, выпущенных до унификации формата
+    // permissions: даже если в БД лежит `{ canSeeProjectBudget: true }`,
+    // в Membership попадёт только sanitized-объект.
+    const membershipPermissions =
+      inv.role === 'representative'
+        ? sanitizeRepresentativeRights(inv.permissions as Record<string, unknown> | undefined)
+        : {};
+
     const result = await this.prisma.$transaction(async (tx) => {
       const membership = await tx.membership.create({
         data: {
           projectId: inv.projectId,
           userId,
           role: inv.role,
-          permissions: (inv.permissions ?? {}) as object,
+          permissions: membershipPermissions as object,
           stageIds: inv.stageIds ?? [],
         },
       });
@@ -263,10 +299,7 @@ export class InvitationsService {
     // Тихий WS-broadcast всем участникам проекта (включая нового — чтобы у него
     // сразу появился проект в списке). Без push, чтобы не плодить шум.
     try {
-      const recipientUserIds = await this.members.collectRecipientUserIds(
-        result.projectId,
-        userId,
-      );
+      const recipientUserIds = await this.members.collectRecipientUserIds(result.projectId, userId);
       this.members.emitMembershipChanged({
         projectId: result.projectId,
         userId,

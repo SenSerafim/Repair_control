@@ -537,6 +537,71 @@ export class StagesService {
     });
   }
 
+  /**
+   * П2.3 / 4.2 — отправка плана этапа на согласование заказчику.
+   *
+   * Семантика «план этапа» (а не «план всего проекта», как было в legacy):
+   * бригадир этапа описал, что и за какие сроки/деньги планирует делать,
+   * и хочет фиксации до старта. Заказчик увидит approval scope=`plan` со
+   * `stageId=X`, при approve бэкенд проставит `stage.planApproved=true`
+   * (см. ApprovalsService.applyDecisionEffect → case 'plan'). После этого
+   * `stage.start` уже не упирается в `approvals.plan_not_approved`.
+   *
+   * Кто может: бригадир (foreman этапа) или представитель с `canEditStages`.
+   * Master отсекается на уровне ApprovalsService.validateRequest (scope=plan
+   * запрещён для master, gaps §3.3).
+   */
+  async submitPlan(stageId: string, actorUserId: string) {
+    const stage = await this.prisma.stage.findUnique({
+      where: { id: stageId },
+      select: {
+        id: true,
+        projectId: true,
+        status: true,
+        planApproved: true,
+        pendingApproval: true,
+        project: { select: { ownerId: true, status: true } },
+      },
+    });
+    if (!stage) throw new NotFoundError(ErrorCodes.STAGE_NOT_FOUND, 'stage not found');
+    if (stage.project.status === 'archived') {
+      throw new ConflictError(ErrorCodes.PROJECT_ARCHIVED, 'archived project is read-only');
+    }
+    if (stage.pendingApproval) {
+      throw new ConflictError(
+        'stage.pending_approval',
+        'stage itself awaits customer approval, cannot submit plan yet (П2.4)',
+      );
+    }
+    if (stage.planApproved) {
+      throw new ConflictError(
+        'stage.plan_already_approved',
+        'plan for this stage is already approved',
+      );
+    }
+    // Если уже есть pending plan-approval для этого этапа — возвращаем его
+    // (idempotent), чтобы повторный тап не плодил дубли.
+    const existing = await this.prisma.approval.findFirst({
+      where: {
+        scope: 'plan',
+        projectId: stage.projectId,
+        stageId: stage.id,
+        status: 'pending',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) return existing;
+    return this.approvals.request({
+      scope: 'plan',
+      projectId: stage.projectId,
+      stageId: stage.id,
+      addresseeId: stage.project.ownerId,
+      actorRole: 'customer',
+      payload: { stageId: stage.id },
+      requestedById: actorUserId,
+    });
+  }
+
   async sendToReview(stageId: string, actorUserId: string) {
     return this.transition(stageId, actorUserId, 'send_to_review', async (stage, tx) => {
       // ТЗ §2.4 / §4.4: запретить отправку этапа на приёмку, пока есть

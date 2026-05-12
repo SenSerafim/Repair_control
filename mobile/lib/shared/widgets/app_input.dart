@@ -84,11 +84,27 @@ class _AppInputState extends State<AppInput> {
     } else if (hasError) {
       borderColor = AppColors.redDot;
       backgroundColor = AppColors.redBg;
+      shadow = const [
+        BoxShadow(
+          color: Color(0x1ADC2626),
+          blurRadius: 0,
+          spreadRadius: 4,
+        ),
+      ];
     } else if (_focused) {
       borderColor = AppColors.brand;
       backgroundColor = AppColors.brandLight;
       shadow = const [
-        BoxShadow(color: AppColors.brandGlow, blurRadius: 0, spreadRadius: 3),
+        BoxShadow(
+          color: AppColors.brandGlow,
+          blurRadius: 0,
+          spreadRadius: 4,
+        ),
+        BoxShadow(
+          color: Color(0x144F6EF7),
+          offset: Offset(0, 4),
+          blurRadius: 14,
+        ),
       ];
     } else {
       borderColor = AppColors.n200;
@@ -103,7 +119,8 @@ class _AppInputState extends State<AppInput> {
           const SizedBox(height: AppSpacing.x6),
         ],
         AnimatedContainer(
-          duration: AppDurations.fast,
+          duration: AppDurations.normal,
+          curve: AppCurves.soft,
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: AppRadius.input,

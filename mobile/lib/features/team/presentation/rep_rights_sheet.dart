@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/access/domain_actions.dart';
+import '../../../core/access/representative_rights.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -12,7 +12,8 @@ import '../domain/representative_rights_l10n.dart';
 /// s-rep-rights-inline — чек-лист прав представителя, привязан к Membership.
 ///
 /// Записывает в Membership.permissions (JSONB на бэкенде) — ключи это
-/// `DomainAction.value`, значения — bool.
+/// `RepresentativeRight.jsonKey` (camelCase, совместимо с
+/// `sanitizeRepresentativeRights`), значения — bool.
 Future<void> showRepRightsSheet(
   BuildContext context,
   WidgetRef ref, {
@@ -36,16 +37,22 @@ class _RightsBody extends ConsumerStatefulWidget {
 }
 
 class _RightsBodyState extends ConsumerState<_RightsBody> {
-  late final Map<String, bool> _rights;
+  late final Map<RepresentativeRight, bool> _rights;
   bool _saving = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _rights = <String, bool>{};
-    for (final a in _representativeActions) {
-      _rights[a.value] = false;
+    _rights = <RepresentativeRight, bool>{
+      for (final r in RepresentativeRight.values) r: false,
+    };
+    // Подтягиваем уже выданные права из membership-кэша. В членстве
+    // representativeRights — List<String> с jsonKey (`canApprove`,
+    // `canSeeBudget`, ...), см. `Membership.parse` + `_parseRights`.
+    for (final raw in widget.member.representativeRights) {
+      final r = RepresentativeRight.fromJsonKey(raw);
+      if (r != null) _rights[r] = true;
     }
   }
 
@@ -54,11 +61,14 @@ class _RightsBodyState extends ConsumerState<_RightsBody> {
       _saving = true;
       _error = null;
     });
+    final permissions = <String, bool>{
+      for (final entry in _rights.entries) entry.key.jsonKey: entry.value,
+    };
     final failure = await ref
         .read(teamControllerProvider(widget.projectId).notifier)
         .updatePermissions(
           membershipId: widget.member.id,
-          permissions: _rights,
+          permissions: permissions,
         );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -107,7 +117,7 @@ class _RightsBodyState extends ConsumerState<_RightsBody> {
             child: ListView(
               shrinkWrap: true,
               children: [
-                for (final group in _groups) ...[
+                for (final group in kRepresentativeRightGroups) ...[
                   Padding(
                     padding: const EdgeInsets.only(
                       top: AppSpacing.x8,
@@ -115,13 +125,11 @@ class _RightsBodyState extends ConsumerState<_RightsBody> {
                     ),
                     child: Text(group.title, style: AppTextStyles.micro),
                   ),
-                  for (final action in group.actions)
+                  for (final right in group.rights)
                     _RightRow(
-                      label: action.label,
-                      action: action.action,
-                      enabled: _rights[action.action.value] ?? false,
-                      onChanged: (v) =>
-                          setState(() => _rights[action.action.value] = v),
+                      right: right,
+                      enabled: _rights[right] ?? false,
+                      onChanged: (v) => setState(() => _rights[right] = v),
                     ),
                 ],
               ],
@@ -137,19 +145,18 @@ class _RightsBodyState extends ConsumerState<_RightsBody> {
 
 class _RightRow extends StatelessWidget {
   const _RightRow({
-    required this.label,
-    required this.action,
+    required this.right,
     required this.enabled,
     required this.onChanged,
   });
 
-  final String label;
-  final DomainAction action;
+  final RepresentativeRight right;
   final bool enabled;
   final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final label = kRepresentativeRightLabels[right];
     return InkWell(
       onTap: () => onChanged(!enabled),
       borderRadius: BorderRadius.circular(AppRadius.r12),
@@ -170,11 +177,9 @@ class _RightRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: AppTextStyles.body),
-                  Text(
-                    kRightsRu[action]?.description ?? action.value,
-                    style: AppTextStyles.micro,
-                  ),
+                  Text(label?.title ?? right.jsonKey, style: AppTextStyles.body),
+                  if (label != null)
+                    Text(label.description, style: AppTextStyles.micro),
                 ],
               ),
             ),
@@ -184,73 +189,3 @@ class _RightRow extends StatelessWidget {
     );
   }
 }
-
-class _Group {
-  const _Group({required this.title, required this.actions});
-  final String title;
-  final List<_ActionDef> actions;
-}
-
-class _ActionDef {
-  const _ActionDef({required this.action, required this.label});
-  final DomainAction action;
-  final String label;
-}
-
-const _groups = <_Group>[
-  _Group(
-    title: 'Проекты и этапы',
-    actions: [
-      _ActionDef(
-        action: DomainAction.projectEdit,
-        label: 'Редактировать проект',
-      ),
-      _ActionDef(action: DomainAction.stageManage, label: 'Управлять этапами'),
-      _ActionDef(action: DomainAction.stageStart, label: 'Запускать этапы'),
-      _ActionDef(action: DomainAction.stagePause, label: 'Ставить на паузу'),
-    ],
-  ),
-  _Group(
-    title: 'Согласования',
-    actions: [
-      _ActionDef(
-        action: DomainAction.approvalRequest,
-        label: 'Запрашивать согласования',
-      ),
-      _ActionDef(
-        action: DomainAction.approvalDecide,
-        label: 'Принимать решение',
-      ),
-    ],
-  ),
-  _Group(
-    title: 'Финансы',
-    actions: [
-      _ActionDef(
-        action: DomainAction.financeBudgetView,
-        label: 'Видеть бюджет',
-      ),
-      _ActionDef(
-        action: DomainAction.financePaymentCreate,
-        label: 'Создавать выплаты',
-      ),
-      _ActionDef(
-        action: DomainAction.financePaymentConfirm,
-        label: 'Подтверждать выплаты',
-      ),
-    ],
-  ),
-  _Group(
-    title: 'Материалы и инструмент',
-    actions: [
-      _ActionDef(
-        action: DomainAction.materialsManage,
-        label: 'Управлять материалами',
-      ),
-      _ActionDef(action: DomainAction.toolsIssue, label: 'Выдавать инструмент'),
-    ],
-  ),
-];
-
-List<DomainAction> get _representativeActions =>
-    _groups.expand((g) => g.actions.map((a) => a.action)).toList();

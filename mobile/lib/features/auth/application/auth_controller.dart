@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -56,10 +58,32 @@ class AuthController extends Notifier<AuthState> {
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
     }
+    // userId раньше жил только в RAM (login/register), при рестарте приложения
+    // обнулялся — все RBAC-провайдеры, завязанные на `me`, ломались
+    // (owner-fallback в invitableRolesProvider, myMembershipInProjectProvider
+    // и т.д.). Источник истины — claim `sub` в access-токене (см.
+    // backend/auth/token.service.ts AccessTokenPayload).
     state = AuthState(
       status: AuthStatus.authenticated,
       activeRole: SystemRole.fromString(roleRaw),
+      userId: _decodeJwtSub(access),
     );
+  }
+
+  static String? _decodeJwtSub(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      var payload = parts[1];
+      final pad = (4 - payload.length % 4) % 4;
+      if (pad > 0) payload = payload.padRight(payload.length + pad, '=');
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      final sub = json['sub'];
+      return sub is String && sub.isNotEmpty ? sub : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String> _ensureDeviceId() async {

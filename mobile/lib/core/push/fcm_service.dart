@@ -90,9 +90,13 @@ class FcmService {
       final vapidKey = vapidFromDefine.isNotEmpty
           ? vapidFromDefine
           : (vapidFromEnv.isNotEmpty ? vapidFromEnv : null);
-      _currentToken = await FirebaseMessaging.instance.getToken(
-        vapidKey: vapidKey,
-      );
+      // Cap'аем 3 секундами: на эмуляторах без Google Play / при сетевом
+      // тротлинге getToken висит до 8с прежде чем упасть AUTHENTICATION_FAILED.
+      // Push'и работают soft-fail-ом, не блокируем init/регистрацию устройства;
+      // если токен прилетит позже — onTokenRefresh подтянет.
+      _currentToken = await FirebaseMessaging.instance
+          .getToken(vapidKey: vapidKey)
+          .timeout(const Duration(seconds: 3), onTimeout: () => null);
       await _maybeRegisterDevice();
     } catch (e) {
       logger.w('FCM getToken failed: $e');
