@@ -7,6 +7,7 @@ import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/widgets/app_auth_image.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../exports/presentation/export_sheet.dart';
 import '../../stages/application/stages_controller.dart';
@@ -234,9 +235,11 @@ class _DocRow extends StatelessWidget {
                   child: SizedBox(
                     width: 44,
                     height: 44,
-                    child: Image.network(
-                      doc.thumbUrl ?? doc.url!,
+                    child: AppAuthImage(
+                      path: doc.thumbUrl ?? doc.url!,
                       fit: BoxFit.cover,
+                      width: 44,
+                      height: 44,
                       errorBuilder: (_, __, ___) =>
                           AppDocTypeIcon(mimeType: doc.mimeType),
                     ),

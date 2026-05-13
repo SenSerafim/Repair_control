@@ -52,6 +52,43 @@ export class ConfirmUploadDto {
   fileKey!: string;
 }
 
+/**
+ * Поля multipart/form-data при POST /projects/:projectId/documents/upload.
+ * Сам файл идёт отдельным полем `file` (multer FileInterceptor),
+ * mimeType / sizeBytes сервер берёт из multipart-метаданных, не из тела.
+ */
+export class UploadDocumentDto {
+  @ApiProperty({ enum: DocumentCategory })
+  @IsEnum(DocumentCategory)
+  category!: DocumentCategory;
+
+  @ApiProperty()
+  @IsString()
+  @Length(1, 200)
+  title!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  stageId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  stepId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsISO8601()
+  documentDate?: string;
+}
+
 export class PatchDocumentDto {
   @ApiPropertyOptional()
   @IsOptional()

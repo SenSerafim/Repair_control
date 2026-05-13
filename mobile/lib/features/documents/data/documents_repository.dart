@@ -108,6 +108,60 @@ class DocumentsRepository {
     return PresignedUpload.fromJson(r.data!);
   });
 
+  /// Multipart upload через API (server-side в S3). Заменяет
+  /// presign+PUT+confirm одним round-trip — поднимает надёжность загрузки
+  /// с эмулятора / устройств, где прямой PUT в Selectel плохо ходит.
+  Future<Document> uploadMultipart({
+    required String projectId,
+    required DocumentCategory category,
+    required String title,
+    required String mimeType,
+    required String filePath,
+    required int sizeBytes,
+    String? stageId,
+    String? stepId,
+    String? description,
+    DateTime? documentDate,
+    UploadProgress? onProgress,
+    CancelToken? cancelToken,
+  }) => _call(() async {
+    final form = FormData.fromMap({
+      'category': category.apiValue,
+      'title': title,
+      if (stageId != null) 'stageId': stageId,
+      if (stepId != null) 'stepId': stepId,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      if (documentDate != null)
+        'documentDate': documentDate.toUtc().toIso8601String(),
+      'file': await MultipartFile.fromFile(
+        filePath,
+        filename: title,
+        contentType: DioMediaType.parse(mimeType),
+      ),
+    });
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/documents/upload',
+      data: form,
+      options: Options(
+        // 200 МБ за 30с не успеют — увеличиваем sendTimeout для крупных файлов.
+        sendTimeout: const Duration(minutes: 5),
+        receiveTimeout: const Duration(minutes: 1),
+        // Не выставлять Content-Type вручную — dio сам прописывает boundary.
+        contentType: 'multipart/form-data',
+      ),
+      cancelToken: cancelToken,
+      onSendProgress: onProgress == null
+          ? null
+          : (sent, total) {
+              final t = total > 0 ? total : sizeBytes;
+              final f = t > 0 ? (sent / t).clamp(0.0, 1.0) : null;
+              onProgress(f, sent, t);
+            },
+    );
+    return Document.parse(r.data!);
+  });
+
   /// Загрузка файла в S3 стримом — без полного чтения в RAM.
   ///
   /// - `filePath` читается через `File.openRead()` → пригоден для 200 МБ.

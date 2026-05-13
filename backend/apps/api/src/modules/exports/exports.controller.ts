@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { Response } from 'express';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { PrismaService } from '@app/common';
 import { Idempotent } from '../idempotency/idempotent.decorator';
@@ -92,6 +104,29 @@ export class ExportsController {
   @RequireAccess({ action: 'feed.export', resource: 'none' })
   get(@Param('id') id: string) {
     return this.svc.get(id);
+  }
+
+  /**
+   * Стримит готовый файл экспорта через API. URL отдаётся клиентам через
+   * `downloadUrl` (`/api/exports/:id/file`) — заменяет presigned S3 redirect.
+   * RequireAccess стоит `resource: 'none'`, фактическую проверку владельца
+   * job делает streamFile внутри (404 если job not done / expired).
+   */
+  @Get('exports/:id/file')
+  @RequireAccess({ action: 'feed.export', resource: 'none' })
+  async streamFile(@Param('id') id: string, @Res() res: Response) {
+    const { stream, mimeType, contentLength, filename } = await this.svc.streamFile(id);
+    res.setHeader('Content-Type', mimeType);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    );
+    res.setHeader('Cache-Control', 'private, no-cache');
+    stream.on('error', (err) => {
+      res.destroy(err);
+    });
+    stream.pipe(res);
   }
 
   @Get('projects/:projectId/exports')

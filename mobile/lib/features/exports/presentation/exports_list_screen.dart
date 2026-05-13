@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
+import '../../../core/config/app_providers.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -153,21 +158,51 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
     }
   }
 
+  /// Скачивает файл через наш API и открывает системным viewer-ом.
+  /// Раньше использовался launchUrl на presigned-S3 URL — Selectel
+  /// отдавал redirect, но Android не открывал результат. Теперь:
+  ///   1. dio.download (auth + baseUrl автоматически) — файл локально
+  ///   2. OpenFilex.open — system intent / preview
+  /// URL приходит относительный (`/api/exports/:id/file`), но если
+  /// сервер вернул абсолютный (back-compat) — тоже работает.
   Future<void> _launchOrCopy(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!mounted) return;
-    if (!launched) {
+    try {
+      final tmpDir = await getTemporaryDirectory();
+      final urlPath = Uri.tryParse(url)?.path ?? url;
+      final ext = p.extension(urlPath).isNotEmpty
+          ? p.extension(urlPath)
+          : _extFromKind(job.kind);
+      final filename = 'export_${job.id.substring(0, 8)}$ext';
+      final file = File(p.join(tmpDir.path, filename));
+      await ref.read(dioProvider).download(url, file.path);
+      if (!mounted) return;
+      final result = await OpenFilex.open(file.path);
+      if (!mounted) return;
+      if (result.type != ResultType.done) {
+        AppToast.show(
+          context,
+          message: 'Не удалось открыть файл (${result.message})',
+          kind: AppToastKind.error,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
       AppToast.show(
         context,
-        message: 'Не удалось открыть ссылку. Скопировали в буфер обмена.',
+        message: 'Не удалось скачать файл. Скопировали ссылку.',
         kind: AppToastKind.error,
       );
       await Clipboard.setData(ClipboardData(text: url));
+    }
+  }
+
+  String _extFromKind(ExportKind kind) {
+    switch (kind) {
+      case ExportKind.feedPdf:
+      case ExportKind.projectReportPdf:
+        return '.pdf';
+      case ExportKind.projectZip:
+        return '.zip';
     }
   }
 

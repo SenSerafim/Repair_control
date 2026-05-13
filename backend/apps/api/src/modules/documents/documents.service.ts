@@ -73,6 +73,115 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Server-side multipart upload — заменяет presign+PUT+confirm одним вызовом.
+   * Используется мобилкой как основной путь: presigned-PUT в Selectel
+   * нестабилен с части устройств (TLS / chunked TE / DNS бакет-субдомена).
+   * Здесь файл уже на сервере (multer), мы кладём его в S3 нашим Node-клиентом
+   * (тот же путь, что в exports/thumbnails — проверен в проде).
+   */
+  async uploadDocument(
+    projectId: string,
+    actorUserId: string,
+    file: { buffer: Buffer; mimeType: string; size: number; originalName?: string },
+    meta: {
+      category: DocumentCategory;
+      title: string;
+      stageId?: string;
+      stepId?: string;
+      description?: string;
+      documentDate?: string;
+    },
+  ): Promise<Document> {
+    const id = nanoid();
+    const scope = `docs/${projectId}/${id}`;
+    this.files.validate({
+      scope,
+      filename: meta.title,
+      mimeType: file.mimeType,
+      sizeBytes: file.size,
+    });
+    const key = this.files.buildKey({
+      scope,
+      filename: meta.title,
+      mimeType: file.mimeType,
+      sizeBytes: file.size,
+    });
+    await this.files.putObject(key, file.buffer, file.mimeType);
+
+    const doc = await this.prisma.document.create({
+      data: {
+        id,
+        projectId,
+        stageId: meta.stageId ?? null,
+        stepId: meta.stepId ?? null,
+        category: meta.category,
+        title: meta.title,
+        description: meta.description?.trim() ? meta.description.trim() : null,
+        documentDate: meta.documentDate ? new Date(meta.documentDate) : null,
+        fileKey: key,
+        mimeType: file.mimeType,
+        sizeBytes: file.size,
+        uploadedById: actorUserId,
+        thumbStatus: 'pending',
+      },
+    });
+
+    if (file.mimeType === 'application/pdf') {
+      await this.thumbQueue.add('generate', { documentId: doc.id }, { jobId: `thumb:${doc.id}` });
+    } else {
+      await this.prisma.document.update({
+        where: { id: doc.id },
+        data: { thumbStatus: 'skipped' },
+      });
+    }
+    await this.feed.emit({
+      kind: 'document_uploaded',
+      projectId: doc.projectId,
+      actorId: actorUserId,
+      payload: { documentId: doc.id, category: doc.category, stageId: doc.stageId },
+    });
+    const fresh = (await this.prisma.document.findUnique({ where: { id: doc.id } })) as Document;
+    return this.attachUrls(fresh);
+  }
+
+  /**
+   * Стримит файл документа через API (без редиректа на S3). См. attachUrls():
+   * url теперь указывает сюда, не на presigned-URL Selectel — мобилка может
+   * скачать через тот же dio (auth-интерсептор сам положит Bearer) или
+   * показать inline через cached_network_image с httpHeaders.
+   */
+  async streamFile(
+    id: string,
+    viewer?: DocumentViewer,
+  ): Promise<{
+    stream: NodeJS.ReadableStream;
+    mimeType: string;
+    contentLength: number;
+    filename: string;
+  }> {
+    const doc = await this.get(id, viewer);
+    const stream = await this.files.streamObject(doc.fileKey);
+    return {
+      stream,
+      mimeType: doc.mimeType,
+      contentLength: doc.sizeBytes,
+      filename: doc.title,
+    };
+  }
+
+  async streamThumbnail(
+    id: string,
+    viewer?: DocumentViewer,
+  ): Promise<{ stream: NodeJS.ReadableStream; mimeType: string }> {
+    const doc = await this.get(id, viewer);
+    if (doc.thumbStatus !== 'done' || !doc.thumbKey) {
+      throw new NotFoundError(ErrorCodes.DOCUMENT_NOT_FOUND, 'thumbnail not ready');
+    }
+    const stream = await this.files.streamObject(doc.thumbKey);
+    return { stream, mimeType: 'image/jpeg' };
+  }
+
   async confirm(documentId: string, actorUserId: string): Promise<Document> {
     const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
     if (!doc) throw new NotFoundError(ErrorCodes.DOCUMENT_NOT_FOUND, 'document not found');
@@ -143,7 +252,7 @@ export class DocumentsService {
     }
 
     const docs = await this.prisma.document.findMany({ where, orderBy: { createdAt: 'desc' } });
-    return Promise.all(docs.map((d) => this.attachUrls(d)));
+    return docs.map((d) => this.attachUrls(d));
   }
 
   async get(id: string, viewer?: DocumentViewer): Promise<Document> {
@@ -168,9 +277,18 @@ export class DocumentsService {
     return this.attachUrls(doc);
   }
 
+  /**
+   * Возвращает относительный путь стрим-эндпоинта (`/api/documents/:id/file`).
+   * Мобилка/admin сами клеят baseUrl и шлют запрос с Authorization-хедером —
+   * никаких redirect на S3 и проблем с TLS у Selectel на старых девайсах.
+   * Поле `expiresAt` оставлено для обратной совместимости старого контракта.
+   */
   async download(id: string): Promise<{ url: string; expiresAt: Date }> {
     const doc = await this.get(id);
-    return this.files.createPresignedDownload(doc.fileKey);
+    return {
+      url: `/api/documents/${doc.id}/file`,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
   }
 
   async thumbnail(id: string): Promise<{ url: string; expiresAt: Date }> {
@@ -178,7 +296,10 @@ export class DocumentsService {
     if (doc.thumbStatus !== 'done' || !doc.thumbKey) {
       throw new NotFoundError(ErrorCodes.DOCUMENT_NOT_FOUND, 'thumbnail not ready');
     }
-    return this.files.createPresignedDownload(doc.thumbKey);
+    return {
+      url: `/api/documents/${doc.id}/thumbnail-file`,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
   }
 
   async patch(
@@ -233,32 +354,25 @@ export class DocumentsService {
   }
 
   /**
-   * Прикрепляет presigned `url` (для inline-просмотра в мобильном/admin) и
-   * `thumbUrl` (PDF-превью или то же изображение для image/*).
-   *
-   * Если presign провалится (S3 недоступен) — возвращаем документ без url:
-   * клиент покажет иконку категории, ссылка на download остаётся доступна
-   * через `GET /documents/:id/download`.
+   * Прикрепляет относительные `url` / `thumbUrl` указывающие на стрим-эндпоинты API.
+   * Полную ссылку собирает клиент: `${env.apiBaseUrl}${doc.url}`. Запрос идёт
+   * с Authorization-хедером через тот же dio/fetch, что и REST. Преимущества
+   * перед presigned-URL Selectel:
+   *   - нет проблем с TLS-кэшем на эмуляторах / старых Android;
+   *   - нет несовместимости host-styled bucket subdomain (DNS на части сетей);
+   *   - нет CORS, redirect, chunked-TE и signature-mismatch на upload;
+   *   - сервер сам решает фильтрацию по правам (RBAC через guard).
    */
-  private async attachUrls<
-    T extends { fileKey: string; thumbKey: string | null; mimeType: string },
-  >(doc: T): Promise<T & { url: string | null; thumbUrl: string | null }> {
-    let url: string | null = null;
+  private attachUrls<T extends { id: string; thumbKey: string | null; mimeType: string }>(
+    doc: T,
+  ): T & { url: string; thumbUrl: string | null } {
+    const url = `/api/documents/${doc.id}/file`;
     let thumbUrl: string | null = null;
-    try {
-      url = (await this.files.createPresignedDownload(doc.fileKey)).url;
-    } catch {
-      url = null;
-    }
-    try {
-      if (doc.thumbKey) {
-        thumbUrl = (await this.files.createPresignedDownload(doc.thumbKey)).url;
-      } else if (doc.mimeType.startsWith('image/')) {
-        // Для изображений отдельной thumbnail нет — используем сам файл.
-        thumbUrl = url;
-      }
-    } catch {
-      thumbUrl = null;
+    if (doc.thumbKey) {
+      thumbUrl = `/api/documents/${doc.id}/thumbnail-file`;
+    } else if (doc.mimeType.startsWith('image/')) {
+      // У изображений отдельной thumbnail нет — клиент сам decode'ит превью.
+      thumbUrl = url;
     }
     return { ...doc, url, thumbUrl };
   }

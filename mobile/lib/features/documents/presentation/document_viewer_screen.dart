@@ -9,8 +9,10 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 
+import '../../../core/config/app_providers.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/widgets/app_auth_image.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/documents_controller.dart';
 import '../data/documents_repository.dart';
@@ -55,13 +57,15 @@ class _DocumentViewerScreenState extends ConsumerState<DocumentViewerScreen> {
       );
 
       if (doc.isPdf) {
-        // Если бэкенд приложил presigned `url` — используем его, иначе
-        // догружаем через download endpoint.
+        // URL теперь относительный (`/api/documents/:id/file`) — берём
+        // глобальный dio с baseUrl + auth-интерсептором.
         final url = doc.url ?? await controller.downloadUrl(doc.id);
-        final bytes = await Dio().get<List<int>>(
-          url,
-          options: Options(responseType: ResponseType.bytes),
-        );
+        final bytes = await ref
+            .read(dioProvider)
+            .get<List<int>>(
+              url,
+              options: Options(responseType: ResponseType.bytes),
+            );
         if (!mounted) return;
         _pdf = PdfController(
           document: PdfDocument.openData(Uint8List.fromList(bytes.data!)),
@@ -135,14 +139,9 @@ class _DocumentViewerScreenState extends ConsumerState<DocumentViewerScreen> {
           minScale: 0.5,
           maxScale: 5,
           child: Center(
-            child: Image.network(
-              _imageUrl!,
+            child: AppAuthImage(
+              path: _imageUrl!,
               fit: BoxFit.contain,
-              loadingBuilder: (_, child, p) => p == null
-                  ? child
-                  : const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
               errorBuilder: (_, __, ___) => Center(
                 child: Text(
                   'Не удалось загрузить изображение',
@@ -206,12 +205,7 @@ class _DocumentViewerScreenState extends ConsumerState<DocumentViewerScreen> {
       final hasExt = p.extension(filename).isNotEmpty;
       final ext = hasExt ? '' : _extFromMime(_doc?.mimeType ?? '');
       final file = File(p.join(tmpDir.path, '$filename$ext'));
-      final raw = Dio();
-      try {
-        await raw.download(url, file.path);
-      } finally {
-        raw.close();
-      }
+      await ref.read(dioProvider).download(url, file.path);
       final result = await OpenFilex.open(file.path);
       if (!mounted) return;
       if (result.type != ResultType.done) {

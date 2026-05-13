@@ -80,8 +80,9 @@ export class ExportService {
     }
     let downloadUrl: string | undefined;
     if (job.status === 'done' && job.resultFileKey) {
-      const { url } = await this.files.createPresignedDownload(job.resultFileKey);
-      downloadUrl = url;
+      // Прокси через API (см. streamFile()) — никаких presigned S3 URL,
+      // мобилке передаём прямой стрим с auth-хедером.
+      downloadUrl = `/api/exports/${job.id}/file`;
     }
     return { ...job, downloadUrl };
   }
@@ -95,27 +96,43 @@ export class ExportService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    // 2026-05-13: enriching списка `downloadUrl`-ами (presigned S3) — иначе
-    // мобайл получает status=done, но без url. Карточка показывает
-    // «Готов», но кнопки «Скачать» нет, и тап ничего не делает. Раньше
-    // url выдавался только в `GET /api/exports/:id`, и мобайл должен был
-    // делать второй запрос — это и есть «не работает».
     const now = this.clock.now();
-    return Promise.all(
-      jobs.map(async (job) => {
-        if (job.status === 'done' && job.resultFileKey && job.expiresAt > now) {
-          try {
-            const { url } = await this.files.createPresignedDownload(job.resultFileKey);
-            return { ...job, downloadUrl: url };
-          } catch {
-            // S3 недоступен — возвращаем job без url, мобайл может
-            // повторить попытку через `get(jobId)`.
-            return job;
-          }
-        }
-        return job;
-      }),
-    );
+    return jobs.map((job) => {
+      if (job.status === 'done' && job.resultFileKey && job.expiresAt > now) {
+        return { ...job, downloadUrl: `/api/exports/${job.id}/file` };
+      }
+      return job;
+    });
+  }
+
+  /**
+   * Стримит готовый файл экспорта (ZIP/PDF/TXT) клиенту. Использует наш
+   * server-side minio-клиент — те же креды, та же сеть, что работает в
+   * проде. Не требует от мобилки ходить напрямую в Selectel.
+   */
+  async streamFile(jobId: string): Promise<{
+    stream: NodeJS.ReadableStream;
+    mimeType: string;
+    contentLength?: number;
+    filename: string;
+  }> {
+    const job = await this.prisma.exportJob.findUnique({ where: { id: jobId } });
+    if (!job) throw new NotFoundError(ErrorCodes.EXPORT_NOT_FOUND, 'export not found');
+    if (job.status !== 'done' || !job.resultFileKey) {
+      throw new NotFoundError(ErrorCodes.EXPORT_NOT_FOUND, 'export file not ready');
+    }
+    if (job.expiresAt < this.clock.now()) {
+      throw new NotFoundError(ErrorCodes.EXPORT_NOT_FOUND, 'export expired');
+    }
+    const stream = await this.files.streamObject(job.resultFileKey);
+    const mimeType = guessExportMime(job.kind, job.resultFileKey);
+    const filename = buildExportFilename(job.kind, job.id, job.resultFileKey);
+    return {
+      stream,
+      mimeType,
+      contentLength: job.resultSizeBytes ?? undefined,
+      filename,
+    };
   }
 
   async markRunning(jobId: string): Promise<void> {
@@ -230,4 +247,26 @@ export class ExportService {
       : null;
     return { items: page, nextCursor };
   }
+}
+
+function guessExportMime(kind: ExportKind, key: string): string {
+  if (key.endsWith('.zip')) return 'application/zip';
+  if (key.endsWith('.pdf')) return 'application/pdf';
+  if (key.endsWith('.txt')) return 'text/plain; charset=utf-8';
+  // Fallback по kind
+  switch (kind) {
+    case 'feed_pdf':
+    case 'project_report_pdf':
+      return 'application/pdf';
+    case 'project_zip':
+      return 'application/zip';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+function buildExportFilename(kind: ExportKind, jobId: string, key: string): string {
+  // Берём расширение из ключа, базовое имя — kind + короткий jobId.
+  const ext = key.includes('.') ? key.slice(key.lastIndexOf('.')) : '';
+  return `${kind}_${jobId.slice(0, 8)}${ext}`;
 }
