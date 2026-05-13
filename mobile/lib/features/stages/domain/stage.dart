@@ -56,6 +56,11 @@ class Stage with _$Stage {
     required int workBudget,
     required int materialsBudget,
     @Default(<String>[]) List<String> foremanIds,
+    /// П2.5 — один мастер на этап. null = «мастер не назначен, ведёт сам
+    /// бригадир». Используется UI для индикации в StageStatsRow и в
+    /// двухступенчатом stage_accept (бэк смотрит masterId для решения,
+    /// кому адресовать первый approval).
+    String? masterId,
     required int progressCache,
     required bool planApproved,
     DateTime? startedAt,
@@ -80,6 +85,7 @@ class Stage with _$Stage {
     foremanIds: (json['foremanIds'] as List<dynamic>? ?? const [])
         .map((e) => e.toString())
         .toList(),
+    masterId: json['masterId'] as String?,
     progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
     planApproved: json['planApproved'] as bool? ?? false,
     startedAt: _date(json['startedAt']),

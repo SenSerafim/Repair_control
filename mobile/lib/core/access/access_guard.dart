@@ -333,22 +333,73 @@ final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
   }
 });
 
-/// Тот же `canProvider`, но с учётом делегированных представителю прав
-/// в конкретном проекте. Используется в экранах, где экшен зависит от
-/// проекта (approval-decide, finance-confirm, и т.д.) — там, где нужно
-/// honor RepresentativeRights для роли representative.
+/// Может ли пользователь выполнить [action] в КОНКРЕТНОМ проекте.
+///
+/// 2026-05-13 рефактор: per-project membership > глобальный activeRole.
+/// Раньше провайдер смотрел только `activeRoleProvider` (глобальную активную
+/// роль) и поэтому скрывал, например, у бригадира пункт «Назначить мастера»,
+/// если он переключил глобальную роль на «заказчика». Теперь:
+///   1) `admin` (глобально) — всегда true.
+///   2) `project.ownerId == me` — права заказчика (фикс legacy-проектов без
+///      явной customer-membership).
+///   3) `Membership.role` в этом проекте → соответствующая `SystemRole` в
+///      матрице. Один аккаунт может быть foreman в проекте A и master в
+///      проекте B; UI принимает решение по тому, где я нахожусь СЕЙЧАС.
+///   4) Делегированные представителю права (canApprove / canSeeBudget / …) —
+///      добавочные, к matrix-набору representative.
+///   5) Fallback на глобальный `activeRoleProvider` — на случай, когда
+///      `teamControllerProvider` ещё не загрузился (нулевой кадр после deep-
+///      link). Это даёт лучший UX, чем ложное «нет прав».
 final canInProjectProvider =
     Provider.family<bool, ({DomainAction action, String projectId})>((
       ref,
       params,
     ) {
-      final role = ref.watch(activeRoleProvider);
-      if (AccessGuard.can(role, params.action)) return true;
-      if (role != SystemRole.representative) return false;
-      final delegated = ref.watch(
-        representativeRightsProvider(params.projectId),
+      final sysRole = ref.watch(activeRoleProvider);
+      if (sysRole == SystemRole.admin) return true;
+
+      final me = ref.watch(authControllerProvider).userId;
+      final projectAsync = ref.watch(projectControllerProvider(params.projectId));
+      final ownerId = projectAsync.maybeWhen(
+        data: (p) => p.ownerId,
+        orElse: () => null,
       );
-      return delegated.contains(params.action);
+      if (me != null &&
+          ownerId != null &&
+          me == ownerId &&
+          AccessGuard.can(SystemRole.customer, params.action)) {
+        return true;
+      }
+
+      final my = ref.watch(myMembershipInProjectProvider(params.projectId));
+      final membershipSysRole = switch (my?.role) {
+        MembershipRole.customer => SystemRole.customer,
+        MembershipRole.representative => SystemRole.representative,
+        MembershipRole.foreman => SystemRole.contractor,
+        MembershipRole.master => SystemRole.master,
+        null => null,
+      };
+      if (membershipSysRole != null &&
+          AccessGuard.can(membershipSysRole, params.action)) {
+        return true;
+      }
+      if (membershipSysRole == SystemRole.representative) {
+        final delegated = ref.watch(
+          representativeRightsProvider(params.projectId),
+        );
+        if (delegated.contains(params.action)) return true;
+      }
+
+      // Fallback на глобальную активную роль (для случая, когда team ещё
+      // не пришла; иначе UI на 1 кадр скрывал кнопки у того, у кого они есть).
+      if (AccessGuard.can(sysRole, params.action)) return true;
+      if (sysRole == SystemRole.representative) {
+        final delegated = ref.watch(
+          representativeRightsProvider(params.projectId),
+        );
+        if (delegated.contains(params.action)) return true;
+      }
+      return false;
     });
 
 /// Wrapper-виджет: показывает [child] только если у текущей роли есть

@@ -40,9 +40,12 @@ interface InvRow {
 const mkPrisma = () => {
   const projects = new Map<string, { id: string }>();
   const memberships: Array<{
+    id?: string;
     projectId: string;
     userId: string;
     role: string;
+    removedAt?: Date | null;
+    removedById?: string | null;
   }> = [];
   const invitations = new Map<string, InvRow>();
   let invSeq = 0;
@@ -66,6 +69,12 @@ const mkPrisma = () => {
       create: jest.fn(({ data }: any) => {
         const m = { ...data, id: `m${++mSeq}` };
         memberships.push(m);
+        return m;
+      }),
+      update: jest.fn(({ where, data }: any) => {
+        const m = memberships.find((mm: any) => mm.id === where.id);
+        if (!m) throw new Error('not found');
+        Object.assign(m, data);
         return m;
       }),
     },
@@ -222,10 +231,10 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     expect(st.invitations.get('inv1')!.status).toBe('expired');
   });
 
-  it('joinByCode: уже участник с этой ролью → ConflictException', async () => {
+  it('joinByCode: уже активный участник с этой ролью → ConflictException', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1' });
-    st.memberships.push({ projectId: 'p1', userId: 'u1', role: 'master' });
+    st.memberships.push({ id: 'm-existing', projectId: 'p1', userId: 'u1', role: 'master' });
     const svc = new InvitationsService(
       st.prisma,
       new FixedClock(NOW),
@@ -239,6 +248,44 @@ describe('InvitationsService — invite-by-code (P2)', () => {
       role: 'master',
     });
     await expect(svc.joinByCode('u1', inv.token)).rejects.toThrow(ConflictException);
+  });
+
+  it('joinByCode: soft-removed membership реанимируется, а не создаётся новая (фикс «уже в проекте» после leaveTeam)', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1' });
+    // Имитация состояния после leaveTeam: запись осталась в БД с removedAt.
+    // До фикса invitations.service.findFirst игнорировал removedAt и кидал
+    // 409 на повторный join — мобильный клиент видел «уже в проекте» при
+    // попытке вступить заново по коду от бригадира.
+    st.memberships.push({
+      id: 'm-old',
+      projectId: 'p1',
+      userId: 'u-back',
+      role: 'master',
+      removedAt: new Date('2026-05-13T10:00:00Z'),
+      removedById: 'u-back',
+    });
+    const svc = new InvitationsService(
+      st.prisma,
+      new FixedClock(NOW),
+      mkChats(),
+      mkFeed(),
+      mkMembers(),
+    );
+    const inv = await svc.generateCode({
+      projectId: 'p1',
+      byUserId: 'owner1',
+      role: 'master',
+    });
+
+    const result = await svc.joinByCode('u-back', inv.token);
+
+    // 1) Возвращается тот же membership.id (revive), а не создаётся дубль.
+    expect(result.membership.id).toBe('m-old');
+    // 2) removedAt/removedById очищены — пользователь снова активен.
+    expect(st.memberships).toHaveLength(1);
+    expect(st.memberships[0].removedAt).toBeNull();
+    expect(st.memberships[0].removedById).toBeNull();
   });
 
   it('generateCode: сохраняет permissions и stageIds для representative', async () => {

@@ -125,6 +125,13 @@ export class MembersService {
       }
     }
 
+    // Unique-индекс (projectId, userId, role) не учитывает removedAt: после
+    // leaveTeam запись остаётся в БД soft-removed. Если её игнорировать —
+    // повторное добавление падает с P2002. Поэтому проверяем существование
+    // и:
+    //   • active (removedAt = null) → Conflict как и раньше;
+    //   • soft-removed → реанимируем ту же строку (clear removedAt/removedById,
+    //     перезаписываем invitedById/permissions/stageIds).
     const exists = await this.prisma.membership.findUnique({
       where: {
         projectId_userId_role: {
@@ -134,22 +141,36 @@ export class MembersService {
         },
       },
     });
-    if (exists) throw new ConflictError(ErrorCodes.MEMBERSHIP_EXISTS, 'membership exists');
+    if (exists && !exists.removedAt) {
+      throw new ConflictError(ErrorCodes.MEMBERSHIP_EXISTS, 'membership exists');
+    }
 
     const permissions =
       input.role === 'representative' ? sanitizeRepresentativeRights(input.permissions as any) : {};
 
     const created = await this.prisma.$transaction(async (tx) => {
-      const m = await tx.membership.create({
-        data: {
-          projectId: input.projectId,
-          userId: input.userId,
-          role: input.role,
-          invitedById: input.actorUserId,
-          permissions: permissions as Prisma.InputJsonValue,
-          stageIds: input.stageIds ?? [],
-        },
-      });
+      const m = exists
+        ? await tx.membership.update({
+            where: { id: exists.id },
+            data: {
+              removedAt: null,
+              removedById: null,
+              hiddenForUser: false,
+              invitedById: input.actorUserId,
+              permissions: permissions as Prisma.InputJsonValue,
+              stageIds: input.stageIds ?? [],
+            },
+          })
+        : await tx.membership.create({
+            data: {
+              projectId: input.projectId,
+              userId: input.userId,
+              role: input.role,
+              invitedById: input.actorUserId,
+              permissions: permissions as Prisma.InputJsonValue,
+              stageIds: input.stageIds ?? [],
+            },
+          });
       // Появление foreman включает требование согласования плана работ (ТЗ §4.4, gaps §3.2)
       if (input.role === 'foreman') {
         await tx.project.update({
@@ -602,23 +623,14 @@ export class MembersService {
   }
 
   /**
-   * ТЗ §1.4 / §8 — иерархическая видимость команды.
+   * Видимость команды.
    *
-   * Цитата заказчика (ТЗ §1.4): «Заказчик не должен никак связываться с
-   * мастером — только через бригадира. Иначе уводят людей на следующий
-   * объект. Даже имя мастера я бы вообще не показывал заказчику.»
-   *
-   * Правила:
-   *   • Заказчик: видит customer/representative/foreman + только мастеров,
-   *     которых сам пригласил (invitedById === ownerId). Мастера, нанятого
-   *     бригадиром, НЕ видит.
-   *   • Представитель заказчика с управленческими правами: правила заказчика
-   *     + видит и тех мастеров, которых сам пригласил.
-   *   • Представитель заказчика без управленческих прав: видит только
-   *     customer + foreman'ов + себя; мастера скрыты.
-   *   • Бригадир: видит customer/representative/foreman + своих мастеров
-   *     (по invitedById или пересечению stageIds).
-   *   • Мастер: видит customer + бригадиров своих этапов + коллег по этапу.
+   * 2026-05-13 раунд: заказчик подтвердил «мастер — одна сущность, видна всем
+   * в команде проекта независимо от того, кто его пригласил». Это упрощает
+   * прежнюю §1.4-иерархию (где invitedById/stage-intersection скрывали
+   * мастеров от заказчика/представителя/чужого бригадира): теперь каждый
+   * активный участник видит весь активный состав. Outsider'у возвращаем
+   * пустой список (контроллер всё равно отдаст 403 раньше).
    */
   async listVisibleForViewer(projectId: string, viewerUserId: string) {
     const all = await this.list(projectId);
@@ -631,10 +643,11 @@ export class MembersService {
   }
 
   /**
-   * Чистый фильтр §1.4: применяется к уже загруженному списку memberships.
+   * Чистый фильтр видимости: применяется к уже загруженному списку memberships.
    * Используется и `listVisibleForViewer` (per-project /members), и
    * `UsersService.listTeammates` (нижний таб «Команда»), чтобы правила
-   * видимости не дрейфовали между двумя источниками.
+   * видимости не дрейфовали между двумя источниками. После раунда 2026-05-13
+   * правило одно: активный участник проекта видит всех активных участников.
    */
   async applyVisibility<
     M extends {
@@ -644,97 +657,10 @@ export class MembersService {
       stageIds: string[];
       permissions: unknown;
     },
-  >(memberships: M[], viewerUserId: string, ownerId: string, projectId: string): Promise<M[]> {
-    const isOwner = ownerId === viewerUserId;
-    const viewerMemberships = memberships.filter((m) => m.userId === viewerUserId);
-
-    // viewer = заказчик. Даже если у него нет явной customer-membership
-    // (legacy-проект), применяем правила заказчика.
-    if (isOwner) {
-      return memberships.filter((m) => this.isVisibleToCustomer(m, ownerId));
-    }
-
-    if (viewerMemberships.length === 0) return [];
-
-    const repMembership = viewerMemberships.find((m) => m.role === 'representative');
-    if (repMembership) {
-      const repPerms = (repMembership.permissions ?? {}) as Record<string, unknown>;
-      const isPrivilegedRep =
-        repPerms.canSeeBudget === true ||
-        repPerms.canManageTeam === true ||
-        repPerms.canInviteMembers === true ||
-        repPerms.canApprove === true ||
-        repPerms.canAddRepresentative === true;
-      if (isPrivilegedRep) {
-        // Действует от имени заказчика → правила заказчика + видит мастеров,
-        // которых сам пригласил.
-        return memberships.filter(
-          (m) => this.isVisibleToCustomer(m, ownerId) || m.invitedById === viewerUserId,
-        );
-      }
-      // Без управленческих прав: customer + foreman'ы + он сам. Мастера
-      // скрыты, как и у заказчика — представитель действует от его имени.
-      return memberships.filter(
-        (m) => m.role === 'customer' || m.role === 'foreman' || m.userId === viewerUserId,
-      );
-    }
-
-    const foremanMembership = viewerMemberships.find((m) => m.role === 'foreman');
-    if (foremanMembership) {
-      const myStages = await this.prisma.stage.findMany({
-        where: { projectId, foremanIds: { has: viewerUserId } },
-        select: { id: true },
-      });
-      const myStageIds = new Set(myStages.map((s) => s.id));
-      return memberships.filter((m) => {
-        if (m.role === 'customer' || m.role === 'representative') return true;
-        if (m.role === 'foreman') return true;
-        if (m.role === 'master') {
-          if (m.invitedById === viewerUserId) return true;
-          if ((m.stageIds ?? []).some((sid) => myStageIds.has(sid))) return true;
-          return false;
-        }
-        return false;
-      });
-    }
-
-    const masterMembership = viewerMemberships.find((m) => m.role === 'master');
-    if (masterMembership) {
-      const myStageIds = new Set(masterMembership.stageIds ?? []);
-      const myStages = await this.prisma.stage.findMany({
-        where: { projectId, id: { in: Array.from(myStageIds) } },
-        select: { id: true, foremanIds: true },
-      });
-      const visibleForemanIds = new Set<string>();
-      for (const st of myStages) for (const fid of st.foremanIds) visibleForemanIds.add(fid);
-
-      return memberships.filter((m) => {
-        if (m.role === 'customer') return true;
-        if (m.role === 'representative') return false;
-        if (m.role === 'foreman') return visibleForemanIds.has(m.userId);
-        if (m.role === 'master') {
-          if (m.userId === viewerUserId) return true;
-          return (m.stageIds ?? []).some((sid) => myStageIds.has(sid));
-        }
-        return false;
-      });
-    }
-
+  >(memberships: M[], viewerUserId: string, ownerId: string, _projectId: string): Promise<M[]> {
+    if (viewerUserId === ownerId) return memberships;
+    if (memberships.some((m) => m.userId === viewerUserId)) return memberships;
     return [];
-  }
-
-  /** Фильтр-предикат «что видит заказчик». Используется и привилегированным
-   * представителем (он действует от имени заказчика). */
-  private isVisibleToCustomer<
-    M extends { userId: string; role: string; invitedById: string | null },
-  >(m: M, ownerId: string): boolean {
-    if (m.role === 'customer' || m.role === 'representative') return true;
-    if (m.role === 'foreman') return true;
-    if (m.role === 'master') {
-      // ТЗ §1.4: заказчик видит мастера ТОЛЬКО если сам его нанял.
-      return m.invitedById === ownerId;
-    }
-    return false;
   }
 
   /** QA-баг #12: используется контроллером для проверки доступа к /members. */

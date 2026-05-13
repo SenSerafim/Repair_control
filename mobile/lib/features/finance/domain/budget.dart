@@ -48,14 +48,17 @@ class StageBudget with _$StageBudget {
   );
 }
 
-/// Master видит только свои выплаты, без planned/spent проекта.
-/// Backend заполняет `earnings[]` + `viewerKind='master'`.
+/// Master видит только свои входящие выплаты (toUserId=me) + read-only
+/// movement проекта. Backend заполняет `earnings[]` + `viewerKind='master'`.
 class MasterEarning {
   const MasterEarning({
     required this.paymentId,
     required this.amount,
     required this.createdAt,
     this.stageId,
+    this.fromUserId,
+    this.fromUserName,
+    this.fromUserRole,
   });
 
   final String paymentId;
@@ -63,12 +66,37 @@ class MasterEarning {
   final int amount;
   final DateTime createdAt;
 
+  /// Кто заплатил мастеру (заказчик или бригадир). Заполняется backend'ом —
+  /// без этих полей экран мастера не может показать «Выплатил Иван Иванов».
+  final String? fromUserId;
+  final String? fromUserName;
+  final String? fromUserRole;
+
   static MasterEarning parse(Map<String, dynamic> json) => MasterEarning(
     paymentId: json['paymentId'] as String,
     stageId: json['stageId'] as String?,
     amount: (json['amount'] as num?)?.toInt() ?? 0,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    fromUserId: json['fromUserId'] as String?,
+    fromUserName: json['fromUserName'] as String?,
+    fromUserRole: json['fromUserRole'] as String?,
   );
+
+  /// Локализованное название роли плательщика для подписи «Выплатил …».
+  String get fromRoleLabel {
+    switch (fromUserRole) {
+      case 'customer':
+        return 'заказчик';
+      case 'representative':
+        return 'представитель заказчика';
+      case 'foreman':
+        return 'бригадир';
+      case 'master':
+        return 'мастер';
+      default:
+        return '';
+    }
+  }
 }
 
 enum BudgetViewerKind { owner, representative, foreman, master, unknown }

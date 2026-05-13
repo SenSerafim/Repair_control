@@ -198,7 +198,7 @@ describe('MaterialsService.createRequest', () => {
     expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
   });
 
-  it('customer-owner создаёт → сразу status=open + бюджет декрементится', async () => {
+  it('customer-owner создаёт → сразу status=open, project.materialsBudget не мутируется (calc сам учитывает spent)', async () => {
     const { st, svc, approvalsMock } = baseSetup();
     const r = await svc.createRequest({
       projectId: 'p1',
@@ -213,11 +213,12 @@ describe('MaterialsService.createRequest', () => {
     expect(r.status).toBe('open');
     expect(r.finalizedAt).toEqual(NOW);
     expect(approvalsMock.request).not.toHaveBeenCalled();
-    // 10*1000 + 5*200 = 11_000 копеек
-    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000 - 11_000));
+    // 2026-05-13: project.materialsBudget — это «план», не мутируется.
+    // BudgetCalculator считает spent отдельно по materialRequest.items.
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
   });
 
-  it('representative.canApprove создаёт → сразу open + бюджет декрементится', async () => {
+  it('representative.canApprove создаёт → сразу open, бюджет проекта не мутируется', async () => {
     const { st, svc, approvalsMock } = baseSetup();
     st.memberships.push({
       projectId: 'p1',
@@ -234,7 +235,7 @@ describe('MaterialsService.createRequest', () => {
     });
     expect(r.status).toBe('open');
     expect(approvalsMock.request).not.toHaveBeenCalled();
-    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000 - 333));
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
   });
 
   it('master создаёт → pending_approval + Approval, бюджет не тронут', async () => {
@@ -323,7 +324,7 @@ describe('MaterialsService.resolvePurchaseApproval', () => {
     return { st, svc, requestId: r.id };
   };
 
-  it('approve → status=open + finalizedAt + бюджет декрементится на сумму всех items', async () => {
+  it('approve → status=open + finalizedAt, project.materialsBudget не мутируется (источник истины — calculator)', async () => {
     const { svc, requestId, st } = await prepare();
     await svc.resolvePurchaseApproval(requestId, {
       decision: 'approved',
@@ -333,8 +334,11 @@ describe('MaterialsService.resolvePurchaseApproval', () => {
     const r = st.requests.get(requestId);
     expect(r.status).toBe('open');
     expect(r.finalizedAt).toEqual(NOW);
-    // 100*1 + 200*2 = 500 копеек
-    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000 - 500));
+    // 2026-05-13: ранее тут вычитали 500 из materialsBudget — это давало
+    // ДВОЙНОЕ списание, потому что BudgetCalculator считает spent через
+    // sum(approved-materialRequest.items.totalPrice). Теперь project.
+    // materialsBudget = «план» и стабилен.
+    expect(st.projects.get('p1').materialsBudget).toBe(BigInt(1_000_000));
   });
 
   it('reject → status=cancelled, бюджет не трогается', async () => {

@@ -26,6 +26,7 @@ import '_widgets/stage_approvals_tab.dart';
 import '_widgets/stage_banner_data.dart';
 import '_widgets/stage_checklist_tab.dart';
 import '_widgets/stage_docs_tab.dart';
+import '_widgets/stage_executors_row.dart';
 import '_widgets/stage_status_banner.dart';
 import '_widgets/stage_stats_row.dart';
 import '_widgets/stage_tabs_bar.dart';
@@ -138,6 +139,14 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               projectId: widget.projectId,
             )),
           );
+          // Право назначать бригадира/мастера на этап (stage.manage).
+          // Используется и для меню header'а, и для нового executors row.
+          final canManageStages = ref.watch(
+            canInProjectProvider((
+              action: DomainAction.stageManage,
+              projectId: widget.projectId,
+            )),
+          );
           return Column(
             children: [
               _StageHeader(stage: stage, display: display),
@@ -155,6 +164,30 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   stepsTotal: stepsTotal,
                   photosCount: photosTotal,
                   filesCount: 0,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x16,
+                  0,
+                  AppSpacing.x16,
+                  AppSpacing.x12,
+                ),
+                child: StageExecutorsRow(
+                  projectId: widget.projectId,
+                  foremanIds: stage.foremanIds,
+                  masterId: stage.masterId,
+                  canAssign: canManageStages,
+                  onAssignForeman: () => _openAssignSheet(
+                    context,
+                    stage,
+                    kind: _AssignKind.foreman,
+                  ),
+                  onAssignMaster: () => _openAssignSheet(
+                    context,
+                    stage,
+                    kind: _AssignKind.master,
+                  ),
                 ),
               ),
               if (StageBannerData.fromStage(stage, display) != null)
@@ -242,6 +275,24 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
     }
   }
 
+  /// Открывает sheet выбора бригадира/мастера на этап. Раньше эта точка входа
+  /// была только в 3-точечном меню header'а; теперь её разделяют:
+  /// `_StageHeader._openMenu` и executors row под статистикой.
+  Future<void> _openAssignSheet(
+    BuildContext context,
+    Stage stage, {
+    required _AssignKind kind,
+  }) async {
+    await showAppBottomSheet<void>(
+      context: context,
+      child: _AssignMemberSheet(
+        projectId: widget.projectId,
+        stageId: stage.id,
+        kind: kind,
+      ),
+    );
+  }
+
   Future<void> _showAddStepSheet(BuildContext context, Stage stage) async {
     final title = await showAppBottomSheet<String>(
       context: context,
@@ -323,7 +374,13 @@ class _StageHeader extends ConsumerWidget {
     );
     await showAppBottomSheet<void>(
       context: context,
-      child: Column(
+      // Builder даёт `sheetContext` внутри модалки — он гарантированно
+      // смонтирован, пока бот.шит открыт. Старый код звал
+      // `Navigator.of(context)` с внешним контекстом `_StageHeader`, и если
+      // header успевал отвалиться (например, real-time refresh stages),
+      // Navigator.of падал с `Null check operator on null value`.
+      child: Builder(
+        builder: (sheetContext) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const AppBottomSheetHeader(title: 'Действия'),
@@ -336,7 +393,8 @@ class _StageHeader extends ConsumerWidget {
               title: const Text('Назначить бригадира'),
               subtitle: const Text('Один бригадир на этап'),
               onTap: () {
-                Navigator.of(context).pop();
+                Navigator.of(sheetContext).pop();
+                if (!context.mounted) return;
                 _showAssignSheet(context, ref, kind: _AssignKind.foreman);
               },
             ),
@@ -350,7 +408,8 @@ class _StageHeader extends ConsumerWidget {
                 'Если мастер не назначен — этап ведёт сам бригадир',
               ),
               onTap: () {
-                Navigator.of(context).pop();
+                Navigator.of(sheetContext).pop();
+                if (!context.mounted) return;
                 _showAssignSheet(context, ref, kind: _AssignKind.master);
               },
             ),
@@ -365,6 +424,7 @@ class _StageHeader extends ConsumerWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }

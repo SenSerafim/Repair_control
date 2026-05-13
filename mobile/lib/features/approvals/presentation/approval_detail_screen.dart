@@ -12,6 +12,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/approvals_controller.dart';
 import '../domain/approval.dart';
 import 'approval_sheets.dart';
@@ -1311,11 +1312,17 @@ class _BottomActions extends ConsumerWidget {
   /// П2.6 / П7.7 — CTA «Принять/Отклонить» показываются ТОЛЬКО тому, чья
   /// активная роль совпадает с `Approval.actorRole` текущей ступени.
   /// Если actorRole не задан (старые approvals без двухступенчатой FSM) —
-  /// fallback на canDecide-проверку (как раньше).
+  /// fallback на проверку `addresseeId == me`: открытый «всем кто может»
+  /// раньше давал бригадиру кнопку «Одобрить» на плане заказчика → 403.
   bool _matchesActorRole(WidgetRef ref) {
     final activeRole = ref.read(activeRoleProvider);
     final actorRole = approval.actorRole;
-    if (actorRole == null) return true; // legacy fallback
+    if (actorRole == null) {
+      final me = ref.read(authControllerProvider).userId;
+      // addresseeId — тот, кому адресован approval. Совпадает с me →
+      // активный пользователь и есть decision-maker, иначе CTA прячем.
+      return me != null && approval.addresseeId == me;
+    }
     switch (actorRole) {
       case ApprovalActorRole.customer:
         return activeRole == SystemRole.customer ||

@@ -235,10 +235,19 @@ export class InvitationsService {
       throw new GoneException('invite code expired');
     }
 
+    // Unique-индекс (projectId, userId, role) не учитывает removedAt: после
+    // leaveTeam запись остаётся в БД soft-removed. Игнорировать её нельзя —
+    // повторный insert упадёт с P2002. Поэтому если активная membership
+    // существует — 409 (как раньше), а soft-removed — реанимируем строку,
+    // чтобы вернувшийся пользователь восстановил прежний membership.id и
+    // ссылки на него (stage.foremanIds/step.assigneeIds выполнили cleanup
+    // при leaveTeam, так что состояние «чистый join»).
     const existing = await this.prisma.membership.findFirst({
       where: { projectId: inv.projectId, userId, role: inv.role },
     });
-    if (existing) throw new ConflictException('already a member with this role');
+    if (existing && !existing.removedAt) {
+      throw new ConflictException('already a member with this role');
+    }
 
     // Защита от legacy invitations, выпущенных до унификации формата
     // permissions: даже если в БД лежит `{ canSeeProjectBudget: true }`,
@@ -249,15 +258,28 @@ export class InvitationsService {
         : {};
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const membership = await tx.membership.create({
-        data: {
-          projectId: inv.projectId,
-          userId,
-          role: inv.role,
-          permissions: membershipPermissions as object,
-          stageIds: inv.stageIds ?? [],
-        },
-      });
+      const membership = existing
+        ? await tx.membership.update({
+            where: { id: existing.id },
+            data: {
+              removedAt: null,
+              removedById: null,
+              hiddenForUser: false,
+              invitedById: inv.invitedById,
+              permissions: membershipPermissions as object,
+              stageIds: inv.stageIds ?? [],
+            },
+          })
+        : await tx.membership.create({
+            data: {
+              projectId: inv.projectId,
+              userId,
+              role: inv.role,
+              invitedById: inv.invitedById,
+              permissions: membershipPermissions as object,
+              stageIds: inv.stageIds ?? [],
+            },
+          });
       // Появление foreman включает требование согласования плана (зеркалит
       // members.service:addMembership). ТЗ §4.2 — кнопка «Старт» этапа серая
       // до approval плана от заказчика.

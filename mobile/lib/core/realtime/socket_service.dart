@@ -91,6 +91,13 @@ class SocketService {
   // если бэкенд закрыл соединение, поэтому делаем это вручную с экспоненциальной
   // задержкой 1s → 30s.
   int _serverDisconnectAttempts = 0;
+  // Момент последнего успешного onConnect. Используется в backoff-логике:
+  // attempts счётчик сбрасываем только если коннект «прожил» больше
+  // _stableConnectionThreshold — иначе сервер кикает сразу после connect
+  // (auth-fail / duplicate session), и без этой защиты backoff остаётся
+  // на 1s навсегда → log-флуд WS /chats reconnect каждую секунду.
+  DateTime? _connectedAt;
+  static const _stableConnectionThreshold = Duration(seconds: 10);
   Timer? _reconnectTimer;
   final _connectedController = StreamController<bool>.broadcast();
   final _eventsController =
@@ -142,7 +149,7 @@ class SocketService {
     socket
       ..onConnect((_) {
         _connecting = false;
-        _serverDisconnectAttempts = 0;
+        _connectedAt = DateTime.now();
         _logger.d('WS /chats connected');
         _connectedController.add(true);
         // Re-join во все чаты, на которые подписаны до disconnect.
@@ -159,6 +166,14 @@ class SocketService {
         // socket.io в этом случае НЕ пытается reconnect самостоятельно,
         // поэтому делаем это вручную с backoff. Транспортные disconnect
         // (transport close, ping timeout) socket.io обрабатывает сам.
+        // Стабильная сессия (≥ _stableConnectionThreshold) сбрасывает
+        // счётчик попыток. Иначе оставляем — backoff будет расти 1→30s,
+        // а не залипать на 1s при пинг-понг кике сразу после handshake.
+        final connectedAt = _connectedAt;
+        final wasStable = connectedAt != null &&
+            DateTime.now().difference(connectedAt) >= _stableConnectionThreshold;
+        if (wasStable) _serverDisconnectAttempts = 0;
+        _connectedAt = null;
         _logger.w('WS /chats disconnected: ${reason ?? "unknown"}');
         _connectedController.add(false);
         if (!_intentionallyClosed && reason == 'io server disconnect') {
@@ -248,6 +263,7 @@ class SocketService {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _serverDisconnectAttempts = 0;
+    _connectedAt = null;
     _socket?.dispose();
     _socket = null;
     _connecting = false;
@@ -259,6 +275,7 @@ class SocketService {
     _intentionallyClosed = true;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _connectedAt = null;
     _socket?.dispose();
     _socket = null;
     _connectedController.close();

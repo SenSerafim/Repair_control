@@ -242,17 +242,29 @@ class _MemberRow extends ConsumerWidget {
         ? 'Участник'
         : '${user.firstName} ${user.lastName}'.trim();
     final isRepresentative = member.role == MembershipRole.representative;
+    final isCustomerRow = member.role == MembershipRole.customer;
+    final me = ref.watch(authControllerProvider).userId;
+    final isSelfRow = me != null && me == member.userId;
     final canManage = ref.watch(
       canInProjectProvider((
         action: DomainAction.projectInviteMember,
         projectId: projectId,
       )),
     );
-
+    // Кнопка «Удалить» не имеет смысла:
+    //   • на самом себе — для self-leave есть отдельная секция «Выйти из команды» внизу.
+    //   • на строке заказчика — owner-membership не удаляется (бэкенд вернёт 400).
+    final canRemoveThisMember = canManage && !isSelfRow && !isCustomerRow;
     final roleTone = _toneFor(member.role);
     return InkWell(
       borderRadius: AppRadius.card,
-      onTap: () => _showCard(context, ref, name: name, canManage: canManage),
+      onTap: () => _showCard(
+        context,
+        ref,
+        name: name,
+        canManage: canManage,
+        canRemove: canRemoveThisMember,
+      ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
@@ -329,7 +341,7 @@ class _MemberRow extends ConsumerWidget {
                 ],
               ),
             ),
-            if (canManage)
+            if (canManage && (isRepresentative || canRemoveThisMember))
               PopupMenuButton<String>(
                 onSelected: (v) async {
                   if (v == 'rights' && isRepresentative) {
@@ -367,13 +379,14 @@ class _MemberRow extends ConsumerWidget {
                       value: 'rights',
                       child: Text('Настроить права'),
                     ),
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Text(
-                      'Удалить из команды',
-                      style: TextStyle(color: AppColors.redDot),
+                  if (canRemoveThisMember)
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Text(
+                        'Удалить из команды',
+                        style: TextStyle(color: AppColors.redDot),
+                      ),
                     ),
-                  ),
                 ],
                 icon: const Icon(
                   Icons.more_vert_rounded,
@@ -392,6 +405,7 @@ class _MemberRow extends ConsumerWidget {
     WidgetRef ref, {
     required String name,
     required bool canManage,
+    required bool canRemove,
   }) async {
     // QA-баг #6 «не открывается карточка участника»: до этого фикса
     // _showCard молча выходил, если бэк по какой-то причине не вернул
@@ -434,7 +448,7 @@ class _MemberRow extends ConsumerWidget {
               member: member,
             )
           : null,
-      onRemoveFromTeam: canManage
+      onRemoveFromTeam: canRemove
           ? () async {
               final failure = await ref
                   .read(teamControllerProvider(projectId).notifier)

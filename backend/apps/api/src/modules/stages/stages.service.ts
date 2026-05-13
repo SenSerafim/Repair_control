@@ -13,6 +13,7 @@ import { StageLifecycle, StageTransition } from './stage-lifecycle';
 import { ProgressCalculator } from './progress-calculator';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { ChatsService } from '../chats/chats.service';
+import { MembersService } from '../projects/members.service';
 
 export interface CreateStageInput {
   projectId: string;
@@ -51,7 +52,37 @@ export class StagesService {
     @Inject(forwardRef(() => ApprovalsService))
     private readonly approvals: ApprovalsService,
     private readonly chats: ChatsService,
+    private readonly members: MembersService,
   ) {}
+
+  /**
+   * Тихий WS-broadcast `project:membership_changed` всем участникам проекта
+   * после изменения состава этапа (foreman/master). Без push — это UX-sync
+   * списка команды/проекта/назначений у клиентов, которые сейчас держат
+   * stale-кеш team-controller'а. Падение броадкаста не должно ронять основной
+   * flow назначения (бэкенд уже зафиксировал stage.foremanIds/masterId), поэтому
+   * глушим ошибки на уровне сервиса.
+   */
+  private async broadcastStageMembershipChange(
+    projectId: string,
+    userId: string,
+    role: 'foreman' | 'master',
+    action: 'added' | 'removed',
+  ): Promise<void> {
+    try {
+      const recipientUserIds = await this.members.collectRecipientUserIds(projectId, userId);
+      this.members.emitMembershipChanged({
+        projectId,
+        userId,
+        role,
+        action,
+        recipientUserIds,
+      });
+    } catch {
+      // silent — broadcast лучший-усильный канал; ошибки сбора получателей
+      // не должны блокировать assign.
+    }
+  }
 
   async create(input: CreateStageInput) {
     const project = await this.prisma.project.findUnique({ where: { id: input.projectId } });
@@ -173,6 +204,7 @@ export class StagesService {
       );
     }
 
+    const previousForemen = stage.foremanIds;
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.stage.update({
         where: { id: stageId },
@@ -191,6 +223,15 @@ export class StagesService {
       await this.chats.ensureStageChat(stageId, actorUserId);
     } catch (e) {
       // silent
+    }
+    // WS-broadcast всем участникам проекта — обновить team/projects кэши,
+    // чтобы новый бригадир сразу появился у других без pull-to-refresh.
+    // Старого бригадира тоже уведомляем, если был.
+    await this.broadcastStageMembershipChange(stage.projectId, foremanUserId, 'foreman', 'added');
+    for (const prev of previousForemen) {
+      if (prev !== foremanUserId) {
+        await this.broadcastStageMembershipChange(stage.projectId, prev, 'foreman', 'removed');
+      }
     }
     return this.serialize(updated);
   }
@@ -220,6 +261,7 @@ export class StagesService {
       }
     }
 
+    const previousMasterId = stage.masterId;
     const updated = await this.prisma.$transaction(async (tx) => {
       const u = await tx.stage.update({
         where: { id: stageId },
@@ -234,6 +276,19 @@ export class StagesService {
       });
       return u;
     });
+    // Тихий WS-broadcast: новый мастер сразу должен увидеть назначение,
+    // а команда — увидеть его в списке исполнителей этапа.
+    if (masterUserId) {
+      await this.broadcastStageMembershipChange(stage.projectId, masterUserId, 'master', 'added');
+    }
+    if (previousMasterId && previousMasterId !== masterUserId) {
+      await this.broadcastStageMembershipChange(
+        stage.projectId,
+        previousMasterId,
+        'master',
+        'removed',
+      );
+    }
     return this.serialize(updated);
   }
 

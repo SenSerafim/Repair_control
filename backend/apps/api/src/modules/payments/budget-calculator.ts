@@ -40,6 +40,14 @@ export interface MasterEarning {
   stageId: string | null;
   amount: number;
   createdAt: Date;
+  /**
+   * Кто заплатил мастеру. Заполняется в `buildMasterView`, чтобы экран мастера
+   * показал «выплатил заказчик / выплатил бригадир Имя Фамилия» — основное
+   * требование UX (мастер должен видеть источник денег).
+   */
+  fromUserId?: string | null;
+  fromUserName?: string | null;
+  fromUserRole?: 'customer' | 'representative' | 'foreman' | 'master' | null;
 }
 
 export interface BudgetViewerContext {
@@ -318,11 +326,12 @@ export class BudgetCalculator {
       : materialsSpent;
 
     // Foreman без распределённого бюджета: сигнализируем мобайлу для inline-баннера.
-    const noStageBudget =
-      isForeman &&
-      topWorkPlanned.isZero() &&
-      topMaterialsPlanned.isZero() &&
-      (projectWorkBigInt > BigInt(0) || projectMaterialsBigInt > BigInt(0));
+    // Раньше флаг ставился только если у проекта вообще был бюджет; теперь —
+    // всякий раз, когда у бригадира нули в шапке (включая случай «совсем нет
+    // бюджета»). Это гарантирует, что вместо full-screen «Бюджет не задан»
+    // (одинаковый для всех пустых случаев) мобайл покажет inline-баннер и
+    // оставит доступ к выплатам/материалам/истории.
+    const noStageBudget = isForeman && topWorkPlanned.isZero() && topMaterialsPlanned.isZero();
 
     return {
       work: this.bucket(topWorkPlanned, topWorkSpent),
@@ -346,27 +355,72 @@ export class BudgetCalculator {
   }
 
   /**
-   * ТЗ §7 / §10: master видит только свои персональные выплаты
-   * (advances → ему как foreman/master, distributions → ему как master,
-   *  его подтверждённые self-purchases). Без planned/spent проекта.
+   * Master-side view бюджета: справочная сводка по проекту, без edit-функционала.
+   * Показываем:
+   *   • `earnings` — только входящие выплаты мастеру (advance toUserId=я,
+   *     distribution toUserId=я). С информацией о том, кто и какой ролью
+   *     заплатил (`fromUserId` + `fromUserName` + `fromUserRole`), чтобы
+   *     мобайл отрисовал «Выплатил заказчик / бригадир Имя Фамилия».
+   *   • `planned/spent` оставлены пустыми — UI для мастера полей бюджета
+   *     не рисует. Денежное движение проекта мастер видит через отдельный
+   *     эндпоинт `/money-flow` (теперь доступен и мастеру read-only).
    */
   private async buildMasterView(
     projectId: string,
     viewer: BudgetViewerContext,
   ): Promise<ProjectBudgetDTO> {
-    const myPayments = await this.prisma.payment.findMany({
+    const myIncomingPayments = await this.prisma.payment.findMany({
       where: {
         projectId,
-        OR: [{ toUserId: viewer.userId }, { fromUserId: viewer.userId }],
+        toUserId: viewer.userId,
       },
       orderBy: { createdAt: 'desc' },
     });
-    const earnings: MasterEarning[] = myPayments.map((p) => ({
-      paymentId: p.id,
-      stageId: p.stageId,
-      amount: Number(p.amount),
-      createdAt: p.createdAt,
-    }));
+
+    const fromUserIds = Array.from(
+      new Set(myIncomingPayments.map((p) => p.fromUserId).filter((x): x is string => !!x)),
+    );
+    const fromUsers =
+      fromUserIds.length > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: fromUserIds } },
+            select: { id: true, firstName: true, lastName: true },
+          })
+        : [];
+    const userById = new Map(fromUsers.map((u) => [u.id, u]));
+    // Роли плательщиков в этом проекте определяем одним запросом: для каждого
+    // fromUserId смотрим membership.role или ownerId (для заказчика, у которого
+    // может не быть явной customer-membership на legacy-проектах).
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const memberships =
+      fromUserIds.length > 0
+        ? await this.prisma.membership.findMany({
+            where: { projectId, userId: { in: fromUserIds }, removedAt: null },
+            select: { userId: true, role: true },
+          })
+        : [];
+    const roleByUser = new Map<string, 'customer' | 'representative' | 'foreman' | 'master'>();
+    for (const m of memberships) {
+      roleByUser.set(m.userId, m.role as 'customer' | 'representative' | 'foreman' | 'master');
+    }
+    if (project?.ownerId) roleByUser.set(project.ownerId, 'customer');
+
+    const earnings: MasterEarning[] = myIncomingPayments.map((p) => {
+      const u = p.fromUserId ? userById.get(p.fromUserId) : null;
+      const fromName = u ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() : null;
+      return {
+        paymentId: p.id,
+        stageId: p.stageId,
+        amount: Number(p.amount),
+        createdAt: p.createdAt,
+        fromUserId: p.fromUserId,
+        fromUserName: fromName,
+        fromUserRole: p.fromUserId ? (roleByUser.get(p.fromUserId) ?? null) : null,
+      };
+    });
     return {
       work: { planned: 0, spent: 0, remaining: 0 },
       materials: { planned: 0, spent: 0, remaining: 0 },
@@ -461,7 +515,14 @@ export class BudgetCalculator {
     if (!allowed && viewer.membershipRole === 'foreman') {
       return this.getForemanMoneyFlow(projectId, viewer.userId, range);
     }
-    if (!allowed) return empty;
+    // Мастер видит movement проекта в справочном режиме (без edit-кнопок на UI).
+    // Срез — тот же, что у owner: полный список advances/distributions/материалов;
+    // мобильный экран рисует только информационные строки.
+    if (!allowed && viewer.membershipRole === 'master') {
+      // Fall through to full-flow ниже.
+    } else if (!allowed) {
+      return empty;
+    }
 
     const dateFilter =
       range && (range.from || range.to)

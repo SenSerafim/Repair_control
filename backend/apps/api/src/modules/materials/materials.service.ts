@@ -144,11 +144,13 @@ export class MaterialsService {
           actorId: input.actorUserId,
           payload: { requestId: created.id, autoApproved: true },
         });
+        // 2026-05-13: ранее тут был decrement project.materialsBudget на
+        // totalKopeks. BudgetCalculator (`materialsSpent`) и так суммирует
+        // approved-материалы → получалось ДВОЙНОЕ списание (планируемый
+        // бюджет уменьшался, а calculator снова вычитал ту же сумму через
+        // spent). Источник истины — calculator; здесь только feed-событие
+        // для аудита/уведомлений.
         if (totalKopeks > 0) {
-          await tx.project.update({
-            where: { id: project.id },
-            data: { materialsBudget: { decrement: BigInt(totalKopeks) } },
-          });
           await this.feed.emit({
             tx,
             kind: 'budget_updated',
@@ -235,11 +237,10 @@ export class MaterialsService {
           actorId: input.actorUserId,
           payload: { requestId: materialRequestId, comment: input.comment ?? null },
         });
+        // 2026-05-13: убрали decrement project.materialsBudget — он давал
+        // двойное вычитание (см. coмent в createRequest). Calculator
+        // суммирует одобренные materialRequest.items.totalPrice сам.
         if (totalKopeks > 0) {
-          await tx.project.update({
-            where: { id: r.projectId },
-            data: { materialsBudget: { decrement: BigInt(totalKopeks) } },
-          });
           await this.feed.emit({
             tx,
             kind: 'budget_updated',

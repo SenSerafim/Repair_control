@@ -178,7 +178,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
     ).rejects.toThrow(ForbiddenError);
   });
 
-  it('повторное добавление → конфликт', async () => {
+  it('повторное добавление активного участника → конфликт', async () => {
     const { prisma, projects } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
     const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
@@ -196,6 +196,35 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
         role: 'representative',
       }),
     ).rejects.toThrow(ConflictError);
+  });
+
+  it('soft-removed membership реанимируется при повторном add (фикс «уже в проекте»)', async () => {
+    const { prisma, projects, memberships } = mkPrisma();
+    projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
+    // Имитация состояния после leaveTeam: запись осталась с removedAt!=null.
+    memberships.push({
+      id: 'm-old',
+      projectId: 'p1',
+      userId: 'u-master',
+      role: 'master',
+      stageIds: [],
+      removedAt: new Date('2026-05-13T10:00:00Z'),
+      removedById: 'u-master',
+    });
+    const svc = new MembersService(prisma, mkFeed(), mkChats(), mkEvents());
+
+    const result = await svc.addMembership({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      userId: 'u-master',
+      role: 'master',
+    });
+
+    // Реанимация той же строки, не дубль.
+    expect((result as any).id).toBe('m-old');
+    expect(memberships).toHaveLength(1);
+    expect(memberships[0].removedAt).toBeNull();
+    expect(memberships[0].invitedById).toBe('u-owner');
   });
 
   it('несуществующий проект → 404', async () => {

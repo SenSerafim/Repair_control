@@ -8,6 +8,8 @@ const mkPrisma = () => {
     payments: [] as any[],
     materialRequests: [] as any[],
     selfPurchases: [] as any[],
+    memberships: [] as any[],
+    users: [] as any[],
   };
   const prisma: any = {
     project: {
@@ -105,7 +107,20 @@ const mkPrisma = () => {
       ),
     },
     user: {
-      findMany: jest.fn(() => []),
+      findMany: jest.fn(({ where }: any) => {
+        if (!where?.id?.in) return state.users;
+        return state.users.filter((u: any) => where.id.in.includes(u.id));
+      }),
+    },
+    membership: {
+      findMany: jest.fn(({ where }: any) =>
+        state.memberships.filter((m: any) => {
+          if (where?.projectId && m.projectId !== where.projectId) return false;
+          if (where?.userId?.in && !where.userId.in.includes(m.userId)) return false;
+          if (where?.removedAt === null && m.removedAt) return false;
+          return true;
+        }),
+      ),
     },
   };
   return { prisma: prisma as unknown as PrismaService, state };
@@ -201,6 +216,101 @@ describe('BudgetCalculator', () => {
     expect(b.stages).toEqual([]);
     expect(b.work.planned).toBe(0);
     expect(b.earnings).toEqual([]);
+  });
+
+  it('master earnings обогащены payer-name/role (заказчик и бригадир)', async () => {
+    // UX-требование 2026-05-13: «корректно показывай мастеру сколько и кто
+    // ему выплатил (заказчик или бригадир)». buildMasterView подмешивает
+    // fromUserId/fromUserName/fromUserRole для каждой входящей выплаты.
+    const { prisma, state } = mkPrisma();
+    state.project = { id: 'p1', ownerId: 'cust1' };
+    state.users = [
+      { id: 'cust1', firstName: 'Иван', lastName: 'Иванов' },
+      { id: 'fore1', firstName: 'Пётр', lastName: 'Петров' },
+    ];
+    state.memberships = [{ projectId: 'p1', userId: 'fore1', role: 'foreman', removedAt: null }];
+    state.payments = [
+      {
+        id: 'pay-direct',
+        projectId: 'p1',
+        stageId: null,
+        kind: 'advance',
+        amount: BigInt(50_000_00),
+        fromUserId: 'cust1',
+        toUserId: 'm1',
+        createdAt: new Date('2026-05-10T10:00:00Z'),
+      },
+      {
+        id: 'pay-dist',
+        projectId: 'p1',
+        stageId: 's1',
+        kind: 'distribution',
+        amount: BigInt(30_000_00),
+        fromUserId: 'fore1',
+        toUserId: 'm1',
+        createdAt: new Date('2026-05-11T10:00:00Z'),
+      },
+    ];
+    const calc = new BudgetCalculator(prisma);
+    const b = await calc.getProjectBudget('p1', {
+      userId: 'm1',
+      isOwner: false,
+      membershipRole: 'master',
+    });
+    expect(b.earnings).toHaveLength(2);
+    const fromCustomer = b.earnings!.find((e) => e.paymentId === 'pay-direct')!;
+    expect(fromCustomer.amount).toBe(50_000_00);
+    expect(fromCustomer.fromUserId).toBe('cust1');
+    expect(fromCustomer.fromUserName).toBe('Иван Иванов');
+    // owner проекта = customer-роль даже без явной customer-membership.
+    expect(fromCustomer.fromUserRole).toBe('customer');
+    const fromForeman = b.earnings!.find((e) => e.paymentId === 'pay-dist')!;
+    expect(fromForeman.fromUserId).toBe('fore1');
+    expect(fromForeman.fromUserName).toBe('Пётр Петров');
+    expect(fromForeman.fromUserRole).toBe('foreman');
+  });
+
+  it('master получает money-flow проекта (read-only, справочный режим)', async () => {
+    // У мастера бюджет «лишь справочно есть. Функционала нету» — он должен
+    // видеть движение денег в проекте, как owner, но UI не рисует CTA.
+    // Прежде getMoneyFlow возвращал empty для master → экран был «пустым».
+    const { prisma, state } = mkPrisma();
+    state.project = { id: 'p1', ownerId: 'cust1' };
+    state.users = [
+      { id: 'fore1', firstName: 'F', lastName: 'F' },
+      { id: 'm1', firstName: 'M', lastName: 'M' },
+    ];
+    state.payments = [
+      {
+        id: 'adv1',
+        projectId: 'p1',
+        kind: 'advance',
+        amount: BigInt(100_000_00),
+        fromUserId: 'cust1',
+        toUserId: 'fore1',
+        createdAt: new Date('2026-05-01T10:00:00Z'),
+      },
+      {
+        id: 'dist1',
+        projectId: 'p1',
+        kind: 'distribution',
+        amount: BigInt(40_000_00),
+        fromUserId: 'fore1',
+        toUserId: 'm1',
+        parentPaymentId: 'adv1',
+        createdAt: new Date('2026-05-02T10:00:00Z'),
+      },
+    ];
+    const calc = new BudgetCalculator(prisma);
+    const flow = await calc.getMoneyFlow('p1', {
+      userId: 'm1',
+      isOwner: false,
+      membershipRole: 'master',
+    });
+    expect(flow.advances).toHaveLength(1);
+    expect(flow.distributions).toHaveLength(1);
+    expect(flow.totals.advances).toBe(100_000_00);
+    expect(flow.totals.distributed).toBe(40_000_00);
   });
 
   it('owner видит fallback на Project.workBudget когда у этапов workBudget=0', async () => {

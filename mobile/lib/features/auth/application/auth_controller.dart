@@ -51,6 +51,12 @@ class AuthController extends Notifier<AuthState> {
   SecureStorage get _storage => ref.read(secureStorageProvider);
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
+  // Single-flight для logout. На старте приложения refresh-interceptor может
+  // получить 401 от нескольких параллельных запросов (projects/me/legal/...)
+  // и каждый раз вызвать onSessionExpired → logout(). Без флага мы делали 5+
+  // дублирующихся `POST /api/auth/logout` подряд.
+  Future<void>? _logoutInFlight;
+
   Future<void> bootstrap() async {
     final access = await _storage.readAccessToken();
     final roleRaw = await _storage.readActiveRole();
@@ -162,7 +168,18 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout() {
+    // Если logout уже идёт — переиспользуем активный Future вместо нового
+    // запроса. Если уже unauthenticated — no-op.
+    final inFlight = _logoutInFlight;
+    if (inFlight != null) return inFlight;
+    if (state.status == AuthStatus.unauthenticated) return Future.value();
+    final future = _doLogout();
+    _logoutInFlight = future;
+    return future.whenComplete(() => _logoutInFlight = null);
+  }
+
+  Future<void> _doLogout() async {
     final refresh = await _storage.readRefreshToken();
     if (refresh != null && refresh.isNotEmpty) {
       try {

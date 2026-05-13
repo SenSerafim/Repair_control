@@ -114,19 +114,25 @@ class BudgetScreen extends ConsumerWidget {
             );
           }
           // «Совсем пусто» — нет ни плана, ни этапов. Полный empty-state с CTA.
-          final fullyEmpty =
-              b.total.planned == 0 && b.total.spent == 0 && b.stages.isEmpty;
+          // 2026-05-13: показываем full-screen empty-state ТОЛЬКО заказчику
+          // (canEditBudget). Бригадир/представитель без прав редактирования
+          // видят обычный экран бюджета с inline `_NoBudgetBanner` — у них
+          // остаётся доступ к табам «Выплаты»/«Материалы»/«История» (туда
+          // могут попасть распределения и самозакупы, даже если шапка пустая).
+          // Иначе для всех не-заказчиков экран вырождался в одну заглушку.
+          final fullyEmpty = canEditBudget &&
+              b.total.planned == 0 &&
+              b.total.spent == 0 &&
+              b.stages.isEmpty;
           if (fullyEmpty) {
             return AppEmptyState(
               title: 'Бюджет не задан',
-              subtitle: canEditBudget
-                  ? 'Укажите бюджет работ и материалов в настройках проекта.'
-                  : 'Заказчик ещё не задал бюджет — обратитесь к нему.',
+              subtitle:
+                  'Укажите бюджет работ и материалов в настройках проекта.',
               icon: Icons.account_balance_wallet_outlined,
-              actionLabel: canEditBudget ? 'Открыть проект' : null,
-              onAction: canEditBudget
-                  ? () => context.push(AppRoutes.projectEditWith(projectId))
-                  : null,
+              actionLabel: 'Открыть проект',
+              onAction: () =>
+                  context.push(AppRoutes.projectEditWith(projectId)),
             );
           }
           // Шапка с нулями + есть этапы → показываем inline-баннер
@@ -703,174 +709,276 @@ class _NoBudgetBanner extends StatelessWidget {
   }
 }
 
-/// Master-view экрана бюджета. ТЗ §7 / §10:
-/// мастер видит только свои персональные выплаты — без планнинга проекта.
-class _MasterEarningsView extends StatelessWidget {
+/// Master-view экрана бюджета. У мастера бюджет — справочный, без edit-функций
+/// (никаких CTA на создание/распределение/одобрение). Показываем:
+///   1) Hero — total received (даже если 0₽, без пугающего empty-state с
+///      анимацией, которая в реальном устройстве рисовала диагональные
+///      артефакты и ломала верстку, см. фидбэк 2026-05-13);
+///   2) Список «Мои выплаты» — каждая запись с именем и ролью плательщика
+///      («Выплатил заказчик Иван Иванов» / «Выплатил бригадир …»);
+///   3) Информационный money-flow проекта (advances/distributions/материалы)
+///      через тот же `moneyFlowFilteredProvider`. UI рисует read-only ленту.
+class _MasterEarningsView extends ConsumerWidget {
   const _MasterEarningsView({required this.projectId, required this.earnings});
 
-  // ignore: unused_element_parameter — projectId зарезервирован для будущих CTA.
   final String projectId;
   final List<MasterEarning> earnings;
 
   @override
-  Widget build(BuildContext context) {
-    // В упрощённой модели платёж = факт передачи денег. Все earnings
-    // отображаются единой лентой — никаких подсекций по статусу.
+  Widget build(BuildContext context, WidgetRef ref) {
     final totalReceived = earnings.fold<int>(0, (a, e) => a + e.amount);
+    final flowAsync = ref.watch(
+      moneyFlowFilteredProvider(MoneyFlowQuery(projectId: projectId)),
+    );
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref
+          ..invalidate(projectBudgetProvider(projectId))
+          ..invalidate(
+            moneyFlowFilteredProvider(MoneyFlowQuery(projectId: projectId)),
+          );
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x16,
+          AppSpacing.x14,
+          AppSpacing.x16,
+          AppSpacing.x40,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _MasterTotalCard(total: totalReceived),
+            const SizedBox(height: AppSpacing.x16),
+            _MasterPaymentsSection(items: earnings),
+            const SizedBox(height: AppSpacing.x20),
+            _MasterProjectFlowSection(flowAsync: flowAsync),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-    if (earnings.isEmpty) {
-      return const AppEmptyState(
-        title: 'Выплат ещё не было',
-        subtitle:
-            'Когда заказчик или бригадир сделает выплату — вы увидите её здесь.',
-        icon: Icons.payments_outlined,
-      );
-    }
+/// Hero-карточка «Получено по проекту» — всегда отрисовывается, даже когда
+/// totalReceived = 0. Раньше при отсутствии выплат показывался
+/// `AppEmptyState` с диагональной анимацией scale → визуальные артефакты
+/// перекрывали экран (см. скриншот 2026-05-13).
+class _MasterTotalCard extends StatelessWidget {
+  const _MasterTotalCard({required this.total});
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x16,
-        AppSpacing.x14,
-        AppSpacing.x16,
-        AppSpacing.x40,
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: AppColors.greenLight,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.greenDot.withValues(alpha: 0.3)),
+        boxShadow: AppShadows.shCard,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.x16),
-          decoration: BoxDecoration(
-            color: AppColors.greenLight,
-            borderRadius: AppRadius.card,
-            border: Border.all(color: AppColors.greenDot.withValues(alpha: 0.3)),
-            boxShadow: AppShadows.shCard,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.n0,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppColors.greenDark.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      size: 20,
-                      color: AppColors.greenDark,
-                    ),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.n0,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.greenDark.withValues(alpha: 0.3),
                   ),
-                  const SizedBox(width: AppSpacing.x10),
-                  Text(
-                    'ПОЛУЧЕНО ПО ПРОЕКТУ',
-                    style: AppTextStyles.tiny.copyWith(
-                      color: AppColors.greenDark,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.x8),
-              Text(
-                Money.format(totalReceived),
-                style: AppTextStyles.h1.copyWith(
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 20,
                   color: AppColors.greenDark,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Сумма всех выплат вам по этому проекту',
-                style: AppTextStyles.tiny.copyWith(
-                  color: AppColors.n600,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: AppSpacing.x10),
+              Expanded(
+                child: Text(
+                  'ВЫПЛАЧЕНО МНЕ ПО ПРОЕКТУ',
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.greenDark,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        _EarningsSection(title: 'Все выплаты', items: earnings),
+          const SizedBox(height: AppSpacing.x8),
+          Text(
+            Money.format(total),
+            style: AppTextStyles.h1.copyWith(
+              color: AppColors.greenDark,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.2,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            total == 0
+                ? 'Когда заказчик или бригадир сделает вам выплату — она появится здесь.'
+                : 'Сумма всех выплат вам по этому проекту',
+            style: AppTextStyles.tiny.copyWith(
+              color: AppColors.n600,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _EarningsSection extends StatelessWidget {
-  const _EarningsSection({required this.title, required this.items});
+class _MasterPaymentsSection extends StatelessWidget {
+  const _MasterPaymentsSection({required this.items});
 
-  final String title;
   final List<MasterEarning> items;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.subtitle.copyWith(
-            color: AppColors.n700,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x8),
-        for (final e in items) ...[
+    if (items.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SectionTitle(label: 'Мои выплаты'),
+          const SizedBox(height: AppSpacing.x8),
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.x14,
-              vertical: AppSpacing.x12,
+              vertical: AppSpacing.x16,
             ),
             decoration: BoxDecoration(
               color: AppColors.n0,
               borderRadius: AppRadius.card,
               border: Border.all(color: AppColors.n200),
             ),
-            child: Row(
+            child: Text(
+              'Выплат от заказчика и бригадира пока нет.',
+              style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle(label: 'Мои выплаты'),
+        const SizedBox(height: AppSpacing.x8),
+        for (final e in items) ...[
+          _EarningTile(e: e),
+          const SizedBox(height: AppSpacing.x8),
+        ],
+      ],
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: AppTextStyles.subtitle.copyWith(
+        color: AppColors.n700,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+class _EarningTile extends StatelessWidget {
+  const _EarningTile({required this.e});
+
+  final MasterEarning e;
+
+  @override
+  Widget build(BuildContext context) {
+    final payer = (e.fromUserName ?? '').trim();
+    final role = e.fromRoleLabel;
+    final payerLine = payer.isEmpty && role.isEmpty
+        ? null
+        : payer.isEmpty
+            ? 'Выплатил $role'
+            : role.isEmpty
+                ? 'Выплатил $payer'
+                : 'Выплатил $role · $payer';
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x14,
+        vertical: AppSpacing.x12,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.n0,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.n200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.greenLight,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.south_west_rounded,
+              size: 18,
+              color: AppColors.greenDark,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        Money.format(e.amount),
-                        style: AppTextStyles.h2.copyWith(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _fmtDate(e.createdAt),
-                        style: AppTextStyles.tiny.copyWith(
-                          color: AppColors.n500,
-                        ),
-                      ),
-                    ],
+                Text(
+                  Money.format(e.amount),
+                  style: AppTextStyles.h2.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const Icon(
-                  Icons.check_circle_rounded,
-                  size: 18,
-                  color: AppColors.greenDark,
+                if (payerLine != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    payerLine,
+                    style: AppTextStyles.tiny.copyWith(
+                      color: AppColors.n600,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 2),
+                Text(
+                  _fmtDate(e.createdAt),
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.n500,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.x8),
         ],
-      ],
+      ),
     );
   }
 
@@ -878,6 +986,110 @@ class _EarningsSection extends StatelessWidget {
     final dd = d.day.toString().padLeft(2, '0');
     final mm = d.month.toString().padLeft(2, '0');
     return '$dd.$mm.${d.year}';
+  }
+}
+
+/// Read-only лента движения денег в проекте — справочная информация для
+/// мастера. Никаких CTA, никакого функционала: agendas/distributions/материалы
+/// одной хронологической лентой.
+class _MasterProjectFlowSection extends StatelessWidget {
+  const _MasterProjectFlowSection({required this.flowAsync});
+
+  final AsyncValue<dynamic> flowAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return flowAsync.when(
+      loading: () => const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SectionTitle(label: 'Движение денег в проекте'),
+          SizedBox(height: AppSpacing.x10),
+          SizedBox(
+            height: 80,
+            child: AppLoadingState(),
+          ),
+        ],
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (rawFlow) {
+        final flow = rawFlow as MoneyFlow;
+        final rows = <_HistoryRow>[];
+        for (final a in flow.advances) {
+          rows.add(_HistoryRow(
+            kind: _HistoryKind.advance,
+            title: 'Аванс → ${a.toUserName}',
+            subtitle: 'аванс от заказчика',
+            amount: a.amount,
+            when: a.createdAt,
+          ));
+        }
+        for (final d in flow.distributions) {
+          rows.add(_HistoryRow(
+            kind: _HistoryKind.distribution,
+            title: 'Распределение → ${d.toUserName}',
+            subtitle: 'бригадир распределил аванс',
+            amount: d.amount,
+            when: d.createdAt,
+          ));
+        }
+        for (final sp in flow.approvedSelfpurchases) {
+          rows.add(_HistoryRow(
+            kind: _HistoryKind.selfpurchase,
+            title: 'Самозакуп: ${sp.byUserName}',
+            subtitle: sp.comment ?? 'одобрено заказчиком',
+            amount: sp.amount,
+            when: sp.decidedAt ?? DateTime.now(),
+          ));
+        }
+        for (final m in flow.materialPurchases) {
+          final who = m.boughtBy == MaterialBoughtBy.customer
+              ? 'купил заказчик'
+              : 'купил ${m.requestedByName}';
+          rows.add(_HistoryRow(
+            kind: _HistoryKind.material,
+            title: m.title,
+            subtitle: '${m.itemCount} поз. · $who',
+            amount: m.totalSpent,
+            when: DateTime.now(),
+          ));
+        }
+        rows.sort((a, b) => b.when.compareTo(a.when));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SectionTitle(label: 'Движение денег в проекте'),
+            const SizedBox(height: AppSpacing.x4),
+            Text(
+              'Справочно — без действий с вашей стороны.',
+              style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            if (rows.isEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x14,
+                  vertical: AppSpacing.x16,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.n0,
+                  borderRadius: AppRadius.card,
+                  border: Border.all(color: AppColors.n200),
+                ),
+                child: Text(
+                  'Движений по проекту ещё не было.',
+                  style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+                ),
+              )
+            else
+              for (final r in rows) ...[
+                _HistoryRowCard(row: r),
+                const SizedBox(height: AppSpacing.x8),
+              ],
+          ],
+        );
+      },
+    );
   }
 }
 

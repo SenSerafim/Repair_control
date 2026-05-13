@@ -3,15 +3,14 @@ import { FeedService } from '../feed/feed.service';
 import { PrismaService } from '@app/common';
 
 /**
- * ТЗ §1.4 — иерархическая видимость команды.
+ * Видимость команды.
  *
- * Базовая гарантия (цитата заказчика): «Заказчик не должен никак связываться
- * с мастером — только через бригадира. Иначе уводят людей на следующий
- * объект. Даже имя мастера я бы вообще не показывал заказчику».
- *
- * Тесты бьют по чистому методу `MembersService.applyVisibility(...)` —
- * единому источнику правил, который вызывается и `listVisibleForViewer`
- * (per-project /members), и `UsersService.listTeammates` (нижний таб «Команда»).
+ * 2026-05-13 раунд: заказчик подтвердил «мастер — одна сущность, видна всем
+ * в команде проекта независимо от того, кто его пригласил» (см. members.service.ts:
+ * applyVisibility). Прежняя §1.4-иерархия (invitedById-фильтр у заказчика,
+ * stage-intersection у бригадира/мастера) снята. Тесты бьют по чистому методу
+ * `MembersService.applyVisibility(...)` — единому источнику правил, который
+ * вызывается и `listVisibleForViewer`, и `UsersService.listTeammates`.
  */
 type M = {
   id: string;
@@ -54,206 +53,105 @@ const mkSvc = (stages: { id: string; foremanIds: string[] }[] = []) => {
 
 const visibleUserIds = (rows: M[]) => rows.map((r) => r.userId).sort();
 
-describe('MembersService.applyVisibility — ТЗ §1.4', () => {
-  describe('заказчик (owner)', () => {
-    const owner = 'u-owner';
-    const foreman = 'u-foreman';
-    const masterByOwner = 'u-master-own';
-    const masterByForeman = 'u-master-foreman';
+describe('MembersService.applyVisibility — единая команда (2026-05-13)', () => {
+  const owner = 'u-owner';
+  const foreman = 'u-foreman';
+  const otherForeman = 'u-other-foreman';
+  const repPlain = 'u-rep';
+  const masterByOwner = 'u-master-own';
+  const masterByForeman = 'u-master-foreman';
+  const otherStageMaster = 'u-other-master';
 
-    const memberships: M[] = [
-      m({ id: 'm1', userId: owner, role: 'customer' }),
-      m({ id: 'm2', userId: foreman, role: 'foreman', invitedById: owner }),
-      m({
-        id: 'm3',
-        userId: masterByOwner,
-        role: 'master',
-        invitedById: owner,
-        stageIds: ['s-direct'],
-      }),
-      m({
-        id: 'm4',
-        userId: masterByForeman,
-        role: 'master',
-        invitedById: foreman,
-        stageIds: ['s-foreman'],
-      }),
-    ];
+  const memberships: M[] = [
+    m({ id: 'm1', userId: owner, role: 'customer' }),
+    m({ id: 'm2', userId: foreman, role: 'foreman', invitedById: owner }),
+    m({ id: 'm3', userId: otherForeman, role: 'foreman', invitedById: owner }),
+    m({ id: 'm4', userId: repPlain, role: 'representative', permissions: {} }),
+    m({
+      id: 'm5',
+      userId: masterByOwner,
+      role: 'master',
+      invitedById: owner,
+      stageIds: ['s-direct'],
+    }),
+    m({
+      id: 'm6',
+      userId: masterByForeman,
+      role: 'master',
+      invitedById: foreman,
+      stageIds: ['s-foreman'],
+    }),
+    m({
+      id: 'm7',
+      userId: otherStageMaster,
+      role: 'master',
+      invitedById: otherForeman,
+      stageIds: ['s-other'],
+    }),
+  ];
 
-    it('видит мастера, которого нанял сам', async () => {
-      const svc = mkSvc();
-      const out = await svc.applyVisibility(memberships, owner, owner, 'p1');
-      expect(visibleUserIds(out)).toEqual([foreman, masterByOwner, owner].sort());
-    });
-
-    it('НЕ видит мастера, нанятого бригадиром (ни имени, ни телефона)', async () => {
-      const svc = mkSvc();
-      const out = await svc.applyVisibility(memberships, owner, owner, 'p1');
-      expect(out.find((r) => r.userId === masterByForeman)).toBeUndefined();
-    });
-
-    it('применяется к owner, даже если у него нет явной customer-membership', async () => {
-      const svc = mkSvc();
-      const trimmed = memberships.filter((x) => x.role !== 'customer');
-      const out = await svc.applyVisibility(trimmed, owner, owner, 'p1');
-      expect(out.find((r) => r.userId === masterByForeman)).toBeUndefined();
-      expect(out.find((r) => r.userId === foreman)).toBeDefined();
-    });
-  });
-
-  describe('представитель заказчика', () => {
-    const owner = 'u-owner';
-    const foreman = 'u-foreman';
-    const repPrivileged = 'u-rep-privileged';
-    const repPlain = 'u-rep-plain';
-    const masterByForeman = 'u-master-foreman';
-
-    const baseMemberships: M[] = [
-      m({ id: 'm1', userId: owner, role: 'customer' }),
-      m({ id: 'm2', userId: foreman, role: 'foreman', invitedById: owner }),
-      m({
-        id: 'm3',
-        userId: masterByForeman,
-        role: 'master',
-        invitedById: foreman,
-        stageIds: ['s1'],
-      }),
-    ];
-
-    it('с canSeeBudget применяет правила заказчика (не видит master бригадира)', async () => {
-      const svc = mkSvc();
-      const all = [
-        ...baseMemberships,
-        m({
-          id: 'm4',
-          userId: repPrivileged,
-          role: 'representative',
-          permissions: { canSeeBudget: true },
-        }),
-      ];
-      const out = await svc.applyVisibility(all, repPrivileged, owner, 'p1');
-      expect(out.find((r) => r.userId === masterByForeman)).toBeUndefined();
-      expect(out.find((r) => r.userId === foreman)).toBeDefined();
-    });
-
-    it('без управленческих прав видит customer + foreman + себя; мастера скрыты', async () => {
-      const svc = mkSvc();
-      const all = [
-        ...baseMemberships,
-        m({ id: 'm4', userId: repPlain, role: 'representative', permissions: {} }),
-      ];
-      const out = await svc.applyVisibility(all, repPlain, owner, 'p1');
-      expect(visibleUserIds(out)).toEqual([foreman, owner, repPlain].sort());
-    });
-  });
-
-  describe('бригадир (foreman)', () => {
-    const owner = 'u-owner';
-    const foreman = 'u-foreman';
-    const otherForeman = 'u-other-foreman';
-    const myMaster = 'u-my-master';
-    const otherMaster = 'u-other-master';
-
-    const memberships: M[] = [
-      m({ id: 'm1', userId: owner, role: 'customer' }),
-      m({ id: 'm2', userId: foreman, role: 'foreman', invitedById: owner }),
-      m({ id: 'm3', userId: otherForeman, role: 'foreman', invitedById: owner }),
-      m({
-        id: 'm4',
-        userId: myMaster,
-        role: 'master',
-        invitedById: foreman,
-        stageIds: ['s-mine'],
-      }),
-      m({
-        id: 'm5',
-        userId: otherMaster,
-        role: 'master',
-        invitedById: otherForeman,
-        stageIds: ['s-other'],
-      }),
-    ];
-
-    it('видит своего мастера, не видит мастера другого бригадира', async () => {
-      const svc = mkSvc([
-        { id: 's-mine', foremanIds: [foreman] },
-        { id: 's-other', foremanIds: [otherForeman] },
-      ]);
-      const out = await svc.applyVisibility(memberships, foreman, owner, 'p1');
-      const ids = visibleUserIds(out);
-      expect(ids).toContain(myMaster);
-      expect(ids).not.toContain(otherMaster);
-      // Других foreman'ов и заказчика бригадир видит — общий контекст проекта.
-      expect(ids).toContain(otherForeman);
-      expect(ids).toContain(owner);
-    });
-
-    it('видит мастера, назначенного на его этап, даже если приглашён не им', async () => {
-      const sharedMaster = 'u-shared-master';
-      const svc = mkSvc([{ id: 's-mine', foremanIds: [foreman] }]);
-      const out = await svc.applyVisibility(
-        [
-          ...memberships,
-          m({
-            id: 'm6',
-            userId: sharedMaster,
-            role: 'master',
-            invitedById: owner, // приглашён заказчиком напрямую
-            stageIds: ['s-mine'],
-          }),
-        ],
-        foreman,
+  it('заказчик видит всю команду — включая мастеров, нанятых бригадиром', async () => {
+    const svc = mkSvc();
+    const out = await svc.applyVisibility(memberships, owner, owner, 'p1');
+    expect(visibleUserIds(out)).toEqual(
+      [
         owner,
-        'p1',
-      );
-      expect(visibleUserIds(out)).toContain(sharedMaster);
-    });
+        foreman,
+        otherForeman,
+        repPlain,
+        masterByOwner,
+        masterByForeman,
+        otherStageMaster,
+      ].sort(),
+    );
   });
 
-  describe('мастер', () => {
-    const owner = 'u-owner';
-    const myForeman = 'u-my-foreman';
-    const otherForeman = 'u-other-foreman';
-    const me = 'u-me';
-    const stageMate = 'u-mate';
-    const otherStageMaster = 'u-other-master';
-
-    const memberships: M[] = [
-      m({ id: 'm1', userId: owner, role: 'customer' }),
-      m({ id: 'm2', userId: myForeman, role: 'foreman' }),
-      m({ id: 'm3', userId: otherForeman, role: 'foreman' }),
-      m({ id: 'm4', userId: me, role: 'master', stageIds: ['s-mine'] }),
-      m({ id: 'm5', userId: stageMate, role: 'master', stageIds: ['s-mine'] }),
-      m({ id: 'm6', userId: otherStageMaster, role: 'master', stageIds: ['s-other'] }),
-    ];
-
-    it('видит заказчика, своего бригадира и коллег-мастеров по этапу', async () => {
-      const svc = mkSvc([
-        { id: 's-mine', foremanIds: [myForeman] },
-        { id: 's-other', foremanIds: [otherForeman] },
-      ]);
-      const out = await svc.applyVisibility(memberships, me, owner, 'p1');
-      const ids = visibleUserIds(out);
-      expect(ids).toContain(owner);
-      expect(ids).toContain(myForeman);
-      expect(ids).toContain(stageMate);
-      expect(ids).toContain(me);
-      expect(ids).not.toContain(otherForeman);
-      expect(ids).not.toContain(otherStageMaster);
-    });
+  it('owner без явной customer-membership получает то же самое', async () => {
+    const svc = mkSvc();
+    const trimmed = memberships.filter((x) => x.role !== 'customer');
+    const out = await svc.applyVisibility(trimmed, owner, owner, 'p1');
+    expect(visibleUserIds(out)).toEqual(
+      [foreman, otherForeman, repPlain, masterByOwner, masterByForeman, otherStageMaster].sort(),
+    );
   });
 
-  describe('outsider (не участник проекта)', () => {
-    it('получает пустой список (контроллер всё равно вернёт 403 раньше)', async () => {
-      const svc = mkSvc();
-      const out = await svc.applyVisibility(
-        [m({ id: 'm1', userId: 'u-owner', role: 'customer' })],
-        'u-stranger',
-        'u-owner',
-        'p1',
-      );
-      expect(out).toEqual([]);
-    });
+  it('представитель видит весь состав команды', async () => {
+    const svc = mkSvc();
+    const out = await svc.applyVisibility(memberships, repPlain, owner, 'p1');
+    expect(visibleUserIds(out)).toEqual(
+      [
+        owner,
+        foreman,
+        otherForeman,
+        repPlain,
+        masterByOwner,
+        masterByForeman,
+        otherStageMaster,
+      ].sort(),
+    );
+  });
+
+  it('бригадир видит мастеров другого бригадира', async () => {
+    const svc = mkSvc();
+    const out = await svc.applyVisibility(memberships, foreman, owner, 'p1');
+    const ids = visibleUserIds(out);
+    expect(ids).toContain(otherStageMaster);
+    expect(ids).toContain(masterByOwner);
+  });
+
+  it('мастер видит всю команду проекта, включая мастеров других этапов', async () => {
+    const svc = mkSvc();
+    const out = await svc.applyVisibility(memberships, masterByForeman, owner, 'p1');
+    const ids = visibleUserIds(out);
+    expect(ids).toContain(otherStageMaster);
+    expect(ids).toContain(masterByOwner);
+    expect(ids).toContain(owner);
+  });
+
+  it('outsider (не участник проекта) → пустой список', async () => {
+    const svc = mkSvc();
+    const out = await svc.applyVisibility(memberships, 'u-stranger', owner, 'p1');
+    expect(out).toEqual([]);
   });
 });
 

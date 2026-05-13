@@ -86,12 +86,36 @@ export class ExportService {
     return { ...job, downloadUrl };
   }
 
-  async listForProject(projectId: string, requestedById: string): Promise<ExportJob[]> {
-    return this.prisma.exportJob.findMany({
+  async listForProject(
+    projectId: string,
+    requestedById: string,
+  ): Promise<Array<ExportJob & { downloadUrl?: string }>> {
+    const jobs = await this.prisma.exportJob.findMany({
       where: { projectId, requestedById },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+    // 2026-05-13: enriching списка `downloadUrl`-ами (presigned S3) — иначе
+    // мобайл получает status=done, но без url. Карточка показывает
+    // «Готов», но кнопки «Скачать» нет, и тап ничего не делает. Раньше
+    // url выдавался только в `GET /api/exports/:id`, и мобайл должен был
+    // делать второй запрос — это и есть «не работает».
+    const now = this.clock.now();
+    return Promise.all(
+      jobs.map(async (job) => {
+        if (job.status === 'done' && job.resultFileKey && job.expiresAt > now) {
+          try {
+            const { url } = await this.files.createPresignedDownload(job.resultFileKey);
+            return { ...job, downloadUrl: url };
+          } catch {
+            // S3 недоступен — возвращаем job без url, мобайл может
+            // повторить попытку через `get(jobId)`.
+            return job;
+          }
+        }
+        return job;
+      }),
+    );
   }
 
   async markRunning(jobId: string): Promise<void> {

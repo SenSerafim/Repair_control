@@ -94,6 +94,10 @@ class FcmService {
       // тротлинге getToken висит до 8с прежде чем упасть AUTHENTICATION_FAILED.
       // Push'и работают soft-fail-ом, не блокируем init/регистрацию устройства;
       // если токен прилетит позже — onTokenRefresh подтянет.
+      // NB: нативный Java-лог `E/FirebaseMessaging: Failed to get FIS auth
+      // token` (и причина `FirebaseInstallationsException`) идёт напрямую из
+      // SDK на эмуляторе без GMS-credentials — на реальном устройстве с Google
+      // Play services не появляется. Из Dart его глушить нельзя.
       _currentToken = await FirebaseMessaging.instance
           .getToken(vapidKey: vapidKey)
           .timeout(const Duration(seconds: 3), onTimeout: () => null);
