@@ -80,6 +80,11 @@ export class AccessGuard implements CanActivate {
       if (paymentId) {
         await this.hydratePaymentContext(accessCtx, paymentId);
       }
+    } else if (requirement.resource === 'export_job' && requirement.resourceIdFrom) {
+      const jobId = this.extractId(req, requirement.resourceIdFrom);
+      if (jobId) {
+        await this.hydrateExportJobContext(accessCtx, jobId);
+      }
     }
 
     if (!canAccess(requirement.action, accessCtx)) {
@@ -266,6 +271,28 @@ export class AccessGuard implements CanActivate {
     acc.documentUploadedById = doc.uploadedById;
     acc.projectOwnerId = doc.project.ownerId;
     const m = doc.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+    }
+  }
+
+  private async hydrateExportJobContext(acc: AccessContext, jobId: string): Promise<void> {
+    const job = await this.prisma.exportJob.findUnique({
+      where: { id: jobId },
+      select: {
+        projectId: true,
+        project: {
+          select: {
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
+        },
+      },
+    });
+    if (!job) return;
+    acc.projectOwnerId = job.project.ownerId;
+    const m = job.project.memberships[0];
     if (m) {
       acc.membershipRole = m.role;
       acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);

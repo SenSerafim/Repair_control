@@ -20,6 +20,7 @@ export interface AccessRequirement {
     | 'document'
     | 'chat_message'
     | 'payment'
+    | 'export_job'
     | 'none';
 }
 

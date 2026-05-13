@@ -101,7 +101,11 @@ export class ExportsController {
   }
 
   @Get('exports/:id')
-  @RequireAccess({ action: 'feed.export', resource: 'none' })
+  @RequireAccess({
+    action: 'feed.export',
+    resource: 'export_job',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
   get(@Param('id') id: string) {
     return this.svc.get(id);
   }
@@ -109,11 +113,17 @@ export class ExportsController {
   /**
    * Стримит готовый файл экспорта через API. URL отдаётся клиентам через
    * `downloadUrl` (`/api/exports/:id/file`) — заменяет presigned S3 redirect.
-   * RequireAccess стоит `resource: 'none'`, фактическую проверку владельца
-   * job делает streamFile внутри (404 если job not done / expired).
+   * AccessGuard через `resource: 'export_job'` сам резолвит projectId
+   * по job → подтягивает membership → проверяет права. Без этого
+   * customer (даже owner проекта) получал бы 403, т.к. при
+   * `resource: 'none'` контекст пуст и матрица `feed.export` возвращает false.
    */
   @Get('exports/:id/file')
-  @RequireAccess({ action: 'feed.export', resource: 'none' })
+  @RequireAccess({
+    action: 'feed.export',
+    resource: 'export_job',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
   async streamFile(@Param('id') id: string, @Res() res: Response) {
     const { stream, mimeType, contentLength, filename } = await this.svc.streamFile(id);
     res.setHeader('Content-Type', mimeType);
