@@ -7,6 +7,7 @@ import { FilesService } from '@app/files';
 import { QUEUE_EXPORTS } from '../queues/queues.module';
 import { ExportService } from './export.service';
 import { PdfRendererService } from './pdf-renderer.service';
+import { ProjectReportPdfService, ReportViewer } from './project-report-pdf.service';
 import { ZipPackerService } from './zip-packer.service';
 
 @Processor(QUEUE_EXPORTS)
@@ -19,6 +20,7 @@ export class ExportProcessor extends WorkerHost {
     private readonly exports: ExportService,
     private readonly pdf: PdfRendererService,
     private readonly zip: ZipPackerService,
+    private readonly reportPdf: ProjectReportPdfService,
   ) {
     super();
   }
@@ -40,9 +42,28 @@ export class ExportProcessor extends WorkerHost {
         await this.files.putObject(fileKey, buffer, 'application/pdf');
         await this.exports.markDone(exportJob.id, fileKey, buffer.length);
       } else if (exportJob.kind === ExportKind.project_zip) {
-        const buffer = await this.buildProjectZip(exportJob.id, exportJob.projectId);
+        const buffer = await this.buildProjectZip(
+          exportJob.id,
+          exportJob.projectId,
+          exportJob.requestedById,
+        );
         const fileKey = `exports/${exportJob.projectId}/${exportJob.id}/project.zip`;
         await this.files.putObject(fileKey, buffer, 'application/zip');
+        await this.exports.markDone(exportJob.id, fileKey, buffer.length);
+      } else if (exportJob.kind === ExportKind.project_report_pdf) {
+        const viewer = await this.buildReportViewer(exportJob.requestedById, exportJob.projectId);
+        const buffer = await this.reportPdf.build(exportJob.projectId, viewer);
+        const fileKey = `exports/${exportJob.projectId}/${exportJob.id}/project-report.pdf`;
+        await this.files.putObject(fileKey, buffer, 'application/pdf');
+        await this.exports.markDone(exportJob.id, fileKey, buffer.length);
+      } else if (exportJob.kind === ExportKind.project_summary_txt) {
+        // Deprecated TXT-сводка — реализация удалена, но историческими записями
+        // (created до 2026-05-12) обрабатываем через тот же ProjectReportPdfService,
+        // чтобы старые re-enqueue работали и отдавали PDF.
+        const viewer = await this.buildReportViewer(exportJob.requestedById, exportJob.projectId);
+        const buffer = await this.reportPdf.build(exportJob.projectId, viewer);
+        const fileKey = `exports/${exportJob.projectId}/${exportJob.id}/project-report.pdf`;
+        await this.files.putObject(fileKey, buffer, 'application/pdf');
         await this.exports.markDone(exportJob.id, fileKey, buffer.length);
       }
     } catch (e) {
@@ -81,12 +102,25 @@ export class ExportProcessor extends WorkerHost {
     });
   }
 
-  private async buildProjectZip(jobId: string, projectId: string): Promise<Buffer> {
+  private async buildProjectZip(
+    jobId: string,
+    projectId: string,
+    requestedById: string,
+  ): Promise<Buffer> {
     const entries: Array<{ name: string; buffer: Buffer }> = [];
     // 1. feed.pdf
     const feedPdf = await this.buildFeedPdf(jobId, projectId, {});
     entries.push({ name: 'feed.pdf', buffer: feedPdf });
-    // 2. documents (не-PDF + PDF)
+    // 2. project-report.pdf — полный отчёт со всеми блоками (бюджеты, этапы,
+    //    шаги с фото, материалы, инструменты, документы, лента событий).
+    try {
+      const viewer = await this.buildReportViewer(requestedById, projectId);
+      const reportPdf = await this.reportPdf.build(projectId, viewer);
+      entries.push({ name: 'project-report.pdf', buffer: reportPdf });
+    } catch (e) {
+      this.logger.warn(`project-report.pdf failed: ${(e as Error).message}`);
+    }
+    // 3. documents (не-PDF + PDF)
     const docs = await this.prisma.document.findMany({
       where: { projectId, deletedAt: null },
     });
@@ -99,7 +133,7 @@ export class ExportProcessor extends WorkerHost {
         this.logger.warn(`skip missing doc ${d.id}: ${(e as Error).message}`);
       }
     }
-    // 3. step photos
+    // 4. step photos
     const photos = await this.prisma.stepPhoto.findMany({
       where: { step: { stage: { projectId } } },
       include: { step: { select: { title: true, stage: { select: { title: true } } } } },
@@ -115,6 +149,50 @@ export class ExportProcessor extends WorkerHost {
       }
     }
     return this.zip.pack(entries);
+  }
+
+  private async buildReportViewer(userId: string, projectId: string): Promise<ReportViewer> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const membership = await this.prisma.membership.findFirst({
+      where: { projectId, userId, removedAt: null },
+      select: { role: true, permissions: true, stageIds: true },
+    });
+    const isOwner = project?.ownerId === userId;
+    const role = membership?.role as ReportViewer['membershipRole'];
+    const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
+
+    // §3.2: подрядчик видит только бюджет своих этапов и свои выплаты.
+    // Общий бюджет проекта — только owner / rep.canSeeBudget.
+    const canSeeProjectBudget = isOwner || (role === 'representative' && !!perms.canSeeBudget);
+    const canSeeStageBudget = canSeeProjectBudget || role === 'foreman';
+    const canSeeAllPayments = canSeeProjectBudget;
+
+    const myForemanStages = await this.prisma.stage.findMany({
+      where: { projectId, foremanIds: { has: userId } },
+      select: { id: true },
+    });
+    const myMasterStages = await this.prisma.stage.findMany({
+      where: { projectId, masterId: userId },
+      select: { id: true },
+    });
+    const assignedStageIds = Array.from(
+      new Set([...(membership?.stageIds ?? []), ...myMasterStages.map((s) => s.id)]),
+    );
+    const foremanStageIds = myForemanStages.map((s) => s.id);
+
+    return {
+      userId,
+      isOwner,
+      membershipRole: role,
+      assignedStageIds,
+      foremanStageIds,
+      canSeeProjectBudget,
+      canSeeStageBudget,
+      canSeeAllPayments,
+    };
   }
 
   @OnWorkerEvent('failed')

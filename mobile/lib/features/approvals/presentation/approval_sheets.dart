@@ -27,26 +27,68 @@ class _SheetIconHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = switch (tone) {
-      _IconTone.success => (AppColors.greenLight, AppColors.greenDark),
-      _IconTone.danger => (AppColors.redBg, AppColors.redDot),
-      _IconTone.info => (AppColors.brandLight, AppColors.brand),
+    final (gradient, halo) = switch (tone) {
+      _IconTone.success => (
+        AppGradients.successHero,
+        const [
+          BoxShadow(color: Color(0x2010B981), spreadRadius: 6),
+          BoxShadow(
+            color: Color(0x33059669),
+            offset: Offset(0, 8),
+            blurRadius: 18,
+          ),
+        ],
+      ),
+      _IconTone.danger => (
+        const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF87171), AppColors.redDot],
+        ),
+        const [
+          BoxShadow(color: Color(0x1ADC2626), spreadRadius: 6),
+          BoxShadow(
+            color: Color(0x33DC2626),
+            offset: Offset(0, 8),
+            blurRadius: 18,
+          ),
+        ],
+      ),
+      _IconTone.info => (
+        AppGradients.brandButton,
+        const [
+          BoxShadow(color: Color(0x224F6EF7), spreadRadius: 6),
+          BoxShadow(
+            color: Color(0x334F6EF7),
+            offset: Offset(0, 8),
+            blurRadius: 18,
+          ),
+        ],
+      ),
     };
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 56,
-          height: 56,
+          width: 60,
+          height: 60,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-          child: Icon(icon, color: fg, size: 28),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            shape: BoxShape.circle,
+            boxShadow: halo,
+          ),
+          child: Icon(icon, color: AppColors.n0, size: 30),
         ),
-        const SizedBox(height: AppSpacing.x14),
+        const SizedBox(height: AppSpacing.x16),
         Text(
           title,
           textAlign: TextAlign.center,
-          style: AppTextStyles.h1.copyWith(fontSize: 18),
+          style: AppTextStyles.h1.copyWith(
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -424,11 +466,11 @@ class _PhotoSlot extends StatelessWidget {
         height: 56,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.n100,
+          gradient: AppGradients.photoPlaceholder,
           borderRadius: BorderRadius.circular(AppRadius.r12),
           border: Border.all(color: AppColors.n200),
         ),
-        child: Icon(icon, color: AppColors.n400, size: 22),
+        child: Icon(icon, color: AppColors.brand, size: 22),
       ),
     );
   }

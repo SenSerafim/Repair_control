@@ -22,22 +22,24 @@ import '../../steps/presentation/extra_work_sheet.dart';
 import '../application/stages_controller.dart';
 import '../data/stages_repository.dart';
 import '../domain/stage.dart';
+import '_widgets/stage_approvals_tab.dart';
 import '_widgets/stage_banner_data.dart';
 import '_widgets/stage_checklist_tab.dart';
-import '_widgets/stage_chat_tab.dart';
 import '_widgets/stage_docs_tab.dart';
+import '_widgets/stage_executors_row.dart';
 import '_widgets/stage_status_banner.dart';
 import '_widgets/stage_stats_row.dart';
 import '_widgets/stage_tabs_bar.dart';
 import 'pause_sheet.dart';
 // П1.7 / 4.6 — `save_as_template_sheet.dart` удалён вместе с фичей пользовательских шаблонов.
 import 'stage_widgets.dart' show StageDisplayStatus, StageStatusBadge;
-import '_widgets/stage_approvals_tab.dart';
 
 /// Детали этапа — пиксель-в-пиксель редизайн c-stage-* (8 состояний).
 ///
 /// Layout: header (back+title+badge+menu) → StageStatsRow → StageStatusBanner
-/// → StageTabsBar → IndexedStack из 4 табов → state-aware bottom action bar.
+/// → StageTabsBar → IndexedStack из 3 табов → state-aware bottom action bar.
+/// Вкладка «Чат» убрана: коммуникации по этапу ведутся через раздел чатов
+/// проекта (overdue-баннер показывает CTA «Связаться»).
 class StageDetailScreen extends ConsumerStatefulWidget {
   const StageDetailScreen({
     required this.projectId,
@@ -90,8 +92,12 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
           final planApproved =
               (project?.planApproved ?? false) || stage.planApproved;
           final display = StageDisplayStatus.of(stage);
+          // Бейдж на табе «Согл.» считаем тем же фильтром, что и сама вкладка:
+          // прямой stageId-матч + plan-scope, упоминающий этот этап в payload.
+          // Иначе число рядом с табом расходилось с реально видимыми карточками.
           final pendingForStage = approvalsAsync.maybeWhen(
-            data: (b) => b.pending.where((a) => a.stageId == stage.id).length,
+            data: (b) =>
+                b.pending.where((a) => approvalBelongsToStage(a, stage.id)).length,
             orElse: () => 0,
           );
           final stepsAsync = ref.watch(
@@ -112,6 +118,35 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             orElse: () => 0,
           );
 
+          // Есть ли уже отправленный (pending) approval scope=plan по этому
+          // этапу — нужно для CTA в action bar (показать «На согласовании» вместо
+          // «Отправить план»).
+          final pendingPlanApproval = approvalsAsync.maybeWhen(
+            data: (b) => b.pending.any(
+              (a) =>
+                  a.scope == ApprovalScope.plan &&
+                  (a.stageId == stage.id ||
+                      a.payload['stageId'] == stage.id),
+            ),
+            orElse: () => false,
+          );
+          // Может ли текущая роль добавлять шаги в этап. Используем
+          // canInProjectProvider, чтобы заказчик/master без права не видел
+          // CTA «+ Шаг» (сервер всё равно вернёт 403).
+          final canManageSteps = ref.watch(
+            canInProjectProvider((
+              action: DomainAction.stepManage,
+              projectId: widget.projectId,
+            )),
+          );
+          // Право назначать бригадира/мастера на этап (stage.manage).
+          // Используется и для меню header'а, и для нового executors row.
+          final canManageStages = ref.watch(
+            canInProjectProvider((
+              action: DomainAction.stageManage,
+              projectId: widget.projectId,
+            )),
+          );
           return Column(
             children: [
               _StageHeader(stage: stage, display: display),
@@ -129,6 +164,30 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   stepsTotal: stepsTotal,
                   photosCount: photosTotal,
                   filesCount: 0,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x16,
+                  0,
+                  AppSpacing.x16,
+                  AppSpacing.x12,
+                ),
+                child: StageExecutorsRow(
+                  projectId: widget.projectId,
+                  foremanIds: stage.foremanIds,
+                  masterId: stage.masterId,
+                  canAssign: canManageStages,
+                  onAssignForeman: () => _openAssignSheet(
+                    context,
+                    stage,
+                    kind: _AssignKind.foreman,
+                  ),
+                  onAssignMaster: () => _openAssignSheet(
+                    context,
+                    stage,
+                    kind: _AssignKind.master,
+                  ),
                 ),
               ),
               if (StageBannerData.fromStage(stage, display) != null)
@@ -160,7 +219,12 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                       onStepTap: (step) => context.push(
                         '/projects/${widget.projectId}/stages/${stage.id}/steps/${step.id}',
                       ),
-                      onAddStep: () => _showAddStepSheet(context, stage),
+                      // Скрываем кнопку «+ Шаг» у ролей без права step.manage
+                      // (у заказчика, мастера-чужого-этапа). Передаём null —
+                      // checklist tab должен трактовать это как «без CTA».
+                      onAddStep: canManageSteps
+                          ? () => _showAddStepSheet(context, stage)
+                          : null,
                       onToggleStep: (step) => _toggleStep(stage, step),
                     ),
                     StageApprovalsTab(
@@ -168,10 +232,6 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                       stageId: stage.id,
                     ),
                     StageDocsTab(
-                      projectId: widget.projectId,
-                      stageId: stage.id,
-                    ),
-                    StageChatTab(
                       projectId: widget.projectId,
                       stageId: stage.id,
                     ),
@@ -183,6 +243,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                 stage: stage,
                 display: display,
                 planAllowsStart: !planRequired || planApproved,
+                planRequired: planRequired,
+                planApproved: planApproved,
+                pendingPlanApproval: pendingPlanApproval,
               ),
             ],
           );
@@ -192,8 +255,8 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
   }
 
   Future<void> _openProjectChat(String projectId, String stageId) async {
-    // overdue → «Связаться» в banner'е. Открываем чат проекта; реальный
-    // stage-chat доступен из таба «Чат».
+    // overdue → «Связаться» в banner'е. Открываем раздел чатов проекта —
+    // пользователь сам выберет нужный чат (этап, общий, личный).
     context.push('/projects/$projectId/chats');
   }
 
@@ -210,6 +273,24 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
         kind: AppToastKind.error,
       );
     }
+  }
+
+  /// Открывает sheet выбора бригадира/мастера на этап. Раньше эта точка входа
+  /// была только в 3-точечном меню header'а; теперь её разделяют:
+  /// `_StageHeader._openMenu` и executors row под статистикой.
+  Future<void> _openAssignSheet(
+    BuildContext context,
+    Stage stage, {
+    required _AssignKind kind,
+  }) async {
+    await showAppBottomSheet<void>(
+      context: context,
+      child: _AssignMemberSheet(
+        projectId: widget.projectId,
+        stageId: stage.id,
+        kind: kind,
+      ),
+    );
   }
 
   Future<void> _showAddStepSheet(BuildContext context, Stage stage) async {
@@ -282,10 +363,24 @@ class _StageHeader extends ConsumerWidget {
   Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
     // П1.7 / 4.6 — пункт «Сохранить как шаблон» удалён.
     // П1.11 / 4.8 / 7.5 — меню переиспользовано под назначение бригадира/мастера.
-    final canManageStages = ref.read(canProvider(DomainAction.stageManage));
+    // 2026-05: canInProjectProvider честно учитывает membership-роль +
+    // делегированные представителю права (canEditStages/canCreateStages),
+    // тогда как старый canProvider смотрел только глобальную активную роль.
+    final canManageStages = ref.read(
+      canInProjectProvider((
+        action: DomainAction.stageManage,
+        projectId: stage.projectId,
+      )),
+    );
     await showAppBottomSheet<void>(
       context: context,
-      child: Column(
+      // Builder даёт `sheetContext` внутри модалки — он гарантированно
+      // смонтирован, пока бот.шит открыт. Старый код звал
+      // `Navigator.of(context)` с внешним контекстом `_StageHeader`, и если
+      // header успевал отвалиться (например, real-time refresh stages),
+      // Navigator.of падал с `Null check operator on null value`.
+      child: Builder(
+        builder: (sheetContext) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const AppBottomSheetHeader(title: 'Действия'),
@@ -298,7 +393,8 @@ class _StageHeader extends ConsumerWidget {
               title: const Text('Назначить бригадира'),
               subtitle: const Text('Один бригадир на этап'),
               onTap: () {
-                Navigator.of(context).pop();
+                Navigator.of(sheetContext).pop();
+                if (!context.mounted) return;
                 _showAssignSheet(context, ref, kind: _AssignKind.foreman);
               },
             ),
@@ -312,7 +408,8 @@ class _StageHeader extends ConsumerWidget {
                 'Если мастер не назначен — этап ведёт сам бригадир',
               ),
               onTap: () {
-                Navigator.of(context).pop();
+                Navigator.of(sheetContext).pop();
+                if (!context.mounted) return;
                 _showAssignSheet(context, ref, kind: _AssignKind.master);
               },
             ),
@@ -328,6 +425,7 @@ class _StageHeader extends ConsumerWidget {
             ),
         ],
       ),
+      ),
     );
   }
 
@@ -336,34 +434,12 @@ class _StageHeader extends ConsumerWidget {
     WidgetRef ref, {
     required _AssignKind kind,
   }) async {
-    final projectId = stage.projectId;
-    final repo = ref.read(stagesRepositoryProvider);
     await showAppBottomSheet<void>(
       context: context,
       child: _AssignMemberSheet(
-        projectId: projectId,
+        projectId: stage.projectId,
         stageId: stage.id,
         kind: kind,
-        onAssign: (userId) async {
-          try {
-            if (kind == _AssignKind.foreman) {
-              await repo.assignForeman(
-                projectId: projectId,
-                stageId: stage.id,
-                foremanUserId: userId,
-              );
-            } else {
-              await repo.assignMaster(
-                projectId: projectId,
-                stageId: stage.id,
-                masterUserId: userId,
-              );
-            }
-            ref.invalidate(stagesControllerProvider(projectId));
-          } catch (_) {
-            // toast — на уровне родителя при необходимости
-          }
-        },
       ),
     );
   }
@@ -371,32 +447,88 @@ class _StageHeader extends ConsumerWidget {
 
 enum _AssignKind { foreman, master }
 
-class _AssignMemberSheet extends ConsumerWidget {
+class _AssignMemberSheet extends ConsumerStatefulWidget {
   const _AssignMemberSheet({
     required this.projectId,
     required this.stageId,
     required this.kind,
-    required this.onAssign,
   });
 
   final String projectId;
   final String stageId;
   final _AssignKind kind;
-  final ValueChanged<String> onAssign;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // QA-баг #3 «Нет возможности назначить бригадира/мастера на этап»: до
-    // этого фикса sheet был stub'ом — текст + кнопка «Открыть команду».
-    // Теперь грузим список участников проекта и фильтруем по нужной
-    // membership-роли (foreman/master). Тап по члену → onAssign(userId).
-    final title = kind == _AssignKind.foreman
+  ConsumerState<_AssignMemberSheet> createState() => _AssignMemberSheetState();
+}
+
+class _AssignMemberSheetState extends ConsumerState<_AssignMemberSheet> {
+  String? _busyUserId;
+
+  Future<void> _doAssign(String userId, String fullName) async {
+    if (_busyUserId != null) return;
+    setState(() => _busyUserId = userId);
+    final repo = ref.read(stagesRepositoryProvider);
+    try {
+      if (widget.kind == _AssignKind.foreman) {
+        await repo.assignForeman(
+          projectId: widget.projectId,
+          stageId: widget.stageId,
+          foremanUserId: userId,
+        );
+      } else {
+        await repo.assignMaster(
+          projectId: widget.projectId,
+          stageId: widget.stageId,
+          masterUserId: userId,
+        );
+      }
+      ref.invalidate(stagesControllerProvider(widget.projectId));
+      if (!mounted) return;
+      final label =
+          widget.kind == _AssignKind.foreman ? 'бригадиром' : 'мастером';
+      final messengerCtx = context;
+      Navigator.of(messengerCtx).pop();
+      AppToast.show(
+        messengerCtx,
+        message: fullName.isEmpty
+            ? '✓ Назначено $label'
+            : '✓ $fullName назначен(а) $label',
+        kind: AppToastKind.success,
+      );
+    } on StagesException catch (e) {
+      if (!mounted) return;
+      setState(() => _busyUserId = null);
+      AppToast.show(
+        context,
+        message: e.failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busyUserId = null);
+      AppToast.show(
+        context,
+        message: 'Не удалось назначить. Попробуйте ещё раз.',
+        kind: AppToastKind.error,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // QA-баг #3 / 2026-05 — pick-and-assign sheet с реальным feedback'ом.
+    // Раньше onAssign закрывал sheet до завершения async и молча проглатывал
+    // ошибки → пользователь видел «ничего не происходит». Теперь sheet
+    // stateful: inline-индикатор на строке, success/error toast, закрытие
+    // только после успеха.
+    final title = widget.kind == _AssignKind.foreman
         ? 'Выберите бригадира'
         : 'Выберите мастера';
-    final neededRole = kind == _AssignKind.foreman
+    final neededRole = widget.kind == _AssignKind.foreman
         ? MembershipRole.foreman
         : MembershipRole.master;
-    final teamAsync = ref.watch(teamControllerProvider(projectId));
+    final teamAsync = ref.watch(teamControllerProvider(widget.projectId));
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -414,7 +546,7 @@ class _AssignMemberSheet extends ConsumerWidget {
               child: AppErrorState(
                 title: 'Не удалось загрузить команду',
                 onRetry: () =>
-                    ref.invalidate(teamControllerProvider(projectId)),
+                    ref.invalidate(teamControllerProvider(widget.projectId)),
               ),
             ),
             data: (team) {
@@ -423,10 +555,12 @@ class _AssignMemberSheet extends ConsumerWidget {
                   .toList();
               if (candidates.isEmpty) {
                 return _AssignEmptyState(
-                  kind: kind,
-                  onOpenTeam: () {
+                  kind: widget.kind,
+                  onAddNew: () {
                     Navigator.of(context).pop();
-                    context.push('/projects/$projectId/team');
+                    context.push(
+                      AppRoutes.projectAddMemberWith(widget.projectId),
+                    );
                   },
                 );
               }
@@ -441,6 +575,7 @@ class _AssignMemberSheet extends ConsumerWidget {
                   final fullName = user == null
                       ? m.userId
                       : '${user.firstName} ${user.lastName}'.trim();
+                  final isBusy = _busyUserId == m.userId;
                   return ListTile(
                     leading: AppAvatar(
                       seed: m.userId,
@@ -449,10 +584,15 @@ class _AssignMemberSheet extends ConsumerWidget {
                     ),
                     title: Text(fullName.isEmpty ? 'Без имени' : fullName),
                     subtitle: Text(m.role.displayName),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onAssign(m.userId);
-                    },
+                    trailing: isBusy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.chevron_right_rounded),
+                    enabled: _busyUserId == null,
+                    onTap: () => _doAssign(m.userId, fullName),
                   );
                 },
               );
@@ -465,13 +605,15 @@ class _AssignMemberSheet extends ConsumerWidget {
 }
 
 class _AssignEmptyState extends StatelessWidget {
-  const _AssignEmptyState({required this.kind, required this.onOpenTeam});
+  const _AssignEmptyState({required this.kind, required this.onAddNew});
   final _AssignKind kind;
-  final VoidCallback onOpenTeam;
+  final VoidCallback onAddNew;
 
   @override
   Widget build(BuildContext context) {
-    final roleLabel = kind == _AssignKind.foreman ? 'бригадиры' : 'мастера';
+    final roleLabel = kind == _AssignKind.foreman ? 'бригадиров' : 'мастеров';
+    final ctaLabel =
+        kind == _AssignKind.foreman ? 'Добавить бригадира' : 'Добавить мастера';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
@@ -479,12 +621,13 @@ class _AssignEmptyState extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'В команде проекта нет участников с ролью «$roleLabel». '
-            'Сначала добавьте подходящего человека.',
+            'В команде проекта пока нет $roleLabel. '
+            'Добавьте подходящего человека — после этого сможете назначить '
+            'его на этот этап.',
             style: const TextStyle(fontSize: 14, color: Color(0xFF656b7a)),
           ),
           const SizedBox(height: 16),
-          AppButton(label: 'Открыть команду', onPressed: onOpenTeam),
+          AppButton(label: ctaLabel, onPressed: onAddNew),
         ],
       ),
     );
@@ -500,12 +643,21 @@ class _ActionBar extends ConsumerStatefulWidget {
     required this.stage,
     required this.display,
     required this.planAllowsStart,
+    required this.planRequired,
+    required this.planApproved,
+    required this.pendingPlanApproval,
   });
 
   final String projectId;
   final Stage stage;
   final StageDisplayStatus display;
   final bool planAllowsStart;
+  /// Проект требует согласования плана (Project.requiresPlanApproval).
+  final bool planRequired;
+  /// Этот этап (или проект целиком) имеет одобренный план.
+  final bool planApproved;
+  /// Уже есть pending approval scope=plan по этому этапу — не плодим повторно.
+  final bool pendingPlanApproval;
 
   @override
   ConsumerState<_ActionBar> createState() => _ActionBarState();
@@ -580,6 +732,37 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     }
   }
 
+  /// П2.3 — отправить план этапа на согласование заказчику.
+  /// Endpoint идемпотентный; повторный тап даст уже существующий pending
+  /// approval. После успеха инвалидируем approvals + stages, чтобы UI
+  /// мгновенно показал «План на согласовании» (через ws-сигнал тоже придёт).
+  Future<void> _trySubmitPlan() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(stagesRepositoryProvider)
+          .submitPlan(projectId: widget.projectId, stageId: widget.stage.id);
+      ref.invalidate(approvalsControllerProvider(widget.projectId));
+      ref.invalidate(stagesControllerProvider(widget.projectId));
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message: 'План отправлен заказчику на согласование',
+        kind: AppToastKind.success,
+      );
+    } on StagesException catch (e) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message: e.failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _showPlanRequiredDialog() async {
     final go = await showAppBottomSheet<bool>(
       context: context,
@@ -622,9 +805,42 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
 
   @override
   Widget build(BuildContext context) {
-    final canStart = ref.watch(canProvider(DomainAction.stageStart));
-    final canPause = ref.watch(canProvider(DomainAction.stagePause));
-    final canRequest = ref.watch(canProvider(DomainAction.approvalRequest));
+    // Решения по UI делаем по правам в КОНКРЕТНОМ проекте, а не по глобальной
+    // роли: один пользователь может быть foreman в одном проекте и customer-
+    // representative в другом. canInProjectProvider учитывает membership-role
+    // + делегированные представителю права.
+    final canStart = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.stageStart,
+        projectId: widget.projectId,
+      )),
+    );
+    final canPause = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.stagePause,
+        projectId: widget.projectId,
+      )),
+    );
+    final canRequest = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalRequest,
+        projectId: widget.projectId,
+      )),
+    );
+    final canDecide = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalDecide,
+        projectId: widget.projectId,
+      )),
+    );
+    // Право управлять этапом — для CTA «Отправить план на согласование».
+    // Бэкенд проверяет это через @RequireAccess('stage.manage') на endpoint.
+    final canManageStage = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.stageManage,
+        projectId: widget.projectId,
+      )),
+    );
     final children = <Widget>[];
 
     // Все элементы children должны быть Expanded — Row делит ширину поровну
@@ -633,24 +849,53 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     // добавляются в общий for-loop ниже, не внутри case'ов.
     switch (widget.display) {
       case StageDisplayStatus.pending:
-        if (canStart) {
+        // План требуется, не одобрен → бригадир видит «Отправить план», а
+        // заказчик/представитель с canApprove — «Согласовать план». Тогда
+        // кнопка «Запустить» появится после approve. Если план не требуется
+        // (project.requiresPlanApproval=false) — бригадир может стартовать
+        // сразу, без plan-approval.
+        final showPlanCta = widget.planRequired && !widget.planApproved;
+        if (showPlanCta && canManageStage) {
+          // Inline submit: pending уже есть → disabled-метка, иначе POST.
+          children.add(
+            Expanded(
+              flex: 2,
+              child: AppButton(
+                label: widget.pendingPlanApproval
+                    ? 'План на согласовании'
+                    : 'Отправить план заказчику',
+                icon: widget.pendingPlanApproval
+                    ? Icons.hourglass_bottom_rounded
+                    : Icons.send_rounded,
+                isLoading: _busy,
+                onPressed: _busy || widget.pendingPlanApproval
+                    ? null
+                    : _trySubmitPlan,
+              ),
+            ),
+          );
+        } else if (showPlanCta && canDecide) {
+          // У заказчика/представителя CTA — открыть экран plan-approval
+          // (там карточка с Approve/Reject). Сюда не попадает foreman.
           children.add(
             Expanded(
               child: AppButton(
-                label: widget.planAllowsStart
-                    ? 'Запустить этап'
-                    : 'План не согласован',
+                label: 'Согласовать план',
+                icon: Icons.task_alt_rounded,
+                onPressed: () => context.push(
+                  AppRoutes.projectPlanApprovalWith(widget.projectId),
+                ),
+              ),
+            ),
+          );
+        } else if (canStart) {
+          children.add(
+            Expanded(
+              child: AppButton(
+                label: 'Запустить этап',
                 icon: Icons.play_arrow_rounded,
                 isLoading: _busy,
-                onPressed: _busy
-                    ? null
-                    : (widget.planAllowsStart
-                          ? _tryStart
-                          : () => context.push(
-                              AppRoutes.projectPlanApprovalWith(
-                                widget.projectId,
-                              ),
-                            )),
+                onPressed: _busy ? null : _tryStart,
               ),
             ),
           );
@@ -728,25 +973,31 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           );
         }
       case StageDisplayStatus.review:
-        children.add(
-          Expanded(
-            child: AppButton(
-              label: 'Отклонить',
-              variant: AppButtonVariant.destructive,
-              onPressed: () => _rejectStage(),
+        // ТЗ §2.6 — Принимает этап заказчик (или бригадир, если приёмку
+        // запускал мастер, — двухступенчатый approval). Решает только тот,
+        // кому адресован pending stage_accept approval. У мастера/прочих
+        // здесь кнопок быть не должно — отсюда canDecide-фильтр.
+        if (canDecide) {
+          children.add(
+            Expanded(
+              child: AppButton(
+                label: 'Отклонить',
+                variant: AppButtonVariant.destructive,
+                onPressed: () => _rejectStage(),
+              ),
             ),
-          ),
-        );
-        children.add(
-          Expanded(
-            flex: 2,
-            child: AppButton(
-              label: 'Принять работу',
-              variant: AppButtonVariant.success,
-              onPressed: () => _approveStage(),
+          );
+          children.add(
+            Expanded(
+              flex: 2,
+              child: AppButton(
+                label: 'Принять работу',
+                variant: AppButtonVariant.success,
+                onPressed: () => _approveStage(),
+              ),
             ),
-          ),
-        );
+          );
+        }
       case StageDisplayStatus.rejected:
         if (canRequest) {
           children.add(
@@ -914,7 +1165,9 @@ class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    // SingleChildScrollView: счётчик maxLength + клавиатура легко выдавливают
+    // контент за 13–30 px на узких экранах; без скролла Column overflow'ит.
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),

@@ -15,6 +15,7 @@ import '../application/projects_list_controller.dart';
 import '../domain/project.dart';
 import 'card_menu_sheet.dart';
 import 'project_card.dart';
+import 'projects_filters.dart';
 
 /// s-projects — список активных проектов.
 ///
@@ -31,6 +32,8 @@ class ProjectsScreen extends ConsumerWidget {
         .watch(notificationsProvider)
         .where((n) => !n.read)
         .length;
+    final activeFilter = ref.watch(projectsFilterProvider);
+    final totalActive = ref.watch(activeProjectsProvider).value?.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.n50,
@@ -39,9 +42,21 @@ class ProjectsScreen extends ConsumerWidget {
           _Header(
             unreadNotifications: unread,
             activeIndex: 0,
+            onActiveTap: () =>
+                ref.read(activeProjectsProvider.notifier).refresh(),
             onArchiveTap: () => context.push(AppRoutes.projectsArchive),
             onJoinByCodeTap: () => context.push(AppRoutes.projectsJoinByCode),
+            onSearchTap: () => context.push(AppRoutes.projectsSearch),
           ),
+          if (totalActive > 0) ...[
+            const SizedBox(height: AppSpacing.x8),
+            ProjectsFilterChips(
+              selected: activeFilter,
+              onSelected: (f) =>
+                  ref.read(projectsFilterProvider.notifier).state = f,
+            ),
+            const SizedBox(height: AppSpacing.x4),
+          ],
           Expanded(
             child: async.when(
               loading: () => const _ProjectsSkeleton(),
@@ -52,6 +67,13 @@ class ProjectsScreen extends ConsumerWidget {
               ),
               data: (items) {
                 if (items.isEmpty) {
+                  if (totalActive > 0) {
+                    return _FilteredEmpty(
+                      onReset: () => ref
+                          .read(projectsFilterProvider.notifier)
+                          .state = ProjectsFilter.all,
+                    );
+                  }
                   return _EmptyState(
                     onCreate: () => context.push(AppRoutes.projectsCreate),
                     onJoinByCode: () =>
@@ -100,21 +122,25 @@ class _Header extends ConsumerWidget {
   const _Header({
     required this.unreadNotifications,
     required this.activeIndex,
+    required this.onActiveTap,
     required this.onArchiveTap,
     required this.onJoinByCodeTap,
+    required this.onSearchTap,
   });
 
   final int unreadNotifications;
   final int activeIndex;
+  final VoidCallback onActiveTap;
   final VoidCallback onArchiveTap;
   final VoidCallback onJoinByCodeTap;
+  final VoidCallback onSearchTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SafeArea(
       bottom: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
         decoration: const BoxDecoration(
           color: AppColors.n0,
           border: Border(bottom: BorderSide(color: AppColors.n200, width: 1)),
@@ -135,16 +161,16 @@ class _Header extends ConsumerWidget {
                     ),
                   ),
                 ),
-                // Доступно всем ролям — присоединиться к проекту по 6-значному
-                // коду от заказчика/бригадира/представителя.
                 _IconBtn(
                   icon: PhosphorIconsRegular.qrCode,
                   onTap: onJoinByCodeTap,
                 ),
+                const SizedBox(width: 6),
                 _IconBtn(
                   icon: PhosphorIconsRegular.question,
                   onTap: () => context.push(AppRoutes.profileHelp),
                 ),
+                const SizedBox(width: 6),
                 _IconBtn(
                   icon: PhosphorIconsRegular.bell,
                   badge: unreadNotifications,
@@ -152,16 +178,66 @@ class _Header extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.x10),
+            _SearchTapField(onTap: onSearchTap),
+            const SizedBox(height: AppSpacing.x10),
             Row(
               children: [
-                _Tab(label: 'Активные', active: activeIndex == 0, onTap: () {}),
+                _Tab(
+                  label: 'Активные',
+                  active: activeIndex == 0,
+                  onTap: onActiveTap,
+                ),
                 _Tab(
                   label: 'Архив',
                   active: activeIndex == 1,
                   onTap: onArchiveTap,
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchTapField extends StatelessWidget {
+  const _SearchTapField({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.n50,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+          border: Border.all(color: AppColors.n200, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              PhosphorIconsRegular.magnifyingGlass,
+              size: 18,
+              color: AppColors.n400,
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Поиск по объектам',
+                style: TextStyle(
+                  fontFamily: 'Manrope',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.n300,
+                ),
+              ),
             ),
           ],
         ),
@@ -179,43 +255,114 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: 22, color: AppColors.n400),
-            if (badge != null && badge! > 0)
-              Positioned(
-                top: -2,
-                right: -2,
-                child: Container(
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.redDot,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.n0, width: 2),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    badge! > 99 ? '99' : '$badge',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.n0,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.n100,
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Icon(icon, size: 20, color: AppColors.n600),
+              if (badge != null && badge! > 0)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.redDot,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.n0, width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      badge! > 99 ? '99' : '$badge',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.n0,
+                      ),
                     ),
                   ),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilteredEmpty extends StatelessWidget {
+  const _FilteredEmpty({required this.onReset});
+
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.n100,
+                borderRadius: BorderRadius.circular(AppRadius.r20),
               ),
+              child: Icon(
+                PhosphorIconsRegular.funnel,
+                size: 26,
+                color: AppColors.n400,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            const Text(
+              'Ничего не подходит под фильтр',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Сбросьте фильтр, чтобы увидеть все активные объекты.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.n500,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: AppButton(
+                label: 'Показать все',
+                variant: AppButtonVariant.secondary,
+                onPressed: onReset,
+              ),
+            ),
           ],
         ),
       ),

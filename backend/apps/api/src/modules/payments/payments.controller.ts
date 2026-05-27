@@ -1,24 +1,13 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Headers,
-  HttpCode,
-  Param,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PaymentKind, PaymentStatus } from '@prisma/client';
+import { PaymentKind } from '@prisma/client';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
 import { PaymentsService } from './payments.service';
 import { BudgetCalculator } from './budget-calculator';
-import { CreateAdvanceDto, DisputePaymentDto, DistributeDto, ResolvePaymentDto } from './dto';
+import { CreateAdvanceDto, DistributeDto } from './dto';
 import { ErrorCodes, InvalidInputError, PrismaService } from '@app/common';
 
 @ApiTags('payments')
@@ -35,7 +24,7 @@ export class PaymentsController {
   @Post('projects/:projectId/payments')
   @Idempotent()
   @RequireAccess({
-    action: 'finance.payment.create',
+    action: 'finance.payment.create_advance',
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
@@ -59,6 +48,11 @@ export class PaymentsController {
 
   @Post('payments/:id/distribute')
   @Idempotent()
+  @RequireAccess({
+    action: 'finance.payment.distribute',
+    resource: 'payment',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
   async distribute(
     @Req() req: { user: AuthenticatedUser },
     @Param('id') parentId: string,
@@ -77,43 +71,33 @@ export class PaymentsController {
     });
   }
 
-  @Post('payments/:id/confirm')
-  @HttpCode(200)
+  /**
+   * Простая выплата мастеру из «кассы бригадира». Не требует выбора конкретного
+   * родительского аванса — баланс кассы считается агрегатом (advancesReceived −
+   * distributed). Точка входа на BudgetScreen у бригадира.
+   */
+  @Post('projects/:projectId/payments/distribute')
   @Idempotent()
-  async confirm(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.payments.confirm(id, req.user.userId);
-  }
-
-  @Post('payments/:id/cancel')
-  @HttpCode(200)
-  async cancel(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.payments.cancel(id, req.user.userId);
-  }
-
-  @Post('payments/:id/dispute')
-  @HttpCode(200)
-  async dispute(
+  @RequireAccess({
+    action: 'finance.payment.distribute',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async distributeFromWallet(
     @Req() req: { user: AuthenticatedUser },
-    @Param('id') id: string,
-    @Body() dto: DisputePaymentDto,
+    @Param('projectId') projectId: string,
+    @Headers('idempotency-key') idempotencyKey: string,
+    @Body() dto: DistributeDto,
   ) {
-    return this.payments.dispute(id, dto.reason, req.user.userId, dto.photoKeys ?? [], {
-      claimedAmount: dto.claimedAmount,
-      kind: dto.kind,
-    });
-  }
-
-  @Post('payments/:id/resolve')
-  @HttpCode(200)
-  async resolve(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('id') id: string,
-    @Body() dto: ResolvePaymentDto,
-  ) {
-    return this.payments.resolve(id, {
-      resolution: dto.resolution,
-      adjustAmount: dto.adjustAmount,
+    return this.payments.createDistribution({
+      projectId,
+      toUserId: dto.toUserId,
+      amount: dto.amount,
+      stageId: dto.stageId,
+      comment: dto.comment,
+      photoKey: dto.photoKey,
       actorUserId: req.user.userId,
+      idempotencyKey,
     });
   }
 
@@ -126,12 +110,11 @@ export class PaymentsController {
   async list(
     @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
-    @Query('status') status?: PaymentStatus,
     @Query('kind') kind?: PaymentKind,
     @Query('userId') userId?: string,
   ) {
     const viewer = await this.buildProjectViewer(req.user.userId, projectId);
-    return this.payments.listForProject(projectId, viewer, { status, kind, userId });
+    return this.payments.listForProject(projectId, viewer, { kind, userId });
   }
 
   @Get('payments/:id')
@@ -197,15 +180,29 @@ export class PaymentsController {
       where: { id: projectId },
       select: { ownerId: true },
     });
-    const membership = await this.prisma.membership.findFirst({
-      where: { projectId, userId: req.user.userId },
-      select: { role: true, stageIds: true },
+    // 2026-05: явно фильтруем removedAt=null и приоритезируем role при множественном membership.
+    // Customer > representative > foreman > master — чтобы owner-customer с legacy
+    // foreman-записью не получал foreman-срез и не видел нули в шапке.
+    const memberships = await this.prisma.membership.findMany({
+      where: { projectId, userId: req.user.userId, removedAt: null },
+      select: { role: true, stageIds: true, permissions: true },
     });
+    const rolePriority: Record<string, number> = {
+      customer: 0,
+      representative: 1,
+      foreman: 2,
+      master: 3,
+    };
+    const membership = memberships
+      .slice()
+      .sort((a, b) => (rolePriority[a.role] ?? 9) - (rolePriority[b.role] ?? 9))[0];
+    const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
     return this.budget.getProjectBudget(projectId, {
       userId: req.user.userId,
       isOwner: project?.ownerId === req.user.userId,
       membershipRole: membership?.role,
       assignedStageIds: membership?.stageIds ?? [],
+      canSeeBudget: perms.canSeeBudget === true,
     });
   }
 
@@ -229,10 +226,19 @@ export class PaymentsController {
       where: { id: projectId },
       select: { ownerId: true },
     });
-    const membership = await this.prisma.membership.findFirst({
-      where: { projectId, userId: req.user.userId },
+    const memberships = await this.prisma.membership.findMany({
+      where: { projectId, userId: req.user.userId, removedAt: null },
       select: { role: true, permissions: true, stageIds: true },
     });
+    const rolePriorityMF: Record<string, number> = {
+      customer: 0,
+      representative: 1,
+      foreman: 2,
+      master: 3,
+    };
+    const membership = memberships
+      .slice()
+      .sort((a, b) => (rolePriorityMF[a.role] ?? 9) - (rolePriorityMF[b.role] ?? 9))[0];
     const perms = (membership?.permissions ?? {}) as { canSeeBudget?: boolean };
     const range = this.parseDateRange(from, to);
     return this.budget.getMoneyFlow(

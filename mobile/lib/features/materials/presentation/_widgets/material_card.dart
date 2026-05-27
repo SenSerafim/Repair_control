@@ -19,7 +19,7 @@ class MaterialCard extends StatelessWidget {
     final semaphore = request.status.semaphore;
     final iconBg = semaphore.bg;
     final iconColor = semaphore.text;
-    final amount = request.totalBoughtPrice;
+    final amount = request.totalEstimatedPrice;
     return InkWell(
       onTap: onTap,
       borderRadius: AppRadius.card,
@@ -39,12 +39,18 @@ class MaterialCard extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: iconBg,
                       borderRadius: BorderRadius.circular(AppRadius.r12),
+                      border: const Border(
+                        top: BorderSide(
+                          color: AppShadows.innerHighlight,
+                          width: 1,
+                        ),
+                      ),
                     ),
                     child: Icon(
                       Icons.inventory_2_outlined,
@@ -85,16 +91,21 @@ class MaterialCard extends StatelessWidget {
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00F8FAFF), Color(0x99F8FAFF)],
+                ),
                 border: Border(top: BorderSide(color: AppColors.n100)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                      horizontal: 9,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: iconBg,
@@ -104,8 +115,9 @@ class MaterialCard extends StatelessWidget {
                       request.status.displayName,
                       style: AppTextStyles.tiny.copyWith(
                         color: iconColor,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         fontSize: 10,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),
@@ -115,7 +127,8 @@ class MaterialCard extends StatelessWidget {
                     style: AppTextStyles.subtitle.copyWith(
                       color: AppColors.n800,
                       fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ],

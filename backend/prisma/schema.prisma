@@ -73,20 +73,13 @@ enum PaymentKind {
   correction
 }
 
-enum PaymentStatus {
-  pending
-  confirmed
-  disputed
-  resolved
-  cancelled
-}
-
 enum MaterialRequestStatus {
-  draft
+  pending_approval
   open
-  partially_bought
   bought
   delivered
+  accepted_partial
+  accepted_full
   disputed
   resolved
   cancelled
@@ -108,16 +101,6 @@ enum SelfPurchaseBy {
   master
 }
 
-enum ToolIssuanceStatus {
-  requested
-  approved
-  rejected
-  issued
-  confirmed
-  return_requested
-  returned
-}
-
 enum ApprovalScope {
   plan
   step
@@ -127,7 +110,6 @@ enum ApprovalScope {
   stage_create
   material_purchase
   self_purchase
-  payment_dispute
 }
 
 enum ApprovalStatus {
@@ -209,18 +191,19 @@ enum FeedEventKind {
   methodology_article_updated
   methodology_article_deleted
   payment_created
-  payment_confirmed
-  payment_cancelled
-  payment_disputed
-  payment_resolved
   payment_distributed
   material_request_created
   material_request_sent
+  material_request_approved
+  material_request_cancelled
   material_item_bought
   material_request_finalized
   material_delivered
   material_disputed
   material_resolved
+  material_request_accepted_partial
+  material_request_accepted_full
+  material_request_overdue
   selfpurchase_created
   selfpurchase_approved
   selfpurchase_rejected
@@ -243,6 +226,10 @@ enum FeedEventKind {
   tool_request_approved
   tool_request_rejected
   tool_force_returned
+  // ---- Simplified tools (2026-05-12) ----
+  tool_added_to_project
+  tool_removed_from_project
+  tool_custody_changed
   // ---- S5 ----
   chat_created
   chat_message_sent
@@ -287,9 +274,6 @@ enum NotificationKind {
   approval_approved
   approval_rejected
   payment_created
-  payment_confirmed
-  payment_disputed
-  payment_resolved
   stage_rejected_by_customer
   stage_overdue
   stage_deadline_exceeds_project
@@ -316,10 +300,14 @@ enum NotificationKind {
   stage_master_assigned
   stage_create_requested
   material_purchase_requested
-  payment_dispute_requested
   budget_changed
   tool_request_created
   tool_request_decided
+  tool_custody_changed
+  // --- E1a — заявки 2.0 (2026-05-27) ---
+  material_request_accepted_partial
+  material_request_accepted_full
+  material_request_overdue
 }
 
 enum NotificationPriority {
@@ -331,6 +319,8 @@ enum NotificationPriority {
 enum ExportKind {
   feed_pdf
   project_zip
+  project_summary_txt // deprecated — TXT-сводка больше не предлагается, оставлено для совместимости
+  project_report_pdf
 }
 
 enum ExportStatus {
@@ -842,7 +832,7 @@ model ReferencePhoto {
 // ---------- Payments ----------
 
 model Payment {
-  id              String        @id @default(cuid())
+  id              String      @id @default(cuid())
   projectId       String
   stageId         String?
   parentPaymentId String?
@@ -850,46 +840,22 @@ model Payment {
   fromUserId      String
   toUserId        String
   amount          BigInt
-  resolvedAmount  BigInt?
   comment         String?
   photoKey        String?
-  status          PaymentStatus @default(pending)
-  idempotencyKey  String?       @unique
-  createdAt       DateTime      @default(now())
-  confirmedAt     DateTime?
-  disputedAt      DateTime?
-  resolvedAt      DateTime?
-  cancelledAt     DateTime?
-  updatedAt       DateTime      @updatedAt
+  idempotencyKey  String?     @unique
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  project  Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  stage    Stage?           @relation(fields: [stageId], references: [id], onDelete: Cascade)
-  parent   Payment?         @relation("PaymentParent", fields: [parentPaymentId], references: [id], onDelete: SetNull)
-  children Payment[]        @relation("PaymentParent")
-  disputes PaymentDispute[]
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage    Stage?    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  parent   Payment?  @relation("PaymentParent", fields: [parentPaymentId], references: [id], onDelete: SetNull)
+  children Payment[] @relation("PaymentParent")
 
-  @@index([projectId, status])
+  @@index([projectId, createdAt])
   @@index([fromUserId])
   @@index([toUserId])
   @@index([parentPaymentId])
   @@index([stageId])
-}
-
-model PaymentDispute {
-  id         String    @id @default(cuid())
-  paymentId  String
-  openedById String
-  reason     String
-  photoKeys  String[]  @default([])
-  status     String    @default("open")
-  resolution String?
-  resolvedAt DateTime?
-  resolvedBy String?
-  createdAt  DateTime  @default(now())
-
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-
-  @@index([paymentId, status])
 }
 
 // ---------- Materials ----------
@@ -902,7 +868,7 @@ model MaterialRequest {
   recipient      MaterialRecipient
   title          String
   comment        String?
-  status         MaterialRequestStatus @default(draft)
+  status         MaterialRequestStatus @default(pending_approval)
   finalizedAt    DateTime?
   deliveredAt    DateTime?
   deliveredById  String?
@@ -924,8 +890,10 @@ model MaterialItem {
   requestId    String
   name         String
   qty          Decimal   @db.Decimal(12, 3)
+  actualQty    Decimal?  @db.Decimal(12, 3)
   unit         String?
   note         String?
+  dueDate      DateTime?
   pricePerUnit BigInt?
   totalPrice   BigInt?
   isBought     Boolean   @default(false)
@@ -933,9 +901,25 @@ model MaterialItem {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  request MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request MaterialRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  photo   MaterialItemPhoto?
 
   @@index([requestId])
+  @@index([dueDate])
+}
+
+model MaterialItemPhoto {
+  id          String   @id @default(cuid())
+  itemId      String   @unique
+  fileKey     String
+  thumbKey    String?
+  mimeType    String
+  sizeBytes   Int
+  uploadedBy  String
+  exifCleared Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  item MaterialItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model MaterialDispute {
@@ -990,52 +974,55 @@ model SelfPurchase {
 }
 
 // ---------- Tools ----------
+//
+// Упрощённая модель (2026-05-12):
+//   • Каждый ToolItem — ОДИН физический инструмент (qty=1).
+//   • `ownerId` — владелец, чей инструмент. Не меняется.
+//   • `currentHolderId` — у кого инструмент сейчас. Меняется только self-claim
+//     (пользователь сам отмечает «я взял»). Никто не назначает другого.
+//   • `ToolCustodyEvent` — иммутабельный лог передач (история).
+//   • `projectId` — если задан, инструмент видим всем участникам проекта.
 
 model ToolItem {
-  id        String   @id @default(cuid())
-  ownerId   String
-  name      String
-  totalQty  Int
-  issuedQty Int      @default(0)
-  unit      String?  @default("шт")
-  photoKey  String?
-  /// Серийный/инвентарный номер инструмента (П2.14). Свободный текст.
-  serial    String?
-  /// Если задан — инструмент привязан к конкретному проекту (бригадир/мастер
-  /// добавил инструмент «в проект»). Видим всем участникам этого проекта.
+  id              String   @id @default(cuid())
+  ownerId         String
+  /// У кого инструмент сейчас. При создании = ownerId. Меняется только через self-claim.
+  currentHolderId String
+  name            String
+  photoKey        String?
+  /// Серийный/инвентарный номер инструмента (опциональный, свободный текст).
+  serial          String?
+  /// Если задан — инструмент привязан к проекту и видим всем его участникам.
   /// Если null — инструмент только в личном профиле владельца (My Tools).
-  projectId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  projectId       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  issuances ToolIssuance[]
+  custodyEvents ToolCustodyEvent[]
 
   @@index([ownerId])
   @@index([projectId])
+  @@index([currentHolderId])
 }
 
-model ToolIssuance {
-  id                String             @id @default(cuid())
-  toolItemId        String
-  projectId         String?
-  stageId           String?
-  toUserId          String
-  issuedById        String
-  qty               Int
-  returnedQty       Int?
-  status            ToolIssuanceStatus @default(issued)
-  issuedAt          DateTime           @default(now())
-  confirmedAt       DateTime?
-  returnedAt        DateTime?
-  returnConfirmedAt DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+model ToolCustodyEvent {
+  id               String   @id @default(cuid())
+  toolItemId       String
+  /// Контекст проекта на момент события (для history-фильтрации).
+  projectId        String
+  /// Кто стал держателем. Это всегда == пользователь, инициировавший claim.
+  holderId         String
+  /// Кто держал до этого (null только для самого первого события — initial-create).
+  previousHolderId String?
+  /// Опциональная пометка пользователя («забрал на этаж 3»).
+  note             String?
+  createdAt        DateTime @default(now())
 
   toolItem ToolItem @relation(fields: [toolItemId], references: [id], onDelete: Cascade)
 
-  @@index([toolItemId, status])
-  @@index([toUserId, status])
-  @@index([projectId])
+  @@index([toolItemId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([holderId])
 }
 
 // ---------- Idempotency ----------
@@ -1140,6 +1127,8 @@ model Document {
   stepId       String?
   category     DocumentCategory
   title        String
+  description  String?
+  documentDate DateTime?
   fileKey      String
   thumbKey     String?
   thumbStatus  String           @default("pending")

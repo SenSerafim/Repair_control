@@ -28,11 +28,21 @@ class ApprovalCard extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Hero(
         tag: 'approval-${approval.id}',
+        // Цель Hero в детале — SizedBox(height:1), поэтому шаттл во время
+        // полёта сжимается до 1px. Чтобы не получать RenderFlex overflow,
+        // оборачиваем содержимое в неприкрытый scroll-view: естественная
+        // высота сохраняется, лишнее клипается по rect анимации.
         flightShuttleBuilder: (_, __, dir, fromCtx, toCtx) {
           final hero =
               (dir == HeroFlightDirection.push ? fromCtx : toCtx).widget
                   as Hero;
-          return hero.child;
+          return Material(
+            type: MaterialType.transparency,
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: hero.child,
+            ),
+          );
         },
         child: Material(
           color: Colors.transparent,
@@ -79,7 +89,8 @@ class _Thumb extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: AppColors.n100,
+        gradient: url == null ? AppGradients.photoPlaceholder : null,
+        color: url == null ? null : AppColors.n100,
         borderRadius: BorderRadius.circular(AppRadius.r12),
       ),
       clipBehavior: Clip.antiAlias,
@@ -102,7 +113,7 @@ class _IconFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Icon(approval.scope.icon, color: AppColors.n400, size: 22),
+      child: Icon(approval.scope.icon, color: AppColors.brand, size: 24),
     );
   }
 }
@@ -123,53 +134,47 @@ class _Body extends StatelessWidget {
     final tone = _toneFor(approval.scope);
     final df = DateFormat('d MMM HH:mm', 'ru');
 
-    // ClipRect защищает от RenderFlex overflow assert: Hero
-    // `flightShuttleBuilder` в момент анимации перехода на ApprovalDetail
-    // даёт Body очень маленький transient height (~12px), и без clipping
-    // Flutter роняет debug assert. Визуально — те же миллисекунды flight.
-    return ClipRect(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              ScopeBadge(label: approval.scope.displayName, tone: tone),
-              AttemptBadge(attemptNumber: approval.attemptNumber),
-              if (approval.status != ApprovalStatus.pending)
-                ScopeBadge(
-                  label: approval.status.displayName,
-                  tone: _statusTone(approval.status),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _title,
-            style: AppTextStyles.subtitle.copyWith(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.n900,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _meta(approval, df),
-            style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (approval.attachments.length > 1) ...[
-            const SizedBox(height: 8),
-            _PhotoRow(attachments: approval.attachments),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ScopeBadge(label: approval.scope.displayName, tone: tone),
+            AttemptBadge(attemptNumber: approval.attemptNumber),
+            if (approval.status != ApprovalStatus.pending)
+              ScopeBadge(
+                label: approval.status.displayName,
+                tone: _statusTone(approval.status),
+              ),
           ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _title,
+          style: AppTextStyles.subtitle.copyWith(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.n900,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _meta(approval, df),
+          style: AppTextStyles.tiny.copyWith(color: AppColors.n400),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (approval.attachments.length > 1) ...[
+          const SizedBox(height: 8),
+          _PhotoRow(attachments: approval.attachments),
         ],
-      ),
+      ],
     );
   }
 
@@ -256,7 +261,6 @@ ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
   ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
   ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
   ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
-  ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
 };
 
 ScopeBadgeTone _statusTone(ApprovalStatus s) => switch (s) {
@@ -293,9 +297,6 @@ String _subtitleFor(Approval a) {
     case ApprovalScope.selfPurchase:
       final amount = (a.payload['amount'] as num?)?.toInt();
       return amount != null ? Money.format(amount) : 'Самокуп';
-    case ApprovalScope.paymentDispute:
-      final reason = a.payload['reason'] as String?;
-      return reason?.isNotEmpty == true ? reason! : 'Спор по платежу';
   }
 }
 

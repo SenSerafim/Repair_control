@@ -26,7 +26,8 @@ class SubstepRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
+            AnimatedContainer(
+              duration: AppDurations.fast,
               width: 8,
               height: 8,
               decoration: BoxDecoration(
@@ -36,6 +37,7 @@ class SubstepRow extends StatelessWidget {
                   color: done ? AppColors.greenDark : AppColors.brandMid,
                   width: 1.5,
                 ),
+                boxShadow: done ? AppShadows.haloGreenSmall : null,
               ),
             ),
             const SizedBox(width: AppSpacing.x10),

@@ -29,6 +29,40 @@ class SocketEvents {
   static const exportReady = 'export:ready';
   static const exportFailed = 'export:failed';
   static const notificationNew = 'notification:new';
+  /// chat:added — личное уведомление «тебя добавили в чат». Эмитится бэкендом
+  /// в `user:{id}` комнату нового участника (см. ChatsGateway.onChatUserJoined).
+  /// Payload: `{ chatId, projectId, type }`. Mobile инвалидирует список чатов,
+  /// чтобы новый чат появился в inbox без pull-to-refresh.
+  static const chatAdded = 'chat:added';
+  /// project:membership_changed — тихий broadcast «состав команды изменился».
+  /// Эмитится бэкендом в `user:{X}` комнаты всех участников проекта (включая
+  /// нового/удалённого). Payload: `{ projectId, userId, role, action }`.
+  /// `membership_sync_provider` использует событие для инвалидации списков
+  /// проектов / команды / чатов без pull-to-refresh.
+  static const projectMembershipChanged = 'project:membership_changed';
+  /// approval:changed — точечный сигнал «обнови approvals», эмитится бэкендом
+  /// для всех approval-родственных feed-событий (request/decide/escalate/cancel
+  /// + mirror-approval lifecycle: selfpurchase/material/payment_dispute).
+  /// Payload: `{ kind, projectId, approvalId, scope }`.
+  static const approvalChanged = 'approval:changed';
+
+  /// stage:changed / step:changed / substep:changed — широковещание изменений
+  /// этапов / шагов / подшагов всем активным участникам проекта. Эмитятся
+  /// бекендом для всех STAGE_FEED_KINDS / STEP_FEED_KINDS / SUBSTEP_FEED_KINDS
+  /// (см. chats.gateway.ts). Payload: `{ kind, projectId, stageId?, stepId?,
+  /// substepId? }`. Мобайл по событию инвалидирует затронутые провайдеры
+  /// (stagesController, stepsController, stepDetailController) — без
+  /// pull-to-refresh у других пользователей.
+  static const stageChanged = 'stage:changed';
+  static const stepChanged = 'step:changed';
+  static const substepChanged = 'substep:changed';
+
+  /// tool:changed — широковещание инструментов проекта всем участникам.
+  /// Self-custody модель (2026-05-12): event эмитится для tool_added_to_project,
+  /// tool_removed_from_project, tool_custody_changed. Payload:
+  /// `{ kind, projectId, toolItemId?, holderId? }`. Mobile инвалидирует
+  /// projectToolsBoardProvider + toolCustodyHistoryProvider.
+  static const toolChanged = 'tool:changed';
 }
 
 /// Обёртка над socket_io_client с авто-подключением через JWT и
@@ -57,6 +91,13 @@ class SocketService {
   // если бэкенд закрыл соединение, поэтому делаем это вручную с экспоненциальной
   // задержкой 1s → 30s.
   int _serverDisconnectAttempts = 0;
+  // Момент последнего успешного onConnect. Используется в backoff-логике:
+  // attempts счётчик сбрасываем только если коннект «прожил» больше
+  // _stableConnectionThreshold — иначе сервер кикает сразу после connect
+  // (auth-fail / duplicate session), и без этой защиты backoff остаётся
+  // на 1s навсегда → log-флуд WS /chats reconnect каждую секунду.
+  DateTime? _connectedAt;
+  static const _stableConnectionThreshold = Duration(seconds: 10);
   Timer? _reconnectTimer;
   final _connectedController = StreamController<bool>.broadcast();
   final _eventsController =
@@ -108,7 +149,7 @@ class SocketService {
     socket
       ..onConnect((_) {
         _connecting = false;
-        _serverDisconnectAttempts = 0;
+        _connectedAt = DateTime.now();
         _logger.d('WS /chats connected');
         _connectedController.add(true);
         // Re-join во все чаты, на которые подписаны до disconnect.
@@ -125,6 +166,14 @@ class SocketService {
         // socket.io в этом случае НЕ пытается reconnect самостоятельно,
         // поэтому делаем это вручную с backoff. Транспортные disconnect
         // (transport close, ping timeout) socket.io обрабатывает сам.
+        // Стабильная сессия (≥ _stableConnectionThreshold) сбрасывает
+        // счётчик попыток. Иначе оставляем — backoff будет расти 1→30s,
+        // а не залипать на 1s при пинг-понг кике сразу после handshake.
+        final connectedAt = _connectedAt;
+        final wasStable = connectedAt != null &&
+            DateTime.now().difference(connectedAt) >= _stableConnectionThreshold;
+        if (wasStable) _serverDisconnectAttempts = 0;
+        _connectedAt = null;
         _logger.w('WS /chats disconnected: ${reason ?? "unknown"}');
         _connectedController.add(false);
         if (!_intentionallyClosed && reason == 'io server disconnect') {
@@ -149,6 +198,13 @@ class SocketService {
       SocketEvents.exportReady,
       SocketEvents.exportFailed,
       SocketEvents.notificationNew,
+      SocketEvents.chatAdded,
+      SocketEvents.projectMembershipChanged,
+      SocketEvents.approvalChanged,
+      SocketEvents.stageChanged,
+      SocketEvents.stepChanged,
+      SocketEvents.toolChanged,
+      SocketEvents.substepChanged,
     ]) {
       socket.on(event, (payload) {
         _eventsController.add((event, payload));
@@ -207,6 +263,7 @@ class SocketService {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _serverDisconnectAttempts = 0;
+    _connectedAt = null;
     _socket?.dispose();
     _socket = null;
     _connecting = false;
@@ -218,6 +275,7 @@ class SocketService {
     _intentionallyClosed = true;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _connectedAt = null;
     _socket?.dispose();
     _socket = null;
     _connectedController.close();

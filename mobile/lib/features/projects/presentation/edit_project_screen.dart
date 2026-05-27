@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/project_controller.dart';
+import '../application/projects_list_controller.dart';
 import '../domain/project.dart';
+import 'card_menu_sheet.dart';
 import 'money_input.dart';
 
 /// s-edit-project — редактирование проекта.
@@ -230,6 +234,8 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
                         const SizedBox(height: AppSpacing.x12),
                         AppInlineError(message: _error!),
                       ],
+                      const SizedBox(height: AppSpacing.x24),
+                      if (!p.isArchived) _DangerZone(project: p),
                     ],
                   ),
                 ),
@@ -332,6 +338,83 @@ class _Header extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DangerZone extends ConsumerWidget {
+  const _DangerZone({required this.project});
+
+  final Project project;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Архивировать может только тот, у кого есть `project.archive` (заказчик/owner).
+    final canArchive = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.projectArchive,
+        projectId: project.id,
+      )),
+    );
+    if (!canArchive) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+        borderRadius: BorderRadius.circular(AppRadius.r16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                PhosphorIconsRegular.warningCircle,
+                size: 18,
+                color: AppColors.redText,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Опасная зона',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.redText,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          const Text(
+            'Архивация скрывает проект из активного списка. '
+            'Данные и фотографии сохраняются — проект можно вернуть из «Архива».',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n600,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          AppButton(
+            label: 'Архивировать проект',
+            variant: AppButtonVariant.destructive,
+            icon: PhosphorIconsRegular.archive,
+            onPressed: () async {
+              final archived = await confirmAndArchiveProject(
+                context,
+                ref.read(activeProjectsProvider.notifier),
+                project,
+              );
+              if (archived && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         ],
       ),
     );

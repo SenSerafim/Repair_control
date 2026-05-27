@@ -154,3 +154,40 @@ describe('SubstepsService.delete — только автор', () => {
     await expect(svc.delete(sub.id, 'u2')).rejects.toThrow(ForbiddenError);
   });
 });
+
+// RBAC-инвариант: подшаги шага — единый список, одинаковый для всех ролей.
+// Модель Substep не имеет полей роли/видимости; SubstepsService.add не принимает
+// атрибут «для кого виден» — значит, customer/foreman/master/representative
+// всегда видят один и тот же массив. Тест фиксирует это, чтобы случайное добавление
+// фильтра по роли в schema/service/DTO ломало сборку.
+describe('Substep — RBAC-инвариант: одинаковые подшаги для всех ролей', () => {
+  it('подшаги от разных ролей лежат в одном bucket для шага (нет per-role видимости)', async () => {
+    const state = mkPrisma();
+    state.steps.set('step1', { id: 'step1', stageId: 'stg1', projectId: 'p1' });
+    const svc = new SubstepsService(state.prisma, mkFeed(), new FixedClock(NOW));
+    await svc.add('step1', 'А — заказчик', 'customer-u');
+    await svc.add('step1', 'Б — бригадир', 'foreman-u');
+    await svc.add('step1', 'В — мастер', 'master-u');
+    await svc.add('step1', 'Г — представитель', 'representative-u');
+
+    const allForStep = [...state.substeps.values()].filter((s) => s.stepId === 'step1');
+    expect(allForStep).toHaveLength(4);
+    expect(allForStep.map((s) => s.authorId).sort()).toEqual([
+      'customer-u',
+      'foreman-u',
+      'master-u',
+      'representative-u',
+    ]);
+    for (const row of allForStep) {
+      expect(row as unknown as Record<string, unknown>).not.toHaveProperty('role');
+      expect(row as unknown as Record<string, unknown>).not.toHaveProperty('assignedRole');
+      expect(row as unknown as Record<string, unknown>).not.toHaveProperty('visibleTo');
+    }
+  });
+
+  it('SubstepsService.add принимает только (stepId, text, actorUserId) — нет параметра роли', () => {
+    // Компиляционная гарантия: если сигнатуру расширят role-параметром,
+    // этот тест нужно пересмотреть совместно с инвариантом.
+    expect(SubstepsService.prototype.add.length).toBe(3);
+  });
+});

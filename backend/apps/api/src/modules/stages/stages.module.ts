@@ -6,9 +6,10 @@ import { StageLifecycle } from './stage-lifecycle';
 import { ProgressCronService } from './progress-cron.service';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { ChatsModule } from '../chats/chats.module';
+import { ProjectsModule } from '../projects/projects.module';
 
 @Module({
-  imports: [forwardRef(() => ApprovalsModule), ChatsModule],
+  imports: [forwardRef(() => ApprovalsModule), ChatsModule, ProjectsModule],
   controllers: [StagesController],
   providers: [StagesService, ProgressCalculator, StageLifecycle, ProgressCronService],
   exports: [StagesService, ProgressCalculator],

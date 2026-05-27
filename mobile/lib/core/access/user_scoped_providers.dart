@@ -53,11 +53,11 @@ import '../../features/tools/application/tools_controller.dart';
 /// глобальные (методология, FAQ, knowledge base, support-контакты) —
 /// сюда не нужно.
 final userScopedProviders = <ProviderOrFamily>[
-  // tools
+  // tools (self-custody модель, 2026-05-12)
   myToolsProvider,
   toolDetailProvider,
-  toolIssuancesProvider,
-  projectToolRegistryProvider,
+  projectToolsBoardProvider,
+  toolCustodyHistoryProvider,
   // team
   teamControllerProvider,
   // materials

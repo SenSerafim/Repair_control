@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
-import '../../../shared/widgets/status_pill.dart';
 import '../domain/payment.dart';
 
+/// Карточка выплаты в списке — упрощённая модель (2026-05-12):
+/// иконка + цвет фона по `PaymentKind`, без status-pill.
 class PaymentCard extends StatelessWidget {
   const PaymentCard({required this.payment, required this.onTap, super.key});
 
@@ -15,6 +16,7 @@ class PaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final (iconColor, iconBg) = _kindStyle(payment.kind);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -39,18 +41,20 @@ class PaymentCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 42,
+                  height: 42,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: payment.status.semaphore.bg,
+                    color: iconBg,
                     borderRadius: BorderRadius.circular(AppRadius.r12),
+                    border: const Border(
+                      top: BorderSide(
+                        color: AppShadows.innerHighlight,
+                        width: 1,
+                      ),
+                    ),
                   ),
-                  child: Icon(
-                    payment.kind.icon,
-                    color: payment.status.semaphore.text,
-                    size: 20,
-                  ),
+                  child: Icon(payment.kind.icon, color: iconColor, size: 20),
                 ),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
@@ -68,33 +72,21 @@ class PaymentCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            Money.format(payment.effectiveAmount),
+                            Money.format(payment.amount),
                             style: AppTextStyles.subtitle.copyWith(
-                              color: payment.status.semaphore.text,
+                              color: AppColors.n900,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          StatusPill(
-                            label: payment.status.displayName,
-                            semaphore: payment.status.semaphore,
-                          ),
-                          const SizedBox(width: AppSpacing.x8),
-                          Expanded(
-                            child: Text(
-                              DateFormat(
-                                'd MMM HH:mm',
-                                'ru',
-                              ).format(payment.createdAt),
-                              style: AppTextStyles.caption,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        DateFormat('d MMM HH:mm', 'ru').format(
+                          payment.createdAt,
+                        ),
+                        style: AppTextStyles.caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -108,4 +100,10 @@ class PaymentCard extends StatelessWidget {
       ),
     );
   }
+
+  (Color, Color) _kindStyle(PaymentKind k) => switch (k) {
+    PaymentKind.advance => (AppColors.brand, AppColors.brandLight),
+    PaymentKind.distribution => (AppColors.greenDark, AppColors.greenLight),
+    PaymentKind.correction => (AppColors.n700, AppColors.n100),
+  };
 }

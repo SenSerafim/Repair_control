@@ -6,7 +6,6 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../stages/data/stages_repository.dart';
 import '../application/project_controller.dart';
 import '../data/projects_repository.dart';
 import 'money_input.dart';
@@ -92,12 +91,12 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   }
 
   /// П1.8 / 4.4 — кнопка «+ Кастомный этап» в шаге wizard'а.
-  /// Минимальный flow: dialog с TextField для названия. Сроки и бюджет
+  /// Минимальный flow: bottom-sheet с TextField для названия. Сроки и бюджет
   /// этапа — задаются позже на экране деталей этапа после создания проекта.
   Future<void> _promptCustomStage() async {
-    final title = await showDialog<String>(
+    final title = await showAppBottomSheet<String>(
       context: context,
-      builder: (_) => const _CustomStageDialog(),
+      child: const _CustomStageSheet(),
     );
     if (title != null && title.isNotEmpty && mounted) {
       setState(() {
@@ -127,6 +126,16 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
       _submitError = null;
     });
     try {
+      // П1.8 / 4.4 — этапы создаются в одной транзакции с проектом через
+      // `initialStages`. Порядок: пресеты в порядке enum `_StageTemplate`,
+      // затем кастомные. Если пользователь снял все галочки — передаём `[]`,
+      // чтобы бекенд НЕ подставил дефолтные плейсхолдеры (он подставляет их,
+      // только когда поле не передано — для API-юзеров).
+      final orderedPresets = _StageTemplate.values
+          .where(_selectedStages.contains)
+          .map((s) => s.title)
+          .toList();
+      final stageTitles = [...orderedPresets, ..._customStageTitles];
       final created = await ref
           .read(projectCreatorProvider)
           .create(
@@ -139,36 +148,13 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
             plannedEnd: _plannedEnd,
             workBudget: MoneyInput.readKopecks(_workBudget),
             materialsBudget: MoneyInput.readKopecks(_materialsBudget),
+            initialStages: stageTitles,
           );
-      // П1.8 / 4.4 — сразу после создания проекта раскидываем выбранные этапы.
-      // Порядок: пресеты в порядке enum _StageTemplate, затем кастомные.
-      // Создание идёт последовательно — orderIndex проставляется явно, чтобы
-      // не зависеть от гонки на бэке. Ошибка одного этапа не валит остальные.
-      final orderedPresets = _StageTemplate.values
-          .where(_selectedStages.contains)
-          .map((s) => s.title)
-          .toList();
-      final stageTitles = [...orderedPresets, ..._customStageTitles];
-      final stagesRepo = ref.read(stagesRepositoryProvider);
-      final failedStages = <String>[];
-      for (var i = 0; i < stageTitles.length; i++) {
-        try {
-          await stagesRepo.create(
-            projectId: created.id,
-            title: stageTitles[i],
-            orderIndex: i,
-          );
-        } on StagesException {
-          failedStages.add(stageTitles[i]);
-        }
-      }
       if (!mounted) return;
       AppToast.show(
         context,
-        message: failedStages.isEmpty
-            ? 'Проект создан'
-            : 'Проект создан, не удалось добавить этапы: ${failedStages.join(', ')}',
-        kind: failedStages.isEmpty ? AppToastKind.success : AppToastKind.info,
+        message: 'Проект создан',
+        kind: AppToastKind.success,
       );
       context.go('/projects/${created.id}');
     } on ProjectsException catch (e) {
@@ -297,6 +283,18 @@ class _Step1 extends StatelessWidget {
           placeholder: 'Например: Квартира на Ленина, 12',
           onChanged: (_) => onAnyChanged(),
         ),
+        const Padding(
+          padding: EdgeInsets.only(top: 6, left: 4),
+          child: Text(
+            'Первая буква ставится автоматически заглавной',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.n400,
+              height: 1.4,
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.x14),
         AppInput(
           controller: address,
@@ -386,19 +384,24 @@ class _Step2 extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.brandLight,
-            border: Border.all(color: AppColors.brand, width: 1.5),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.brandLight, Color(0xFFE8EDFF)],
+            ),
+            border: Border.all(color: AppColors.brand.withValues(alpha: 0.15)),
             borderRadius: BorderRadius.circular(AppRadius.r12),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'ИТОГО',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.brandDark,
+                  letterSpacing: 0.4,
                 ),
               ),
               Text(
@@ -448,19 +451,49 @@ class _Step3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pickedCount = selected.length + customStageTitles.length;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x20),
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: AppSpacing.x10),
-          child: Text(
-            'Выберите этапы — потом добавите свои.',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.n500,
-              height: 1.45,
-            ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Выберите этапы — потом добавите свои.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.n500,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: pickedCount > 0
+                      ? AppColors.brandLight
+                      : AppColors.n100,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  'Выбрано: $pickedCount',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: pickedCount > 0
+                        ? AppColors.brandDark
+                        : AppColors.n500,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         for (final s in _StageTemplate.values) ...[
@@ -514,15 +547,25 @@ class _Step3 extends StatelessWidget {
   }
 }
 
-class _CustomStageDialog extends StatefulWidget {
-  const _CustomStageDialog();
+class _CustomStageSheet extends StatefulWidget {
+  const _CustomStageSheet();
 
   @override
-  State<_CustomStageDialog> createState() => _CustomStageDialogState();
+  State<_CustomStageSheet> createState() => _CustomStageSheetState();
 }
 
-class _CustomStageDialogState extends State<_CustomStageDialog> {
+class _CustomStageSheetState extends State<_CustomStageSheet> {
   final _controller = TextEditingController();
+  bool _canSubmit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      final v = _controller.text.trim().isNotEmpty;
+      if (v != _canSubmit) setState(() => _canSubmit = v);
+    });
+  }
 
   @override
   void dispose() {
@@ -530,25 +573,44 @@ class _CustomStageDialogState extends State<_CustomStageDialog> {
     super.dispose();
   }
 
-  void _submit() => Navigator.of(context).pop(_controller.text.trim());
+  void _submit() {
+    final v = _controller.text.trim();
+    if (v.isEmpty) return;
+    Navigator.of(context).pop(v);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Свой этап'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(hintText: 'Например: Балкон'),
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Отмена'),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AppBottomSheetHeader(
+          title: 'Свой этап',
+          subtitle: 'Сроки и бюджет зададите позже, на экране этапа',
+          centered: true,
         ),
-        TextButton(onPressed: _submit, child: const Text('Добавить')),
+        const SizedBox(height: AppSpacing.x14),
+        AppInput(
+          controller: _controller,
+          label: 'НАЗВАНИЕ',
+          placeholder: 'Например: Балкон',
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+        ),
+        const SizedBox(height: AppSpacing.x16),
+        AppButton(
+          label: 'Добавить',
+          icon: PhosphorIconsBold.plus,
+          onPressed: _canSubmit ? _submit : null,
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        AppButton(
+          label: 'Отмена',
+          variant: AppButtonVariant.secondary,
+          onPressed: () => Navigator.of(context).pop(null),
+        ),
       ],
     );
   }
@@ -778,13 +840,28 @@ class _StageRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.x10),
               Expanded(
-                child: Text(
-                  template.title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? AppColors.brand : AppColors.n800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      template.title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? AppColors.brand : AppColors.n800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      template.meta,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.n400,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               _Check(selected: selected),
@@ -825,18 +902,31 @@ class _Check extends StatelessWidget {
 /// Локальный пресет этапов (UI). После создания проекта реальные этапы
 /// создаются на бэке через POST /stages для каждого выбранного template'а.
 enum _StageTemplate {
-  demolition('Демонтаж', PhosphorIconsRegular.hammer),
-  electrical('Электрика', PhosphorIconsRegular.lightning),
-  plumbing('Сантехника', PhosphorIconsRegular.drop),
-  walls('Штукатурка и стяжка', PhosphorIconsRegular.squareHalf),
-  flooring('Полы', PhosphorIconsRegular.squaresFour),
-  ceiling('Потолки', PhosphorIconsRegular.rectangle),
-  finishing('Чистовая отделка', PhosphorIconsRegular.paintBrush),
-  doors('Двери', PhosphorIconsRegular.door),
-  furniture('Мебель и техника', PhosphorIconsRegular.armchair),
-  cleaning('Уборка', PhosphorIconsRegular.broom);
+  demolition('Демонтаж', PhosphorIconsRegular.hammer, '4 шага · 3–7 дней'),
+  electrical('Электрика', PhosphorIconsRegular.lightning, '6 шагов · 5–10 дней'),
+  plumbing('Сантехника', PhosphorIconsRegular.drop, '5 шагов · 4–8 дней'),
+  walls(
+    'Штукатурка и стяжка',
+    PhosphorIconsRegular.squareHalf,
+    '4 шага · 7–14 дней',
+  ),
+  flooring('Полы', PhosphorIconsRegular.squaresFour, '5 шагов · 4–7 дней'),
+  ceiling('Потолки', PhosphorIconsRegular.rectangle, '3 шага · 2–5 дней'),
+  finishing(
+    'Чистовая отделка',
+    PhosphorIconsRegular.paintBrush,
+    '6 шагов · 7–14 дней',
+  ),
+  doors('Двери', PhosphorIconsRegular.door, '3 шага · 1–3 дня'),
+  furniture(
+    'Мебель и техника',
+    PhosphorIconsRegular.armchair,
+    '4 шага · 2–5 дней',
+  ),
+  cleaning('Уборка', PhosphorIconsRegular.broom, '2 шага · 1 день');
 
-  const _StageTemplate(this.title, this.icon);
+  const _StageTemplate(this.title, this.icon, this.meta);
   final String title;
   final IconData icon;
+  final String meta;
 }

@@ -52,6 +52,10 @@ class ProjectsRepository {
     DateTime? plannedEnd,
     int? workBudget,
     int? materialsBudget,
+    /// П1.8 — этапы создаются вместе с проектом одной транзакцией.
+    /// `null` (не передан) — бекенд подставит дефолтные 3 плейсхолдера.
+    /// `[]` — без этапов. Любой непустой список — ровно эти этапы по порядку.
+    List<String>? initialStages,
   }) => _call(() async {
     final body = <String, dynamic>{
       'title': title,
@@ -62,6 +66,7 @@ class ProjectsRepository {
       if (plannedEnd != null) 'plannedEnd': plannedEnd.toIso8601String(),
       if (workBudget != null) 'workBudget': workBudget,
       if (materialsBudget != null) 'materialsBudget': materialsBudget,
+      if (initialStages != null) 'initialStages': initialStages,
     };
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/projects',

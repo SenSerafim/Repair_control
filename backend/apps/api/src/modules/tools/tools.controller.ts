@@ -13,17 +13,14 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AccessGuard, RequireAccess } from '@app/rbac';
-import { PrismaService } from '@app/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 import { ToolsService } from './tools.service';
 import {
-  AddToolsToProjectDto,
+  AttachToolsToProjectDto,
+  ClaimToolDto,
+  CreateProjectToolDto,
   CreateToolDto,
-  IssueToolDto,
-  RejectRequestDto,
-  RequestToolDto,
-  ReturnToolDto,
   UpdateToolDto,
 } from './dto';
 
@@ -32,21 +29,28 @@ import {
 @UseGuards(JwtAuthGuard, AccessGuard)
 @Controller()
 export class ToolsController {
-  constructor(
-    private readonly tools: ToolsService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly tools: ToolsService) {}
 
-  // ---- /me/tools ----
+  // ---------- My Tools (профиль пользователя) ----------
 
   @Post('me/tools')
-  async create(@Req() req: { user: AuthenticatedUser }, @Body() dto: CreateToolDto) {
-    return this.tools.createToolItem({ ownerId: req.user.userId, ...dto });
+  async createMine(@Req() req: { user: AuthenticatedUser }, @Body() dto: CreateToolDto) {
+    return this.tools.createMyTool({
+      ownerId: req.user.userId,
+      name: dto.name,
+      photoKey: dto.photoKey,
+      serial: dto.serial,
+    });
   }
 
   @Get('me/tools')
   async listMine(@Req() req: { user: AuthenticatedUser }) {
-    return this.tools.listOwn(req.user.userId);
+    return this.tools.listMyTools(req.user.userId);
+  }
+
+  @Get('tools/:id')
+  async get(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    return this.tools.getTool(id, req.user.userId);
   }
 
   @Patch('tools/:id')
@@ -55,153 +59,106 @@ export class ToolsController {
     @Param('id') id: string,
     @Body() dto: UpdateToolDto,
   ) {
-    return this.tools.updateToolItem(id, dto, req.user.userId);
-  }
-
-  @Get('tools/:id')
-  async get(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.tools.getTool(id, req.user.userId);
+    return this.tools.updateTool(id, dto, req.user.userId);
   }
 
   @Delete('tools/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string): Promise<void> {
-    await this.tools.deleteToolItem(id, req.user.userId);
+    await this.tools.deleteTool(id, req.user.userId);
   }
 
-  // ---- /projects/:projectId/tool-issuances ----
+  // ---------- Project Tools ----------
 
-  @Post('projects/:projectId/tool-issuances')
+  /**
+   * Список инструментов проекта (виден всем member-ам).
+   */
+  @Get('projects/:projectId/tools')
   @RequireAccess({
-    action: 'tools.issue',
+    action: 'tools.view_project',
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
-  async issue(
+  async listProject(
     @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
-    @Body() dto: IssueToolDto,
   ) {
-    return this.tools.issue({
-      toolItemId: dto.toolItemId,
+    return this.tools.listProjectTools(projectId, req.user.userId);
+  }
+
+  /**
+   * Создать новый инструмент сразу в проекте. Любой member.
+   */
+  @Post('projects/:projectId/tools')
+  @RequireAccess({
+    action: 'tools.add_to_project',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async createInProject(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('projectId') projectId: string,
+    @Body() dto: CreateProjectToolDto,
+  ) {
+    return this.tools.createInProject({
       projectId,
-      stageId: dto.stageId,
-      toUserId: dto.toUserId,
-      qty: dto.qty,
       actorUserId: req.user.userId,
+      ownerId: dto.ownerId,
+      name: dto.name,
+      photoKey: dto.photoKey,
+      serial: dto.serial,
     });
   }
 
-  @Get('projects/:projectId/tool-issuances')
+  /**
+   * Bulk attach «из Моих инструментов» в проект.
+   */
+  @Post('projects/:projectId/tools/attach')
   @RequireAccess({
-    action: 'tools.view_project',
+    action: 'tools.add_to_project',
     resource: 'project',
     resourceIdFrom: { source: 'params', key: 'projectId' },
   })
-  async list(@Req() req: { user: AuthenticatedUser }, @Param('projectId') projectId: string) {
-    const membership = await this.prisma.membership.findFirst({
-      where: { projectId, userId: req.user.userId },
-      select: { role: true },
-    });
-    return this.tools.listIssuancesForProject(projectId, req.user.userId, membership?.role);
-  }
-
-  @Post('tool-issuances/:id/confirm')
-  @HttpCode(200)
-  @RequireAccess({
-    action: 'tools.manage',
-    resource: 'tool_issuance',
-    resourceIdFrom: { source: 'params', key: 'id' },
-  })
-  async confirmReceipt(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.tools.confirmReceipt(id, req.user.userId);
-  }
-
-  @Post('tool-issuances/:id/return')
-  @HttpCode(200)
-  @RequireAccess({
-    action: 'tools.return',
-    resource: 'tool_issuance',
-    resourceIdFrom: { source: 'params', key: 'id' },
-  })
-  async requestReturn(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('id') id: string,
-    @Body() dto: ReturnToolDto,
-  ) {
-    return this.tools.requestReturn(id, dto.returnedQty, req.user.userId);
-  }
-
-  @Post('tool-issuances/:id/return-confirm')
-  @HttpCode(200)
-  @RequireAccess({
-    action: 'tools.return',
-    resource: 'tool_issuance',
-    resourceIdFrom: { source: 'params', key: 'id' },
-  })
-  async confirmReturn(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.tools.confirmReturn(id, req.user.userId);
-  }
-
-  // ---- П2.15: реестр + заявки на инструмент ----
-
-  /**
-   * Реестр инструментов проекта (виден всем участникам — П2.15).
-   * Используется на mobile в новой вкладке «Инструменты».
-   */
-  @Get('projects/:projectId/tool-registry')
-  @RequireAccess({
-    action: 'tools.view_project',
-    resource: 'project',
-    resourceIdFrom: { source: 'params', key: 'projectId' },
-  })
-  async registry(@Param('projectId') projectId: string) {
-    return this.tools.listProjectRegistry(projectId);
-  }
-
-  /**
-   * Bulk-add «из моих инструментов в проект» (П2.15 / П3.2).
-   */
-  @Post('projects/:projectId/tools/from-my')
-  async addFromMy(
+  async attachFromMy(
     @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
-    @Body() dto: AddToolsToProjectDto,
+    @Body() dto: AttachToolsToProjectDto,
   ) {
-    const result: unknown[] = [];
-    for (const id of dto.toolItemIds) {
-      result.push(await this.tools.addToProject(id, projectId, req.user.userId));
-    }
-    return result;
+    return this.tools.attachFromMy(projectId, dto.toolItemIds, req.user.userId);
   }
 
   /**
-   * Заявка на получение инструмента (П2.15). Доступно любому участнику проекта,
-   * у которого нет инструмента (валидируется в сервисе через ownerId !== byUserId).
+   * Открепить инструмент от проекта (только owner).
    */
-  @Post('tool-requests')
-  async requestTool(@Req() req: { user: AuthenticatedUser }, @Body() dto: RequestToolDto) {
-    return this.tools.requestTool({
-      toolItemId: dto.toolItemId,
-      byUserId: req.user.userId,
-      qty: dto.qty,
-      stageId: dto.stageId,
-    });
+  @Delete('projects/:projectId/tools/:toolId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async detachFromProject(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('toolId') toolId: string,
+  ): Promise<void> {
+    await this.tools.detachFromProject(toolId, req.user.userId);
   }
 
-  @Post('tool-requests/:id/approve')
-  @HttpCode(200)
-  async approveRequest(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.tools.approveRequest(id, req.user.userId);
-  }
+  // ---------- Custody ----------
 
-  @Post('tool-requests/:id/reject')
-  @HttpCode(200)
-  async rejectRequest(
+  /**
+   * Self-claim: текущий пользователь отмечает «инструмент теперь у меня».
+   */
+  @Post('tools/:id/claim')
+  @HttpCode(HttpStatus.OK)
+  async claim(
     @Req() req: { user: AuthenticatedUser },
     @Param('id') id: string,
-    @Body() dto: RejectRequestDto,
+    @Body() dto: ClaimToolDto,
   ) {
-    return this.tools.rejectRequest(id, req.user.userId, dto.comment);
+    return this.tools.claim(id, req.user.userId, dto.note);
+  }
+
+  /**
+   * История передач инструмента (timeline).
+   */
+  @Get('tools/:id/custody-history')
+  async history(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    return this.tools.listCustodyHistory(id, req.user.userId);
   }
 }

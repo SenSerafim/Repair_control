@@ -115,13 +115,29 @@ class AppEmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-                width: 72,
-                height: 72,
+                width: 88,
+                height: 88,
                 decoration: BoxDecoration(
-                  color: AppColors.n100,
-                  borderRadius: BorderRadius.circular(AppRadius.r24),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.n100, AppColors.n200],
+                  ),
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0xCCFFFFFF),
+                      offset: Offset(0, 1),
+                      blurRadius: 0,
+                    ),
+                    BoxShadow(
+                      color: Color(0x144F6EF7),
+                      offset: Offset(0, 10),
+                      blurRadius: 24,
+                    ),
+                  ],
                 ),
-                child: Icon(icon, size: 32, color: AppColors.n400),
+                child: Icon(icon, size: 36, color: AppColors.n400),
               )
               .animate()
               .fadeIn(duration: 260.ms)
@@ -135,7 +151,11 @@ class AppEmptyState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: AppTextStyles.h2.copyWith(color: AppColors.n700),
+            style: AppTextStyles.h2.copyWith(
+              color: AppColors.n700,
+              fontSize: 19,
+              letterSpacing: -0.3,
+            ),
           ).animate().fadeIn(delay: 120.ms, duration: 280.ms),
           if (subtitle != null) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -280,7 +300,7 @@ class AppInlineError extends StatelessWidget {
 /// (submit forms, successful action, confirm-delete).
 class AppSuccessBurst extends StatelessWidget {
   const AppSuccessBurst({
-    this.size = 72,
+    this.size = 88,
     this.color = AppColors.greenDot,
     super.key,
   });
@@ -288,8 +308,22 @@ class AppSuccessBurst extends StatelessWidget {
   final double size;
   final Color color;
 
+  bool get _isError => color == AppColors.redDot;
+
+  Gradient get _circleGradient => _isError
+      ? const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF87171), AppColors.redDot],
+        )
+      : AppGradients.successHero;
+
+  List<BoxShadow> get _halo =>
+      _isError ? AppShadows.haloRed : AppShadows.haloGreen;
+
   @override
   Widget build(BuildContext context) {
+    final core = size * 0.62;
     return SizedBox(
       width: size,
       height: size,
@@ -304,25 +338,29 @@ class AppSuccessBurst extends StatelessWidget {
               )
               .animate(onPlay: (c) => c.repeat())
               .scaleXY(
-                begin: 0.6,
-                end: 1.3,
+                begin: 0.55,
+                end: 1.35,
                 duration: 1200.ms,
                 curve: Curves.easeOut,
               )
               .fadeOut(duration: 1200.ms, curve: Curves.easeOut),
           Container(
-            width: size * 0.62,
-            height: size * 0.62,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: const Icon(
-              Icons.check_rounded,
+            width: core,
+            height: core,
+            decoration: BoxDecoration(
+              gradient: _circleGradient,
+              shape: BoxShape.circle,
+              boxShadow: _halo,
+            ),
+            child: Icon(
+              _isError ? Icons.close_rounded : Icons.check_rounded,
               color: AppColors.n0,
-              size: 28,
+              size: 32,
             ),
           ).animate().scale(
             begin: const Offset(0.5, 0.5),
             end: const Offset(1, 1),
-            duration: 400.ms,
+            duration: 420.ms,
             curve: Curves.easeOutBack,
           ),
         ],

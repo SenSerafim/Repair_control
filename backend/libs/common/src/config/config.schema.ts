@@ -36,7 +36,7 @@ export const configValidationSchema = Joi.object({
   MINIO_ACCESS_KEY: Joi.string().required(),
   MINIO_SECRET_KEY: Joi.string().required(),
   MINIO_BUCKET: Joi.string().default('repair-control'),
-  MINIO_PRESIGN_TTL_SECONDS: Joi.number().default(300),
+  MINIO_PRESIGN_TTL_SECONDS: Joi.number().default(900),
   MINIO_REGION: Joi.string().default('us-east-1'),
   MINIO_PATH_STYLE: Joi.boolean().default(true),
 

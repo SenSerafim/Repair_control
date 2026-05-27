@@ -17,7 +17,10 @@ const t = (
   render: (payload) => ({ title, body: bodyFn(payload) }),
 });
 
-export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTemplate> = {
+// Partial-record: устаревшие kind'ы (например, material_disputed) остаются в
+// Prisma-enum для совместимости с историческими данными, но шаблона для них
+// нет — приложение их больше не публикует.
+export const NOTIFICATION_TEMPLATES: Partial<Record<NotificationKind, NotificationTemplate>> = {
   // ---------- CRITICAL ----------
   approval_requested: t(
     'approval_requested',
@@ -39,24 +42,6 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTempla
     'critical',
     'Новая выплата',
     (p) => `Поступил платёж ${p.amountRub ?? ''} ₽`,
-  ),
-  payment_confirmed: t(
-    'payment_confirmed',
-    'critical',
-    'Выплата подтверждена',
-    (p) => `Платёж ${p.amountRub ?? ''} ₽ подтверждён`,
-  ),
-  payment_disputed: t(
-    'payment_disputed',
-    'critical',
-    'Спор по выплате',
-    (p) => `Открыт спор по платежу ${p.amountRub ?? ''} ₽`,
-  ),
-  payment_resolved: t(
-    'payment_resolved',
-    'critical',
-    'Спор по выплате решён',
-    () => 'Итоговая сумма зафиксирована',
   ),
   stage_rejected_by_customer: t(
     'stage_rejected_by_customer',
@@ -85,20 +70,26 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTempla
   material_delivered: t('material_delivered', 'critical', 'Материалы доставлены', (p) =>
     String(p.title ?? 'Доставка подтверждена'),
   ),
-  material_disputed: t('material_disputed', 'critical', 'Спор по материалам', (p) =>
-    String(p.reason ?? 'Открыт спор'),
+  material_request_accepted_partial: t(
+    'material_request_accepted_partial',
+    'critical',
+    'Заявка принята частично',
+    (p) => String(p.title ?? 'Бригадир принял часть позиций'),
+  ),
+  material_request_accepted_full: t(
+    'material_request_accepted_full',
+    'critical',
+    'Заявка принята полностью',
+    (p) => String(p.title ?? 'Заявка закрыта'),
+  ),
+  material_request_overdue: t('material_request_overdue', 'critical', 'Заявка просрочена', (p) =>
+    String(p.title ?? 'Срок поставки прошёл, заявка не закрыта'),
   ),
   selfpurchase_created: t(
     'selfpurchase_created',
     'critical',
     'Самозакуп на подтверждение',
     (p) => `${p.amountRub ?? ''} ₽ — требуется подтверждение`,
-  ),
-  tool_issued: t(
-    'tool_issued',
-    'critical',
-    'Инструмент выдан',
-    (p) => `Выдан: ${p.toolName ?? ''} (${p.qty ?? ''} шт)`,
   ),
   export_completed: t(
     'export_completed',
@@ -165,33 +156,21 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTempla
     'Заявка на покупку материалов',
     (p) => `Бригадир запрашивает покупку на ${p.amountRub ?? ''} ₽`,
   ),
-  payment_dispute_requested: t(
-    'payment_dispute_requested',
-    'critical',
-    'Спор по платежу',
-    (p) => `Открыт спор: ${p.reason ?? ''}`,
-  ),
   budget_changed: t(
     'budget_changed',
     'high',
     'Бюджет проекта изменён',
     (p) => `Новый общий бюджет: ${p.newTotalRub ?? ''} ₽`,
   ),
-  tool_request_created: t(
-    'tool_request_created',
+  tool_custody_changed: t(
+    'tool_custody_changed',
     'high',
-    'Запрос на инструмент',
-    (p) => `Запрашивает: ${p.toolName ?? ''}`,
-  ),
-  tool_request_decided: t(
-    'tool_request_decided',
-    'high',
-    'Решение по инструменту',
-    (p) => `${p.toolName ?? ''} — ${p.decisionRu ?? 'обновлено'}`,
+    'Инструмент сменил держателя',
+    (p) => `${p.holderName ?? 'Участник'} забрал «${p.toolName ?? ''}»`,
   ),
 };
 
 /** Критичные типы — пользователь не может отключить. */
 export function isCritical(kind: NotificationKind): boolean {
-  return NOTIFICATION_TEMPLATES[kind].priority === 'critical';
+  return NOTIFICATION_TEMPLATES[kind]?.priority === 'critical';
 }

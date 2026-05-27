@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -49,6 +51,12 @@ class AuthController extends Notifier<AuthState> {
   SecureStorage get _storage => ref.read(secureStorageProvider);
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
+  // Single-flight для logout. На старте приложения refresh-interceptor может
+  // получить 401 от нескольких параллельных запросов (projects/me/legal/...)
+  // и каждый раз вызвать onSessionExpired → logout(). Без флага мы делали 5+
+  // дублирующихся `POST /api/auth/logout` подряд.
+  Future<void>? _logoutInFlight;
+
   Future<void> bootstrap() async {
     final access = await _storage.readAccessToken();
     final roleRaw = await _storage.readActiveRole();
@@ -56,10 +64,32 @@ class AuthController extends Notifier<AuthState> {
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
     }
+    // userId раньше жил только в RAM (login/register), при рестарте приложения
+    // обнулялся — все RBAC-провайдеры, завязанные на `me`, ломались
+    // (owner-fallback в invitableRolesProvider, myMembershipInProjectProvider
+    // и т.д.). Источник истины — claim `sub` в access-токене (см.
+    // backend/auth/token.service.ts AccessTokenPayload).
     state = AuthState(
       status: AuthStatus.authenticated,
       activeRole: SystemRole.fromString(roleRaw),
+      userId: _decodeJwtSub(access),
     );
+  }
+
+  static String? _decodeJwtSub(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      var payload = parts[1];
+      final pad = (4 - payload.length % 4) % 4;
+      if (pad > 0) payload = payload.padRight(payload.length + pad, '=');
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      final sub = json['sub'];
+      return sub is String && sub.isNotEmpty ? sub : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<String> _ensureDeviceId() async {
@@ -138,7 +168,18 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout() {
+    // Если logout уже идёт — переиспользуем активный Future вместо нового
+    // запроса. Если уже unauthenticated — no-op.
+    final inFlight = _logoutInFlight;
+    if (inFlight != null) return inFlight;
+    if (state.status == AuthStatus.unauthenticated) return Future.value();
+    final future = _doLogout();
+    _logoutInFlight = future;
+    return future.whenComplete(() => _logoutInFlight = null);
+  }
+
+  Future<void> _doLogout() async {
     final refresh = await _storage.readRefreshToken();
     if (refresh != null && refresh.isNotEmpty) {
       try {

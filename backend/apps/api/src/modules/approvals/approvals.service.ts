@@ -12,7 +12,6 @@ import {
 import { FeedService } from '../feed/feed.service';
 import { ProgressCalculator } from '../stages/progress-calculator';
 import { SelfPurchasesService } from '../selfpurchases/selfpurchases.service';
-import { PaymentsService } from '../payments/payments.service';
 import { MaterialsService } from '../materials/materials.service';
 
 export interface CreateApprovalInput {
@@ -46,8 +45,6 @@ export class ApprovalsService {
     private readonly clock: Clock,
     @Inject(forwardRef(() => SelfPurchasesService))
     private readonly selfpurchases: SelfPurchasesService,
-    @Inject(forwardRef(() => PaymentsService))
-    private readonly payments: PaymentsService,
     @Inject(forwardRef(() => MaterialsService))
     private readonly materials: MaterialsService,
   ) {}
@@ -62,11 +59,10 @@ export class ApprovalsService {
       // §6.1 / E — общее правило: если адресат — заказчик и инициатор НЕ бригадир,
       // а в проекте есть бригадир с правом canApprove (или role=foreman без явных прав
       // — он бригадир по дефолту) — вставляем промежуточную ступень foreman→customer.
-      // Применяется к scope, где это семантически уместно: self_purchase / payment_dispute /
+      // Применяется к scope, где это семантически уместно: self_purchase /
       // material_purchase / extra_work / stage_accept.
       const eligibleScopes: ApprovalScope[] = [
         'self_purchase',
-        'payment_dispute',
         'material_purchase',
         'extra_work',
         'stage_accept',
@@ -199,7 +195,7 @@ export class ApprovalsService {
       );
     }
 
-    // §6.1 — для mirror-approvals (self_purchase / payment_dispute / material_purchase)
+    // §6.1 — для mirror-approvals (self_purchase / material_purchase)
     // источник истины — соответствующий доменный сервис. Делегируем туда.
     // Источник синхронизирует Approval.status в той же транзакции.
     const payload = approval.payload as Record<string, unknown>;
@@ -214,19 +210,6 @@ export class ApprovalsService {
           // (это уже forwarded запись); для foreman-step мы хотим автоматический
           // forward, поэтому проверяем actorRole approval.
           forwardOnApprove: approval.actorRole === 'foreman',
-        });
-        const refreshed = await this.prisma.approval.findUnique({ where: { id: approvalId } });
-        return refreshed!;
-      }
-    }
-    if (approval.scope === 'payment_dispute') {
-      const paymentId = payload.paymentId as string | undefined;
-      if (paymentId) {
-        await this.payments.resolveDispute(paymentId, {
-          decision: input.decision,
-          comment: input.comment,
-          actorUserId: input.actorUserId,
-          actorSystemRole: input.actorSystemRole,
         });
         const refreshed = await this.prisma.approval.findUnique({ where: { id: approvalId } });
         return refreshed!;
@@ -564,16 +547,6 @@ export class ApprovalsService {
         }
         break;
       }
-      case 'payment_dispute': {
-        const paymentId = (input.payload as any)?.paymentId;
-        if (typeof paymentId !== 'string' || !paymentId) {
-          throw new InvalidInputError(
-            ErrorCodes.APPROVAL_INVALID_SCOPE,
-            'payload.paymentId required for payment_dispute',
-          );
-        }
-        break;
-      }
     }
   }
 
@@ -589,20 +562,34 @@ export class ApprovalsService {
     switch (approval.scope) {
       case 'plan': {
         if (approval.status === 'approved') {
-          await tx.project.update({
-            where: { id: approval.projectId },
-            data: { planApproved: true },
-          });
-          await tx.stage.updateMany({
-            where: { projectId: approval.projectId },
-            data: { planApproved: true },
-          });
+          // П2.3: план может приходить либо «на этап» (approval.stageId задан —
+          // одобряется именно этот этап), либо «на проект целиком» (стagеId не
+          // задан — legacy-режим, обновляет project.planApproved + все этапы).
+          // Бекенд поддерживает оба варианта для совместимости с двумя UX-flow:
+          // 1) Бригадир каждого этапа отправляет план отдельно (новый flow,
+          //    stage-level submit-plan endpoint).
+          // 2) Один общий «План всех этапов» из console-banner (legacy).
+          if (approval.stageId) {
+            await tx.stage.update({
+              where: { id: approval.stageId },
+              data: { planApproved: true },
+            });
+          } else {
+            await tx.project.update({
+              where: { id: approval.projectId },
+              data: { planApproved: true },
+            });
+            await tx.stage.updateMany({
+              where: { projectId: approval.projectId },
+              data: { planApproved: true },
+            });
+          }
           await this.feed.emit({
             tx,
             kind: 'plan_approved',
             projectId: approval.projectId,
             actorId: approval.decidedById ?? undefined,
-            payload: { approvalId: approval.id },
+            payload: { approvalId: approval.id, stageId: approval.stageId },
           });
         }
         break;
@@ -619,7 +606,7 @@ export class ApprovalsService {
               select: { ownerId: true },
             });
             if (project) {
-              await tx.approval.create({
+              const escalation = await tx.approval.create({
                 data: {
                   scope: 'stage_accept',
                   projectId: approval.projectId,
@@ -638,6 +625,8 @@ export class ApprovalsService {
                 projectId: approval.projectId,
                 actorId: approval.requestedById,
                 payload: {
+                  approvalId: escalation.id,
+                  addresseeId: project.ownerId,
                   scope: 'stage_accept',
                   stageId: approval.stageId,
                   step: 'customer',
@@ -723,12 +712,10 @@ export class ApprovalsService {
         break;
       }
       case 'material_purchase':
-      case 'self_purchase':
-      case 'payment_dispute': {
+      case 'self_purchase': {
         // §6.1 — mirror Approvals. Источник истины — доменный сервис
-        // (SelfPurchasesService / PaymentsService / MaterialsService).
-        // ApprovalsService.decide делегирует туда; applyDecisionEffect
-        // не должен дублировать списание/обновление состояния.
+        // (SelfPurchasesService / MaterialsService). ApprovalsService.decide
+        // делегирует туда; applyDecisionEffect не должен дублировать списание.
         break;
       }
       case 'extra_work': {
@@ -746,7 +733,7 @@ export class ApprovalsService {
               select: { ownerId: true },
             });
             if (project) {
-              await tx.approval.create({
+              const escalation = await tx.approval.create({
                 data: {
                   scope: 'extra_work',
                   projectId: approval.projectId,
@@ -761,10 +748,13 @@ export class ApprovalsService {
               });
               await this.feed.emit({
                 tx,
-                kind: 'extra_work_requested',
+                kind: 'approval_requested',
                 projectId: approval.projectId,
                 actorId: approval.requestedById,
                 payload: {
+                  approvalId: escalation.id,
+                  addresseeId: project.ownerId,
+                  scope: 'extra_work',
                   stepId: approval.stepId,
                   step: 'customer',
                   parentApprovalId: approval.id,

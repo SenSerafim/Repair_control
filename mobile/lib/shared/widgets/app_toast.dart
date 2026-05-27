@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app.dart' show rootScaffoldMessengerKey;
 import '../../core/theme/text_styles.dart';
 import '../../core/theme/tokens.dart';
 
@@ -16,7 +17,11 @@ class AppToast {
     Duration duration = const Duration(seconds: 3),
   }) {
     final spec = _spec(kind);
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    // Сначала пытаемся через root-messenger: переживает pop/push экрана и не
+    // падает в _updateScaffolds, если локальный Scaffold уже отмонтирован.
+    final messenger =
+        rootScaffoldMessengerKey.currentState ??
+        ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 
     messenger

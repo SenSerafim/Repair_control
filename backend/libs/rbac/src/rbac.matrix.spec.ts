@@ -39,7 +39,7 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     it('bypasses all checks', () => {
       expect(canAccess('project.create', admin())).toBe(true);
       expect(canAccess('finance.budget.edit', admin())).toBe(true);
-      expect(canAccess('tools.manage', admin())).toBe(true);
+      expect(canAccess('tools.claim', admin())).toBe(true);
     });
   });
 
@@ -165,31 +165,42 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
   });
 
-  describe('finance.payment.create', () => {
-    it('owner, foreman, and permitted representative', () => {
-      expect(canAccess('finance.payment.create', customer(true))).toBe(true);
-      expect(canAccess('finance.payment.create', foreman())).toBe(true);
-      expect(canAccess('finance.payment.create', representative({ canCreatePayments: true }))).toBe(
-        true,
-      );
+  describe('finance.payment.create_advance', () => {
+    it('owner-customer and representative.canCreatePayments may create advance from budget; foreman/master cannot', () => {
+      expect(canAccess('finance.payment.create_advance', customer(true))).toBe(true);
       expect(
-        canAccess('finance.payment.create', representative({ canCreatePayments: false })),
+        canAccess('finance.payment.create_advance', representative({ canCreatePayments: true })),
+      ).toBe(true);
+      expect(
+        canAccess('finance.payment.create_advance', representative({ canCreatePayments: false })),
       ).toBe(false);
-      expect(canAccess('finance.payment.create', master())).toBe(false);
+      expect(canAccess('finance.payment.create_advance', foreman())).toBe(false);
+      expect(canAccess('finance.payment.create_advance', master())).toBe(false);
     });
   });
 
-  describe('tools.manage — customer invisible (ТЗ §1.4)', () => {
-    it('customer cannot see/manage tools', () => {
-      expect(canAccess('tools.manage', customer(true))).toBe(false);
+  describe('finance.payment.distribute', () => {
+    it('only foreman can distribute; customer/representative/master cannot', () => {
+      expect(canAccess('finance.payment.distribute', foreman())).toBe(true);
+      expect(canAccess('finance.payment.distribute', customer(true))).toBe(false);
+      expect(
+        canAccess('finance.payment.distribute', representative({ canCreatePayments: true })),
+      ).toBe(false);
+      expect(canAccess('finance.payment.distribute', master())).toBe(false);
     });
-    it('foreman and master can', () => {
-      expect(canAccess('tools.manage', foreman())).toBe(true);
-      expect(canAccess('tools.manage', master())).toBe(true);
+  });
+
+  describe('tools.* — self-custody (2026-05-12)', () => {
+    it('любой member видит / добавляет / claim-ит', () => {
+      for (const action of ['tools.view_project', 'tools.add_to_project', 'tools.claim'] as const) {
+        expect(canAccess(action, customer(true))).toBe(true);
+        expect(canAccess(action, representative())).toBe(true);
+        expect(canAccess(action, foreman())).toBe(true);
+        expect(canAccess(action, master())).toBe(true);
+      }
     });
-    it('representative needs canManageTools', () => {
-      expect(canAccess('tools.manage', representative({ canManageTools: true }))).toBe(true);
-      expect(canAccess('tools.manage', representative({ canManageTools: false }))).toBe(false);
+    it('не-участник проекта — 403', () => {
+      expect(canAccess('tools.claim', { userId: 'x', systemRole: 'customer' })).toBe(false);
     });
   });
 
@@ -253,24 +264,6 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
     it('не-участник — 403', () => {
       expect(canAccess('step.photo.upload', { userId: 'x', systemRole: 'customer' })).toBe(false);
-    });
-  });
-
-  describe('tools.* — customer явно заблокирован (ТЗ §1.4)', () => {
-    it('customer-owner НЕ видит инструмент', () => {
-      expect(canAccess('tools.manage', customer(true))).toBe(false);
-      expect(canAccess('tools.return', customer(true))).toBe(false);
-      expect(canAccess('tools.issue', customer(true))).toBe(false);
-    });
-    it('foreman выдаёт и возвращает', () => {
-      expect(canAccess('tools.issue', foreman())).toBe(true);
-      expect(canAccess('tools.return', foreman())).toBe(true);
-    });
-    it('master не может выдавать (только foreman)', () => {
-      expect(canAccess('tools.issue', master())).toBe(false);
-    });
-    it('master может инициировать возврат', () => {
-      expect(canAccess('tools.return', master())).toBe(true);
     });
   });
 
@@ -438,12 +431,18 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     it('owner — OK', () => {
       expect(canAccess('document.delete', customer(true))).toBe(true);
     });
-    it('uploader-сам — OK', () => {
-      const ctx: AccessContext = { ...foreman(), documentUploadedById: 'u-for' };
-      expect(canAccess('document.delete', ctx)).toBe(true);
+    it('rep с canEditStages — OK', () => {
+      expect(canAccess('document.delete', representative({ canEditStages: true }))).toBe(true);
     });
-    it('чужой foreman — no', () => {
-      const ctx: AccessContext = { ...foreman(), documentUploadedById: 'u-other' };
+    it('rep без canEditStages — no', () => {
+      expect(canAccess('document.delete', representative())).toBe(false);
+    });
+    it('автор-foreman не может удалить свой документ (общая папка)', () => {
+      const ctx: AccessContext = { ...foreman(), documentUploadedById: 'u-for' };
+      expect(canAccess('document.delete', ctx)).toBe(false);
+    });
+    it('автор-master не может удалить свой документ', () => {
+      const ctx: AccessContext = { ...master(), documentUploadedById: 'u-mas' };
       expect(canAccess('document.delete', ctx)).toBe(false);
     });
     it('master чужой документ — no', () => {
@@ -454,16 +453,16 @@ describe('RBAC matrix — ТЗ §1.5', () => {
   // ---------- S5: Feed export ----------
 
   describe('feed.export', () => {
-    it('owner и foreman — OK', () => {
+    it('любой участник проекта — OK (объём данных в сводке фильтруется по роли)', () => {
       expect(canAccess('feed.export', customer(true))).toBe(true);
       expect(canAccess('feed.export', foreman())).toBe(true);
+      expect(canAccess('feed.export', master())).toBe(true);
       expect(canAccess('feed.export', representative({ canSeeBudget: true }))).toBe(true);
+      expect(canAccess('feed.export', representative())).toBe(true);
     });
-    it('master — no', () => {
-      expect(canAccess('feed.export', master())).toBe(false);
-    });
-    it('rep без canSeeBudget — no', () => {
-      expect(canAccess('feed.export', representative())).toBe(false);
+    it('outsider без membership — нет', () => {
+      const outsider: AccessContext = { userId: 'u-out', systemRole: 'master' };
+      expect(canAccess('feed.export', outsider)).toBe(false);
     });
   });
 
@@ -506,6 +505,52 @@ describe('RBAC matrix — ТЗ §1.5', () => {
       expect(canAccess('admin.feedback.read', representative({ canApprove: true }))).toBe(false);
       expect(canAccess('admin.settings.manage', master())).toBe(false);
       expect(canAccess('admin.notifications.inspect', foreman())).toBe(false);
+    });
+  });
+});
+
+describe('materials.mark_delivered / materials.accept (E1a — ТЗ NEWFIX §5.7)', () => {
+  describe('materials.mark_delivered (любой active member)', () => {
+    it('owner-customer может', () => {
+      expect(canAccess('materials.mark_delivered', customer(true))).toBe(true);
+    });
+    it('foreman может', () => {
+      expect(canAccess('materials.mark_delivered', foreman())).toBe(true);
+    });
+    it('master может (он первый принимает материал)', () => {
+      expect(canAccess('materials.mark_delivered', master())).toBe(true);
+    });
+    it('representative может (даже без специальных rights)', () => {
+      expect(canAccess('materials.mark_delivered', representative())).toBe(true);
+    });
+    it('non-owner customer без membership — не может', () => {
+      const noMember: AccessContext = {
+        userId: 'u-stranger',
+        systemRole: 'customer',
+        projectOwnerId: 'u-other',
+      };
+      expect(canAccess('materials.mark_delivered', noMember)).toBe(false);
+    });
+  });
+
+  describe('materials.accept (foreman / customer-owner / representative с canApprove)', () => {
+    it('owner-customer может', () => {
+      expect(canAccess('materials.accept', customer(true))).toBe(true);
+    });
+    it('foreman может', () => {
+      expect(canAccess('materials.accept', foreman())).toBe(true);
+    });
+    it('master НЕ может — мастер только фиксирует доставку, не принимает', () => {
+      expect(canAccess('materials.accept', master())).toBe(false);
+    });
+    it('representative с canApprove — может', () => {
+      expect(canAccess('materials.accept', representative({ canApprove: true }))).toBe(true);
+    });
+    it('representative без canApprove — НЕ может', () => {
+      expect(canAccess('materials.accept', representative({ canApprove: false }))).toBe(false);
+    });
+    it('admin — bypass', () => {
+      expect(canAccess('materials.accept', admin())).toBe(true);
     });
   });
 });

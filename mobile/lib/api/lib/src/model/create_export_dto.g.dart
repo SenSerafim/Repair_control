@@ -37,4 +37,6 @@ Map<String, dynamic> _$CreateExportDtoToJson(CreateExportDto instance) =>
 const _$CreateExportDtoKindEnumEnumMap = {
   CreateExportDtoKindEnum.feedPdf: 'feed_pdf',
   CreateExportDtoKindEnum.projectZip: 'project_zip',
+  CreateExportDtoKindEnum.projectReportPdf: 'project_report_pdf',
+  CreateExportDtoKindEnum.projectSummaryTxt: 'project_summary_txt',
 };

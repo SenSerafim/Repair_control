@@ -35,33 +35,22 @@ class ApprovalResultScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(approvalDetailProvider(approvalId));
 
-    return Stack(
-      children: [
-        SuccessScreen(
-          title: _isError ? 'Согласование отклонено' : 'Этап одобрен',
-          subtitle: async.maybeWhen(data: _summaryFor, orElse: () => null),
-          isError: _isError,
-          primaryLabel: 'К списку согласований',
-          onPrimary: () => context.go('/projects/$projectId/approvals'),
-          secondaryLabel: 'Открыть детали',
-          onSecondary: () => context.push(
-            AppRoutes.approvalDetailWith(
-              approvalId,
-            ).replaceFirst('/approvals/', '/projects/$projectId/approvals/'),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: AppSpacing.x16 + MediaQuery.of(context).padding.bottom + 160,
-          child: Center(
-            child: async.maybeWhen(
-              data: (a) => _ResultMetaCard(approval: a, isError: _isError),
-              orElse: () => const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      ],
+    return SuccessScreen(
+      title: _isError ? 'Согласование отклонено' : 'Этап одобрен',
+      subtitle: async.maybeWhen(data: _summaryFor, orElse: () => null),
+      isError: _isError,
+      primaryLabel: 'К списку согласований',
+      onPrimary: () => context.go('/projects/$projectId/approvals'),
+      secondaryLabel: 'Открыть детали',
+      onSecondary: () => context.push(
+        AppRoutes.approvalDetailWith(
+          approvalId,
+        ).replaceFirst('/approvals/', '/projects/$projectId/approvals/'),
+      ),
+      trailing: async.maybeWhen(
+        data: (a) => _ResultMetaCard(approval: a, isError: _isError),
+        orElse: () => null,
+      ),
     );
   }
 
@@ -84,7 +73,7 @@ class _ResultMetaCard extends StatelessWidget {
     final df = DateFormat('d MMMM y · HH:mm', 'ru');
     final decidedAt = approval.decidedAt ?? approval.updatedAt;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
         color: AppColors.n0,

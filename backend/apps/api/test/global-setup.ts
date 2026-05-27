@@ -17,7 +17,10 @@ export default async function globalSetup(): Promise<void> {
   }
   const parsed = dotenv.parse(fs.readFileSync(envPath));
   for (const [k, v] of Object.entries(parsed)) {
-    process.env[k] = v;
+    // .env.test даёт дефолты; уже выставленные переменные (например, через
+    // `DATABASE_URL=... npm test:e2e`) имеют приоритет. Это позволяет
+    // переключить локальную тест-БД на другой порт без правки .env.test.
+    if (process.env[k] === undefined) process.env[k] = v;
   }
 
   const cwd = path.resolve(__dirname, '../../..');

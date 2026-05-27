@@ -2,30 +2,31 @@ import { ToolsService } from './tools.service';
 import { FeedService } from '../feed/feed.service';
 import {
   ConflictError,
-  FixedClock,
   ForbiddenError,
   InvalidInputError,
   NotFoundError,
   PrismaService,
 } from '@app/common';
 
-const NOW = new Date('2026-07-21T10:00:00Z');
-
+/**
+ * In-memory mock Prisma — повторяет ровно те запросы, которые делает
+ * упрощённый ToolsService (self-custody, 2026-05-12). Сознательно НЕ имитирует
+ * Postgres-семантику кроме нужного минимума.
+ */
 const mkPrisma = () => {
   const users = new Map<string, any>();
   const tools = new Map<string, any>();
-  const issuances = new Map<string, any>();
+  const events: any[] = [];
   const memberships: any[] = [];
   let tSeq = 0;
-  let iSeq = 0;
+  let eSeq = 0;
 
   const prisma: any = {
     user: {
-      findUnique: jest.fn(({ where, include }: any) => {
-        const u = users.get(where.id);
-        if (!u) return null;
-        if (include?.roles) return { ...u, roles: u.roles ?? [] };
-        return u;
+      findUnique: jest.fn(({ where }: any) => users.get(where.id) ?? null),
+      findMany: jest.fn(({ where }: any) => {
+        if (where?.id?.in) return [...users.values()].filter((u) => where.id.in.includes(u.id));
+        return [...users.values()];
       }),
     },
     toolItem: {
@@ -33,11 +34,11 @@ const mkPrisma = () => {
         const t = {
           id: `tl${++tSeq}`,
           ownerId: data.ownerId,
+          currentHolderId: data.currentHolderId,
           name: data.name,
-          totalQty: data.totalQty,
-          issuedQty: 0,
-          unit: data.unit ?? 'шт',
           photoKey: data.photoKey ?? null,
+          serial: data.serial ?? null,
+          projectId: data.projectId ?? null,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -46,64 +47,46 @@ const mkPrisma = () => {
       }),
       findUnique: jest.fn(({ where }: any) => tools.get(where.id) ?? null),
       findMany: jest.fn(({ where }: any) =>
-        [...tools.values()].filter((t) => !where.ownerId || t.ownerId === where.ownerId),
+        [...tools.values()].filter((t) => {
+          if (where.ownerId && t.ownerId !== where.ownerId) return false;
+          if (where.projectId === null && t.projectId !== null) return false;
+          if (where.projectId && where.projectId !== null && t.projectId !== where.projectId)
+            return false;
+          if (where.id?.in) return where.id.in.includes(t.id);
+          return true;
+        }),
       ),
       update: jest.fn(({ where, data }: any) => {
         const t = tools.get(where.id);
         if (!t) throw new Error('not found');
-        for (const [k, v] of Object.entries(data)) {
-          if (typeof v === 'object' && v && 'increment' in (v as any)) {
-            (t as any)[k] += (v as any).increment;
-          } else if (typeof v === 'object' && v && 'decrement' in (v as any)) {
-            (t as any)[k] -= (v as any).decrement;
-          } else {
-            (t as any)[k] = v;
-          }
-        }
+        Object.assign(t, data);
         return t;
       }),
+      delete: jest.fn(({ where }: any) => {
+        tools.delete(where.id);
+        return null;
+      }),
     },
-    toolIssuance: {
+    toolCustodyEvent: {
       create: jest.fn(({ data }: any) => {
-        const iss = {
-          id: `iss${++iSeq}`,
+        const e = {
+          id: `ev${++eSeq}`,
           toolItemId: data.toolItemId,
-          projectId: data.projectId ?? null,
-          stageId: data.stageId ?? null,
-          toUserId: data.toUserId,
-          issuedById: data.issuedById,
-          qty: data.qty,
-          returnedQty: null,
-          status: data.status ?? 'issued',
-          issuedAt: new Date(),
-          confirmedAt: null,
-          returnedAt: null,
-          returnConfirmedAt: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          projectId: data.projectId,
+          holderId: data.holderId,
+          previousHolderId: data.previousHolderId ?? null,
+          note: data.note ?? null,
+          createdAt: new Date(Date.now() + eSeq), // монотонное возрастание
         };
-        issuances.set(iss.id, iss);
-        return iss;
+        events.push(e);
+        return e;
       }),
-      findUnique: jest.fn(({ where, include }: any) => {
-        const iss = issuances.get(where.id);
-        if (!iss) return null;
-        if (include?.toolItem) return { ...iss, toolItem: tools.get(iss.toolItemId) };
-        return iss;
+      findMany: jest.fn(({ where, orderBy }: any) => {
+        let list = events.filter((e) => e.toolItemId === where.toolItemId);
+        if (orderBy?.createdAt === 'desc')
+          list = [...list].sort((a, b) => b.createdAt - a.createdAt);
+        return list;
       }),
-      update: jest.fn(({ where, data }: any) => {
-        const iss = issuances.get(where.id);
-        if (!iss) throw new Error('not found');
-        Object.assign(iss, data);
-        return iss;
-      }),
-      findMany: jest.fn(({ where }: any) =>
-        [...issuances.values()].filter((iss) => {
-          if (where.projectId && iss.projectId !== where.projectId) return false;
-          if (where.toUserId && iss.toUserId !== where.toUserId) return false;
-          return true;
-        }),
-      ),
     },
     membership: {
       findFirst: jest.fn(
@@ -112,269 +95,389 @@ const mkPrisma = () => {
             (m) =>
               m.projectId === where.projectId &&
               m.userId === where.userId &&
-              (!where.role || m.role === where.role),
+              (where.removedAt === null ? m.removedAt === null : true),
           ) ?? null,
       ),
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
-  return { prisma: prisma as unknown as PrismaService, users, tools, issuances, memberships };
+  return { prisma: prisma as unknown as PrismaService, users, tools, events, memberships };
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
 
-describe('ToolsService.createToolItem', () => {
-  it('создаёт ToolItem на профиле foreman (gaps §5.2)', async () => {
-    const st = mkPrisma();
-    st.users.set('foreman1', {
-      id: 'foreman1',
-      roles: [{ role: 'contractor', isActive: true }],
-    });
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    const t = await svc.createToolItem({
-      ownerId: 'foreman1',
-      name: 'Перфоратор',
-      totalQty: 5,
-    });
-    expect(t.ownerId).toBe('foreman1');
-    expect(t.issuedQty).toBe(0);
-  });
+const addUser = (
+  st: ReturnType<typeof mkPrisma>,
+  id: string,
+  firstName = 'F',
+  lastName = 'L',
+  phone = `+7900000${id.slice(-4)}`,
+) => {
+  st.users.set(id, { id, firstName, lastName, phone, avatarUrl: null });
+};
 
-  it('не contractor — теперь тоже разрешено создавать (П2.14 / П8.1, раунд 2026-05-03)', async () => {
+const addMember = (
+  st: ReturnType<typeof mkPrisma>,
+  projectId: string,
+  userId: string,
+  role = 'foreman',
+) => {
+  st.memberships.push({ projectId, userId, role, removedAt: null });
+};
+
+// ============================================================================
+
+describe('ToolsService.createMyTool', () => {
+  it('создаёт инструмент в личном профиле; holder = owner', async () => {
     const st = mkPrisma();
-    st.users.set('customer1', {
-      id: 'customer1',
-      roles: [{ role: 'customer', isActive: true }],
-    });
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    const t = await svc.createToolItem({
-      ownerId: 'customer1',
-      name: 'X',
-      totalQty: 1,
-    });
-    expect(t.ownerId).toBe('customer1');
-    expect(t.name).toBe('X');
+    addUser(st, 'u-owner');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createMyTool({ ownerId: 'u-owner', name: 'Перфоратор' });
+    expect(t.ownerId).toBe('u-owner');
+    expect(t.currentHolderId).toBe('u-owner');
+    expect(t.projectId).toBeNull();
   });
 });
 
-describe('ToolsService.issue', () => {
-  const setup = async () => {
+describe('ToolsService.createInProject', () => {
+  it('создаёт инструмент сразу в проекте от actor-а; пишет initial custody event', async () => {
     const st = mkPrisma();
-    st.users.set('foreman1', {
-      id: 'foreman1',
-      roles: [{ role: 'contractor', isActive: true }],
-    });
-    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    const t = await svc.createToolItem({
-      ownerId: 'foreman1',
-      name: 'Перфоратор',
-      totalQty: 10,
-    });
-    return { st, svc, toolId: t.id };
-  };
+    addUser(st, 'u-actor');
+    addMember(st, 'p1', 'u-actor');
+    const feed = mkFeed();
+    const svc = new ToolsService(st.prisma, feed);
 
-  it('issue qty=10 из 10 → ok, issuedQty=10', async () => {
-    const { st, svc, toolId } = await setup();
-    const iss = await svc.issue({
-      toolItemId: toolId,
+    const t = await svc.createInProject({
       projectId: 'p1',
-      toUserId: 'master1',
-      qty: 10,
-      actorUserId: 'foreman1',
+      actorUserId: 'u-actor',
+      name: 'Шуруповёрт',
     });
-    expect(iss.status).toBe('issued');
-    expect(iss.qty).toBe(10);
-    expect(st.tools.get(toolId).issuedQty).toBe(10);
-  });
 
-  it('issue qty > available → ConflictError', async () => {
-    const { svc, toolId } = await setup();
-    await svc.issue({
-      toolItemId: toolId,
-      projectId: 'p1',
-      toUserId: 'master1',
-      qty: 8,
-      actorUserId: 'foreman1',
-    });
-    await expect(
-      svc.issue({
-        toolItemId: toolId,
-        projectId: 'p1',
-        toUserId: 'master1',
-        qty: 5,
-        actorUserId: 'foreman1',
-      }),
-    ).rejects.toThrow(ConflictError);
-  });
-
-  it('не owner → ForbiddenError', async () => {
-    const { svc, toolId } = await setup();
-    await expect(
-      svc.issue({
-        toolItemId: toolId,
-        projectId: 'p1',
-        toUserId: 'master1',
-        qty: 1,
-        actorUserId: 'stranger',
-      }),
-    ).rejects.toThrow(ForbiddenError);
-  });
-
-  it('toUserId не master проекта → InvalidInputError', async () => {
-    const { svc, toolId } = await setup();
-    await expect(
-      svc.issue({
-        toolItemId: toolId,
-        projectId: 'p1',
-        toUserId: 'notmaster',
-        qty: 1,
-        actorUserId: 'foreman1',
-      }),
-    ).rejects.toThrow(InvalidInputError);
-  });
-});
-
-describe('ToolsService FSM: issue → confirm → requestReturn → confirmReturn', () => {
-  const setup = async () => {
-    const st = mkPrisma();
-    st.users.set('foreman1', {
-      id: 'foreman1',
-      roles: [{ role: 'contractor', isActive: true }],
-    });
-    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    const t = await svc.createToolItem({
-      ownerId: 'foreman1',
-      name: 'Перфоратор',
-      totalQty: 10,
-    });
-    const iss = await svc.issue({
+    expect(t.ownerId).toBe('u-actor');
+    expect(t.currentHolderId).toBe('u-actor');
+    expect(t.projectId).toBe('p1');
+    expect(st.events).toHaveLength(1);
+    expect(st.events[0]).toMatchObject({
       toolItemId: t.id,
-      projectId: 'p1',
-      toUserId: 'master1',
-      qty: 10,
-      actorUserId: 'foreman1',
+      holderId: 'u-actor',
+      previousHolderId: null,
     });
-    return { st, svc, toolId: t.id, issuanceId: iss.id };
-  };
-
-  it('master подтверждает приёмку → status=confirmed', async () => {
-    const { svc, issuanceId } = await setup();
-    const u = await svc.confirmReceipt(issuanceId, 'master1');
-    expect(u.status).toBe('confirmed');
-    expect(u.confirmedAt).toEqual(NOW);
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'tool_added_to_project' }),
+    );
   });
 
-  it('не мастер пытается подтвердить → ForbiddenError', async () => {
-    const { svc, issuanceId } = await setup();
-    await expect(svc.confirmReceipt(issuanceId, 'foreman1')).rejects.toThrow(ForbiddenError);
+  it('позволяет актору указать другого owner-а (member проекта)', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-actor');
+    addUser(st, 'u-other');
+    addMember(st, 'p1', 'u-actor');
+    addMember(st, 'p1', 'u-other');
+    const svc = new ToolsService(st.prisma, mkFeed());
+
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-actor',
+      ownerId: 'u-other',
+      name: 'Болгарка',
+    });
+
+    expect(t.ownerId).toBe('u-other');
+    expect(t.currentHolderId).toBe('u-other');
   });
 
-  it('полный цикл возврата: 10→8→бригадир подтвердил→issuedQty=2', async () => {
-    const { st, svc, toolId, issuanceId } = await setup();
-    await svc.confirmReceipt(issuanceId, 'master1');
-    const retReq = await svc.requestReturn(issuanceId, 8, 'master1');
-    expect(retReq.status).toBe('return_requested');
-    expect(retReq.returnedQty).toBe(8);
-    // issuedQty пока не изменился
-    expect(st.tools.get(toolId).issuedQty).toBe(10);
-    // Бригадир подтверждает возврат
-    const done = await svc.confirmReturn(issuanceId, 'foreman1');
-    expect(done.status).toBe('returned');
-    expect(st.tools.get(toolId).issuedQty).toBe(2);
+  it('403 если actor не member проекта', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-actor');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    await expect(
+      svc.createInProject({ projectId: 'p1', actorUserId: 'u-actor', name: 'X' }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
-  it('requestReturn qty > issued → InvalidInputError', async () => {
-    const { svc, issuanceId } = await setup();
-    await svc.confirmReceipt(issuanceId, 'master1');
-    await expect(svc.requestReturn(issuanceId, 20, 'master1')).rejects.toThrow(InvalidInputError);
-  });
-
-  it('requestReturn в статусе issued (без confirm) → Conflict', async () => {
-    const { svc, issuanceId } = await setup();
-    await expect(svc.requestReturn(issuanceId, 5, 'master1')).rejects.toThrow(ConflictError);
-  });
-
-  it('confirmReturn не owner → Forbidden', async () => {
-    const { svc, issuanceId } = await setup();
-    await svc.confirmReceipt(issuanceId, 'master1');
-    await svc.requestReturn(issuanceId, 5, 'master1');
-    await expect(svc.confirmReturn(issuanceId, 'stranger')).rejects.toThrow(ForbiddenError);
+  it('403 если указанный owner не member проекта', async () => {
+    const st = mkPrisma();
+    addMember(st, 'p1', 'u-actor');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    await expect(
+      svc.createInProject({
+        projectId: 'p1',
+        actorUserId: 'u-actor',
+        ownerId: 'u-stranger',
+        name: 'X',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
 
-describe('ToolsService.listIssuancesForProject — customer не видит (ТЗ §1.4)', () => {
-  it('customer получает 403', async () => {
+describe('ToolsService.attachFromMy', () => {
+  it('переносит инструменты owner-а в проект; создаёт events', async () => {
     const st = mkPrisma();
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    await expect(svc.listIssuancesForProject('p1', 'customer1', 'customer')).rejects.toThrow(
+    addUser(st, 'u-actor');
+    addMember(st, 'p1', 'u-actor');
+    const svc = new ToolsService(st.prisma, mkFeed());
+
+    const t1 = await svc.createMyTool({ ownerId: 'u-actor', name: 'A' });
+    const t2 = await svc.createMyTool({ ownerId: 'u-actor', name: 'B' });
+
+    const result = await svc.attachFromMy('p1', [t1.id, t2.id], 'u-actor');
+    expect(result).toHaveLength(2);
+    for (const t of result) {
+      expect(t.projectId).toBe('p1');
+      expect(t.currentHolderId).toBe('u-actor');
+    }
+    expect(st.events).toHaveLength(2);
+  });
+
+  it('403 при попытке привязать чужой инструмент', async () => {
+    const st = mkPrisma();
+    addMember(st, 'p1', 'u-actor');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const foreign = await svc.createMyTool({ ownerId: 'u-other', name: 'X' });
+    await expect(svc.attachFromMy('p1', [foreign.id], 'u-actor')).rejects.toBeInstanceOf(
       ForbiddenError,
     );
   });
-
-  it('master видит только свои выдачи (фильтрация по toUserId)', async () => {
-    const st = mkPrisma();
-    st.users.set('foreman1', {
-      id: 'foreman1',
-      roles: [{ role: 'contractor', isActive: true }],
-    });
-    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    st.memberships.push({ projectId: 'p1', userId: 'master2', role: 'master' });
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    const t = await svc.createToolItem({
-      ownerId: 'foreman1',
-      name: 'X',
-      totalQty: 20,
-    });
-    await svc.issue({
-      toolItemId: t.id,
-      projectId: 'p1',
-      toUserId: 'master1',
-      qty: 5,
-      actorUserId: 'foreman1',
-    });
-    await svc.issue({
-      toolItemId: t.id,
-      projectId: 'p1',
-      toUserId: 'master2',
-      qty: 5,
-      actorUserId: 'foreman1',
-    });
-    const visible = await svc.listIssuancesForProject('p1', 'master1', 'master');
-    expect(visible).toHaveLength(1);
-  });
 });
 
-describe('ToolsService.updateToolItem sanity', () => {
-  it('totalQty < issuedQty → InvalidInputError', async () => {
+describe('ToolsService.claim (self-custody)', () => {
+  it('текущий пользователь становится holder-ом; пишется event с previousHolderId', async () => {
     const st = mkPrisma();
-    st.users.set('foreman1', {
-      id: 'foreman1',
-      roles: [{ role: 'contractor', isActive: true }],
-    });
-    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    const t = await svc.createToolItem({
-      ownerId: 'foreman1',
-      name: 'X',
-      totalQty: 10,
-    });
-    await svc.issue({
-      toolItemId: t.id,
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-other');
+    const feed = mkFeed();
+    const svc = new ToolsService(st.prisma, feed);
+
+    const t = await svc.createInProject({
       projectId: 'p1',
-      toUserId: 'master1',
-      qty: 8,
-      actorUserId: 'foreman1',
+      actorUserId: 'u-owner',
+      name: 'Дрель',
     });
-    await expect(svc.updateToolItem(t.id, { totalQty: 5 }, 'foreman1')).rejects.toThrow(
-      InvalidInputError,
+
+    const updated = await svc.claim(t.id, 'u-other', 'на 3 этаж');
+
+    expect(updated.currentHolderId).toBe('u-other');
+    const claimEvent = st.events.find(
+      (e) => e.holderId === 'u-other' && e.previousHolderId === 'u-owner',
+    );
+    expect(claimEvent).toBeDefined();
+    expect(claimEvent!.note).toBe('на 3 этаж');
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'tool_custody_changed',
+        actorId: 'u-other',
+      }),
     );
   });
 
-  it('get not found → 404', async () => {
+  it('409 если actor уже держит этот инструмент', async () => {
     const st = mkPrisma();
-    const svc = new ToolsService(st.prisma, mkFeed(), new FixedClock(NOW));
-    await expect(svc.getTool('missing', 'u')).rejects.toThrow(NotFoundError);
+    addMember(st, 'p1', 'u-owner');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'Х',
+    });
+    await expect(svc.claim(t.id, 'u-owner')).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it('403 если actor не member проекта', async () => {
+    const st = mkPrisma();
+    addMember(st, 'p1', 'u-owner');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'X',
+    });
+    await expect(svc.claim(t.id, 'u-stranger')).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('400 если инструмент не в проекте (личный)', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-owner');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createMyTool({ ownerId: 'u-owner', name: 'X' });
+    await expect(svc.claim(t.id, 'u-other')).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
+  it('404 если tool не существует', async () => {
+    const st = mkPrisma();
+    const svc = new ToolsService(st.prisma, mkFeed());
+    await expect(svc.claim('does-not-exist', 'u-x')).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('ToolsService.listProjectTools', () => {
+  it('возвращает инструменты проекта с обогащёнными owner/holder', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-owner', 'Иван', 'Петров');
+    addUser(st, 'u-other', 'Пётр', 'Сидоров');
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-other');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'Кувалда',
+    });
+    await svc.claim(t.id, 'u-other');
+
+    const list = await svc.listProjectTools('p1', 'u-other');
+    expect(list).toHaveLength(1);
+    expect(list[0]._owner?.firstName).toBe('Иван');
+    expect(list[0]._holder?.firstName).toBe('Пётр');
+  });
+
+  it('403 если viewer не member проекта', async () => {
+    const st = mkPrisma();
+    const svc = new ToolsService(st.prisma, mkFeed());
+    await expect(svc.listProjectTools('p1', 'u-stranger')).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+describe('ToolsService enrichment (single-tool returns)', () => {
+  it('getTool возвращает _owner и _holder с phone (для tap-to-call)', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-owner', 'Иван', 'Петров', '+79991110000');
+    addUser(st, 'u-other', 'Пётр', 'Сидоров', '+79991111111');
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-other');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'Лестница',
+    });
+    await svc.claim(t.id, 'u-other');
+
+    const got = await svc.getTool(t.id, 'u-other');
+    expect(got._owner?.firstName).toBe('Иван');
+    expect(got._owner?.phone).toBe('+79991110000');
+    expect(got._holder?.firstName).toBe('Пётр');
+    expect(got._holder?.phone).toBe('+79991111111');
+  });
+
+  it('claim возвращает обогащённый инструмент с новым _holder', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-owner', 'Иван', 'Петров', '+79991110000');
+    addUser(st, 'u-other', 'Пётр', 'Сидоров', '+79991111111');
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-other');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'Молоток',
+    });
+    const claimed = await svc.claim(t.id, 'u-other');
+    expect(claimed.currentHolderId).toBe('u-other');
+    expect(claimed._holder?.firstName).toBe('Пётр');
+    expect(claimed._owner?.firstName).toBe('Иван');
+  });
+
+  it('createInProject и attachFromMy возвращают обогащённые объекты', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-actor', 'Алексей', 'Иванов', '+79991112222');
+    addMember(st, 'p1', 'u-actor');
+    const svc = new ToolsService(st.prisma, mkFeed());
+
+    const created = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-actor',
+      name: 'Болгарка',
+    });
+    expect(created._owner?.firstName).toBe('Алексей');
+    expect(created._holder?.firstName).toBe('Алексей');
+
+    const my = await svc.createMyTool({ ownerId: 'u-actor', name: 'Шуруповёрт' });
+    const attached = await svc.attachFromMy('p1', [my.id], 'u-actor');
+    expect(attached).toHaveLength(1);
+    expect(attached[0]._holder?.firstName).toBe('Алексей');
+  });
+});
+
+describe('ToolsService.listCustodyHistory', () => {
+  it('возвращает события DESC по времени', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-owner');
+    addUser(st, 'u-a');
+    addUser(st, 'u-b');
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-a');
+    addMember(st, 'p1', 'u-b');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'Тест',
+    });
+    await svc.claim(t.id, 'u-a');
+    await svc.claim(t.id, 'u-b');
+
+    const history = await svc.listCustodyHistory(t.id, 'u-owner');
+    expect(history).toHaveLength(3);
+    // первый по DESC — последний по времени → claim u-b
+    expect(history[0].holderId).toBe('u-b');
+    expect(history[0].previousHolderId).toBe('u-a');
+    expect(history[2].previousHolderId).toBeNull();
+  });
+});
+
+describe('ToolsService.deleteTool', () => {
+  it('запрещает удалить если currentHolder ≠ owner', async () => {
+    const st = mkPrisma();
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-other');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'X',
+    });
+    await svc.claim(t.id, 'u-other');
+
+    await expect(svc.deleteTool(t.id, 'u-owner')).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it('разрешает удалить если у owner-а', async () => {
+    const st = mkPrisma();
+    addUser(st, 'u-owner');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createMyTool({ ownerId: 'u-owner', name: 'X' });
+    await svc.deleteTool(t.id, 'u-owner');
+    expect(st.tools.has(t.id)).toBe(false);
+  });
+});
+
+describe('ToolsService.detachFromProject', () => {
+  it('убирает projectId и возвращает currentHolder = owner', async () => {
+    const st = mkPrisma();
+    addMember(st, 'p1', 'u-owner');
+    addMember(st, 'p1', 'u-other');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'X',
+    });
+    await svc.claim(t.id, 'u-other');
+
+    const u = await svc.detachFromProject(t.id, 'u-owner');
+    expect(u.projectId).toBeNull();
+    expect(u.currentHolderId).toBe('u-owner');
+  });
+
+  it('403 если actor не owner', async () => {
+    const st = mkPrisma();
+    addMember(st, 'p1', 'u-owner');
+    const svc = new ToolsService(st.prisma, mkFeed());
+    const t = await svc.createInProject({
+      projectId: 'p1',
+      actorUserId: 'u-owner',
+      name: 'X',
+    });
+    await expect(svc.detachFromProject(t.id, 'u-other')).rejects.toBeInstanceOf(ForbiddenError);
   });
 });

@@ -1,5 +1,13 @@
 import { UsersService } from './users.service';
 import { ConflictError, InvalidInputError, NotFoundError, PrismaService } from '@app/common';
+import { MembersService } from '../projects/members.service';
+
+// Юниты UsersService по addRole/removeRole/registerDevice не дергают
+// listTeammates, поэтому MembersService — заглушка с no-op applyVisibility.
+const mkMembersStub = () =>
+  ({
+    applyVisibility: jest.fn(async (rows: unknown[]) => rows),
+  }) as unknown as MembersService;
 
 interface Fake {
   users: Map<string, any>;
@@ -65,7 +73,7 @@ describe('UsersService.addRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await svc.addRole('u1', 'contractor');
     expect(state.roles.some((r) => r.role === 'contractor')).toBe(true);
   });
@@ -74,13 +82,13 @@ describe('UsersService.addRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await expect(svc.addRole('u1', 'customer')).rejects.toThrow(ConflictError);
   });
 
   it('нельзя самостоятельно назначать admin', async () => {
     const { prisma } = mkPrisma();
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await expect(svc.addRole('u1', 'admin')).rejects.toThrow(InvalidInputError);
   });
 });
@@ -93,7 +101,7 @@ describe('UsersService.removeRole', () => {
       { userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true },
       { userId: 'u1', role: 'contractor', addedAt: new Date(), isActive: true },
     );
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await svc.removeRole('u1', 'customer');
     expect(state.roles.find((r) => r.role === 'customer')).toBeUndefined();
     expect(state.users.get('u1').activeRole).toBe('contractor');
@@ -103,7 +111,7 @@ describe('UsersService.removeRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await expect(svc.removeRole('u1', 'customer')).rejects.toThrow(InvalidInputError);
   });
 
@@ -111,7 +119,7 @@ describe('UsersService.removeRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await expect(svc.removeRole('u1', 'master')).rejects.toThrow(NotFoundError);
   });
 });
@@ -124,7 +132,7 @@ describe('UsersService.setActiveRole', () => {
       { userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true },
       { userId: 'u1', role: 'contractor', addedAt: new Date(), isActive: true },
     );
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     const res = await svc.setActiveRole('u1', 'contractor');
     expect(res.activeRole).toBe('contractor');
   });
@@ -133,7 +141,7 @@ describe('UsersService.setActiveRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await expect(svc.setActiveRole('u1', 'master')).rejects.toThrow(NotFoundError);
   });
 });
@@ -141,7 +149,7 @@ describe('UsersService.setActiveRole', () => {
 describe('UsersService.registerDevice', () => {
   it('upsert по токену', async () => {
     const { prisma, state } = mkPrisma();
-    const svc = new UsersService(prisma);
+    const svc = new UsersService(prisma, mkMembersStub());
     await svc.registerDevice('u1', { platform: 'ios', token: 'abcdef0123456789' });
     expect(state.devices.length).toBe(1);
     // повторный upsert не создаёт дубликат

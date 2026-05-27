@@ -164,6 +164,13 @@ class _IconBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x80FFFFFF),
+            blurRadius: 0,
+            spreadRadius: -1,
+          ),
+        ],
       ),
       child: Icon(icon, color: color, size: 20),
     );
@@ -194,10 +201,14 @@ class AppMenuGroup extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.n0,
-        borderRadius: AppRadius.card,
+        borderRadius: AppRadius.container,
+        border: Border.all(color: const Color(0x99E2E8F5)),
         boxShadow: AppShadows.sh1,
       ),
-      child: Column(children: items),
+      child: ClipRRect(
+        borderRadius: AppRadius.container,
+        child: Column(children: items),
+      ),
     );
   }
 }

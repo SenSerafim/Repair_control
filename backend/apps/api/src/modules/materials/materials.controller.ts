@@ -1,27 +1,10 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Param,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
-import { Idempotent } from '../idempotency/idempotent.decorator';
 import { MaterialsService } from './materials.service';
-import {
-  CreateMaterialRequestDto,
-  DisputeMaterialDto,
-  MarkBoughtDto,
-  RequestMaterialPurchaseDto,
-  ResolveMaterialDto,
-} from './dto';
+import { AcceptFullDto, AcceptPartialDto, CreateMaterialRequestDto, MarkDeliveredDto } from './dto';
 
 @ApiTags('materials')
 @ApiBearerAuth()
@@ -30,6 +13,10 @@ import {
 export class MaterialsController {
   constructor(private readonly materials: MaterialsService) {}
 
+  /**
+   * Создать заявку. customer-owner / representative.canApprove → сразу «Согласовано» (`open`).
+   * foreman / master → «Ждёт согласования» + Approval(material_purchase) заказчику.
+   */
   @Post('projects/:projectId/materials')
   @RequireAccess({
     action: 'materials.manage',
@@ -71,86 +58,71 @@ export class MaterialsController {
     return this.materials.get(id);
   }
 
-  @Post('materials/:id/send')
-  @HttpCode(200)
-  async send(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.materials.send(id, req.user.userId);
-  }
-
-  @Post('materials/:id/items/:itemId/bought')
-  @HttpCode(200)
-  async markBought(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('id') _id: string,
-    @Param('itemId') itemId: string,
-    @Body() dto: MarkBoughtDto,
-  ) {
-    return this.materials.markItemBought(itemId, dto, req.user.userId);
-  }
-
-  @Post('materials/:id/finalize')
-  @HttpCode(200)
-  @Idempotent()
+  /**
+   * Отметить заявку «Доставлено». ТЗ NEWFIX §5.7 шаг 1.
+   * RBAC: любой активный member проекта (materials.mark_delivered).
+   * Допустимые переходы: open → delivered, accepted_partial → delivered (довоз).
+   * Идемпотентно из delivered.
+   */
+  @Post('materials/:id/mark-delivered')
   @RequireAccess({
-    action: 'material.finalize',
+    action: 'materials.mark_delivered',
     resource: 'material_request',
     resourceIdFrom: { source: 'params', key: 'id' },
   })
-  async finalize(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.materials.finalize(id, req.user.userId);
-  }
-
-  @Post('materials/:id/confirm-delivery')
-  @HttpCode(200)
-  async confirmDelivery(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
-    return this.materials.confirmDelivery(id, req.user.userId);
-  }
-
-  @Post('materials/:id/dispute')
-  @HttpCode(200)
-  async dispute(
+  async markDelivered(
     @Req() req: { user: AuthenticatedUser },
     @Param('id') id: string,
-    @Body() dto: DisputeMaterialDto,
+    @Body() _dto: MarkDeliveredDto,
   ) {
-    return this.materials.dispute(id, dto.reason, req.user.userId);
+    return this.materials.markDelivered({
+      requestId: id,
+      actorUserId: req.user.userId,
+    });
   }
 
-  @Post('materials/:id/resolve')
-  @HttpCode(200)
-  async resolve(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('id') id: string,
-    @Body() dto: ResolveMaterialDto,
-  ) {
-    return this.materials.resolve(id, { resolution: dto.resolution, actorUserId: req.user.userId });
-  }
-
-  /// §6.1 — заявка от бригадира на approve закупки материалов до фактической покупки.
-  /// Создаёт Approval(scope=material_purchase, addressee=customer).
-  /// MaterialRequest появляется только после approve (см. ApprovalsService.decide).
-  @Post('projects/:projectId/materials/purchase-approvals')
-  @HttpCode(201)
+  /**
+   * Частичная приёмка. ТЗ NEWFIX §5.7 шаги 4–5.
+   * RBAC: foreman / customer-owner / representative.canApprove (materials.accept).
+   */
+  @Post('materials/:id/accept-partial')
   @RequireAccess({
-    action: 'materials.manage',
-    resource: 'project',
-    resourceIdFrom: { source: 'params', key: 'projectId' },
+    action: 'materials.accept',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
   })
-  async requestPurchaseApproval(
+  async acceptPartial(
     @Req() req: { user: AuthenticatedUser },
-    @Param('projectId') projectId: string,
-    @Body() dto: RequestMaterialPurchaseDto,
+    @Param('id') id: string,
+    @Body() dto: AcceptPartialDto,
   ) {
-    return this.materials.requestPurchaseApproval({
-      projectId,
-      stageId: dto.stageId,
-      title: dto.title,
-      amount: dto.amount,
+    return this.materials.acceptPartial({
+      requestId: id,
+      actorUserId: req.user.userId,
       items: dto.items,
       comment: dto.comment,
-      supplier: dto.supplier,
-      photoKeys: dto.photoKeys,
+    });
+  }
+
+  /**
+   * Полная приёмка. ТЗ NEWFIX §5.7 шаг 4.
+   * RBAC: foreman / customer-owner / representative.canApprove (materials.accept).
+   */
+  @Post('materials/:id/accept-full')
+  @RequireAccess({
+    action: 'materials.accept',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async acceptFull(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+    @Body() dto: AcceptFullDto,
+  ) {
+    return this.materials.acceptFull({
+      requestId: id,
       actorUserId: req.user.userId,
+      comment: dto.comment,
     });
   }
 }

@@ -1,31 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/finance/domain/budget.dart';
 import 'package:repair_control/features/finance/domain/payment.dart';
-import 'package:repair_control/shared/widgets/status_pill.dart';
 
 void main() {
-  group('PaymentKind / PaymentStatus', () {
+  group('PaymentKind', () {
     test('roundtrip всех значений', () {
       for (final k in PaymentKind.values) {
         expect(PaymentKind.fromString(k.apiValue), k);
       }
-      for (final s in PaymentStatus.values) {
-        expect(PaymentStatus.fromString(s.apiValue), s);
-      }
     });
 
-    test('unknown → advance / pending', () {
+    test('unknown → advance', () {
       expect(PaymentKind.fromString(null), PaymentKind.advance);
       expect(PaymentKind.fromString('?'), PaymentKind.advance);
-      expect(PaymentStatus.fromString(null), PaymentStatus.pending);
-    });
-
-    test('semaphore mapping', () {
-      expect(PaymentStatus.pending.semaphore, Semaphore.blue);
-      expect(PaymentStatus.confirmed.semaphore, Semaphore.green);
-      expect(PaymentStatus.disputed.semaphore, Semaphore.red);
-      expect(PaymentStatus.resolved.semaphore, Semaphore.plan);
-      expect(PaymentStatus.cancelled.semaphore, Semaphore.plan);
     });
   });
 
@@ -38,17 +25,14 @@ void main() {
         'fromUserId': 'u1',
         'toUserId': 'u2',
         'amount': 500_000_00,
-        'status': 'pending',
         'createdAt': '2026-04-22T10:00:00Z',
         'updatedAt': '2026-04-22T10:00:00Z',
       });
       expect(p.kind, PaymentKind.advance);
-      expect(p.status, PaymentStatus.pending);
       expect(p.amount, 500_000_00);
       expect(p.children, isEmpty);
       expect(p.distributedAmount, 0);
       expect(p.remainingToDistribute, 500_000_00);
-      expect(p.effectiveAmount, 500_000_00);
     });
 
     test('advance с child-distributions', () {
@@ -59,7 +43,6 @@ void main() {
         'fromUserId': 'u1',
         'toUserId': 'u2',
         'amount': 500_000_00,
-        'status': 'confirmed',
         'createdAt': '2026-04-22T10:00:00Z',
         'updatedAt': '2026-04-22T10:00:00Z',
         'children': [
@@ -71,7 +54,6 @@ void main() {
             'fromUserId': 'u2',
             'toUserId': 'u3',
             'amount': 200_000_00,
-            'status': 'pending',
             'createdAt': '2026-04-22T11:00:00Z',
             'updatedAt': '2026-04-22T11:00:00Z',
           },
@@ -83,7 +65,6 @@ void main() {
             'fromUserId': 'u2',
             'toUserId': 'u4',
             'amount': 150_000_00,
-            'status': 'confirmed',
             'createdAt': '2026-04-22T11:30:00Z',
             'updatedAt': '2026-04-22T11:30:00Z',
           },
@@ -92,23 +73,6 @@ void main() {
       expect(p.children.length, 2);
       expect(p.distributedAmount, 350_000_00);
       expect(p.remainingToDistribute, 150_000_00);
-    });
-
-    test('resolved с корректировкой', () {
-      final p = Payment.parse({
-        'id': 'pay1',
-        'projectId': 'pr1',
-        'kind': 'distribution',
-        'fromUserId': 'u1',
-        'toUserId': 'u2',
-        'amount': 100_000_00,
-        'resolvedAmount': 80_000_00,
-        'status': 'resolved',
-        'createdAt': '2026-04-22T10:00:00Z',
-        'updatedAt': '2026-04-23T10:00:00Z',
-      });
-      expect(p.effectiveAmount, 80_000_00);
-      expect(p.amount, 100_000_00);
     });
   });
 

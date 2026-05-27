@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/notes_controller.dart';
 import '../domain/note.dart';
 
@@ -21,32 +23,36 @@ class NoteDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(notesControllerProvider(projectId));
+    final currentUserId = ref.watch(authControllerProvider).userId;
     return AppScaffold(
       showBack: true,
       title: 'Заметка',
+      // Author-only edit/delete. Backend проверяет authorId; UI прячет действия,
+      // которые иначе вернут 403 (B4).
       actions: [
         async.maybeWhen(
           data: (notes) {
-            final note = notes.firstWhere(
-              (n) => n.id == noteId,
-              orElse: () => notes.isNotEmpty
-                  ? notes.first
-                  : Note(
-                      id: noteId,
-                      scope: NoteScope.personal,
-                      authorId: '',
-                      text: '',
-                      createdAt: DateTime.now(),
-                      updatedAt: DateTime.now(),
-                    ),
-            );
-            return IconButton(
-              icon: const Icon(Icons.delete_outline_rounded),
-              tooltip: 'Удалить',
-              onPressed: () => _confirmDelete(context, ref, note),
+            final note = notes.where((n) => n.id == noteId).firstOrNull;
+            if (note == null) return const SizedBox.shrink();
+            final isAuthor =
+                currentUserId != null && note.authorId == currentUserId;
+            if (!isAuthor) return const SizedBox.shrink();
+            return Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Редактировать',
+                  onPressed: () => _showEditSheet(context, ref, note),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  tooltip: 'Удалить',
+                  onPressed: () => _confirmDelete(context, ref, note),
+                ),
+              ],
             );
           },
-          orElse: SizedBox.shrink,
+          orElse: () => const SizedBox.shrink(),
         ),
       ],
       body: async.when(
@@ -66,6 +72,17 @@ class NoteDetailScreen extends ConsumerWidget {
           return _Content(note: note);
         },
       ),
+    );
+  }
+
+  Future<void> _showEditSheet(
+    BuildContext context,
+    WidgetRef ref,
+    Note note,
+  ) async {
+    await showAppBottomSheet<void>(
+      context: context,
+      child: _EditNoteBody(projectId: projectId, note: note),
     );
   }
 
@@ -195,6 +212,115 @@ class _Content extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Bottom-sheet для PATCH /notes/:noteId — доступно только автору заметки (B3).
+class _EditNoteBody extends ConsumerStatefulWidget {
+  const _EditNoteBody({required this.projectId, required this.note});
+
+  final String projectId;
+  final Note note;
+
+  @override
+  ConsumerState<_EditNoteBody> createState() => _EditNoteBodyState();
+}
+
+class _EditNoteBodyState extends ConsumerState<_EditNoteBody> {
+  late final TextEditingController _text = TextEditingController(
+    text: widget.note.text,
+  );
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final value = _text.text.trim();
+    if (value.isEmpty) {
+      setState(() => _error = 'Введите текст');
+      return;
+    }
+    if (value == widget.note.text) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final failure = await ref
+        .read(notesControllerProvider(widget.projectId).notifier)
+        .updateText(noteId: widget.note.id, text: value);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (failure == null) {
+      Navigator.of(context).pop();
+      AppToast.show(context, message: 'Сохранено', kind: AppToastKind.success);
+    } else {
+      setState(() => _error = failure.userMessage);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: Text(
+            'Редактировать заметку',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+            ),
+          ),
+        ),
+        if (_error != null) ...[
+          AppInlineError(message: _error!),
+          const SizedBox(height: 12),
+        ],
+        TextField(
+          controller: _text,
+          minLines: 4,
+          maxLines: 8,
+          maxLength: 5000,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Текст заметки',
+            hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+            filled: true,
+            fillColor: AppColors.n50,
+            contentPadding: const EdgeInsets.all(14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              borderSide: const BorderSide(color: AppColors.brand, width: 1.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        AppButton(
+          label: 'Сохранить',
+          isLoading: _submitting,
+          onPressed: _submit,
+        ),
       ],
     );
   }

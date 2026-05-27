@@ -19,6 +19,7 @@ class BudgetMaterialsTable extends StatelessWidget {
         color: AppColors.n0,
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200),
+        boxShadow: AppShadows.shCard,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -63,7 +64,11 @@ class _Header extends StatelessWidget {
         vertical: 10,
       ),
       decoration: const BoxDecoration(
-        color: AppColors.n50,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.n50, AppColors.n100],
+        ),
         border: Border(bottom: BorderSide(color: AppColors.n200)),
       ),
       child: Row(

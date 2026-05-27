@@ -4,7 +4,7 @@ import { ForbiddenError, InvalidInputError, NotFoundError, PrismaService } from 
 
 type NoteRow = {
   id: string;
-  scope: 'personal' | 'for_me' | 'stage';
+  scope: 'personal' | 'for_me' | 'stage' | 'team_broadcast';
   authorId: string;
   addresseeId: string | null;
   projectId: string;
@@ -123,6 +123,39 @@ describe('NotesService.create — валидация scope', () => {
     });
     expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'note_created' }));
   });
+
+  it('feed-payload содержит addresseeId для scope=for_me (push → addressee)', async () => {
+    const state = mkPrisma();
+    const feed = mkFeed();
+    const svc = new NotesService(state.prisma, feed);
+    await svc.create({
+      scope: 'for_me',
+      text: 'для u2',
+      projectId: 'p1',
+      authorId: 'u1',
+      addresseeId: 'u2',
+    });
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'note_created',
+        payload: expect.objectContaining({ addresseeId: 'u2', scope: 'for_me' }),
+      }),
+    );
+  });
+
+  it('team_broadcast — без addressee/stage, проходит валидацию', async () => {
+    const state = mkPrisma();
+    const svc = new NotesService(state.prisma, mkFeed());
+    const n = await svc.create({
+      scope: 'team_broadcast',
+      text: 'привет команда',
+      projectId: 'p1',
+      authorId: 'u1',
+    });
+    expect(n.scope).toBe('team_broadcast');
+    expect(n.addresseeId).toBeNull();
+    expect(n.stageId).toBeNull();
+  });
 });
 
 describe('NotesService.list — visibility по scope', () => {
@@ -166,6 +199,44 @@ describe('NotesService.list — visibility по scope', () => {
     });
     const res = await svc.list({ userId: 'u2', projectId: 'p1', scope: 'stage' });
     expect(res).toHaveLength(1);
+  });
+
+  it('team_broadcast — видна любому участнику проекта (П1.10/П2.19)', async () => {
+    const state = mkPrisma();
+    const svc = new NotesService(state.prisma, mkFeed());
+    await svc.create({
+      scope: 'team_broadcast',
+      text: 'на стенд',
+      projectId: 'p1',
+      authorId: 'u1',
+    });
+    const res = await svc.list({ userId: 'u9', projectId: 'p1', scope: 'team_broadcast' });
+    expect(res).toHaveLength(1);
+    expect(res[0].scope).toBe('team_broadcast');
+  });
+
+  it('list без scope — отдаёт все 4 типа автору', async () => {
+    const state = mkPrisma();
+    const svc = new NotesService(state.prisma, mkFeed());
+    await svc.create({ scope: 'personal', text: 'p', projectId: 'p1', authorId: 'u1' });
+    await svc.create({
+      scope: 'for_me',
+      text: 'fm',
+      projectId: 'p1',
+      authorId: 'u1',
+      addresseeId: 'u2',
+    });
+    await svc.create({
+      scope: 'stage',
+      text: 's',
+      projectId: 'p1',
+      stageId: 's1',
+      authorId: 'u1',
+    });
+    await svc.create({ scope: 'team_broadcast', text: 'tb', projectId: 'p1', authorId: 'u1' });
+    const res = await svc.list({ userId: 'u1', projectId: 'p1' });
+    const scopes = res.map((n) => n.scope).sort();
+    expect(scopes).toEqual(['for_me', 'personal', 'stage', 'team_broadcast']);
   });
 
   it('поиск по substring работает (case-insensitive)', async () => {

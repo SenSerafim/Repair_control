@@ -3,23 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import '../../../core/access/access_guard.dart';
-import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
-import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
 import '../domain/tool.dart';
 
-/// П2.15 — реестр инструментов проекта (вкладка «Инструменты»).
-///
-/// Видим всем участникам проекта. Колонка «у кого сейчас» показывает
-/// текущего держателя (последний confirmed получатель, либо владелец).
-/// Бэйдж «есть запрос» — для всех; кнопки approve/reject — только владельцу.
-/// Кнопка «+ из моих инструментов» — добавляет из профиля в проект (П3.2).
+/// Доска инструментов проекта (self-custody модель, 2026-05-12).
+///   • Любой member видит список «кто сейчас держит каждый инструмент».
+///   • Любой может self-claim («Я забрал»).
+///   • Любой может добавить инструмент: из «Моих» или новый сразу в проекте.
+///   • История передач — в детальной карточке.
 class ProjectToolsScreen extends ConsumerWidget {
   const ProjectToolsScreen({required this.projectId, super.key});
 
@@ -27,309 +24,137 @@ class ProjectToolsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final registryAsync = ref.watch(projectToolRegistryProvider(projectId));
-    final canManageTools = ref.watch(canProvider(DomainAction.toolsManage));
+    final async = ref.watch(projectToolsBoardProvider(projectId));
+    final me = ref.watch(authControllerProvider).userId;
 
     return AppScaffold(
       showBack: true,
-      title: 'Инструменты проекта',
-      padding: EdgeInsets.zero,
-      body: registryAsync.when(
-        loading: () => const AppLoadingState(),
-        error: (e, _) => AppErrorState(
-          title: 'Не удалось загрузить реестр',
-          onRetry: () => ref.invalidate(projectToolRegistryProvider(projectId)),
-        ),
-        data: (entries) {
-          if (entries.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.all(AppSpacing.x16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      title: 'Инструменты',
+      backgroundColor: AppColors.n50,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      body: Stack(
+        children: [
+          async.when(
+            loading: () => const AppLoadingState(),
+            error: (e, _) => AppErrorState(
+              title: 'Не удалось загрузить',
+              onRetry: () =>
+                  ref.invalidate(projectToolsBoardProvider(projectId)),
+            ),
+            data: (tools) => RefreshIndicator(
+              onRefresh: () async =>
+                  ref.invalidate(projectToolsBoardProvider(projectId)),
+              child: ListView(
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.x16),
                 children: [
-                  const AppEmptyState(
-                    title: 'В проекте пока нет инструментов',
-                    subtitle:
-                        'Добавьте свои инструменты или попросите участника добавить',
-                    icon: Icons.handyman_outlined,
-                  ),
-                  const SizedBox(height: AppSpacing.x16),
-                  if (canManageTools) ...[
-                    AppButton(
-                      label: 'Добавить из моих',
-                      icon: PhosphorIconsBold.plus,
-                      onPressed: () =>
-                          _showAddFromMy(context, ref, projectId: projectId),
-                    ),
-                    const SizedBox(height: AppSpacing.x8),
-                    // QA-баг #8: альтернативный путь — создать новый
-                    // инструмент сразу с привязкой к этому проекту.
-                    // Раньше юзер мог вернуться на «Мои инструменты»,
-                    // создать там без projectId и потом увидеть, что
-                    // в реестре проекта пусто.
-                    AppButton(
-                      label: 'Создать новый',
-                      icon: PhosphorIconsBold.wrench,
-                      variant: AppButtonVariant.ghost,
-                      onPressed: () => context.push(
-                        '${AppRoutes.profileToolAdd}?projectId=$projectId',
+                  if (tools.isEmpty)
+                    AppEmptyState(
+                      title: 'Инструментов в проекте ещё нет',
+                      subtitle:
+                          'Добавьте свой инструмент или возьмите из «Мои инструменты». '
+                          'Любой участник проекта может это сделать.',
+                      icon: PhosphorIconsFill.wrench,
+                      actionLabel: 'Добавить',
+                      onAction: () => _showAddSheet(context, projectId),
+                    )
+                  else ...[
+                    _SummaryBar(tools: tools, me: me),
+                    const SizedBox(height: AppSpacing.x12),
+                    for (final t in tools) ...[
+                      _ToolBoardCard(
+                        tool: t,
+                        isHeldByMe: me != null && t.isHeldBy(me),
+                        onTap: () => context.push(
+                          AppRoutes.profileToolDetailWith(t.id),
+                        ),
+                        onClaim: me != null && !t.isHeldBy(me)
+                            ? () => _claim(context, ref, t.id, projectId)
+                            : null,
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.x10),
+                    ],
                   ],
+                  const SizedBox(height: 80),
                 ],
               ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.x16,
-              AppSpacing.x16,
-              AppSpacing.x16,
-              AppSpacing.x32,
             ),
-            itemCount: entries.length + (canManageTools ? 1 : 0),
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
-            itemBuilder: (_, i) {
-              if (canManageTools && i == entries.length) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: AppButton(
-                    label: 'Добавить из моих',
-                    icon: PhosphorIconsBold.plus,
-                    variant: AppButtonVariant.ghost,
-                    onPressed: () =>
-                        _showAddFromMy(context, ref, projectId: projectId),
-                  ),
-                );
-              }
-              return _RegistryRow(projectId: projectId, entry: entries[i]);
-            },
-          );
-        },
+          ),
+          Positioned(
+            right: 0,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              backgroundColor: AppColors.brand,
+              foregroundColor: AppColors.n0,
+              onPressed: () => _showAddSheet(context, projectId),
+              icon: Icon(PhosphorIconsBold.plus),
+              label: const Text('Добавить'),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _showAddFromMy(
+  Future<void> _claim(
     BuildContext context,
-    WidgetRef ref, {
-    required String projectId,
-  }) async {
+    WidgetRef ref,
+    String toolId,
+    String projectId,
+  ) async {
+    final failure = await ref
+        .read(projectToolsBoardProvider(projectId).notifier)
+        .claim(toolId: toolId);
+    if (!context.mounted) return;
+    if (failure != null) {
+      AppToast.show(
+        context,
+        message: failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } else {
+      AppToast.show(
+        context,
+        message: 'Инструмент теперь у вас',
+        kind: AppToastKind.success,
+      );
+    }
+  }
+
+  Future<void> _showAddSheet(BuildContext context, String projectId) async {
     await showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      child: _AddFromMySheet(projectId: projectId),
+      child: _AddToolToProjectSheet(projectId: projectId),
     );
   }
 }
 
-/// Строка реестра: фото / имя / серийник / держатель / actions.
-class _RegistryRow extends ConsumerWidget {
-  const _RegistryRow({required this.projectId, required this.entry});
-
-  final String projectId;
-  final ProjectToolEntry entry;
+class _SummaryBar extends StatelessWidget {
+  const _SummaryBar({required this.tools, required this.me});
+  final List<ToolItem> tools;
+  final String? me;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final me = ref.read(authControllerProvider).userId;
-    final isOwner = entry.tool.ownerId == me;
-    final amHolder = entry.currentHolderId == me;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: AppRadius.card,
-        border: Border.all(color: AppColors.n200),
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.n100,
-                  borderRadius: BorderRadius.circular(AppRadius.r12),
-                ),
-                child: const Icon(
-                  PhosphorIconsRegular.wrench,
-                  color: AppColors.n500,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.tool.name,
-                      style: AppTextStyles.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (entry.tool.serial != null &&
-                        entry.tool.serial!.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '№ ${entry.tool.serial}',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.n500,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 4),
-                    _HolderTag(entry: entry),
-                  ],
-                ),
-              ),
-              if (entry.hasActiveRequest)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.yellowBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Заявка',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.yellowText,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x10),
-          // Действия (зависят от роли):
-          // - Не-владелец и не текущий держатель → «Запросить»
-          // - Владелец c активной заявкой → «Принять» / «Отклонить»
-          //   (но реальная заявка обрабатывается внутри ToolRequestDetail)
-          if (!isOwner && !amHolder && entry.tool.availableQty > 0)
-            AppButton(
-              label: 'Запросить',
-              variant: AppButtonVariant.ghost,
-              icon: PhosphorIconsRegular.handArrowDown,
-              onPressed: () => _request(context, ref),
-            ),
-          if (isOwner && entry.hasActiveRequest)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Откройте раздел «Выдачи» для обработки заявок',
-                style: AppTextStyles.caption.copyWith(color: AppColors.n500),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _request(BuildContext context, WidgetRef ref) async {
-    final qtyController = TextEditingController(text: '1');
-    final qty = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Запросить ${entry.tool.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Доступно: ${entry.tool.availableQty} ${entry.tool.unit ?? ''}',
-              style: AppTextStyles.caption.copyWith(color: AppColors.n500),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: qtyController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Количество'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              final n = int.tryParse(qtyController.text);
-              if (n != null && n > 0) Navigator.of(ctx).pop(n);
-            },
-            child: const Text('Запросить'),
-          ),
-        ],
-      ),
-    );
-    qtyController.dispose();
-    if (qty == null || !context.mounted) return;
-    final failure = await ref
-        .read(projectToolRegistryProvider(projectId).notifier)
-        .requestTool(toolItemId: entry.tool.id, qty: qty);
-    if (!context.mounted) return;
-    AppToast.show(
-      context,
-      message: failure == null
-          ? 'Заявка отправлена владельцу'
-          : failure.userMessage,
-      kind: failure == null ? AppToastKind.success : AppToastKind.error,
-    );
-  }
-}
-
-class _HolderTag extends ConsumerWidget {
-  const _HolderTag({required this.entry});
-
-  final ProjectToolEntry entry;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final teamAsync = entry.tool.projectId != null
-        ? ref.watch(teamControllerProvider(entry.tool.projectId!))
-        : null;
-    final holderName =
-        teamAsync?.maybeWhen(
-          data: (team) {
-            final m = team.members.firstWhere(
-              (m) => m.userId == entry.currentHolderId,
-              orElse: () => team.members.isEmpty
-                  ? team.members.first
-                  : team.members.first,
-            );
-            final u = m.user;
-            if (u == null) return 'Участник';
-            return '${u.firstName} ${u.lastName}'.trim();
-          },
-          orElse: () => null,
-        ) ??
-        'У владельца';
-
-    final color = entry.isHeldByOwner ? AppColors.brand : AppColors.greenDark;
+  Widget build(BuildContext context) {
+    final total = tools.length;
+    final myCount = me == null ? 0 : tools.where((t) => t.isHeldBy(me!)).length;
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.person_outline, size: 14, color: color),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            'У: $holderName',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        Expanded(
+          child: _Stat(
+            value: '$total',
+            label: 'ВСЕГО',
+            bg: AppColors.n0,
+            color: AppColors.n800,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Stat(
+            value: '$myCount',
+            label: 'У МЕНЯ',
+            bg: AppColors.greenLight,
+            color: AppColors.greenDark,
           ),
         ),
       ],
@@ -337,141 +162,707 @@ class _HolderTag extends ConsumerWidget {
   }
 }
 
-/// П3.2 — bottom-sheet с чек-листом «Моих инструментов» для bulk-add в проект.
-class _AddFromMySheet extends ConsumerStatefulWidget {
-  const _AddFromMySheet({required this.projectId});
-
-  final String projectId;
-
-  @override
-  ConsumerState<_AddFromMySheet> createState() => _AddFromMySheetState();
-}
-
-class _AddFromMySheetState extends ConsumerState<_AddFromMySheet> {
-  final _selected = <String>{};
-  bool _busy = false;
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.value,
+    required this.label,
+    required this.bg,
+    required this.color,
+  });
+  final String value;
+  final String label;
+  final Color bg;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final myAsync = ref.watch(myToolsProvider);
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.7,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        boxShadow: AppShadows.sh1,
+      ),
       child: Column(
         children: [
-          const AppBottomSheetHeader(
-            title: 'Добавить из моих',
-            subtitle: 'Выберите инструменты, которые добавите в проект',
-          ),
-          Expanded(
-            child: myAsync.when(
-              loading: () => const AppLoadingState(),
-              error: (e, _) => AppErrorState(
-                title: 'Ошибка',
-                onRetry: () => ref.invalidate(myToolsProvider),
-              ),
-              data: (tools) {
-                // Фильтруем те, что уже в этом проекте.
-                final available = tools
-                    .where((t) => t.projectId != widget.projectId)
-                    .toList();
-                if (available.isEmpty) {
-                  return const AppEmptyState(
-                    title: 'Все инструменты уже в проекте',
-                    icon: Icons.check_circle_outline,
-                  );
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.x16,
-                    vertical: AppSpacing.x8,
-                  ),
-                  itemCount: available.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final t = available[i];
-                    final checked = _selected.contains(t.id);
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(AppRadius.r12),
-                      onTap: () => setState(() {
-                        if (checked) {
-                          _selected.remove(t.id);
-                        } else {
-                          _selected.add(t.id);
-                        }
-                      }),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: checked ? AppColors.brandLight : AppColors.n50,
-                          borderRadius: BorderRadius.circular(AppRadius.r12),
-                          border: Border.all(
-                            color: checked ? AppColors.brand : AppColors.n200,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: checked,
-                              onChanged: (_) => setState(() {
-                                if (checked) {
-                                  _selected.remove(t.id);
-                                } else {
-                                  _selected.add(t.id);
-                                }
-                              }),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(t.name, style: AppTextStyles.subtitle),
-                                  if (t.serial != null && t.serial!.isNotEmpty)
-                                    Text(
-                                      '№ ${t.serial} · ${t.totalQty} ${t.unit ?? ''}',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.n500,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: AppButton(
-              label: _selected.isEmpty
-                  ? 'Выберите инструменты'
-                  : 'Добавить (${_selected.length})',
-              isLoading: _busy,
-              onPressed: _selected.isEmpty || _busy ? null : _submit,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: color.withValues(alpha: 0.75),
+              letterSpacing: 0.4,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _ToolBoardCard extends StatelessWidget {
+  const _ToolBoardCard({
+    required this.tool,
+    required this.isHeldByMe,
+    required this.onTap,
+    this.onClaim,
+  });
+
+  final ToolItem tool;
+  final bool isHeldByMe;
+  final VoidCallback onTap;
+  final VoidCallback? onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    final holderName = tool.holder?.displayName ?? '—';
+    final ownerName = tool.owner?.displayName ?? '—';
+
+    return Material(
+      color: AppColors.n0,
+      borderRadius: AppRadius.card,
+      child: InkWell(
+        borderRadius: AppRadius.card,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.x14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isHeldByMe ? AppColors.greenDark : AppColors.n200,
+              width: isHeldByMe ? 1.5 : 1,
+            ),
+            borderRadius: AppRadius.card,
+            boxShadow: AppShadows.sh1,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isHeldByMe
+                          ? AppColors.greenLight
+                          : AppColors.brandLight,
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                    ),
+                    child: Icon(
+                      PhosphorIconsFill.wrench,
+                      color: isHeldByMe ? AppColors.greenDark : AppColors.brand,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                tool.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.n800,
+                                  letterSpacing: -0.1,
+                                ),
+                              ),
+                            ),
+                            if (isHeldByMe) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.greenLight,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.pill),
+                                ),
+                                child: const Text(
+                                  '👤 Я',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.greenDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isHeldByMe ? 'Сейчас у вас' : 'Сейчас у: $holderName',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isHeldByMe
+                                ? AppColors.greenDark
+                                : AppColors.n700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Владелец: $ownerName'
+                          '${tool.serial != null && tool.serial!.isNotEmpty ? ' · № ${tool.serial}' : ''}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.n400,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (onClaim != null) ...[
+                const SizedBox(height: AppSpacing.x10),
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton(
+                    label: 'Я забрал',
+                    icon: PhosphorIconsBold.handArrowDown,
+                    variant: AppButtonVariant.secondary,
+                    onPressed: onClaim,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────── AddToolToProjectSheet (внутренний компонент экрана) ───────────────
+
+enum _AddMode { fromMy, brandNew }
+
+class _AddToolToProjectSheet extends ConsumerStatefulWidget {
+  const _AddToolToProjectSheet({required this.projectId});
+  final String projectId;
+
+  @override
+  ConsumerState<_AddToolToProjectSheet> createState() =>
+      _AddToolToProjectSheetState();
+}
+
+class _AddToolToProjectSheetState
+    extends ConsumerState<_AddToolToProjectSheet> {
+  _AddMode _mode = _AddMode.fromMy;
+  final _name = TextEditingController();
+  final _serial = TextEditingController();
+  String? _selectedOwnerId;
+  bool _busy = false;
+  final Set<String> _selected = {};
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _serial.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
+    final controller =
+        ref.read(projectToolsBoardProvider(widget.projectId).notifier);
     setState(() => _busy = true);
-    final failure = await ref
-        .read(projectToolRegistryProvider(widget.projectId).notifier)
-        .addFromMy(_selected.toList());
-    if (!mounted) return;
-    setState(() => _busy = false);
-    Navigator.of(context).pop();
-    AppToast.show(
-      context,
-      message: failure == null ? 'Инструменты добавлены' : failure.userMessage,
-      kind: failure == null ? AppToastKind.success : AppToastKind.error,
+
+    if (_mode == _AddMode.fromMy) {
+      if (_selected.isEmpty) {
+        setState(() => _busy = false);
+        AppToast.show(
+          context,
+          message: 'Выберите хотя бы один инструмент',
+          kind: AppToastKind.error,
+        );
+        return;
+      }
+      final failure = await controller.attachFromMy(_selected.toList());
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (failure != null) {
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
+      } else {
+        Navigator.of(context).pop();
+        AppToast.show(
+          context,
+          message: 'Добавлено в проект',
+          kind: AppToastKind.success,
+        );
+      }
+    } else {
+      final name = _name.text.trim();
+      if (name.isEmpty) {
+        setState(() => _busy = false);
+        AppToast.show(
+          context,
+          message: 'Введите название',
+          kind: AppToastKind.error,
+        );
+        return;
+      }
+      final failure = await controller.createInProject(
+        name: name,
+        ownerId: _selectedOwnerId,
+        serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (failure != null) {
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
+      } else {
+        Navigator.of(context).pop();
+        AppToast.show(
+          context,
+          message: 'Инструмент добавлен',
+          kind: AppToastKind.success,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x16,
+          AppSpacing.x8,
+          AppSpacing.x16,
+          AppSpacing.x16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppBottomSheetHeader(title: 'Добавить инструмент'),
+            _ModeSwitch(
+              value: _mode,
+              onChanged: (v) => setState(() => _mode = v),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            if (_mode == _AddMode.fromMy)
+              _FromMyContent(
+                selected: _selected,
+                onToggle: (id, on) => setState(() {
+                  if (on) {
+                    _selected.add(id);
+                  } else {
+                    _selected.remove(id);
+                  }
+                }),
+              )
+            else
+              _BrandNewContent(
+                name: _name,
+                serial: _serial,
+                projectId: widget.projectId,
+                selectedOwnerId: _selectedOwnerId,
+                onOwnerChanged: (v) => setState(() => _selectedOwnerId = v),
+              ),
+            const SizedBox(height: AppSpacing.x14),
+            AppButton(
+              label: _mode == _AddMode.fromMy
+                  ? (_selected.isEmpty
+                      ? 'Выберите инструменты'
+                      : 'Добавить (${_selected.length})')
+                  : 'Добавить в проект',
+              icon: PhosphorIconsBold.check,
+              isLoading: _busy,
+              onPressed: _submit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeSwitch extends StatelessWidget {
+  const _ModeSwitch({required this.value, required this.onChanged});
+  final _AddMode value;
+  final ValueChanged<_AddMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.n100,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _Tab(
+              label: 'Из моих',
+              active: value == _AddMode.fromMy,
+              onTap: () => onChanged(_AddMode.fromMy),
+            ),
+          ),
+          Expanded(
+            child: _Tab(
+              label: 'Новый',
+              active: value == _AddMode.brandNew,
+              onTap: () => onChanged(_AddMode.brandNew),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tab extends StatelessWidget {
+  const _Tab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? AppColors.n0 : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.r8),
+          boxShadow: active ? AppShadows.sh1 : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: active ? AppColors.n800 : AppColors.n400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FromMyContent extends ConsumerWidget {
+  const _FromMyContent({required this.selected, required this.onToggle});
+  final Set<String> selected;
+  final void Function(String id, bool on) onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(myToolsProvider);
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: AppErrorState(
+          title: 'Не удалось загрузить «Мои инструменты»',
+          onRetry: () => ref.invalidate(myToolsProvider),
+        ),
+      ),
+      data: (tools) {
+        final available = tools.where((t) => !t.isInProject).toList();
+        if (available.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                Text(
+                  'В вашем профиле нет свободных инструментов',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.n700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Перейдите на вкладку «Новый», чтобы создать инструмент сразу в этом проекте.',
+                  style: TextStyle(fontSize: 11, color: AppColors.n400),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final t in available)
+                _SelectableRow(
+                  tool: t,
+                  selected: selected.contains(t.id),
+                  onChanged: (on) => onToggle(t.id, on),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SelectableRow extends StatelessWidget {
+  const _SelectableRow({
+    required this.tool,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final ToolItem tool;
+  final bool selected;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!selected),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: AppColors.n0,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.n200,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? PhosphorIconsFill.checkSquare
+                  : PhosphorIconsRegular.square,
+              color: selected ? AppColors.brand : AppColors.n300,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tool.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.n800,
+                    ),
+                  ),
+                  if (tool.serial != null && tool.serial!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '№ ${tool.serial}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.n400,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandNewContent extends ConsumerWidget {
+  const _BrandNewContent({
+    required this.name,
+    required this.serial,
+    required this.projectId,
+    required this.selectedOwnerId,
+    required this.onOwnerChanged,
+  });
+
+  final TextEditingController name;
+  final TextEditingController serial;
+  final String projectId;
+  final String? selectedOwnerId;
+  final ValueChanged<String?> onOwnerChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(teamControllerProvider(projectId));
+    final me = ref.watch(authControllerProvider).userId;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppInput(
+          controller: name,
+          label: 'Название',
+          placeholder: 'Например: Перфоратор Bosch GBH 2-26',
+        ),
+        const SizedBox(height: AppSpacing.x12),
+        AppInput(
+          controller: serial,
+          label: 'Серийный номер',
+          placeholder: 'Опционально',
+        ),
+        const SizedBox(height: AppSpacing.x12),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Кому будет принадлежать инструмент',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        async.when(
+          loading: () => const SizedBox(
+            height: 56,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, __) => const Text(
+            'Не удалось загрузить команду',
+            style: TextStyle(fontSize: 11, color: AppColors.redDot),
+          ),
+          data: (teamState) {
+            final members = teamState.members;
+            final effective = selectedOwnerId ?? me;
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 180),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final m in members)
+                    _OwnerRow(
+                      title: _displayName(m),
+                      role: m.role.displayName,
+                      isMe: m.userId == me,
+                      selected: effective == m.userId,
+                      onTap: () => onOwnerChanged(m.userId),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _displayName(Membership m) {
+    final u = m.user;
+    if (u == null) return m.userId;
+    final s = '${u.firstName} ${u.lastName}'.trim();
+    return s.isEmpty ? m.userId : s;
+  }
+}
+
+class _OwnerRow extends StatelessWidget {
+  const _OwnerRow({
+    required this.title,
+    required this.role,
+    required this.isMe,
+    required this.selected,
+    required this.onTap,
+  });
+  final String title;
+  final String role;
+  final bool isMe;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brandLight : AppColors.n0,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.n200,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.r8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? PhosphorIconsFill.radioButton
+                  : PhosphorIconsRegular.circle,
+              color: selected ? AppColors.brand : AppColors.n300,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isMe ? '$title (вы)' : title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.n800,
+                ),
+              ),
+            ),
+            Text(
+              role,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.n400,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -7,7 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Clock, ErrorCodes, NotFoundError, PrismaService } from '@app/common';
-import { MembershipRole } from './members.service';
+import { sanitizeRepresentativeRights } from '@app/rbac';
+import { ChatsService } from '../chats/chats.service';
+import { FeedService } from '../feed/feed.service';
+import { MembersService, MembershipRole } from './members.service';
 
 const INVITATION_TTL_DAYS = 14;
 /** TTL для invite-by-code (P2). 7 дней. */
@@ -28,6 +31,14 @@ export class InvitationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clock: Clock,
+    private readonly chats: ChatsService,
+    private readonly feed: FeedService,
+    // MembersService даёт helpers `collectRecipientUserIds` + `emitMembershipChanged`,
+    // чтобы joinByCode имел те же side-effects (feed-event + WS-broadcast),
+    // что и обычное addMembership. До этого вступление по коду было «тихим»:
+    // ни ленты, ни push, ни чата → у других участников ничего не обновлялось
+    // до перезапуска приложения (главная жалоба).
+    private readonly members: MembersService,
   ) {}
 
   async invite(params: {
@@ -44,12 +55,28 @@ export class InvitationsService {
     if (project.ownerId !== params.actorUserId) {
       const actor = await this.prisma.membership.findFirst({
         where: { projectId: params.projectId, userId: params.actorUserId },
-        select: { role: true },
+        select: { role: true, permissions: true },
       });
       if (actor?.role === 'foreman' && params.role !== 'master') {
         throw new ForbiddenException('foreman can invite only master role');
       }
+      if (actor?.role === 'representative' && params.role === 'representative') {
+        const actorPerms = (actor.permissions ?? {}) as Record<string, boolean | undefined>;
+        if (!actorPerms.canAddRepresentative) {
+          throw new ForbiddenException(
+            'representative needs canAddRepresentative to invite another representative',
+          );
+        }
+      }
     }
+
+    // Перед сохранением — sanitize, чтобы фантазийные ключи из старого
+    // клиента (canSeeProjectBudget, canApproveWorks и т.п.) не доезжали до
+    // Membership через joinByCode (см. вторую половину файла).
+    const sanitizedPermissions =
+      params.role === 'representative'
+        ? sanitizeRepresentativeRights(params.permissions)
+        : undefined;
 
     const expiresAt = new Date(
       this.clock.now().getTime() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000,
@@ -67,7 +94,7 @@ export class InvitationsService {
             role: params.role,
             invitedById: params.actorUserId,
             token,
-            permissions: params.permissions ?? undefined,
+            permissions: (sanitizedPermissions ?? undefined) as Record<string, boolean> | undefined,
             stageIds: params.stageIds ?? [],
             expiresAt,
           },
@@ -117,16 +144,27 @@ export class InvitationsService {
     // Бригадир может пригласить только мастера. RBAC matrix допускает
     // foreman→project.invite_member на уровне роли — здесь сужаем до
     // конкретной приглашаемой роли (ТЗ §1.5: foreman не приглашает
-    // representative/foreman).
+    // representative/foreman). Представитель — только с canAddRepresentative.
     if (project.ownerId !== input.byUserId) {
       const actor = await this.prisma.membership.findFirst({
         where: { projectId: input.projectId, userId: input.byUserId },
-        select: { role: true },
+        select: { role: true, permissions: true },
       });
       if (actor?.role === 'foreman' && input.role !== 'master') {
         throw new ForbiddenException('foreman can invite only master role');
       }
+      if (actor?.role === 'representative' && input.role === 'representative') {
+        const actorPerms = (actor.permissions ?? {}) as Record<string, boolean | undefined>;
+        if (!actorPerms.canAddRepresentative) {
+          throw new ForbiddenException(
+            'representative needs canAddRepresentative to invite another representative',
+          );
+        }
+      }
     }
+
+    const sanitizedPermissions =
+      input.role === 'representative' ? sanitizeRepresentativeRights(input.permissions) : undefined;
 
     const expiresAt = new Date(this.clock.now().getTime() + CODE_TTL_DAYS * 24 * 60 * 60 * 1000);
 
@@ -140,7 +178,7 @@ export class InvitationsService {
             role: input.role,
             invitedById: input.byUserId,
             token: code,
-            permissions: input.permissions ?? undefined,
+            permissions: (sanitizedPermissions ?? undefined) as Record<string, boolean> | undefined,
             stageIds: input.stageIds ?? [],
             expiresAt,
           },
@@ -170,6 +208,18 @@ export class InvitationsService {
 
   /**
    * Принять приглашение по коду. Создаёт Membership + закрывает invitation.
+   *
+   * ТЗ §10.1/§13.2/§14: вступивший по коду должен немедленно:
+   *  1) появиться в общем project-чате (`chats.ensureProjectChat` + add),
+   *  2) сгенерировать feed-событие `membership_added` → notification-router
+   *     отправит push новому участнику ([Проект — Роль] Вас добавили),
+   *  3) спровоцировать тихий WS-broadcast `project:membership_changed`,
+   *     чтобы у всех остальных клиентов инвалидировались списки
+   *     проектов / команды / чатов без pull-to-refresh.
+   *
+   * До этого joinByCode только писал Membership и `acceptedAt` — все
+   * остальные стороны узнавали об изменении только после перезапуска
+   * приложения. Это и было главной причиной жалобы пользователя.
    */
   async joinByCode(userId: string, code: string) {
     const inv = await this.prisma.projectInvitation.findFirst({
@@ -185,21 +235,60 @@ export class InvitationsService {
       throw new GoneException('invite code expired');
     }
 
+    // Unique-индекс (projectId, userId, role) не учитывает removedAt: после
+    // leaveTeam запись остаётся в БД soft-removed. Игнорировать её нельзя —
+    // повторный insert упадёт с P2002. Поэтому если активная membership
+    // существует — 409 (как раньше), а soft-removed — реанимируем строку,
+    // чтобы вернувшийся пользователь восстановил прежний membership.id и
+    // ссылки на него (stage.foremanIds/step.assigneeIds выполнили cleanup
+    // при leaveTeam, так что состояние «чистый join»).
     const existing = await this.prisma.membership.findFirst({
       where: { projectId: inv.projectId, userId, role: inv.role },
     });
-    if (existing) throw new ConflictException('already a member with this role');
+    if (existing && !existing.removedAt) {
+      throw new ConflictException('already a member with this role');
+    }
 
-    return this.prisma.$transaction(async (tx) => {
-      const membership = await tx.membership.create({
-        data: {
-          projectId: inv.projectId,
-          userId,
-          role: inv.role,
-          permissions: (inv.permissions ?? {}) as object,
-          stageIds: inv.stageIds ?? [],
-        },
-      });
+    // Защита от legacy invitations, выпущенных до унификации формата
+    // permissions: даже если в БД лежит `{ canSeeProjectBudget: true }`,
+    // в Membership попадёт только sanitized-объект.
+    const membershipPermissions =
+      inv.role === 'representative'
+        ? sanitizeRepresentativeRights(inv.permissions as Record<string, unknown> | undefined)
+        : {};
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const membership = existing
+        ? await tx.membership.update({
+            where: { id: existing.id },
+            data: {
+              removedAt: null,
+              removedById: null,
+              hiddenForUser: false,
+              invitedById: inv.invitedById,
+              permissions: membershipPermissions as object,
+              stageIds: inv.stageIds ?? [],
+            },
+          })
+        : await tx.membership.create({
+            data: {
+              projectId: inv.projectId,
+              userId,
+              role: inv.role,
+              invitedById: inv.invitedById,
+              permissions: membershipPermissions as object,
+              stageIds: inv.stageIds ?? [],
+            },
+          });
+      // Появление foreman включает требование согласования плана (зеркалит
+      // members.service:addMembership). ТЗ §4.2 — кнопка «Старт» этапа серая
+      // до approval плана от заказчика.
+      if (inv.role === 'foreman') {
+        await tx.project.update({
+          where: { id: inv.projectId },
+          data: { requiresPlanApproval: true },
+        });
+      }
       await tx.projectInvitation.update({
         where: { id: inv.id },
         data: {
@@ -208,8 +297,43 @@ export class InvitationsService {
           acceptedAt: this.clock.now(),
         },
       });
+      // Лента + маршрутизация push новому участнику. Эмитим внутри транзакции,
+      // чтобы feed_event коммитился атомарно с membership.
+      await this.feed.emit({
+        tx,
+        kind: 'membership_added',
+        projectId: inv.projectId,
+        actorId: userId,
+        payload: { userId, role: inv.role },
+      });
       return { membership, projectId: inv.projectId };
     });
+
+    // Чат-side и WS-broadcast — вне транзакции, не валим accept если что-то
+    // упадёт по сети/redis. Membership уже создан, остальное — best-effort.
+    try {
+      await this.chats.ensureProjectChat(result.projectId, userId);
+      await this.chats.addProjectChatParticipant(result.projectId, userId);
+    } catch (_e) {
+      // membership уже создан — не откатываем
+    }
+
+    // Тихий WS-broadcast всем участникам проекта (включая нового — чтобы у него
+    // сразу появился проект в списке). Без push, чтобы не плодить шум.
+    try {
+      const recipientUserIds = await this.members.collectRecipientUserIds(result.projectId, userId);
+      this.members.emitMembershipChanged({
+        projectId: result.projectId,
+        userId,
+        role: inv.role,
+        action: 'added',
+        recipientUserIds,
+      });
+    } catch (_e) {
+      /* best-effort */
+    }
+
+    return result;
   }
 }
 

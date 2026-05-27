@@ -78,14 +78,16 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.x8),
         decoration: BoxDecoration(
-          color: widget.isActive ? AppColors.brandLight : AppColors.n0,
+          gradient: widget.isActive
+              ? AppGradients.activeStepBg
+              : AppGradients.surfaceCard,
           borderRadius: AppRadius.card,
           border: Border.all(
             color: widget.isActive
-                ? AppColors.brand.withValues(alpha: 0.3)
+                ? AppColors.brand.withValues(alpha: 0.32)
                 : AppColors.n200,
           ),
-          boxShadow: AppShadows.sh1,
+          boxShadow: AppShadows.shCard,
         ),
         child: Column(
           children: [

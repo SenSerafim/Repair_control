@@ -20,6 +20,34 @@ export interface ProjectBudgetDTO {
   materials: BudgetBucket;
   total: BudgetBucket;
   stages: StageBudgetDTO[];
+  /**
+   * ТЗ §7 / §10: master видит «свои выплаты», без бюджета проекта.
+   * Поле заполнено только для master-viewer'а; иначе пусто/undefined.
+   * Mobile разруливает экран по наличию `earnings` или `viewerKind === 'master'`.
+   */
+  viewerKind?: 'owner' | 'representative' | 'foreman' | 'master';
+  earnings?: MasterEarning[];
+  /**
+   * true, когда у бригадира все его этапы имеют workBudget/materialsBudget = 0,
+   * но заказчик задал общий Project.workBudget. UI показывает баннер
+   * «Заказчик не разнёс бюджет по вашим этапам».
+   */
+  noStageBudget?: boolean;
+}
+
+export interface MasterEarning {
+  paymentId: string;
+  stageId: string | null;
+  amount: number;
+  createdAt: Date;
+  /**
+   * Кто заплатил мастеру. Заполняется в `buildMasterView`, чтобы экран мастера
+   * показал «выплатил заказчик / выплатил бригадир Имя Фамилия» — основное
+   * требование UX (мастер должен видеть источник денег).
+   */
+  fromUserId?: string | null;
+  fromUserName?: string | null;
+  fromUserRole?: 'customer' | 'representative' | 'foreman' | 'master' | null;
 }
 
 export interface BudgetViewerContext {
@@ -37,9 +65,7 @@ export interface AdvanceFlow {
   toUserId: string;
   toUserName: string;
   amount: number;
-  status: string;
   createdAt: Date;
-  confirmedAt: Date | null;
 }
 
 export interface DistributionFlow {
@@ -49,7 +75,6 @@ export interface DistributionFlow {
   toUserId: string;
   toUserName: string;
   amount: number;
-  status: string;
   createdAt: Date;
 }
 
@@ -67,6 +92,62 @@ export interface MaterialPurchaseFlow {
   title: string;
   totalSpent: number;
   itemCount: number;
+  /**
+   * Кто фактически покупал материал.
+   * `customer` — заказчик/представитель (списание сразу).
+   * `foreman` — бригадир/мастер (списание после approve заказчиком).
+   */
+  boughtBy: 'customer' | 'foreman';
+  requestedByName: string;
+}
+
+/**
+ * Материал в статусе `pending_approval` — ждёт решения заказчика.
+ * В таб «Материалы» бюджета показывается отдельной полупрозрачной секцией
+ * («На согласовании»), в spent НЕ попадает.
+ */
+export interface PendingMaterialFlow {
+  requestId: string;
+  title: string;
+  estimatedTotal: number;
+  itemCount: number;
+  requestedByName: string;
+  createdAt: Date;
+}
+
+/**
+ * Материал в статусе `cancelled` (после rejected approval либо отзыва автором)
+ * — в spent НЕ попадает, показывается в таб «История» серой строкой.
+ */
+export interface RejectedMaterialFlow {
+  requestId: string;
+  title: string;
+  estimatedTotal: number;
+  itemCount: number;
+  requestedByName: string;
+  decidedAt: Date;
+}
+
+export interface RejectedSelfpurchaseFlow {
+  id: string;
+  byUserName: string;
+  amount: number;
+  comment: string | null;
+  decidedAt: Date | null;
+}
+
+/**
+ * Касса бригадира по проекту:
+ *   advancesReceived — сумма всех авансов customer→foreman.
+ *   distributed      — сумма всех distributions foreman→master.
+ *   available        — `advancesReceived - distributed`. Может быть
+ *                      отрицательной — бригадир распределил больше, чем
+ *                      получил (например, оплатил мастеру из своих карманных).
+ */
+export interface ForemanWallet {
+  advancesReceived: number;
+  distributed: number;
+  available: number;
 }
 
 export interface MoneyFlowTotals {
@@ -82,14 +163,24 @@ export interface MoneyFlowDTO {
   distributions: DistributionFlow[];
   approvedSelfpurchases: ApprovedSelfpurchaseFlow[];
   materialPurchases: MaterialPurchaseFlow[];
+  /** Материалы со статусом `pending_approval` (ждут заказчика). */
+  pendingMaterials: PendingMaterialFlow[];
+  /** Материалы со статусом `cancelled` (отклонены или отозваны). */
+  rejectedMaterials: RejectedMaterialFlow[];
+  /** Самозакупы со статусом `rejected`. */
+  rejectedSelfpurchases: RejectedSelfpurchaseFlow[];
+  /** Касса бригадира — заполняется только когда viewer = foreman. */
+  wallet?: ForemanWallet;
   totals: MoneyFlowTotals;
 }
 
 /**
  * BudgetCalculator — dynamic view бюджета (ТЗ §4): план + потрачено + остаток.
  *
- * Spent = sum(confirmed+resolved payments by category)
- *       + sum(finalized material items isBought=true)
+ * Simplified 2026-05: подтверждений у платежей больше нет, любая запись
+ * advance/distribution = факт передачи денег. Spent = sum(advance.amount).
+ * Distributions не уменьшают бюджет повторно — это перераспределение уже
+ * выданных бригадиру денег.
  */
 @Injectable()
 export class BudgetCalculator {
@@ -99,6 +190,11 @@ export class BudgetCalculator {
     projectId: string,
     viewer: BudgetViewerContext,
   ): Promise<ProjectBudgetDTO> {
+    // ТЗ §7/§10 — master не видит общий бюджет проекта, только свои выплаты.
+    if (viewer.membershipRole === 'master') {
+      return this.buildMasterView(projectId, viewer);
+    }
+
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -111,23 +207,23 @@ export class BudgetCalculator {
         materials: { planned: 0, spent: 0, remaining: 0 },
         total: { planned: 0, spent: 0, remaining: 0 },
         stages: [],
+        viewerKind: this.viewerKindOf(viewer),
       };
     }
 
     const payments = await this.prisma.payment.findMany({
       where: {
         projectId,
-        status: { in: ['confirmed', 'resolved'] },
         kind: 'advance',
       },
     });
     const materialRequests = await this.prisma.materialRequest.findMany({
       where: {
         projectId,
-        status: { in: ['bought', 'partially_bought', 'delivered', 'resolved'] },
-        finalizedAt: { not: null },
+        // «Согласовано» = open. UI/UX-упрощение 2026-05: pending → approved | rejected.
+        status: 'open',
       },
-      include: { items: { where: { isBought: true } } },
+      include: { items: true },
     });
     // 3-tier forwarding: в бюджет попадают только foreman-самозакупы, одобренные
     // заказчиком (или одноступенчатые foreman→customer). Master-копия с
@@ -136,10 +232,7 @@ export class BudgetCalculator {
       where: { projectId, status: 'approved', byRole: 'foreman' },
     });
 
-    const workSpent = payments.reduce(
-      (acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)),
-      Money.zero(),
-    );
+    const workSpent = payments.reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero());
     const materialsFromRequests = materialRequests.reduce(
       (acc, r) =>
         acc.plus(
@@ -183,7 +276,7 @@ export class BudgetCalculator {
       .map((s) => {
         const stageWorkSpent = payments
           .filter((p) => p.stageId === s.id)
-          .reduce((acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)), Money.zero());
+          .reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero());
         const stageMaterialsFromReq = materialRequests
           .filter((r) => r.stageId === s.id)
           .reduce(
@@ -212,11 +305,129 @@ export class BudgetCalculator {
         };
       });
 
+    // ТЗ §6 «Бригадир — Видимость»: foreman видит бюджет только своих этапов.
+    // 2026-05 рефактор: для foreman пересчитываем top-level суммы по visibleStages,
+    // чтобы карточка «Работа / Материалы / Итого» показывала только его сегмент.
+    const isForeman = viewer.membershipRole === 'foreman' && !viewer.isOwner;
+    const topWorkPlanned = isForeman
+      ? stages.reduce((acc, s) => acc.plus(Money.ofKopeks(BigInt(s.work.planned))), Money.zero())
+      : workPlanned;
+    const topMaterialsPlanned = isForeman
+      ? stages.reduce(
+          (acc, s) => acc.plus(Money.ofKopeks(BigInt(s.materials.planned))),
+          Money.zero(),
+        )
+      : materialsPlanned;
+    const topWorkSpent = isForeman
+      ? stages.reduce((acc, s) => acc.plus(Money.ofKopeks(BigInt(s.work.spent))), Money.zero())
+      : workSpent;
+    const topMaterialsSpent = isForeman
+      ? stages.reduce((acc, s) => acc.plus(Money.ofKopeks(BigInt(s.materials.spent))), Money.zero())
+      : materialsSpent;
+
+    // Foreman без распределённого бюджета: сигнализируем мобайлу для inline-баннера.
+    // Раньше флаг ставился только если у проекта вообще был бюджет; теперь —
+    // всякий раз, когда у бригадира нули в шапке (включая случай «совсем нет
+    // бюджета»). Это гарантирует, что вместо full-screen «Бюджет не задан»
+    // (одинаковый для всех пустых случаев) мобайл покажет inline-баннер и
+    // оставит доступ к выплатам/материалам/истории.
+    const noStageBudget = isForeman && topWorkPlanned.isZero() && topMaterialsPlanned.isZero();
+
     return {
-      work: this.bucket(workPlanned, workSpent),
-      materials: this.bucket(materialsPlanned, materialsSpent),
-      total: this.bucket(workPlanned.plus(materialsPlanned), workSpent.plus(materialsSpent)),
+      work: this.bucket(topWorkPlanned, topWorkSpent),
+      materials: this.bucket(topMaterialsPlanned, topMaterialsSpent),
+      total: this.bucket(
+        topWorkPlanned.plus(topMaterialsPlanned),
+        topWorkSpent.plus(topMaterialsSpent),
+      ),
       stages,
+      viewerKind: this.viewerKindOf(viewer),
+      ...(noStageBudget ? { noStageBudget: true } : {}),
+    };
+  }
+
+  private viewerKindOf(viewer: BudgetViewerContext): ProjectBudgetDTO['viewerKind'] {
+    if (viewer.isOwner) return 'owner';
+    if (viewer.membershipRole === 'representative') return 'representative';
+    if (viewer.membershipRole === 'foreman') return 'foreman';
+    if (viewer.membershipRole === 'master') return 'master';
+    return undefined;
+  }
+
+  /**
+   * Master-side view бюджета: справочная сводка по проекту, без edit-функционала.
+   * Показываем:
+   *   • `earnings` — только входящие выплаты мастеру (advance toUserId=я,
+   *     distribution toUserId=я). С информацией о том, кто и какой ролью
+   *     заплатил (`fromUserId` + `fromUserName` + `fromUserRole`), чтобы
+   *     мобайл отрисовал «Выплатил заказчик / бригадир Имя Фамилия».
+   *   • `planned/spent` оставлены пустыми — UI для мастера полей бюджета
+   *     не рисует. Денежное движение проекта мастер видит через отдельный
+   *     эндпоинт `/money-flow` (теперь доступен и мастеру read-only).
+   */
+  private async buildMasterView(
+    projectId: string,
+    viewer: BudgetViewerContext,
+  ): Promise<ProjectBudgetDTO> {
+    const myIncomingPayments = await this.prisma.payment.findMany({
+      where: {
+        projectId,
+        toUserId: viewer.userId,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const fromUserIds = Array.from(
+      new Set(myIncomingPayments.map((p) => p.fromUserId).filter((x): x is string => !!x)),
+    );
+    const fromUsers =
+      fromUserIds.length > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: fromUserIds } },
+            select: { id: true, firstName: true, lastName: true },
+          })
+        : [];
+    const userById = new Map(fromUsers.map((u) => [u.id, u]));
+    // Роли плательщиков в этом проекте определяем одним запросом: для каждого
+    // fromUserId смотрим membership.role или ownerId (для заказчика, у которого
+    // может не быть явной customer-membership на legacy-проектах).
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const memberships =
+      fromUserIds.length > 0
+        ? await this.prisma.membership.findMany({
+            where: { projectId, userId: { in: fromUserIds }, removedAt: null },
+            select: { userId: true, role: true },
+          })
+        : [];
+    const roleByUser = new Map<string, 'customer' | 'representative' | 'foreman' | 'master'>();
+    for (const m of memberships) {
+      roleByUser.set(m.userId, m.role as 'customer' | 'representative' | 'foreman' | 'master');
+    }
+    if (project?.ownerId) roleByUser.set(project.ownerId, 'customer');
+
+    const earnings: MasterEarning[] = myIncomingPayments.map((p) => {
+      const u = p.fromUserId ? userById.get(p.fromUserId) : null;
+      const fromName = u ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() : null;
+      return {
+        paymentId: p.id,
+        stageId: p.stageId,
+        amount: Number(p.amount),
+        createdAt: p.createdAt,
+        fromUserId: p.fromUserId,
+        fromUserName: fromName,
+        fromUserRole: p.fromUserId ? (roleByUser.get(p.fromUserId) ?? null) : null,
+      };
+    });
+    return {
+      work: { planned: 0, spent: 0, remaining: 0 },
+      materials: { planned: 0, spent: 0, remaining: 0 },
+      total: { planned: 0, spent: 0, remaining: 0 },
+      stages: [],
+      viewerKind: 'master',
+      earnings,
     };
   }
 
@@ -229,23 +440,20 @@ export class BudgetCalculator {
     if (!this.stageVisibleTo(viewer, stage.id, stage.foremanIds)) return null;
 
     const payments = await this.prisma.payment.findMany({
-      where: { stageId, status: { in: ['confirmed', 'resolved'] } },
+      where: { stageId, kind: 'advance' },
     });
     const materialRequests = await this.prisma.materialRequest.findMany({
       where: {
         stageId,
-        status: { in: ['bought', 'partially_bought', 'delivered', 'resolved'] },
-        finalizedAt: { not: null },
+        // «Согласовано» = open.
+        status: 'open',
       },
-      include: { items: { where: { isBought: true } } },
+      include: { items: true },
     });
     const stageSelfPurchases = await this.prisma.selfPurchase.findMany({
       where: { stageId, status: 'approved', byRole: 'foreman' },
     });
-    const workSpent = payments.reduce(
-      (acc, p) => acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount)),
-      Money.zero(),
-    );
+    const workSpent = payments.reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero());
     const materialsFromReq = materialRequests.reduce(
       (acc, r) =>
         acc.plus(
@@ -276,8 +484,11 @@ export class BudgetCalculator {
   /**
    * P1.5: Возвращает «Движение средств» проекта — авансы customer→foreman,
    * распределения foreman→master, одобренные самозакупы foreman→customer
-   * и закупки материалов. Доступно только owner / representative.canSeeBudget.
-   * Для master/foreman/outsider — пустой объект.
+   * и закупки материалов. Доступно owner / representative.canSeeBudget.
+   *
+   * 2026-05: для foreman возвращается его срез (только свои входящие/исходящие),
+   * чтобы вкладка «История» в бюджете заполнялась его транзакциями.
+   * Master уже получает свои выплаты через budget endpoint (earnings[]).
    */
   async getMoneyFlow(
     projectId: string,
@@ -289,6 +500,9 @@ export class BudgetCalculator {
       distributions: [],
       approvedSelfpurchases: [],
       materialPurchases: [],
+      pendingMaterials: [],
+      rejectedMaterials: [],
+      rejectedSelfpurchases: [],
       totals: {
         advances: 0,
         distributed: 0,
@@ -298,7 +512,17 @@ export class BudgetCalculator {
       },
     };
     const allowed = viewer.isOwner || viewer.canSeeBudget === true;
-    if (!allowed) return empty;
+    if (!allowed && viewer.membershipRole === 'foreman') {
+      return this.getForemanMoneyFlow(projectId, viewer.userId, range);
+    }
+    // Мастер видит movement проекта в справочном режиме (без edit-кнопок на UI).
+    // Срез — тот же, что у owner: полный список advances/distributions/материалов;
+    // мобильный экран рисует только информационные строки.
+    if (!allowed && viewer.membershipRole === 'master') {
+      // Fall through to full-flow ниже.
+    } else if (!allowed) {
+      return empty;
+    }
 
     const dateFilter =
       range && (range.from || range.to)
@@ -336,11 +560,40 @@ export class BudgetCalculator {
     const materialReqs = await this.prisma.materialRequest.findMany({
       where: {
         projectId,
-        status: { in: ['bought', 'partially_bought', 'delivered', 'resolved'] },
-        finalizedAt: dateFilter ? { ...dateFilter, not: null } : { not: null },
+        // «Согласовано» = open. finalizedAt ставится в момент approve.
+        status: 'open',
+        ...(dateFilter ? { finalizedAt: dateFilter } : {}),
       },
-      include: { items: { where: { isBought: true } } },
+      include: { items: true },
       orderBy: { createdAt: 'desc' },
+    });
+    // pending_approval — отдельной секцией «На согласовании», без вычета из spent.
+    const pendingMaterialReqs = await this.prisma.materialRequest.findMany({
+      where: {
+        projectId,
+        status: 'pending_approval',
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    // cancelled — отклонённые/отозванные. Показываем в истории серой строкой.
+    const rejectedMaterialReqs = await this.prisma.materialRequest.findMany({
+      where: {
+        projectId,
+        status: 'cancelled',
+        ...(dateFilter ? { updatedAt: dateFilter } : {}),
+      },
+      include: { items: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const rejectedSp = await this.prisma.selfPurchase.findMany({
+      where: {
+        projectId,
+        status: 'rejected',
+        ...(dateFilter ? { decidedAt: dateFilter } : {}),
+      },
+      orderBy: { decidedAt: 'desc' },
     });
     // NB: dateFilter влияет только на агрегаты (totals/lists). Пагинация и
     // долгосрочные тренды по проектам с тысячами движений требуют отдельного
@@ -351,6 +604,10 @@ export class BudgetCalculator {
     advances.forEach((p) => userIds.add(p.toUserId));
     distributions.forEach((p) => userIds.add(p.toUserId));
     approvedSp.forEach((sp) => userIds.add(sp.byUserId));
+    rejectedSp.forEach((sp) => userIds.add(sp.byUserId));
+    materialReqs.forEach((r) => userIds.add(r.createdById));
+    pendingMaterialReqs.forEach((r) => userIds.add(r.createdById));
+    rejectedMaterialReqs.forEach((r) => userIds.add(r.createdById));
     const users =
       userIds.size > 0
         ? await this.prisma.user.findMany({
@@ -361,17 +618,11 @@ export class BudgetCalculator {
     const userById = new Map(users.map((u) => [u.id, u]));
 
     const totalAdvances = advances.reduce(
-      (acc, p) =>
-        p.status === 'confirmed' || p.status === 'resolved'
-          ? acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount))
-          : acc,
+      (acc, p) => acc.plus(Money.ofKopeks(p.amount)),
       Money.zero(),
     );
     const totalDistributed = distributions.reduce(
-      (acc, p) =>
-        p.status === 'confirmed' || p.status === 'resolved'
-          ? acc.plus(Money.ofKopeks(p.resolvedAmount ?? p.amount))
-          : acc,
+      (acc, p) => acc.plus(Money.ofKopeks(p.amount)),
       Money.zero(),
     );
     const totalApprovedSp = approvedSp.reduce(
@@ -400,10 +651,8 @@ export class BudgetCalculator {
         id: p.id,
         toUserId: p.toUserId,
         toUserName: fmtUser(p.toUserId),
-        amount: Number(p.resolvedAmount ?? p.amount),
-        status: p.status,
+        amount: Number(p.amount),
         createdAt: p.createdAt,
-        confirmedAt: p.confirmedAt,
       })),
       distributions: distributions.map((p) => ({
         id: p.id,
@@ -411,8 +660,7 @@ export class BudgetCalculator {
         fromUserId: p.fromUserId,
         toUserId: p.toUserId,
         toUserName: fmtUser(p.toUserId),
-        amount: Number(p.resolvedAmount ?? p.amount),
-        status: p.status,
+        amount: Number(p.amount),
         createdAt: p.createdAt,
       })),
       approvedSelfpurchases: approvedSp.map((sp) => ({
@@ -433,8 +681,280 @@ export class BudgetCalculator {
           title: r.title ?? 'Запрос материалов',
           totalSpent: Number(totalSpent.kopeks()),
           itemCount: r.items.length,
+          boughtBy: r.recipient as 'customer' | 'foreman',
+          requestedByName: fmtUser(r.createdById),
         };
       }),
+      pendingMaterials: pendingMaterialReqs.map((r) => {
+        const estimated = r.items.reduce(
+          (acc, it) => acc.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+          Money.zero(),
+        );
+        return {
+          requestId: r.id,
+          title: r.title ?? 'Запрос материалов',
+          estimatedTotal: Number(estimated.kopeks()),
+          itemCount: r.items.length,
+          requestedByName: fmtUser(r.createdById),
+          createdAt: r.createdAt,
+        };
+      }),
+      rejectedMaterials: rejectedMaterialReqs.map((r) => {
+        const estimated = r.items.reduce(
+          (acc, it) => acc.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+          Money.zero(),
+        );
+        return {
+          requestId: r.id,
+          title: r.title ?? 'Запрос материалов',
+          estimatedTotal: Number(estimated.kopeks()),
+          itemCount: r.items.length,
+          requestedByName: fmtUser(r.createdById),
+          decidedAt: r.updatedAt,
+        };
+      }),
+      rejectedSelfpurchases: rejectedSp.map((sp) => ({
+        id: sp.id,
+        byUserName: fmtUser(sp.byUserId),
+        amount: Number(sp.amount),
+        comment: sp.comment,
+        decidedAt: sp.decidedAt,
+      })),
+      totals: {
+        advances: Number(totalAdvances.kopeks()),
+        distributed: Number(totalDistributed.kopeks()),
+        undistributed: Number(totalAdvances.minus(totalDistributed).kopeks()),
+        approvedSelfpurchases: Number(totalApprovedSp.kopeks()),
+        materials: Number(totalMaterials.kopeks()),
+      },
+    };
+  }
+
+  /**
+   * Срез money-flow для бригадира: только то, в чём он сторона.
+   * - advances: где он `toUserId` (полученные от заказчика)
+   * - distributions: где он `fromUserId` (выплаченные мастерам)
+   * - approvedSelfpurchases: его собственные одобренные самозакупы
+   * - materialPurchases: запросы материалов его этапов
+   */
+  private async getForemanMoneyFlow(
+    projectId: string,
+    foremanUserId: string,
+    range?: { from?: Date; to?: Date },
+  ): Promise<MoneyFlowDTO> {
+    const dateFilter =
+      range && (range.from || range.to)
+        ? {
+            ...(range.from ? { gte: range.from } : {}),
+            ...(range.to ? { lte: range.to } : {}),
+          }
+        : undefined;
+
+    const myStages = await this.prisma.stage.findMany({
+      where: { projectId, foremanIds: { has: foremanUserId } },
+      select: { id: true },
+    });
+    const myStageIds = myStages.map((s) => s.id);
+
+    const advances = await this.prisma.payment.findMany({
+      where: {
+        projectId,
+        kind: 'advance',
+        toUserId: foremanUserId,
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const distributions = await this.prisma.payment.findMany({
+      where: {
+        projectId,
+        kind: 'distribution',
+        fromUserId: foremanUserId,
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const approvedSp = await this.prisma.selfPurchase.findMany({
+      where: {
+        projectId,
+        status: 'approved',
+        byRole: 'foreman',
+        byUserId: foremanUserId,
+        ...(dateFilter ? { decidedAt: dateFilter } : {}),
+      },
+      orderBy: { decidedAt: 'desc' },
+    });
+    const materialReqs =
+      myStageIds.length === 0
+        ? []
+        : await this.prisma.materialRequest.findMany({
+            where: {
+              projectId,
+              stageId: { in: myStageIds },
+              // «Согласовано» = open.
+              status: 'open',
+              ...(dateFilter ? { finalizedAt: dateFilter } : {}),
+            },
+            include: { items: true },
+            orderBy: { createdAt: 'desc' },
+          });
+    const pendingMaterialReqs =
+      myStageIds.length === 0
+        ? []
+        : await this.prisma.materialRequest.findMany({
+            where: {
+              projectId,
+              stageId: { in: myStageIds },
+              status: 'pending_approval',
+              ...(dateFilter ? { createdAt: dateFilter } : {}),
+            },
+            include: { items: true },
+            orderBy: { createdAt: 'desc' },
+          });
+    const rejectedMaterialReqs =
+      myStageIds.length === 0
+        ? []
+        : await this.prisma.materialRequest.findMany({
+            where: {
+              projectId,
+              stageId: { in: myStageIds },
+              status: 'cancelled',
+              ...(dateFilter ? { updatedAt: dateFilter } : {}),
+            },
+            include: { items: true },
+            orderBy: { updatedAt: 'desc' },
+          });
+    const rejectedSp = await this.prisma.selfPurchase.findMany({
+      where: {
+        projectId,
+        status: 'rejected',
+        byUserId: foremanUserId,
+        ...(dateFilter ? { decidedAt: dateFilter } : {}),
+      },
+      orderBy: { decidedAt: 'desc' },
+    });
+
+    const userIds = new Set<string>();
+    advances.forEach((p) => userIds.add(p.fromUserId));
+    distributions.forEach((p) => userIds.add(p.toUserId));
+    materialReqs.forEach((r) => userIds.add(r.createdById));
+    pendingMaterialReqs.forEach((r) => userIds.add(r.createdById));
+    rejectedMaterialReqs.forEach((r) => userIds.add(r.createdById));
+    const users =
+      userIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: [...userIds] } },
+            select: { id: true, firstName: true, lastName: true },
+          })
+        : [];
+    const userById = new Map(users.map((u) => [u.id, u]));
+    const fmtUser = (id: string) => {
+      const u = userById.get(id);
+      if (!u) return '—';
+      return `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || '—';
+    };
+
+    const sumAll = (rows: typeof advances) =>
+      rows.reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero());
+
+    const totalAdvances = sumAll(advances);
+    const totalDistributed = sumAll(distributions);
+    const totalApprovedSp = approvedSp.reduce(
+      (acc, sp) => acc.plus(Money.ofKopeks(sp.amount)),
+      Money.zero(),
+    );
+    const totalMaterials = materialReqs.reduce(
+      (acc, r) =>
+        acc.plus(
+          r.items.reduce(
+            (inner, it) => inner.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+            Money.zero(),
+          ),
+        ),
+      Money.zero(),
+    );
+
+    return {
+      advances: advances.map((p) => ({
+        id: p.id,
+        toUserId: p.toUserId,
+        toUserName: fmtUser(p.fromUserId),
+        amount: Number(p.amount),
+        createdAt: p.createdAt,
+      })),
+      distributions: distributions.map((p) => ({
+        id: p.id,
+        parentPaymentId: p.parentPaymentId,
+        fromUserId: p.fromUserId,
+        toUserId: p.toUserId,
+        toUserName: fmtUser(p.toUserId),
+        amount: Number(p.amount),
+        createdAt: p.createdAt,
+      })),
+      approvedSelfpurchases: approvedSp.map((sp) => ({
+        id: sp.id,
+        byUserId: sp.byUserId,
+        byUserName: fmtUser(sp.byUserId) === '—' ? 'Я' : fmtUser(sp.byUserId),
+        amount: Number(sp.amount),
+        comment: sp.comment,
+        decidedAt: sp.decidedAt,
+      })),
+      materialPurchases: materialReqs.map((r) => {
+        const totalSpent = r.items.reduce(
+          (acc, it) => acc.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+          Money.zero(),
+        );
+        return {
+          requestId: r.id,
+          title: r.title ?? 'Запрос материалов',
+          totalSpent: Number(totalSpent.kopeks()),
+          itemCount: r.items.length,
+          boughtBy: r.recipient as 'customer' | 'foreman',
+          requestedByName: fmtUser(r.createdById),
+        };
+      }),
+      pendingMaterials: pendingMaterialReqs.map((r) => {
+        const estimated = r.items.reduce(
+          (acc, it) => acc.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+          Money.zero(),
+        );
+        return {
+          requestId: r.id,
+          title: r.title ?? 'Запрос материалов',
+          estimatedTotal: Number(estimated.kopeks()),
+          itemCount: r.items.length,
+          requestedByName: fmtUser(r.createdById),
+          createdAt: r.createdAt,
+        };
+      }),
+      rejectedMaterials: rejectedMaterialReqs.map((r) => {
+        const estimated = r.items.reduce(
+          (acc, it) => acc.plus(Money.ofKopeks(it.totalPrice ?? BigInt(0))),
+          Money.zero(),
+        );
+        return {
+          requestId: r.id,
+          title: r.title ?? 'Запрос материалов',
+          estimatedTotal: Number(estimated.kopeks()),
+          itemCount: r.items.length,
+          requestedByName: fmtUser(r.createdById),
+          decidedAt: r.updatedAt,
+        };
+      }),
+      rejectedSelfpurchases: rejectedSp.map((sp) => ({
+        id: sp.id,
+        byUserName: fmtUser(sp.byUserId) === '—' ? 'Я' : fmtUser(sp.byUserId),
+        amount: Number(sp.amount),
+        comment: sp.comment,
+        decidedAt: sp.decidedAt,
+      })),
+      // Касса бригадира — агрегированный остаток для распределения мастерам.
+      // available может быть отрицательным (см. JSDoc ForemanWallet).
+      wallet: {
+        advancesReceived: Number(totalAdvances.kopeks()),
+        distributed: Number(totalDistributed.kopeks()),
+        available: Number(totalAdvances.minus(totalDistributed).kopeks()),
+      },
       totals: {
         advances: Number(totalAdvances.kopeks()),
         distributed: Number(totalDistributed.kopeks()),

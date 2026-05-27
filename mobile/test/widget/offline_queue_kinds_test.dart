@@ -1,43 +1,40 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/core/storage/offline_queue.dart';
 
-/// Phase 8: проверяем что enum OfflineActionKind покрывает все типы из ТЗ §5.3
-/// и что serialize/parse работают.
+/// Покрытие enum OfflineActionKind: список типов и базовый roundtrip.
 void main() {
-  test('OfflineActionKind содержит расширенный набор Phase 8', () {
-    // Старые 4 + 5 новых = 9.
-    expect(OfflineActionKind.values.length, 9);
-    expect(OfflineActionKind.values, contains(OfflineActionKind.stagePause));
-    expect(OfflineActionKind.values, contains(OfflineActionKind.stageResume));
+  test('OfflineActionKind содержит актуальные типы', () {
+    // 2026-05: paymentDispute и materialMarkBought удалены вместе с
+    // соответствующими упрощениями домена.
     expect(
-      OfflineActionKind.values,
-      contains(OfflineActionKind.paymentDispute),
-    );
-    expect(
-      OfflineActionKind.values,
-      contains(OfflineActionKind.selfpurchaseCreate),
-    );
-    expect(
-      OfflineActionKind.values,
-      contains(OfflineActionKind.materialMarkBought),
+      OfflineActionKind.values.map((k) => k.name).toSet(),
+      {
+        'stepToggle',
+        'substepToggle',
+        'noteCreate',
+        'questionAnswer',
+        'stagePause',
+        'stageResume',
+        'selfpurchaseCreate',
+      },
     );
   });
 
-  test('OfflineAction roundtrip JSON для нового типа', () {
+  test('OfflineAction roundtrip JSON', () {
     final action = OfflineAction(
       id: 'a-1',
-      kind: OfflineActionKind.paymentDispute,
+      kind: OfflineActionKind.selfpurchaseCreate,
       payload: const {
-        'paymentId': 'pay-1',
-        'reason': 'Сумма не совпадает с актом приёмки',
+        'projectId': 'p-1',
+        'amount': 5000_00,
       },
       createdAt: DateTime.utc(2026, 4, 25, 10),
     );
     final json = action.toJson();
     final back = OfflineAction.fromJson(json);
-    expect(back.kind, OfflineActionKind.paymentDispute);
-    expect(back.payload['paymentId'], 'pay-1');
-    expect(back.payload['reason'], contains('Сумма'));
+    expect(back.kind, OfflineActionKind.selfpurchaseCreate);
+    expect(back.payload['projectId'], 'p-1');
+    expect(back.payload['amount'], 5000_00);
   });
 
   test('OfflineAction.fromJson fallback при неизвестном kind', () {
@@ -48,7 +45,7 @@ void main() {
       'createdAt': '2026-04-25T10:00:00Z',
     });
     // Контракт: при unknown kind — fallback на stepToggle (см. реализацию).
-    // Это значит что persistent очередь не уронит приложение при апгрейде
+    // Это значит что persistent-очередь не уронит приложение при апгрейде
     // схемы (читая старый файл с уже несуществующим типом).
     expect(back.kind, OfflineActionKind.stepToggle);
   });

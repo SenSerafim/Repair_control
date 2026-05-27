@@ -8,6 +8,11 @@ import '../../core/theme/tokens.dart';
 
 /// Скелет для списочных экранов (ProjectsScreen, StagesScreen, etc.).
 /// Рисует 6 плейсхолдер-карточек одинаковой высоты.
+///
+/// `shrinkWrap` + `NeverScrollableScrollPhysics` — обязательно, потому что
+/// skeleton встраивают в `SingleChildScrollView`/`Column` (см. budget_screen
+/// loading state). Иначе ListView требует ограниченную высоту и крашится
+/// «Vertical viewport was given unbounded height».
 class AppListSkeleton extends StatelessWidget {
   const AppListSkeleton({this.itemHeight = 88, this.itemCount = 6, super.key});
 
@@ -17,6 +22,8 @@ class AppListSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.x16),
       itemCount: itemCount,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x8),
@@ -32,6 +39,8 @@ class AppChatListSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       itemCount: 8,
       separatorBuilder: (_, __) =>
@@ -69,6 +78,8 @@ class AppDetailSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.x16),
       children: const [
         _SkeletonCard(height: 120),

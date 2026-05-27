@@ -33,34 +33,4 @@ class DemoMaterialsRepository extends MaterialsRepository {
     String? stageId,
     String? comment,
   }) async => DemoData.materialRequests.first;
-
-  @override
-  Future<MaterialRequest> send(String id) async => DemoData.materialById(id);
-
-  @override
-  Future<MaterialRequest> markBought({
-    required String requestId,
-    required String itemId,
-    required int pricePerUnit,
-  }) async => DemoData.materialById(requestId);
-
-  @override
-  Future<MaterialRequest> finalizeRequest(String id) async =>
-      DemoData.materialById(id);
-
-  @override
-  Future<MaterialRequest> confirmDelivery(String id) async =>
-      DemoData.materialById(id);
-
-  @override
-  Future<MaterialRequest> dispute({
-    required String id,
-    required String reason,
-  }) async => DemoData.materialById(id);
-
-  @override
-  Future<MaterialRequest> resolve({
-    required String id,
-    required String resolution,
-  }) async => DemoData.materialById(id);
 }

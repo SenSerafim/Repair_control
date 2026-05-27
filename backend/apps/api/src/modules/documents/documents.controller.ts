@@ -8,14 +8,24 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { Response } from 'express';
 import { AccessGuard, RequireAccess } from '@app/rbac';
-import { PrismaService } from '@app/common';
+import { InvalidInputError, PrismaService } from '@app/common';
 import { DocumentsService, DocumentViewer } from './documents.service';
-import { ListDocumentsQueryDto, PatchDocumentDto, PresignUploadDto } from './dto';
+import {
+  ListDocumentsQueryDto,
+  PatchDocumentDto,
+  PresignUploadDto,
+  UploadDocumentDto,
+} from './dto';
 
 @ApiTags('documents')
 @ApiBearerAuth()
@@ -53,6 +63,54 @@ export class DocumentsController {
   })
   presign(@Param('projectId') projectId: string, @Body() dto: PresignUploadDto, @Req() req: any) {
     return this.docs.presignUpload(projectId, req.user.userId, dto);
+  }
+
+  /**
+   * Server-side multipart upload. Принимает файл напрямую в API (multer
+   * в памяти, лимит 200 МБ — совпадает с docs/-policy в FilesService).
+   * Используется мобилкой как основной путь загрузки: presigned-PUT в
+   * Selectel оказался нестабилен с части устройств (TLS / chunked).
+   */
+  @Post('projects/:projectId/documents/upload')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 200 * 1024 * 1024, files: 1 },
+    }),
+  )
+  @RequireAccess({
+    action: 'document.write',
+    resource: 'project',
+    resourceIdFrom: { source: 'params', key: 'projectId' },
+  })
+  async upload(
+    @Param('projectId') projectId: string,
+    @UploadedFile()
+    file: { buffer: Buffer; mimetype: string; size: number; originalname: string } | undefined,
+    @Body() dto: UploadDocumentDto,
+    @Req() req: any,
+  ) {
+    if (!file) {
+      throw new InvalidInputError('files.no_file', 'file is required (multipart field "file")');
+    }
+    return this.docs.uploadDocument(
+      projectId,
+      req.user.userId,
+      {
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+        size: file.size,
+        originalName: file.originalname,
+      },
+      {
+        category: dto.category,
+        title: dto.title,
+        stageId: dto.stageId,
+        stepId: dto.stepId,
+        description: dto.description,
+        documentDate: dto.documentDate,
+      },
+    );
   }
 
   @Post('documents/:id/confirm')
@@ -115,6 +173,62 @@ export class DocumentsController {
   })
   thumbnail(@Param('id') id: string) {
     return this.docs.thumbnail(id);
+  }
+
+  /**
+   * Стрим самого файла через API. URL отдаётся клиентам через `attachUrls()`
+   * (поле `url` объекта Document) и через `download()` — заменяет presigned
+   * redirect на S3. Auth — обычный AuthGuard + AccessGuard.
+   */
+  @Get('documents/:id/file')
+  @RequireAccess({
+    action: 'document.read',
+    resource: 'document',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async streamFile(@Param('id') id: string, @Req() req: any, @Res() res: Response) {
+    const doc = await this.prisma.document.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    const viewer = doc
+      ? await this.buildViewer(req.user.userId, doc.projectId)
+      : { userId: req.user.userId };
+    const { stream, mimeType, contentLength, filename } = await this.docs.streamFile(id, viewer);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Length', contentLength);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    );
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    stream.on('error', (err) => {
+      res.destroy(err);
+    });
+    stream.pipe(res);
+  }
+
+  @Get('documents/:id/thumbnail-file')
+  @RequireAccess({
+    action: 'document.read',
+    resource: 'document',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async streamThumbnail(@Param('id') id: string, @Req() req: any, @Res() res: Response) {
+    const doc = await this.prisma.document.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+    const viewer = doc
+      ? await this.buildViewer(req.user.userId, doc.projectId)
+      : { userId: req.user.userId };
+    const { stream, mimeType } = await this.docs.streamThumbnail(id, viewer);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=600');
+    stream.on('error', (err) => {
+      res.destroy(err);
+    });
+    stream.pipe(res);
   }
 
   @Patch('documents/:id')

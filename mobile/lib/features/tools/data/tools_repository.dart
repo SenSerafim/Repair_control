@@ -12,40 +12,40 @@ class ToolsException implements Exception {
   final ApiError apiError;
 }
 
+/// Self-custody модель (2026-05-12). API:
+///   GET    /api/me/tools                         — мои инструменты (профиль)
+///   POST   /api/me/tools                         — создать в профиле
+///   GET    /api/tools/:id                        — детали
+///   PATCH  /api/tools/:id                        — обновить (owner only)
+///   DELETE /api/tools/:id                        — удалить (owner only)
+///   GET    /api/projects/:pid/tools              — список инструментов проекта
+///   POST   /api/projects/:pid/tools              — создать в проекте
+///   POST   /api/projects/:pid/tools/attach       — bulk attach «из моих»
+///   DELETE /api/projects/:pid/tools/:tid         — открепить от проекта
+///   POST   /api/tools/:id/claim                  — self-claim («я забрал»)
+///   GET    /api/tools/:id/custody-history        — timeline передач
 class ToolsRepository {
   ToolsRepository(this._dio);
   final Dio _dio;
 
-  // ───── Personal tools ─────
+  // ─────────── My Tools (профиль) ───────────
 
   Future<List<ToolItem>> myTools() => _call(() async {
     final r = await _dio.get<List<dynamic>>('/api/me/tools');
-    return r.data!
-        .map((e) => ToolItem.parse(e as Map<String, dynamic>))
-        .toList();
+    return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
   });
 
-  Future<ToolItem> createTool({
+  Future<ToolItem> createMyTool({
     required String name,
-    required int totalQty,
-    String? unit,
     String? photoKey,
-
-    /// П2.14 — серийный/инвентарный номер (опц.).
     String? serial,
-
-    /// П2.15 — сразу привязать к проекту (опц.).
-    String? projectId,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/me/tools',
       data: {
         'name': name,
-        'totalQty': totalQty,
-        if (unit != null && unit.isNotEmpty) 'unit': unit,
         if (photoKey != null) 'photoKey': photoKey,
         if (serial != null && serial.isNotEmpty) 'serial': serial,
-        if (projectId != null) 'projectId': projectId,
       },
     );
     return ToolItem.parse(r.data!);
@@ -54,17 +54,15 @@ class ToolsRepository {
   Future<ToolItem> updateTool({
     required String id,
     String? name,
-    int? totalQty,
-    String? unit,
     String? photoKey,
+    String? serial,
   }) => _call(() async {
     final r = await _dio.patch<Map<String, dynamic>>(
       '/api/tools/$id',
       data: {
         if (name != null) 'name': name,
-        if (totalQty != null) 'totalQty': totalQty,
-        if (unit != null) 'unit': unit,
         if (photoKey != null) 'photoKey': photoKey,
+        if (serial != null) 'serial': serial,
       },
     );
     return ToolItem.parse(r.data!);
@@ -79,122 +77,70 @@ class ToolsRepository {
     await _dio.delete<void>('/api/tools/$id');
   });
 
-  // ───── Project issuances ─────
+  // ─────────── Project Tools ───────────
 
-  Future<List<ToolIssuance>> listIssuances(String projectId) => _call(() async {
-    final r = await _dio.get<List<dynamic>>(
-      '/api/projects/$projectId/tool-issuances',
-    );
-    return r.data!
-        .map((e) => ToolIssuance.parse(e as Map<String, dynamic>))
-        .toList();
+  Future<List<ToolItem>> listProjectTools(String projectId) => _call(() async {
+    final r = await _dio.get<List<dynamic>>('/api/projects/$projectId/tools');
+    return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
   });
 
-  Future<ToolIssuance> issue({
+  /// Создать новый инструмент сразу в проекте. Любая роль member-а.
+  /// `ownerId` опционален — по умолчанию текущий пользователь.
+  Future<ToolItem> createInProject({
     required String projectId,
-    required String toolItemId,
-    required String toUserId,
-    required int qty,
-    String? stageId,
+    required String name,
+    String? ownerId,
+    String? photoKey,
+    String? serial,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
-      '/api/projects/$projectId/tool-issuances',
+      '/api/projects/$projectId/tools',
       data: {
-        'toolItemId': toolItemId,
-        'toUserId': toUserId,
-        'qty': qty,
-        if (stageId != null) 'stageId': stageId,
+        'name': name,
+        if (ownerId != null) 'ownerId': ownerId,
+        if (photoKey != null) 'photoKey': photoKey,
+        if (serial != null && serial.isNotEmpty) 'serial': serial,
       },
     );
-    return ToolIssuance.parse(r.data!);
+    return ToolItem.parse(r.data!);
   });
 
-  Future<ToolIssuance> confirm(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tool-issuances/$id/confirm',
-    );
-    return ToolIssuance.parse(r.data!);
-  });
-
-  Future<ToolIssuance> requestReturn({
-    required String id,
-    required int returnedQty,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tool-issuances/$id/return',
-      data: {'returnedQty': returnedQty},
-    );
-    return ToolIssuance.parse(r.data!);
-  });
-
-  Future<ToolIssuance> returnConfirm(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tool-issuances/$id/return-confirm',
-    );
-    return ToolIssuance.parse(r.data!);
-  });
-
-  // ───── П2.15: реестр проекта + заявки на инструмент ─────
-
-  /// Реестр инструментов проекта (виден всем участникам).
-  /// Каждая запись — ToolItem + currentHolderId + hasActiveRequest.
-  Future<List<Map<String, dynamic>>> projectRegistry(String projectId) =>
-      _call(() async {
-        final r = await _dio.get<List<dynamic>>(
-          '/api/projects/$projectId/tool-registry',
-        );
-        return r.data!.cast<Map<String, dynamic>>();
-      });
-
-  /// Bulk-add «из моих инструментов в проект».
-  Future<List<ToolItem>> addToolsFromMy({
+  /// Bulk attach — добавить инструменты из «Моих» в проект.
+  Future<List<ToolItem>> attachFromMy({
     required String projectId,
     required List<String> toolItemIds,
   }) => _call(() async {
     final r = await _dio.post<List<dynamic>>(
-      '/api/projects/$projectId/tools/from-my',
+      '/api/projects/$projectId/tools/attach',
       data: {'toolItemIds': toolItemIds},
     );
+    return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
+  });
+
+  /// Открепить инструмент от проекта (только owner).
+  Future<void> detachFromProject({
+    required String projectId,
+    required String toolId,
+  }) => _call(() async {
+    await _dio.delete<void>('/api/projects/$projectId/tools/$toolId');
+  });
+
+  // ─────────── Custody ───────────
+
+  /// Self-claim: текущий пользователь становится holder-ом.
+  Future<ToolItem> claim({required String toolId, String? note}) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/tools/$toolId/claim',
+      data: {if (note != null && note.isNotEmpty) 'note': note},
+    );
+    return ToolItem.parse(r.data!);
+  });
+
+  Future<List<ToolCustodyEvent>> custodyHistory(String toolId) => _call(() async {
+    final r = await _dio.get<List<dynamic>>('/api/tools/$toolId/custody-history');
     return r.data!
-        .map((e) => ToolItem.parse(e as Map<String, dynamic>))
+        .map((e) => ToolCustodyEvent.parse(e as Map<String, dynamic>))
         .toList();
-  });
-
-  /// Заявка на получение инструмента (бригадир/мастер запрашивает у владельца).
-  Future<ToolIssuance> requestTool({
-    required String toolItemId,
-    int? qty,
-    String? stageId,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tool-requests',
-      data: {
-        'toolItemId': toolItemId,
-        if (qty != null) 'qty': qty,
-        if (stageId != null) 'stageId': stageId,
-      },
-    );
-    return ToolIssuance.parse(r.data!);
-  });
-
-  /// Approve заявки на инструмент (действие владельца).
-  Future<ToolIssuance> approveRequest(String issuanceId) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tool-requests/$issuanceId/approve',
-    );
-    return ToolIssuance.parse(r.data!);
-  });
-
-  /// Reject заявки на инструмент (с опциональным комментарием).
-  Future<ToolIssuance> rejectRequest({
-    required String issuanceId,
-    String? comment,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tool-requests/$issuanceId/reject',
-      data: {if (comment != null && comment.isNotEmpty) 'comment': comment},
-    );
-    return ToolIssuance.parse(r.data!);
   });
 
   Future<T> _call<T>(Future<T> Function() action) async {

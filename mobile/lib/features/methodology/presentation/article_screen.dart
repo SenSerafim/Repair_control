@@ -46,7 +46,10 @@ class ArticleScreen extends ConsumerWidget {
               Text(
                 a.title,
                 style: AppTextStyles.screenTitle.copyWith(
-                  fontSize: 22,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  height: 1.25,
                   color: AppColors.n900,
                 ),
               ),
@@ -101,9 +104,9 @@ List<Widget> _renderBody(String body) {
           paragraph.toString().trim(),
           style: const TextStyle(
             fontFamily: 'Manrope',
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: AppColors.n700,
+            color: AppColors.n600,
             height: 1.7,
           ),
         ),
@@ -125,12 +128,15 @@ List<Widget> _renderBody(String body) {
           Text(
             line.substring(3).trim(),
             style: AppTextStyles.h2.copyWith(
-              fontSize: 17,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+              height: 1.3,
               color: AppColors.n900,
             ),
           ),
         )
-        ..add(const SizedBox(height: AppSpacing.x10));
+        ..add(const SizedBox(height: AppSpacing.x12));
       continue;
     }
     if (line.startsWith('> ')) {

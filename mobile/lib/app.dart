@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +14,17 @@ import 'core/routing/app_router.dart';
 import 'core/storage/offline_handlers.dart';
 import 'core/storage/offline_queue.dart';
 import 'core/theme/app_theme.dart';
+import 'features/chat/application/chats_controller.dart';
+import 'features/projects/application/membership_sync.dart';
+import 'features/projects/application/projects_list_controller.dart';
 import 'shared/widgets/widgets.dart';
+
+/// Root-level ScaffoldMessenger key. Переживает навигацию между экранами,
+/// поэтому SnackBar, показанный перед pop()/push(), не падает в
+/// _updateScaffolds (lookup ancestor unsafe) и не цепляется за уже
+/// отмонтированный Scaffold.
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 class RepairControlApp extends ConsumerStatefulWidget {
   const RepairControlApp({super.key});
@@ -21,12 +33,14 @@ class RepairControlApp extends ConsumerStatefulWidget {
   ConsumerState<RepairControlApp> createState() => _RepairControlAppState();
 }
 
-class _RepairControlAppState extends ConsumerState<RepairControlApp> {
+class _RepairControlAppState extends ConsumerState<RepairControlApp>
+    with WidgetsBindingObserver {
   FcmService? _fcm;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServices());
   }
 
@@ -41,23 +55,50 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
       ..read(offlineQueueDrainProvider)
       // Автоподключение WebSocket при authenticated.
       ..read(socketAutoconnectProvider)
+      // Real-time membership-sync: при добавлении/удалении участника
+      // (на любом устройстве) WS-broadcast инвалидирует списки проектов,
+      // команды и чатов. Должен быть зарегистрирован ПОСЛЕ socketAutoconnect.
+      ..read(membershipSyncProvider)
       // Cross-session invalidation: на logout сбрасываем все user-scoped
       // провайдеры (см. core/access/user_scoped_providers.dart).
       ..read(userScopedInvalidationProvider);
     // Инициализируем FCM (soft-fail — работает без Firebase на dev).
+    // Не блокируем критический путь startup: на эмуляторах без Google Play
+    // Firebase валится ~8с, всё это время висит fcm.init() и задерживает
+    // первую регистрацию роутера/подписок. Присваиваем _fcm сразу — чтобы
+    // dispose() мог его освободить, даже если init ещё в полёте.
     final fcm = FcmService(
       logger: ref.read(loggerProvider),
       container: container,
     );
-    final ok = await fcm.init();
-    if (ok && mounted) {
-      fcm.router = ref.read(routerProvider);
-      _fcm = fcm;
+    _fcm = fcm;
+    unawaited(
+      fcm.init().then((ok) {
+        if (ok && mounted) {
+          fcm.router = ref.read(routerProvider);
+        }
+      }),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Backfill при возврате из background: iOS/Android могут «убить» WS-
+    // соединение, и события за время offline теряются. socketAutoconnect
+    // сам поднимет коннект, а здесь дополнительно инвалидируем главные
+    // списки, чтобы пользователь увидел все изменения, произошедшие в фоне
+    // (новые проекты в команде, новые чаты, изменения состава).
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref
+        ..invalidate(activeProjectsProvider)
+        ..invalidate(myChatsProvider);
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fcm?.dispose();
     super.dispose();
   }
@@ -85,6 +126,7 @@ class _RepairControlAppState extends ConsumerState<RepairControlApp> {
     return MaterialApp.router(
       title: 'Repair Control',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,

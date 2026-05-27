@@ -33,12 +33,18 @@ class SelfpurchaseListCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: sp.status.semaphore.bg,
                 borderRadius: BorderRadius.circular(AppRadius.r12),
+                border: const Border(
+                  top: BorderSide(
+                    color: AppShadows.innerHighlight,
+                    width: 1,
+                  ),
+                ),
               ),
               child: Icon(
                 Icons.shopping_bag_outlined,

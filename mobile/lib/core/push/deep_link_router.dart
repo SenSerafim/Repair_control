@@ -1,22 +1,25 @@
 /// Парсер FCM data-payload'ов в go_router-пути.
 ///
 /// Backend шлёт push с полем `data: { kind, projectId?, stageId?, stepId?,
-/// approvalId?, chatId?, paymentId? }` — см. NotificationTemplates.
+/// approvalId?, chatId?, paymentId?, requestId?, selfPurchaseId?, ... }` —
+/// см. NotificationTemplates и push.processor.ts (ROUTABLE_PAYLOAD_KEYS).
 /// Эта утилита преобразует payload в URL. Чистая функция — легко
 /// покрывается unit-тестами без Flutter-окружения.
 class DeepLinkRouter {
   const DeepLinkRouter._();
 
   /// Вернуть URL для перехода или `null`, если payload не содержит
-  /// распознаваемых полей. Покрывает 6 типов deep-link'ов из ТЗ §15.2:
-  /// approval, payment, stage, document, export, chat.
+  /// распознаваемых полей. Покрывает все типы deep-link'ов из ТЗ §15.2.
   static String? routeFor(Map<String, dynamic> data) {
     String? s(Object? v) => v?.toString();
     final kind = s(data['kind']);
     final approvalId = s(data['approvalId']);
     final paymentId = s(data['paymentId']);
     final chatId = s(data['chatId']);
-    final materialId = s(data['materialId']);
+    // Backend payload использует `requestId` (см. materials.service.ts);
+    // `materialId` оставлен как алиас для обратной совместимости.
+    final materialRequestId = s(data['requestId'] ?? data['materialId']);
+    final selfPurchaseId = s(data['selfPurchaseId']);
     final stepId = s(data['stepId']);
     final stageId = s(data['stageId']);
     final documentId = s(data['documentId']);
@@ -56,8 +59,11 @@ class DeepLinkRouter {
     if (stageId != null) {
       return '/projects/$projectId/stages/$stageId';
     }
-    if (materialId != null) {
-      return '/projects/$projectId/materials/$materialId';
+    if (materialRequestId != null) {
+      return '/projects/$projectId/materials/$materialRequestId';
+    }
+    if (selfPurchaseId != null) {
+      return '/projects/$projectId/selfpurchases/$selfPurchaseId';
     }
 
     // Fallback: open project console.
@@ -75,7 +81,7 @@ class DeepLinkRouter {
     if (kind.startsWith('document_')) return NotificationRoute.document;
     if (kind.startsWith('material_') ||
         kind.startsWith('selfpurchase_') ||
-        kind == 'tool_issued') {
+        kind.startsWith('tool_')) {
       return NotificationRoute.materials;
     }
     if (kind.startsWith('stage_') ||

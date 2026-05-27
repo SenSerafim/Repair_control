@@ -2,20 +2,18 @@ import { PaymentsService } from './payments.service';
 import { FeedService } from '../feed/feed.service';
 import {
   ConflictError,
-  FixedClock,
   ForbiddenError,
   InvalidInputError,
   NotFoundError,
   PrismaService,
 } from '@app/common';
 
-const NOW = new Date('2026-07-10T10:00:00Z');
-
 type ProjectRow = { id: string; ownerId: string; status: 'active' | 'archived' };
 type MembershipRow = {
   projectId: string;
   userId: string;
   role: 'customer' | 'representative' | 'foreman' | 'master';
+  removedAt: Date | null;
 };
 type PaymentRow = {
   id: string;
@@ -26,15 +24,9 @@ type PaymentRow = {
   fromUserId: string;
   toUserId: string;
   amount: bigint;
-  resolvedAmount: bigint | null;
-  status: 'pending' | 'confirmed' | 'disputed' | 'resolved' | 'cancelled';
-  comment?: string | null;
-  photoKey?: string | null;
+  comment: string | null;
+  photoKey: string | null;
   idempotencyKey: string | null;
-  confirmedAt: Date | null;
-  disputedAt: Date | null;
-  resolvedAt: Date | null;
-  cancelledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -43,7 +35,6 @@ const mkPrisma = () => {
   const projects = new Map<string, ProjectRow>();
   const memberships: MembershipRow[] = [];
   const payments = new Map<string, PaymentRow>();
-  const disputes: any[] = [];
   let pSeq = 0;
 
   const prisma: any = {
@@ -51,15 +42,23 @@ const mkPrisma = () => {
       findUnique: jest.fn(({ where }: any) => projects.get(where.id) ?? null),
     },
     membership: {
-      findFirst: jest.fn(
-        ({ where }: any) =>
+      findFirst: jest.fn(({ where }: any) => {
+        const roleMatches = (m: MembershipRow): boolean => {
+          if (!where.role) return true;
+          if (typeof where.role === 'string') return m.role === where.role;
+          if (where.role.in) return (where.role.in as string[]).includes(m.role);
+          return false;
+        };
+        return (
           memberships.find(
             (m) =>
               m.projectId === where.projectId &&
               m.userId === where.userId &&
-              (!where.role || m.role === where.role),
-          ) ?? null,
-      ),
+              roleMatches(m) &&
+              (where.removedAt === null ? m.removedAt === null : true),
+          ) ?? null
+        );
+      }),
     },
     payment: {
       findUnique: jest.fn(({ where, include }: any) => {
@@ -67,7 +66,11 @@ const mkPrisma = () => {
         if (!p) return null;
         if (include?.children) {
           const children = [...payments.values()].filter((c) => c.parentPaymentId === p.id);
-          return { ...p, children, disputes: disputes.filter((d) => d.paymentId === p.id) };
+          return { ...p, children };
+        }
+        if (include?.project) {
+          const proj = projects.get(p.projectId);
+          return { ...p, project: proj ? { ownerId: proj.ownerId } : null };
         }
         return p;
       }),
@@ -75,11 +78,6 @@ const mkPrisma = () => {
         const matches = (p: PaymentRow, w: any): boolean => {
           if (!w) return true;
           if (w.projectId && p.projectId !== w.projectId) return false;
-          if (w.status) {
-            if (w.status.in) {
-              if (!w.status.in.includes(p.status)) return false;
-            } else if (p.status !== w.status) return false;
-          }
           if (w.kind && p.kind !== w.kind) return false;
           if (w.parentPaymentId && p.parentPaymentId !== w.parentPaymentId) return false;
           if (w.fromUserId && p.fromUserId !== w.fromUserId) return false;
@@ -105,72 +103,38 @@ const mkPrisma = () => {
           fromUserId: data.fromUserId,
           toUserId: data.toUserId,
           amount: data.amount,
-          resolvedAmount: null,
-          status: data.status ?? 'pending',
           comment: data.comment ?? null,
           photoKey: data.photoKey ?? null,
           idempotencyKey: data.idempotencyKey ?? null,
-          confirmedAt: null,
-          disputedAt: null,
-          resolvedAt: null,
-          cancelledAt: null,
           createdAt: now,
           updatedAt: now,
         };
         payments.set(row.id, row);
         return row;
       }),
-      update: jest.fn(({ where, data }: any) => {
-        const p = payments.get(where.id);
-        if (!p) throw new Error('not found');
-        Object.assign(p, data);
-        return p;
-      }),
-      updateMany: jest.fn(({ where, data }: any) => {
-        const candidates = [...payments.values()].filter((p) => {
-          if (p.id !== where.id) return false;
-          if (where.status && p.status !== where.status) return false;
-          return true;
-        });
-        for (const p of candidates) Object.assign(p, data);
-        return { count: candidates.length };
-      }),
-    },
-    paymentDispute: {
-      create: jest.fn(({ data }: any) => {
-        const row = {
-          id: `d${disputes.length + 1}`,
-          ...data,
-          status: 'open',
-          createdAt: new Date(),
-        };
-        disputes.push(row);
-        return row;
-      }),
-      updateMany: jest.fn(({ where, data }: any) => {
-        const candidates = disputes.filter(
-          (d) => d.paymentId === where.paymentId && d.status === where.status,
-        );
-        for (const d of candidates) Object.assign(d, data);
-        return { count: candidates.length };
-      }),
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
-  return { prisma: prisma as unknown as PrismaService, projects, memberships, payments, disputes };
+  return { prisma: prisma as unknown as PrismaService, projects, memberships, payments };
 };
 
 const mkFeed = (): FeedService => ({ emit: jest.fn().mockResolvedValue(undefined) }) as any;
 
+const makeService = (st: ReturnType<typeof mkPrisma>, feed = mkFeed()) =>
+  new PaymentsService(st.prisma, feed);
+
 describe('PaymentsService.createAdvance', () => {
-  it('создаёт pending advance и эмитит payment_created', async () => {
+  it('создаёт advance customer→foreman и эмитит payment_created + budget_updated', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
+    st.memberships.push({
+      projectId: 'p1',
+      userId: 'foreman1',
+      role: 'foreman',
+      removedAt: null,
+    });
     const feed = mkFeed();
-    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+    const svc = makeService(st, feed);
     const p = await svc.createAdvance({
       projectId: 'p1',
       toUserId: 'foreman1',
@@ -178,467 +142,380 @@ describe('PaymentsService.createAdvance', () => {
       actorUserId: 'customer1',
       idempotencyKey: 'k-1',
     });
-    expect(p.status).toBe('pending');
     expect(p.kind).toBe('advance');
     expect(Number(p.amount)).toBe(500_000_00);
     expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'payment_created' }));
+    expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'budget_updated' }));
+  });
+
+  it('customer→master напрямую разрешён', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
+    st.memberships.push({
+      projectId: 'p1',
+      userId: 'master1',
+      role: 'master',
+      removedAt: null,
+    });
+    const svc = makeService(st);
+    const p = await svc.createAdvance({
+      projectId: 'p1',
+      toUserId: 'master1',
+      amount: 50_000_00,
+      actorUserId: 'customer1',
+    });
+    expect(p.toUserId).toBe('master1');
+    expect(p.kind).toBe('advance');
   });
 
   it('amount=0 → InvalidInputError', async () => {
     const st = mkPrisma();
     st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'active' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+    const svc = makeService(st);
     await expect(
       svc.createAdvance({ projectId: 'p1', toUserId: 'x', amount: 0, actorUserId: 'c' }),
     ).rejects.toThrow(InvalidInputError);
   });
 
-  it('получатель не foreman → InvalidInputError', async () => {
+  it('self-payment запрещён', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'm1', role: 'master' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+    st.projects.set('p1', { id: 'p1', ownerId: 'c1', status: 'active' });
+    const svc = makeService(st);
     await expect(
-      svc.createAdvance({ projectId: 'p1', toUserId: 'm1', amount: 100, actorUserId: 'c' }),
-    ).rejects.toThrow(InvalidInputError);
+      svc.createAdvance({
+        projectId: 'p1',
+        toUserId: 'c1',
+        amount: 1_000_00,
+        actorUserId: 'c1',
+      }),
+    ).rejects.toThrow(ForbiddenError);
   });
 
-  it('project archived → Conflict', async () => {
+  it('archived проект → ConflictError', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'archived' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
+    st.projects.set('p1', { id: 'p1', ownerId: 'c1', status: 'archived' });
+    st.memberships.push({
+      projectId: 'p1',
+      userId: 'foreman1',
+      role: 'foreman',
+      removedAt: null,
+    });
+    const svc = makeService(st);
     await expect(
-      svc.createAdvance({ projectId: 'p1', toUserId: 'f', amount: 100, actorUserId: 'c' }),
+      svc.createAdvance({
+        projectId: 'p1',
+        toUserId: 'foreman1',
+        amount: 1_000_00,
+        actorUserId: 'c1',
+      }),
     ).rejects.toThrow(ConflictError);
   });
-});
 
-describe('PaymentsService.confirm (двустороннее подтверждение)', () => {
-  it('только получатель может подтвердить, status pending → confirmed, emit + budget_updated', async () => {
+  it('получатель не foreman/master → InvalidInputError', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const feed = mkFeed();
-    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100_000_00,
-      actorUserId: 'customer1',
-    });
-    const confirmed = await svc.confirm(p.id, 'foreman1');
-    expect(confirmed.status).toBe('confirmed');
-    expect(confirmed.confirmedAt).toEqual(NOW);
-    const kinds = (feed.emit as jest.Mock).mock.calls.map((c) => c[0].kind);
-    expect(kinds).toContain('payment_confirmed');
-    expect(kinds).toContain('budget_updated');
-  });
-
-  it('отправитель пытается подтвердить → 403', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100,
-      actorUserId: 'customer1',
-    });
-    await expect(svc.confirm(p.id, 'customer1')).rejects.toThrow(ForbiddenError);
-  });
-
-  it('повторный confirm → Conflict', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100,
-      actorUserId: 'customer1',
-    });
-    await svc.confirm(p.id, 'foreman1');
-    await expect(svc.confirm(p.id, 'foreman1')).rejects.toThrow(ConflictError);
+    st.projects.set('p1', { id: 'p1', ownerId: 'c1', status: 'active' });
+    const svc = makeService(st);
+    await expect(
+      svc.createAdvance({
+        projectId: 'p1',
+        toUserId: 'someone',
+        amount: 1_000_00,
+        actorUserId: 'c1',
+      }),
+    ).rejects.toThrow(InvalidInputError);
   });
 });
 
 describe('PaymentsService.createDistribution', () => {
-  const setupConfirmedAdvance = async () => {
-    const st = mkPrisma();
+  const seedAdvance = (st: ReturnType<typeof mkPrisma>): PaymentRow => {
     st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    st.memberships.push({ projectId: 'p1', userId: 'master2', role: 'master' });
-    st.memberships.push({ projectId: 'p1', userId: 'master3', role: 'master' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const advance = await svc.createAdvance({
+    st.memberships.push({
       projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 500_000_00,
-      actorUserId: 'customer1',
+      userId: 'foreman1',
+      role: 'foreman',
+      removedAt: null,
     });
-    await svc.confirm(advance.id, 'foreman1');
-    return { st, svc, advanceId: advance.id };
-  };
-
-  it('foreman распределяет → создаётся distribution, emit payment_distributed', async () => {
-    const { svc, advanceId } = await setupConfirmedAdvance();
-    const d = await svc.createDistribution({
-      parentPaymentId: advanceId,
-      toUserId: 'master1',
-      amount: 100_000_00,
-      actorUserId: 'foreman1',
-    });
-    expect(d.kind).toBe('distribution');
-    expect(d.parentPaymentId).toBe(advanceId);
-    expect(d.warning).toBeUndefined();
-  });
-
-  it('не получатель advance → 403 (только foreman=parent.toUserId)', async () => {
-    const { st, svc, advanceId } = await setupConfirmedAdvance();
-    // customer пытается распределить чужой advance
-    await expect(
-      svc.createDistribution({
-        parentPaymentId: advanceId,
-        toUserId: 'master1',
-        amount: 100,
-        actorUserId: 'customer1',
-      }),
-    ).rejects.toThrow(ForbiddenError);
-    expect(st.payments.size).toBe(1); // только исходный advance
-  });
-
-  it('parent не confirmed → Conflict', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'c', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'f1', role: 'foreman' });
-    st.memberships.push({ projectId: 'p1', userId: 'm1', role: 'master' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const advance = await svc.createAdvance({
+    st.memberships.push({
       projectId: 'p1',
-      toUserId: 'f1',
-      amount: 1000,
-      actorUserId: 'c',
+      userId: 'master1',
+      role: 'master',
+      removedAt: null,
     });
-    // не подтверждаем — сразу distribute
-    await expect(
-      svc.createDistribution({
-        parentPaymentId: advance.id,
-        toUserId: 'm1',
-        amount: 500,
-        actorUserId: 'f1',
-      }),
-    ).rejects.toThrow(ConflictError);
-  });
-
-  it('сумма > остатка parent → warning, НЕ блок (gaps §4.2)', async () => {
-    const { svc, advanceId } = await setupConfirmedAdvance();
-    await svc.createDistribution({
-      parentPaymentId: advanceId,
-      toUserId: 'master1',
-      amount: 300_000_00,
-      actorUserId: 'foreman1',
-    });
-    await svc.createDistribution({
-      parentPaymentId: advanceId,
-      toUserId: 'master2',
-      amount: 150_000_00,
-      actorUserId: 'foreman1',
-    });
-    // На этот момент active = 450k. Добавим 100k → 550k > 500k
-    const overflow = await svc.createDistribution({
-      parentPaymentId: advanceId,
-      toUserId: 'master3',
-      amount: 100_000_00,
-      actorUserId: 'foreman1',
-    });
-    expect(overflow.warning).toBe('exceeds_parent_remaining');
-  });
-
-  it('распределение по 3 мастерам 100k+100k+100k — без warning, все pending', async () => {
-    const { st, svc, advanceId } = await setupConfirmedAdvance();
-    for (const m of ['master1', 'master2', 'master3']) {
-      await svc.createDistribution({
-        parentPaymentId: advanceId,
-        toUserId: m,
-        amount: 100_000_00,
-        actorUserId: 'foreman1',
-      });
-    }
-    const distributions = [...st.payments.values()].filter((p) => p.kind === 'distribution');
-    expect(distributions).toHaveLength(3);
-    expect(distributions.every((p) => p.status === 'pending')).toBe(true);
-  });
-});
-
-describe('PaymentsService.dispute + resolve', () => {
-  it('сторона открывает спор, customer резолвит с коррекцией', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const feed = mkFeed();
-    const svc = new PaymentsService(st.prisma, feed, new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100_000_00,
-      actorUserId: 'customer1',
-    });
-    await svc.confirm(p.id, 'foreman1');
-    const disputed = await svc.dispute(p.id, 'неверная сумма', 'foreman1');
-    expect(disputed.status).toBe('disputed');
-    const resolved = await svc.resolve(p.id, {
-      resolution: 'корректировка',
-      adjustAmount: 95_000_00,
-      actorUserId: 'customer1',
-    });
-    expect(resolved.status).toBe('resolved');
-    expect(Number(resolved.resolvedAmount)).toBe(95_000_00);
-  });
-
-  it('third party не может dispute → 403', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100,
-      actorUserId: 'customer1',
-    });
-    await expect(svc.dispute(p.id, 'x', 'stranger')).rejects.toThrow(ForbiddenError);
-  });
-
-  it('resolve не disputed → Conflict', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100,
-      actorUserId: 'customer1',
-    });
-    await expect(svc.resolve(p.id, { resolution: 'x', actorUserId: 'customer1' })).rejects.toThrow(
-      ConflictError,
-    );
-  });
-});
-
-describe('PaymentsService.cancel', () => {
-  it('fromUserId может отменить pending, статус → cancelled', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100,
-      actorUserId: 'customer1',
-    });
-    const cancelled = await svc.cancel(p.id, 'customer1');
-    expect(cancelled.status).toBe('cancelled');
-  });
-
-  it('после confirmed cancel невозможен → Conflict', async () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const p = await svc.createAdvance({
-      projectId: 'p1',
-      toUserId: 'foreman1',
-      amount: 100,
-      actorUserId: 'customer1',
-    });
-    await svc.confirm(p.id, 'foreman1');
-    await expect(svc.cancel(p.id, 'customer1')).rejects.toThrow(ConflictError);
-  });
-});
-
-describe('PaymentsService.get not found', () => {
-  it('404 на несуществующий id', async () => {
-    const st = mkPrisma();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    await expect(svc.get('missing')).rejects.toThrow(NotFoundError);
-  });
-});
-
-// ---------- P0.7.a/b: role-based видимость ----------
-
-describe('PaymentsService.listForProject — visibility', () => {
-  const seed = () => {
-    const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'active' });
-    st.memberships.push({ projectId: 'p1', userId: 'foreman1', role: 'foreman' });
-    st.memberships.push({ projectId: 'p1', userId: 'master1', role: 'master' });
-    st.memberships.push({ projectId: 'p1', userId: 'master2', role: 'master' });
-
-    // advance customer1 → foreman1
-    st.payments.set('adv', {
-      id: 'adv',
+    const adv: PaymentRow = {
+      id: 'advP',
       projectId: 'p1',
       stageId: null,
       parentPaymentId: null,
       kind: 'advance',
       fromUserId: 'customer1',
       toUserId: 'foreman1',
-      amount: 100000n,
-      resolvedAmount: null,
-      status: 'confirmed',
+      amount: BigInt(100_000_00),
+      comment: null,
+      photoKey: null,
       idempotencyKey: null,
-      confirmedAt: NOW,
-      disputedAt: null,
-      resolvedAt: null,
-      cancelledAt: null,
-      createdAt: NOW,
-      updatedAt: NOW,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    st.payments.set(adv.id, adv);
+    return adv;
+  };
+
+  it('foreman распределяет мастеру — distribution создаётся, emits payment_distributed', async () => {
+    const st = mkPrisma();
+    seedAdvance(st);
+    const feed = mkFeed();
+    const svc = makeService(st, feed);
+    const p = await svc.createDistribution({
+      parentPaymentId: 'advP',
+      toUserId: 'master1',
+      amount: 30_000_00,
+      actorUserId: 'foreman1',
     });
-    // distribution foreman1 → master1
+    expect(p.kind).toBe('distribution');
+    expect(p.parentPaymentId).toBe('advP');
+    expect(p.toUserId).toBe('master1');
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'payment_distributed' }),
+    );
+  });
+
+  it('не foreman parent.toUserId → ForbiddenError', async () => {
+    const st = mkPrisma();
+    seedAdvance(st);
+    const svc = makeService(st);
+    await expect(
+      svc.createDistribution({
+        parentPaymentId: 'advP',
+        toUserId: 'master1',
+        amount: 1_000_00,
+        actorUserId: 'someone_else',
+      }),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it('parent не advance → ConflictError', async () => {
+    const st = mkPrisma();
+    seedAdvance(st);
+    st.payments.set('dist1', {
+      ...st.payments.get('advP')!,
+      id: 'dist1',
+      kind: 'distribution',
+      parentPaymentId: 'advP',
+    });
+    const svc = makeService(st);
+    await expect(
+      svc.createDistribution({
+        parentPaymentId: 'dist1',
+        toUserId: 'master1',
+        amount: 1_000_00,
+        actorUserId: 'foreman1',
+      }),
+    ).rejects.toThrow(ConflictError);
+  });
+
+  it('получатель не master → InvalidInputError', async () => {
+    const st = mkPrisma();
+    seedAdvance(st);
+    const svc = makeService(st);
+    await expect(
+      svc.createDistribution({
+        parentPaymentId: 'advP',
+        toUserId: 'outsider',
+        amount: 1_000_00,
+        actorUserId: 'foreman1',
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it('parent не найден → NotFoundError', async () => {
+    const st = mkPrisma();
+    const svc = makeService(st);
+    await expect(
+      svc.createDistribution({
+        parentPaymentId: 'nope',
+        toUserId: 'm',
+        amount: 1_000_00,
+        actorUserId: 'f',
+      }),
+    ).rejects.toThrow(NotFoundError);
+  });
+
+  it('distribution может превышать parent.amount — записывается без блокировки', async () => {
+    const st = mkPrisma();
+    seedAdvance(st);
+    const svc = makeService(st);
+    const p = await svc.createDistribution({
+      parentPaymentId: 'advP',
+      toUserId: 'master1',
+      amount: 200_000_00,
+      actorUserId: 'foreman1',
+    });
+    expect(Number(p.amount)).toBe(200_000_00);
+  });
+
+  describe('из кассы бригадира (без parentPaymentId)', () => {
+    it('foreman→master без parent — создаётся distribution с parentPaymentId=null', async () => {
+      const st = mkPrisma();
+      seedAdvance(st);
+      const feed = mkFeed();
+      const svc = makeService(st, feed);
+      const p = await svc.createDistribution({
+        projectId: 'p1',
+        toUserId: 'master1',
+        amount: 30_000_00,
+        actorUserId: 'foreman1',
+      });
+      expect(p.kind).toBe('distribution');
+      expect(p.parentPaymentId).toBeNull();
+      expect(p.toUserId).toBe('master1');
+      expect(p.fromUserId).toBe('foreman1');
+      expect(Number(p.amount)).toBe(30_000_00);
+      expect(feed.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'payment_distributed' }),
+      );
+    });
+
+    it('actor не foreman проекта → ForbiddenError', async () => {
+      const st = mkPrisma();
+      seedAdvance(st);
+      const svc = makeService(st);
+      await expect(
+        svc.createDistribution({
+          projectId: 'p1',
+          toUserId: 'master1',
+          amount: 1_000_00,
+          actorUserId: 'customer1',
+        }),
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it('recipient не master → InvalidInputError', async () => {
+      const st = mkPrisma();
+      seedAdvance(st);
+      const svc = makeService(st);
+      await expect(
+        svc.createDistribution({
+          projectId: 'p1',
+          toUserId: 'outsider',
+          amount: 1_000_00,
+          actorUserId: 'foreman1',
+        }),
+      ).rejects.toThrow(InvalidInputError);
+    });
+
+    it('projectId не передан и parentPaymentId тоже — InvalidInputError', async () => {
+      const st = mkPrisma();
+      const svc = makeService(st);
+      await expect(
+        svc.createDistribution({
+          toUserId: 'master1',
+          amount: 1_000_00,
+          actorUserId: 'foreman1',
+        }),
+      ).rejects.toThrow(InvalidInputError);
+    });
+
+    it('archived проект → ConflictError', async () => {
+      const st = mkPrisma();
+      st.projects.set('p1', { id: 'p1', ownerId: 'customer1', status: 'archived' });
+      st.memberships.push({
+        projectId: 'p1',
+        userId: 'foreman1',
+        role: 'foreman',
+        removedAt: null,
+      });
+      st.memberships.push({
+        projectId: 'p1',
+        userId: 'master1',
+        role: 'master',
+        removedAt: null,
+      });
+      const svc = makeService(st);
+      await expect(
+        svc.createDistribution({
+          projectId: 'p1',
+          toUserId: 'master1',
+          amount: 1_000_00,
+          actorUserId: 'foreman1',
+        }),
+      ).rejects.toThrow(ConflictError);
+    });
+
+    it('self-payment запрещён (foreman пытается заплатить самому себе)', async () => {
+      const st = mkPrisma();
+      seedAdvance(st);
+      const svc = makeService(st);
+      await expect(
+        svc.createDistribution({
+          projectId: 'p1',
+          toUserId: 'foreman1',
+          amount: 1_000_00,
+          actorUserId: 'foreman1',
+        }),
+      ).rejects.toThrow(ForbiddenError);
+    });
+  });
+});
+
+describe('PaymentsService.listForProject', () => {
+  const seed = (st: ReturnType<typeof mkPrisma>) => {
+    st.projects.set('p1', { id: 'p1', ownerId: 'c1', status: 'active' });
+    st.payments.set('a1', {
+      id: 'a1',
+      projectId: 'p1',
+      stageId: null,
+      parentPaymentId: null,
+      kind: 'advance',
+      fromUserId: 'c1',
+      toUserId: 'f1',
+      amount: BigInt(50_000_00),
+      comment: null,
+      photoKey: null,
+      idempotencyKey: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     st.payments.set('d1', {
       id: 'd1',
       projectId: 'p1',
       stageId: null,
-      parentPaymentId: 'adv',
+      parentPaymentId: 'a1',
       kind: 'distribution',
-      fromUserId: 'foreman1',
-      toUserId: 'master1',
-      amount: 30000n,
-      resolvedAmount: null,
-      status: 'pending',
+      fromUserId: 'f1',
+      toUserId: 'm1',
+      amount: BigInt(20_000_00),
+      comment: null,
+      photoKey: null,
       idempotencyKey: null,
-      confirmedAt: null,
-      disputedAt: null,
-      resolvedAt: null,
-      cancelledAt: null,
-      createdAt: NOW,
-      updatedAt: NOW,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
-    // distribution foreman1 → master2
-    st.payments.set('d2', {
-      id: 'd2',
-      projectId: 'p1',
-      stageId: null,
-      parentPaymentId: 'adv',
-      kind: 'distribution',
-      fromUserId: 'foreman1',
-      toUserId: 'master2',
-      amount: 20000n,
-      resolvedAmount: null,
-      status: 'pending',
-      idempotencyKey: null,
-      confirmedAt: null,
-      disputedAt: null,
-      resolvedAt: null,
-      cancelledAt: null,
-      createdAt: NOW,
-      updatedAt: NOW,
-    });
-    return st;
   };
 
-  it('owner видит все 3 платежа', async () => {
-    const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const list = await svc.listForProject('p1', {
-      userId: 'customer1',
-      isOwner: true,
-      membershipRole: 'customer',
-    });
-    expect(list.map((p) => p.id).sort()).toEqual(['adv', 'd1', 'd2']);
+  it('owner видит все платежи проекта', async () => {
+    const st = mkPrisma();
+    seed(st);
+    const svc = makeService(st);
+    const rows = await svc.listForProject('p1', { userId: 'c1', isOwner: true });
+    expect(rows.map((r) => r.id).sort()).toEqual(['a1', 'd1']);
   });
 
-  it('master1 видит только d1', async () => {
-    const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const list = await svc.listForProject('p1', {
-      userId: 'master1',
+  it('master видит только свои платежи', async () => {
+    const st = mkPrisma();
+    seed(st);
+    const svc = makeService(st);
+    const rows = await svc.listForProject('p1', {
+      userId: 'm1',
       membershipRole: 'master',
     });
-    expect(list.map((p) => p.id)).toEqual(['d1']);
+    expect(rows.map((r) => r.id)).toEqual(['d1']);
   });
 
-  it('foreman1 видит advance + 2 distribution (свои исходящие)', async () => {
-    const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const list = await svc.listForProject('p1', {
-      userId: 'foreman1',
-      membershipRole: 'foreman',
-    });
-    expect(list.map((p) => p.id).sort()).toEqual(['adv', 'd1', 'd2']);
-  });
-
-  it('outsider (customer без isOwner) → пусто', async () => {
-    const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const list = await svc.listForProject('p1', {
-      userId: 'noone',
-      membershipRole: 'customer', // не owner
-    });
-    expect(list).toEqual([]);
-  });
-
-  it('representative с canSeeBudget видит всё', async () => {
-    const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    const list = await svc.listForProject('p1', {
-      userId: 'rep1',
-      membershipRole: 'representative',
-      canSeeBudget: true,
-    });
-    expect(list).toHaveLength(3);
-  });
-
-  it('master2 не видит платёж master1 (P0.7.a get)', async () => {
-    const st = seed();
-    const svc = new PaymentsService(st.prisma, mkFeed(), new FixedClock(NOW), {
-      request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
-    } as any);
-    await expect(svc.get('d1', { userId: 'master2', membershipRole: 'master' })).rejects.toThrow(
-      /payment not visible/i,
-    );
+  it('outsider не видит ничего', async () => {
+    const st = mkPrisma();
+    seed(st);
+    const svc = makeService(st);
+    const rows = await svc.listForProject('p1', { userId: 'x' });
+    expect(rows).toEqual([]);
   });
 });

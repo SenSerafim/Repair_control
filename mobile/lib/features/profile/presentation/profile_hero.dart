@@ -96,7 +96,8 @@ class _Avatar extends StatelessWidget {
       height: 86,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0x4DFFFFFF), width: 3),
+        border: Border.all(color: const Color(0x59FFFFFF), width: 3),
+        boxShadow: AppShadows.avatarHero,
       ),
       child: Padding(
         padding: const EdgeInsets.all(3),

@@ -12,6 +12,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/approvals_controller.dart';
 import '../domain/approval.dart';
 import 'approval_sheets.dart';
@@ -60,6 +61,10 @@ class ApprovalDetailScreen extends ConsumerWidget {
                     children: [
                       Hero(
                         tag: 'approval-${approval.id}',
+                        // Симметричный шаттл со списком (approval_widgets.dart).
+                        // SingleChildScrollView позволяет содержимому
+                        // отрисоваться в естественную высоту, пока rect Hero
+                        // анимируется от карточки списка к SizedBox(h:1).
                         flightShuttleBuilder: (_, __, dir, fromCtx, toCtx) {
                           final hero =
                               (dir == HeroFlightDirection.push
@@ -67,7 +72,13 @@ class ApprovalDetailScreen extends ConsumerWidget {
                                           : toCtx)
                                       .widget
                                   as Hero;
-                          return hero.child;
+                          return Material(
+                            type: MaterialType.transparency,
+                            child: SingleChildScrollView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              child: hero.child,
+                            ),
+                          );
                         },
                         child: const SizedBox(height: 1),
                       ),
@@ -163,7 +174,6 @@ String _titleFor(Approval a) {
     ApprovalScope.stageCreate => 'Этап от бригадира',
     ApprovalScope.materialPurchase => 'Закупка материалов',
     ApprovalScope.selfPurchase => 'Самокуп мастера',
-    ApprovalScope.paymentDispute => 'Спор по платежу',
   };
 }
 
@@ -184,7 +194,6 @@ String _subtitleFor(Approval a) {
       'Бригадир запрашивает закупку. После approve сумма спишется из бюджета.',
     ApprovalScope.selfPurchase =>
       'Мастер просит возместить расходы на материалы.',
-    ApprovalScope.paymentDispute => 'Получатель платежа открыл спор по сумме.',
   };
 }
 
@@ -198,7 +207,6 @@ ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
   ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
   ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
   ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
-  ApprovalScope.paymentDispute => ScopeBadgeTone.deadline,
 };
 
 class _DecisionBlock extends StatelessWidget {
@@ -257,8 +265,6 @@ class _ScopeBody extends StatelessWidget {
         return _MaterialPurchaseBody(approval: approval);
       case ApprovalScope.selfPurchase:
         return _SelfPurchaseBody(approval: approval);
-      case ApprovalScope.paymentDispute:
-        return _PaymentDisputeBody(approval: approval);
     }
   }
 }
@@ -350,13 +356,15 @@ class _DetailPhotoGrid extends StatelessWidget {
         final url = attachments[i].thumbUrl ?? attachments[i].url;
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.n100,
-            borderRadius: BorderRadius.circular(AppRadius.r12),
+            gradient: url == null ? AppGradients.photoPlaceholder : null,
+            color: url == null ? null : AppColors.n100,
+            borderRadius: BorderRadius.circular(AppRadius.r16),
+            boxShadow: AppShadows.sh1,
           ),
           clipBehavior: Clip.antiAlias,
           child: url == null
               ? const Center(
-                  child: Icon(Icons.image_outlined, color: AppColors.n400),
+                  child: Icon(Icons.image_outlined, color: AppColors.brand),
                 )
               : CachedNetworkImage(
                   imageUrl: url,
@@ -487,48 +495,90 @@ class _PlanBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.x16),
-          decoration: BoxDecoration(
-            gradient: AppGradients.planInfo,
-            borderRadius: AppRadius.card,
-            boxShadow: AppShadows.shBlue,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.description_outlined,
-                color: AppColors.n0,
-                size: 22,
-              ),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Бригадир предложил план',
-                      style: AppTextStyles.subtitle.copyWith(
-                        color: AppColors.n0,
-                        fontSize: 14,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.r20),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: const BoxDecoration(
+              gradient: AppGradients.planInfoRich,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x4D4F6EF7),
+                  offset: Offset(0, 12),
+                  blurRadius: 28,
+                ),
+              ],
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  top: -40,
+                  right: -30,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 160,
+                      height: 160,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [Color(0x2EFFFFFF), Color(0x00FFFFFF)],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      stages.isEmpty
-                          ? 'Согласуется план в целом'
-                          : '${stages.length} ${_plural(stages.length, 'этап', 'этапа', 'этапов')}'
-                                '${totalDays != null ? ' · $totalDays дней' : ''}',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.n0.withValues(alpha: 0.85),
-                        fontSize: 12,
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0x2EFFFFFF),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0x33FFFFFF)),
+                      ),
+                      child: const Icon(
+                        Icons.description_outlined,
+                        color: AppColors.n0,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.x14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Бригадир предложил план',
+                            style: AppTextStyles.subtitle.copyWith(
+                              color: AppColors.n0,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            stages.isEmpty
+                                ? 'Согласуется план в целом'
+                                : '${stages.length} ${_plural(stages.length, 'этап', 'этапа', 'этапов')}'
+                                      '${totalDays != null ? ' · $totalDays дней' : ''}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xC7FFFFFF),
+                              fontSize: 12.5,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         if (stages.isNotEmpty) ...[
@@ -836,16 +886,32 @@ class _StageAcceptBody extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.redBg,
               borderRadius: AppRadius.card,
+              border: Border.all(color: const Color(0xFFFECACA)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.error_outline_rounded,
-                  color: AppColors.redDot,
-                  size: 18,
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.n0,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.redDot.withValues(alpha: 0.18),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.error_outline_rounded,
+                    color: AppColors.redDot,
+                    size: 18,
+                  ),
                 ),
-                const SizedBox(width: AppSpacing.x10),
+                const SizedBox(width: AppSpacing.x12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -854,6 +920,7 @@ class _StageAcceptBody extends StatelessWidget {
                         'Прошлое отклонение',
                         style: AppTextStyles.subtitle.copyWith(
                           color: AppColors.redText,
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1234,139 +1301,6 @@ class _SelfPurchaseBody extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Payment dispute (П2.2 / 6.1) — спор по сумме платежа
-// ──────────────────────────────────────────────────────────────────────
-
-class _PaymentDisputeBody extends StatelessWidget {
-  const _PaymentDisputeBody({required this.approval});
-
-  final Approval approval;
-
-  @override
-  Widget build(BuildContext context) {
-    final originalAmount = (approval.payload['originalAmount'] as num?)
-        ?.toInt();
-    final claimedAmount = (approval.payload['claimedAmount'] as num?)?.toInt();
-    final reason = approval.payload['reason'] as String?;
-    final kind = approval.payload['kind'] as String?;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _AmountChip(
-                label: 'Платёж',
-                value: originalAmount == null
-                    ? '—'
-                    : Money.format(originalAmount),
-                tone: _DateTone.danger,
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.x8),
-              child: Icon(Icons.arrow_forward_rounded, color: AppColors.n400),
-            ),
-            Expanded(
-              child: _AmountChip(
-                label: 'Заявлено',
-                value: claimedAmount == null
-                    ? '—'
-                    : Money.format(claimedAmount),
-                tone: _DateTone.success,
-              ),
-            ),
-          ],
-        ),
-        if (kind != null && kind.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.x12),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.x12,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.yellowBg,
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-            ),
-            child: Text(
-              switch (kind) {
-                'underpayment' => 'Не доплатили',
-                'overpayment' => 'Переплата',
-                _ => 'Спор',
-              },
-              style: AppTextStyles.subtitle.copyWith(
-                color: AppColors.yellowText,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-        if (reason != null && reason.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.x16),
-          const _SectionLabel('Причина'),
-          const SizedBox(height: AppSpacing.x8),
-          _CommentBox(text: reason),
-        ],
-        if (approval.attachments.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.x16),
-          const _SectionLabel('Подтверждение'),
-          const SizedBox(height: AppSpacing.x8),
-          _DetailPhotoGrid(attachments: approval.attachments, columns: 2),
-        ],
-      ],
-    );
-  }
-}
-
-class _AmountChip extends StatelessWidget {
-  const _AmountChip({
-    required this.label,
-    required this.value,
-    required this.tone,
-  });
-  final String label;
-  final String value;
-  final _DateTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = tone == _DateTone.danger
-        ? AppColors.redBg
-        : AppColors.greenLight;
-    final fg = tone == _DateTone.danger
-        ? AppColors.redText
-        : AppColors.greenDark;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.tiny.copyWith(color: fg, letterSpacing: 0.4),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTextStyles.subtitle.copyWith(
-              color: fg,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────
 // Bottom actions
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1378,11 +1312,17 @@ class _BottomActions extends ConsumerWidget {
   /// П2.6 / П7.7 — CTA «Принять/Отклонить» показываются ТОЛЬКО тому, чья
   /// активная роль совпадает с `Approval.actorRole` текущей ступени.
   /// Если actorRole не задан (старые approvals без двухступенчатой FSM) —
-  /// fallback на canDecide-проверку (как раньше).
+  /// fallback на проверку `addresseeId == me`: открытый «всем кто может»
+  /// раньше давал бригадиру кнопку «Одобрить» на плане заказчика → 403.
   bool _matchesActorRole(WidgetRef ref) {
     final activeRole = ref.read(activeRoleProvider);
     final actorRole = approval.actorRole;
-    if (actorRole == null) return true; // legacy fallback
+    if (actorRole == null) {
+      final me = ref.read(authControllerProvider).userId;
+      // addresseeId — тот, кому адресован approval. Совпадает с me →
+      // активный пользователь и есть decision-maker, иначе CTA прячем.
+      return me != null && approval.addresseeId == me;
+    }
     switch (actorRole) {
       case ApprovalActorRole.customer:
         return activeRole == SystemRole.customer ||

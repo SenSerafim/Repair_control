@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../stages/application/stages_controller.dart';
 import '../../team/application/team_controller.dart';
 import '../application/notes_controller.dart';
 import '../domain/note.dart';
@@ -192,6 +193,19 @@ class _NoteTile extends StatelessWidget {
             color: AppColors.n0,
             border: Border.all(color: AppColors.n200),
             borderRadius: BorderRadius.circular(AppRadius.r16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A0D1229),
+                offset: Offset(0, 1),
+                blurRadius: 2,
+              ),
+              BoxShadow(
+                color: Color(0x1F4F6EF7),
+                offset: Offset(0, 10),
+                blurRadius: 24,
+                spreadRadius: -10,
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,6 +304,10 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
   /// из участников проекта; кнопка submit disabled, пока null.
   String? _addresseeId;
   String? _addresseeName;
+
+  /// Для scope=stage backend требует stageId — иначе 400 NOTE_STAGE_REQUIRED.
+  String? _stageId;
+  String? _stageName;
   final _text = TextEditingController();
   bool _submitting = false;
   String? _error;
@@ -309,6 +327,10 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
       setState(() => _error = 'Выберите получателя');
       return;
     }
+    if (_scope == NoteScope.stage && _stageId == null) {
+      setState(() => _error = 'Выберите этап');
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;
@@ -319,6 +341,7 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
           scope: _scope,
           text: _text.text.trim(),
           addresseeId: _scope == NoteScope.forMe ? _addresseeId : null,
+          stageId: _scope == NoteScope.stage ? _stageId : null,
         );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -386,6 +409,55 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
     });
   }
 
+  Future<void> _pickStage() async {
+    final stagesAsync = ref.read(stagesControllerProvider(widget.projectId));
+    final stages = stagesAsync.value;
+    if (stages == null) {
+      setState(() => _error = 'Этапы ещё загружаются, попробуйте ещё раз');
+      return;
+    }
+    if (stages.isEmpty) {
+      setState(() => _error = 'В проекте ещё нет этапов');
+      return;
+    }
+    final selected = await showAppBottomSheet<({String id, String title})>(
+      context: context,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AppBottomSheetHeader(title: 'Выберите этап'),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 360),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: stages.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              itemBuilder: (context, i) {
+                final s = stages[i];
+                return ListTile(
+                  leading: const Icon(
+                    Icons.layers_outlined,
+                    color: AppColors.n500,
+                  ),
+                  title: Text(s.title),
+                  onTap: () =>
+                      Navigator.of(context).pop((id: s.id, title: s.title)),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _stageId = selected.id;
+      _stageName = selected.title;
+      _error = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -438,6 +510,10 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
                 _addresseeId = null;
                 _addresseeName = null;
               }
+              if (s != NoteScope.stage) {
+                _stageId = null;
+                _stageName = null;
+              }
             }),
           ),
           if (s != NoteScope.values.last) const SizedBox(height: 8),
@@ -482,6 +558,61 @@ class _CreateNoteBodyState extends ConsumerState<_CreateNoteBody> {
                         style: TextStyle(
                           fontSize: 14,
                           color: _addresseeName == null
+                              ? AppColors.n400
+                              : AppColors.n900,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.n400,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (_scope == NoteScope.stage) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'ЭТАП',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n500,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Material(
+            color: AppColors.n0,
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            child: InkWell(
+              onTap: _pickStage,
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.n200),
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.layers_outlined,
+                      color: AppColors.n400,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _stageName ?? 'Выбрать этап',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _stageName == null
                               ? AppColors.n400
                               : AppColors.n900,
                         ),

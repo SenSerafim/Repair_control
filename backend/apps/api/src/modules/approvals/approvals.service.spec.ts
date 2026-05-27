@@ -2,7 +2,6 @@ import { ApprovalsService } from './approvals.service';
 import { FeedService } from '../feed/feed.service';
 import { ProgressCalculator } from '../stages/progress-calculator';
 import { SelfPurchasesService } from '../selfpurchases/selfpurchases.service';
-import { PaymentsService } from '../payments/payments.service';
 import { MaterialsService } from '../materials/materials.service';
 import {
   ConflictError,
@@ -14,11 +13,10 @@ import {
 } from '@app/common';
 
 // §6.1 — стабы делегатов. В тестах ApprovalsService для self_purchase /
-// payment_dispute / material_purchase делегирование никогда не активируется
-// (тесты используют scope plan/step/extra_work/deadline_change/stage_accept),
-// поэтому стабы можно оставить пустыми.
+// material_purchase делегирование никогда не активируется (тесты используют
+// scope plan/step/extra_work/deadline_change/stage_accept), поэтому стабы
+// можно оставить пустыми.
 const stubSelfPurchases = {} as unknown as SelfPurchasesService;
-const stubPayments = {} as unknown as PaymentsService;
 const stubMaterials = {} as unknown as MaterialsService;
 
 const NOW = new Date('2026-06-10T12:00:00Z');
@@ -224,7 +222,6 @@ describe('ApprovalsService.request — валидация scope', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     await expect(
@@ -247,7 +244,6 @@ describe('ApprovalsService.request — валидация scope', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     await expect(
@@ -271,7 +267,6 @@ describe('ApprovalsService.request — валидация scope', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     await expect(
@@ -295,7 +290,6 @@ describe('ApprovalsService.request — валидация scope', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     await expect(
@@ -318,7 +312,6 @@ describe('ApprovalsService.request — валидация scope', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -348,7 +341,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -381,7 +373,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -416,7 +407,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -459,7 +449,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -503,7 +492,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -542,7 +530,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const newEndIso = '2026-08-15T00:00:00.000Z';
@@ -576,7 +563,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -603,7 +589,6 @@ describe('ApprovalsService.decide — применение эффектов', ()
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -644,7 +629,6 @@ describe('ApprovalsService — gaps §3.3 (customer не решает мимо �
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -680,7 +664,6 @@ describe('ApprovalsService — gaps §3.3 (customer не решает мимо �
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -711,7 +694,6 @@ describe('ApprovalsService.resubmit', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -743,7 +725,6 @@ describe('ApprovalsService.resubmit', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -770,7 +751,6 @@ describe('ApprovalsService.resubmit', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -794,7 +774,6 @@ describe('ApprovalsService.cancel', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -818,7 +797,6 @@ describe('ApprovalsService.cancel', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -839,7 +817,6 @@ describe('ApprovalsService.cancel', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -873,7 +850,6 @@ describe('ApprovalsService — авторизация decide', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -906,7 +882,6 @@ describe('ApprovalsService — авторизация decide', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -932,7 +907,6 @@ describe('ApprovalsService — авторизация decide', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     const a = await svc.request({
@@ -960,7 +934,6 @@ describe('ApprovalsService — не найдено', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     await expect(
@@ -980,7 +953,6 @@ describe('ApprovalsService — не найдено', () => {
       mkCalc(),
       new FixedClock(NOW),
       stubSelfPurchases,
-      stubPayments,
       stubMaterials,
     );
     await expect(

@@ -37,6 +37,18 @@ class RefreshInterceptor extends Interceptor {
       return handler.next(err);
     }
 
+    // После logout: secure storage очищена, но активные провайдеры успевают
+    // ещё раз сходить на API до того как go_router отредиректит UI на
+    // /login. Каждый такой запрос возвращает 401. Без этой проверки мы
+    // вызвали бы onSessionExpired() (= logout()) для каждого 401 — а это
+    // повторно дёргает state = unauthenticated и потенциально новые
+    // инвалидации. Если access-токена уже нет — тихо пропускаем ошибку
+    // дальше, без попытки рефреша и без logout-цикла.
+    final accessToken = await storage.readAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      return handler.next(err);
+    }
+
     try {
       final newToken = await _refresh();
       if (newToken == null) {

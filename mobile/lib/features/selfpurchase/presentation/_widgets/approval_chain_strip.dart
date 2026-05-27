@@ -23,12 +23,13 @@ class ApprovalChainStrip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x14,
-        vertical: AppSpacing.x10,
+        vertical: AppSpacing.x12,
       ),
       decoration: BoxDecoration(
-        color: AppColors.n50,
+        gradient: AppGradients.surfaceCard,
         border: Border.all(color: AppColors.n200),
         borderRadius: BorderRadius.circular(AppRadius.r12),
+        boxShadow: AppShadows.shCard,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +110,7 @@ class _Chip extends StatelessWidget {
         ? AppColors.n500
         : (current ? palette.fg : palette.fgMuted);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
         border: Border.all(
@@ -117,6 +118,15 @@ class _Chip extends StatelessWidget {
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(AppRadius.r8),
+        boxShadow: current
+            ? [
+                BoxShadow(
+                  color: fg.withValues(alpha: 0.18),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ]
+            : null,
       ),
       child: Text(
         step.label,
@@ -124,6 +134,7 @@ class _Chip extends StatelessWidget {
           color: fg,
           fontWeight: FontWeight.w700,
           fontSize: 11,
+          letterSpacing: -0.1,
         ),
       ),
     );

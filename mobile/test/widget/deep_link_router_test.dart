@@ -107,6 +107,33 @@ void main() {
       expect(route, '/projects/p-1/exports');
     });
 
+    test('material_request_created с requestId → /projects/:id/materials/:requestId', () {
+      final route = DeepLinkRouter.routeFor({
+        'kind': 'material_request_created',
+        'projectId': 'p-1',
+        'requestId': 'mr-42',
+      });
+      expect(route, '/projects/p-1/materials/mr-42');
+    });
+
+    test('materialId как алиас для обратной совместимости', () {
+      final route = DeepLinkRouter.routeFor({
+        'kind': 'material_request_created',
+        'projectId': 'p-1',
+        'materialId': 'mr-old',
+      });
+      expect(route, '/projects/p-1/materials/mr-old');
+    });
+
+    test('selfpurchase_created → /projects/:id/selfpurchases/:id', () {
+      final route = DeepLinkRouter.routeFor({
+        'kind': 'selfpurchase_created',
+        'projectId': 'p-1',
+        'selfPurchaseId': 'sp-9',
+      });
+      expect(route, '/projects/p-1/selfpurchases/sp-9');
+    });
+
     test('пустой payload → null', () {
       expect(DeepLinkRouter.routeFor(const {}), isNull);
     });
@@ -130,7 +157,7 @@ void main() {
 
     test('payment_* → payment', () {
       expect(
-        DeepLinkRouter.categoryOf('payment_confirmed'),
+        DeepLinkRouter.categoryOf('payment_created'),
         NotificationRoute.payment,
       );
     });
@@ -165,6 +192,28 @@ void main() {
       expect(
         DeepLinkRouter.categoryOf('document_uploaded'),
         NotificationRoute.document,
+      );
+    });
+
+    test('tool_* → materials', () {
+      expect(
+        DeepLinkRouter.categoryOf('tool_issued'),
+        NotificationRoute.materials,
+      );
+      expect(
+        DeepLinkRouter.categoryOf('tool_request_decided'),
+        NotificationRoute.materials,
+      );
+      expect(
+        DeepLinkRouter.categoryOf('tool_request_created'),
+        NotificationRoute.materials,
+      );
+    });
+
+    test('selfpurchase_* → materials', () {
+      expect(
+        DeepLinkRouter.categoryOf('selfpurchase_created'),
+        NotificationRoute.materials,
       );
     });
 

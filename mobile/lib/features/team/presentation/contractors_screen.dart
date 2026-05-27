@@ -46,7 +46,8 @@ class ContractorsScreen extends ConsumerWidget {
             child: ListView.builder(
               padding: EdgeInsets.zero,
               itemCount: groups.length,
-              itemBuilder: (_, i) => _ProjectGroup(group: groups[i]),
+              itemBuilder: (_, i) =>
+                  _ProjectGroup(group: groups[i], allGroups: groups),
             ),
           );
         },
@@ -56,9 +57,10 @@ class ContractorsScreen extends ConsumerWidget {
 }
 
 class _ProjectGroup extends StatelessWidget {
-  const _ProjectGroup({required this.group});
+  const _ProjectGroup({required this.group, required this.allGroups});
 
   final TeammateGroup group;
+  final List<TeammateGroup> allGroups;
 
   @override
   Widget build(BuildContext context) {
@@ -102,64 +104,140 @@ class _ProjectGroup extends StatelessWidget {
           _MemberRow(
             user: ownerAsMember,
             roleLabel: MembershipRole.customer.displayName,
+            currentProjectId: group.projectId,
+            currentProjectTitle: group.projectTitle,
+            allGroups: allGroups,
           ),
+        // Бекенд для legacy-проектов может содержать явную membership-строку
+        // role=customer для ownerId. Не рендерим её повторно — owner уже
+        // выведен через group.owner выше.
         for (final m in group.members)
-          if (m.user != null)
-            _MemberRow(user: m.user!, roleLabel: m.role.displayName),
+          if (m.user != null &&
+              !(m.userId == group.ownerId &&
+                  m.role == MembershipRole.customer))
+            _MemberRow(
+              user: m.user!,
+              roleLabel: m.role.displayName,
+              currentProjectId: group.projectId,
+              currentProjectTitle: group.projectTitle,
+              allGroups: allGroups,
+            ),
       ],
     );
   }
 }
 
 class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.user, required this.roleLabel});
+  const _MemberRow({
+    required this.user,
+    required this.roleLabel,
+    required this.currentProjectId,
+    required this.currentProjectTitle,
+    required this.allGroups,
+  });
 
   final ProjectMemberUser user;
   final String roleLabel;
+  final String currentProjectId;
+  final String currentProjectTitle;
+  final List<TeammateGroup> allGroups;
 
   @override
   Widget build(BuildContext context) {
     final fullName = '${user.firstName} ${user.lastName}'.trim();
     return Material(
       color: AppColors.n0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x16,
-          vertical: AppSpacing.x10,
-        ),
-        child: Row(
-          children: [
-            AppAvatar(seed: user.id, name: fullName, size: 40),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    fullName.isEmpty ? user.phone : fullName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.n900,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    roleLabel,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.n500,
-                    ),
-                  ),
-                ],
+      child: InkWell(
+        onTap: () => _openCard(context, fullName),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x16,
+            vertical: AppSpacing.x10,
+          ),
+          child: Row(
+            children: [
+              AppAvatar(
+                seed: user.id,
+                name: fullName,
+                imageUrl: user.avatarUrl,
+                size: 40,
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName.isEmpty ? user.phone : fullName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.n900,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      roleLabel,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.n500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.n400,
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Future<void> _openCard(BuildContext context, String fullName) async {
+    final commonProjects = <({String id, String title, String role})>[];
+    for (final g in allGroups) {
+      if (g.projectId == currentProjectId) continue;
+      if (g.ownerId == user.id) {
+        commonProjects.add((
+          id: g.projectId,
+          title: g.projectTitle,
+          role: MembershipRole.customer.displayName,
+        ));
+        continue;
+      }
+      for (final m in g.members) {
+        if (m.userId == user.id) {
+          commonProjects.add((
+            id: g.projectId,
+            title: g.projectTitle,
+            role: m.role.displayName,
+          ));
+          break;
+        }
+      }
+    }
+
+    await showMemberCardSheet(
+      context,
+      data: MemberCardData(
+        userId: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roleInCurrentProject: roleLabel,
+        currentProjectTitle: currentProjectTitle,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        commonProjects: commonProjects,
+      ),
+      onOpenProject: (id) => context.go('/projects/$id'),
     );
   }
 }

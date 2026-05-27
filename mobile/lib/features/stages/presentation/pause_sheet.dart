@@ -92,8 +92,19 @@ class _ReasonRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: spec.bg,
                 borderRadius: BorderRadius.circular(AppRadius.r12),
+                // Тонкий ring + soft inner highlight (через светлый
+                // overlay-gradient): icon-tile «отрывается» от плоского
+                // background sheet'а.
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    spec.bg.withValues(alpha: 0.85),
+                    spec.bg,
+                  ],
+                ),
+                border: Border.all(color: spec.fg.withValues(alpha: 0.10)),
               ),
               child: Icon(reason.icon, size: 20, color: spec.fg),
             ),

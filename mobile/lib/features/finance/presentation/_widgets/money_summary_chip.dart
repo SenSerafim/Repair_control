@@ -33,11 +33,18 @@ class MoneySummaryChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x14,
-        vertical: AppSpacing.x12,
+        vertical: AppSpacing.x14,
       ),
       decoration: BoxDecoration(
-        color: AppColors.brandLight,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF1F4FE), AppColors.brandLight],
+        ),
         borderRadius: BorderRadius.circular(AppRadius.r12),
+        border: Border.all(
+          color: AppColors.brand.withValues(alpha: 0.18),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,17 +58,17 @@ class MoneySummaryChip extends StatelessWidget {
                   style: AppTextStyles.tiny.copyWith(
                     color: AppColors.brand,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.6,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   Money.format(total),
                   style: AppTextStyles.h2.copyWith(
-                    fontSize: 18,
+                    fontSize: 20,
                     color: AppColors.brandDark,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.6,
                   ),
                 ),
               ],

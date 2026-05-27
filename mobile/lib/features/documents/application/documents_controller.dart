@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -91,32 +92,38 @@ class DocumentsController {
 
   DocumentsRepository get _repo => _ref.read(documentsRepositoryProvider);
 
+  /// Загрузка документа через server-side multipart endpoint
+  /// (`POST /api/projects/:id/documents/upload`). Один round-trip:
+  /// файл идёт в API, API кладёт в S3 нашим Node-клиентом.
+  /// Решает проблему «PUT в Selectel падает с эмулятора» — раньше
+  /// был presign + PUT-в-S3 + confirm, теперь один POST.
   Future<Document> upload({
     required String projectId,
     required DocumentCategory category,
     required String title,
     required String mimeType,
-    required Uint8List bytes,
+    required String filePath,
+    required int sizeBytes,
     String? stageId,
     String? stepId,
+    String? description,
+    DateTime? documentDate,
+    UploadProgress? onProgress,
+    CancelToken? cancelToken,
   }) async {
-    final presigned = await _repo.presignUpload(
+    final doc = await _repo.uploadMultipart(
       projectId: projectId,
       category: category,
       title: title,
       mimeType: mimeType,
-      sizeBytes: bytes.length,
+      filePath: filePath,
+      sizeBytes: sizeBytes,
       stageId: stageId,
       stepId: stepId,
-    );
-    await _repo.uploadToStorage(
-      presigned: presigned,
-      bytes: bytes,
-      mimeType: mimeType,
-    );
-    final doc = await _repo.confirm(
-      documentId: presigned.documentId,
-      fileKey: presigned.fileKey,
+      description: description,
+      documentDate: documentDate,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
     );
     _invalidateLists(projectId);
     return doc;
@@ -129,6 +136,8 @@ class DocumentsController {
     DocumentCategory? category,
     String? stageId,
     String? stepId,
+    String? description,
+    DateTime? documentDate,
   }) async {
     final doc = await _repo.patch(
       id: id,
@@ -136,6 +145,8 @@ class DocumentsController {
       category: category,
       stageId: stageId,
       stepId: stepId,
+      description: description,
+      documentDate: documentDate,
     );
     _ref.invalidate(documentByIdProvider(id));
     _invalidateLists(projectId);

@@ -27,7 +27,7 @@ class BudgetBucketCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
-        color: AppColors.n0,
+        gradient: AppGradients.surfaceCard,
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200, width: 1.5),
         boxShadow: AppShadows.sh1,
@@ -91,6 +91,12 @@ class BudgetBucketCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: progressColor,
                   borderRadius: BorderRadius.circular(4),
+                  border: const Border(
+                    top: BorderSide(
+                      color: AppShadows.innerHighlight,
+                      width: 1,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -155,6 +161,7 @@ class StageBudgetRow extends StatelessWidget {
           color: AppColors.n0,
           borderRadius: AppRadius.card,
           border: Border.all(color: AppColors.n200, width: 1.5),
+          boxShadow: AppShadows.shCard,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

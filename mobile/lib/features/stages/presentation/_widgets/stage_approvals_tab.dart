@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/access/access_guard.dart';
-import '../../../../core/access/domain_actions.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../approvals/application/approvals_controller.dart';
 import '../../../approvals/domain/approval.dart';
-import '../../../approvals/presentation/_widgets/approval_pending_card.dart';
-import '../../../approvals/presentation/_widgets/approval_timeline_item.dart';
-import '../../../approvals/presentation/_widgets/reject_sheet.dart';
+import '../../../approvals/presentation/approval_widgets.dart';
 
-/// Таб «Согл.» в детали этапа — показывает только согласования по текущему
-/// stageId. Pending → yellow cards с inline approve/reject; история — timeline.
+/// Таб «Согл.» в детали этапа.
+///
+/// Фильтр: все approvals, привязанные к этапу прямым `stageId`-матчем (step /
+/// extra_work / deadline_change / stage_accept / stage_create / material_purchase),
+/// плюс `plan`-scope, в payload которого этот этап упомянут (план блокирует
+/// запуск этапа, поэтому пользователю важно его видеть отсюда). Не-стейджевые
+/// scope (selfPurchase без stageId) игнорируются — они живут
+/// в финансовой вкладке.
+///
+/// Состав:
+///   1. SliverPersistentHeader со scope-чипами для фильтрации
+///   2. Секция «Ожидают решения · N» — ApprovalCard, tap → /approvals/:id
+///   3. Секция «История» — те же ApprovalCard со статус-бейджем
+///   4. Pull-to-refresh
+///
+/// Раньше тут была кастомная yellow `ApprovalPendingCard` с inline approve/reject,
+/// но (а) она не показывала фото/payload-контекст, нужный для информированного
+/// решения, (б) дублировала логику ApprovalsScreen и UX расходился. Теперь
+/// единственное действие — открыть detail-экран с полным контекстом.
 class StageApprovalsTab extends ConsumerWidget {
   const StageApprovalsTab({
     required this.projectId,
@@ -28,15 +41,6 @@ class StageApprovalsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(approvalsControllerProvider(projectId));
-    // RBAC: только customer/foreman/representative.canApprove + admin
-    // могут одобрять/отклонять. Master видит карточки, но без CTA —
-    // backend всё равно отдаст 403 на approve/reject.
-    final canDecide = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.approvalDecide,
-        projectId: projectId,
-      )),
-    );
     return async.when(
       loading: () => const AppLoadingState(),
       error: (e, _) => AppErrorState(
@@ -45,104 +49,182 @@ class StageApprovalsTab extends ConsumerWidget {
       ),
       data: (buckets) {
         final pending = buckets.pending
-            .where((a) => a.stageId == stageId)
+            .where((a) => approvalBelongsToStage(a, stageId))
             .toList();
         final history = buckets.history
-            .where((a) => a.stageId == stageId)
+            .where((a) => approvalBelongsToStage(a, stageId))
             .toList();
-        if (pending.isEmpty && history.isEmpty) {
-          // Center гарантирует, что AppEmptyState окажется ровно в середине
-          // вкладки. Без него Column внутри Padding опирается на baseline
-          // родителя и текст визуально «прижимается» к левому краю при
-          // длинных subtitle-строках.
-          return const Center(
-            child: AppEmptyState(
-              title: 'Согласований нет',
-              subtitle:
-                  'Здесь появятся отправленные на согласование шаги, '
-                  'дополнительные работы и приёмка этапа.',
-              icon: Icons.fact_check_outlined,
-            ),
-          );
-        }
-        return ListView(
-          padding: const EdgeInsets.all(AppSpacing.x16),
-          children: [
-            if (pending.isNotEmpty) ...[
-              _SectionHeader(text: 'Ожидают решения · ${pending.length}'),
-              const SizedBox(height: AppSpacing.x8),
-              for (final a in pending) ...[
-                ApprovalPendingCard(
-                  approval: a,
-                  // Кнопки доступны только тем, у кого есть RBAC `approval.decide`.
-                  // Для master передаём заглушку, и `ApprovalPendingCard`
-                  // дисейблит CTA через `null` onPressed.
-                  onApprove: canDecide ? () => _approve(context, ref, a) : null,
-                  onReject: canDecide ? () => _reject(context, ref, a) : null,
-                ),
-                const SizedBox(height: AppSpacing.x10),
-              ],
-              const SizedBox(height: AppSpacing.x8),
-            ],
-            if (history.isNotEmpty) ...[
-              const _SectionHeader(text: 'История'),
-              const SizedBox(height: AppSpacing.x12),
-              for (var i = 0; i < history.length; i++)
-                ApprovalTimelineItem(
-                  title:
-                      '${history[i].scope.displayName} · ${_statusLabel(history[i].status)}',
-                  byline:
-                      '${_actorByline(history[i])} · ${DateFormat('d MMM', 'ru').format(history[i].decidedAt ?? history[i].updatedAt)}',
-                  comment: history[i].decisionComment,
-                  last: i == history.length - 1,
-                ),
-            ],
-          ],
+        return _Body(
+          projectId: projectId,
+          stageId: stageId,
+          pending: pending,
+          history: history,
+          onRefresh: () => ref
+              .read(approvalsControllerProvider(projectId).notifier)
+              .refresh(),
         );
       },
     );
   }
+}
 
-  Future<void> _approve(BuildContext context, WidgetRef ref, Approval a) async {
-    final failure = await ref
-        .read(approvalsControllerProvider(projectId).notifier)
-        .approve(approval: a);
-    if (!context.mounted) return;
-    AppToast.show(
-      context,
-      message: failure == null ? 'Одобрено' : failure.userMessage,
-      kind: failure == null ? AppToastKind.success : AppToastKind.error,
-    );
+/// Возвращает `true`, если согласование относится к указанному этапу.
+///
+/// Stage-scoped scope'ы: совпадение по `stageId`. Особый случай — `plan`:
+/// stageId у самой записи нет (план project-wide), но в `payload.stages`
+/// перечислены этапы, к которым он применяется. Совпадение → показать.
+///
+/// Экспортируется наружу: stage_detail_screen использует её для подсчёта
+/// бейджа на табе, чтобы число совпадало с фильтром карточек.
+bool approvalBelongsToStage(Approval a, String stageId) {
+  if (a.stageId == stageId) return true;
+  if (a.scope == ApprovalScope.plan) {
+    return a.planStages.any((s) => s['stageId'] == stageId);
+  }
+  return false;
+}
+
+class _Body extends StatefulWidget {
+  const _Body({
+    required this.projectId,
+    required this.stageId,
+    required this.pending,
+    required this.history,
+    required this.onRefresh,
+  });
+
+  final String projectId;
+  final String stageId;
+  final List<Approval> pending;
+  final List<Approval> history;
+  final Future<void> Function() onRefresh;
+
+  @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  String _scopeId = 'all';
+
+  List<Approval> _applyScope(List<Approval> src) {
+    if (_scopeId == 'all') return src;
+    return src.where((a) => a.scope.apiValue == _scopeId).toList();
   }
 
-  Future<void> _reject(BuildContext context, WidgetRef ref, Approval a) async {
-    final reason = await showRejectSheet(
-      context,
-      entityName: a.scope.displayName,
-    );
-    if (reason == null || !context.mounted) return;
-    final failure = await ref
-        .read(approvalsControllerProvider(projectId).notifier)
-        .reject(approval: a, comment: reason);
-    if (!context.mounted) return;
-    AppToast.show(
-      context,
-      message: failure == null ? 'Отклонено' : failure.userMessage,
-      kind: failure == null ? AppToastKind.success : AppToastKind.error,
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    // Чипы строим только из тех scope'ов, что реально встречаются у этого
+    // этапа — иначе пользователь будет тапать пустые фильтры. «Все» добавляем
+    // всегда, чтобы был способ сбросить выбор.
+    final scopesOnStage = <ApprovalScope>{
+      for (final a in widget.pending) a.scope,
+      for (final a in widget.history) a.scope,
+    };
+    final chips = <AppFilterChipSpec>[
+      const AppFilterChipSpec(id: 'all', label: 'Все'),
+      for (final s in ApprovalScope.values)
+        if (scopesOnStage.contains(s))
+          AppFilterChipSpec(id: s.apiValue, label: s.displayName),
+    ];
 
-  String _statusLabel(ApprovalStatus s) => switch (s) {
-    ApprovalStatus.approved => 'согласован',
-    ApprovalStatus.rejected => 'отклонён',
-    ApprovalStatus.cancelled => 'отменён',
-    ApprovalStatus.pending => 'на рассмотрении',
-  };
+    final pending = _applyScope(widget.pending);
+    final history = _applyScope(widget.history);
 
-  String _actorByline(Approval a) {
-    if (a.status == ApprovalStatus.approved) return 'Заказчик одобрил';
-    if (a.status == ApprovalStatus.rejected) return 'Заказчик отклонил';
-    return '';
+    if (widget.pending.isEmpty && widget.history.isEmpty) {
+      // Pull-to-refresh должен работать и на пустом экране (свежие согласования
+      // могут прийти, пока пользователь стоит на табе). AlwaysScrollable +
+      // SizedBox под высоту вкладки → жест ловится, контент остаётся по центру.
+      return RefreshIndicator(
+        onRefresh: widget.onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: const AppEmptyState(
+                title: 'Согласований по этому этапу нет',
+                subtitle:
+                    'Здесь появятся отправленные на согласование шаги, '
+                    'доп.работы, перенос дедлайна и приёмка этапа.',
+                icon: Icons.fact_check_outlined,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        if (chips.length > 1)
+          ColoredBox(
+            color: AppColors.n0,
+            child: AppFilterChips(
+              chips: chips,
+              activeId: _scopeId,
+              onSelect: (id) => setState(() => _scopeId = id),
+            ),
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: widget.onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.x16,
+                AppSpacing.x12,
+                AppSpacing.x16,
+                AppSpacing.x20,
+              ),
+              children: [
+                if (pending.isNotEmpty) ...[
+                  _SectionHeader(text: 'Ожидают решения · ${pending.length}'),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final a in pending) ...[
+                    ApprovalCard(
+                      approval: a,
+                      onTap: () => context.push(
+                        '/projects/${widget.projectId}/approvals/${a.id}',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.x10),
+                  ],
+                  const SizedBox(height: AppSpacing.x12),
+                ],
+                if (history.isNotEmpty) ...[
+                  _SectionHeader(text: 'История · ${history.length}'),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final a in history) ...[
+                    ApprovalCard(
+                      approval: a,
+                      onTap: () => context.push(
+                        '/projects/${widget.projectId}/approvals/${a.id}',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.x10),
+                  ],
+                ],
+                // Под скоуп-фильтр могут попасть нулевые секции (например,
+                // выбран scope, который есть только в истории). Тогда показываем
+                // тонкий inline-плейсхолдер, чтобы экран не выглядел пустым
+                // после chip-клика.
+                if (pending.isEmpty && history.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x24),
+                    child: Text(
+                      'По выбранному фильтру согласований нет.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.n500,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

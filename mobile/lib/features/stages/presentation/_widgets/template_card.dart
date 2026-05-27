@@ -26,10 +26,10 @@ class TemplateCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.x14),
           decoration: BoxDecoration(
-            color: AppColors.n0,
+            gradient: AppGradients.surfaceCard,
             borderRadius: AppRadius.card,
             border: Border.all(color: AppColors.n200),
-            boxShadow: AppShadows.sh1,
+            boxShadow: AppShadows.shCard,
           ),
           child: Row(
             children: [
@@ -37,8 +37,16 @@ class TemplateCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: spec.bg,
                   borderRadius: BorderRadius.circular(AppRadius.r12),
+                  // Soft inner highlight на icon-tile → шаблоны «дышат».
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [spec.bg.withValues(alpha: 0.82), spec.bg],
+                  ),
+                  border: Border.all(
+                    color: spec.fg.withValues(alpha: 0.10),
+                  ),
                 ),
                 child: Icon(spec.icon, size: 22, color: spec.fg),
               ),

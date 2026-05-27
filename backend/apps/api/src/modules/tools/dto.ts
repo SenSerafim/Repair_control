@@ -1,40 +1,55 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
+import { ArrayMinSize, IsArray, IsOptional, IsString, Length } from 'class-validator';
 
+/**
+ * Создание инструмента в личном профиле (My Tools), без привязки к проекту.
+ */
 export class CreateToolDto {
   @ApiProperty({ maxLength: 200 })
   @IsString()
   @Length(1, 200)
   name!: string;
 
-  @ApiProperty()
-  @IsInt()
-  @Min(1)
-  totalQty!: number;
-
-  @ApiPropertyOptional({ maxLength: 20 })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Length(0, 20)
-  unit?: string;
+  photoKey?: string;
+
+  @ApiPropertyOptional({ maxLength: 100, description: 'Серийный/инвентарный номер' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  serial?: string;
+}
+
+/**
+ * Создание инструмента сразу в проекте. Любой member проекта может добавить:
+ * — `ownerId` задаёт владельца (по умолчанию = текущий пользователь).
+ * Создатель автоматически становится initial-holder.
+ */
+export class CreateProjectToolDto {
+  @ApiProperty({ maxLength: 200 })
+  @IsString()
+  @Length(1, 200)
+  name!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   photoKey?: string;
 
-  /// П2.14 — серийник, опц. свободный текст
   @ApiPropertyOptional({ maxLength: 100 })
   @IsOptional()
   @IsString()
   @Length(0, 100)
   serial?: string;
 
-  /// П2.15 — сразу добавить в проект (необязательно)
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'ID владельца (member проекта). По умолчанию — текущий пользователь.',
+  })
   @IsOptional()
   @IsString()
-  projectId?: string;
+  ownerId?: string;
 }
 
 export class UpdateToolDto {
@@ -46,77 +61,31 @@ export class UpdateToolDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  totalQty?: number;
-
-  @ApiPropertyOptional({ maxLength: 20 })
-  @IsOptional()
-  @IsString()
-  @Length(0, 20)
-  unit?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsString()
   photoKey?: string;
-}
 
-export class IssueToolDto {
-  @ApiProperty()
-  @IsString()
-  toolItemId!: string;
-
-  @ApiProperty()
-  @IsString()
-  toUserId!: string;
-
-  @ApiProperty()
-  @IsInt()
-  @Min(1)
-  qty!: number;
-
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: 100 })
   @IsOptional()
   @IsString()
-  stageId?: string;
+  @Length(0, 100)
+  serial?: string;
 }
 
-export class ReturnToolDto {
-  @ApiProperty()
-  @IsInt()
-  @Min(0)
-  returnedQty!: number;
-}
-
-// ---------- П2.15 — заявка на инструмент ----------
-
-export class RequestToolDto {
-  @ApiProperty()
-  @IsString()
-  toolItemId!: string;
-
-  @ApiPropertyOptional({ description: 'Кол-во запрашиваемых единиц (default 1)' })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  qty?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  stageId?: string;
-}
-
-export class RejectRequestDto {
-  @ApiPropertyOptional({ maxLength: 500 })
-  @IsOptional()
-  @IsString()
-  @Length(0, 500)
-  comment?: string;
-}
-
-export class AddToolsToProjectDto {
+export class AttachToolsToProjectDto {
   @ApiProperty({ type: [String], description: 'IDs ToolItem из «Моих инструментов»' })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
   toolItemIds!: string[];
+}
+
+export class ClaimToolDto {
+  @ApiPropertyOptional({
+    maxLength: 200,
+    description: 'Опциональный комментарий («забрал на 3 этаж»)',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  note?: string;
 }

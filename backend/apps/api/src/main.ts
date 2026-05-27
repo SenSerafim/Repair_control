@@ -52,7 +52,7 @@ async function bootstrap(): Promise<void> {
         'OpenAPI (этот документ) — источник истины для генерации клиентов.',
       ].join('\n'),
     )
-    .setVersion('1.0.0')
+    .setVersion('2.0.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swagger);

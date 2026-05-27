@@ -7,6 +7,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../../core/config/app_providers.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../data/knowledge_repository.dart';
 import '../../domain/knowledge_asset.dart';
 import 'knowledge_video_player.dart';
@@ -138,9 +139,11 @@ class _FileTileState extends ConsumerState<_FileTile> {
       await OpenFilex.open(tempPath);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Не удалось открыть файл: $e')));
+          message: 'Не удалось открыть файл: $e',
+          kind: AppToastKind.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

@@ -18,6 +18,7 @@ class SuccessScreen extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.isError = false,
+    this.trailing,
     super.key,
   });
 
@@ -28,6 +29,7 @@ class SuccessScreen extends StatelessWidget {
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
   final bool isError;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +46,16 @@ class SuccessScreen extends StatelessWidget {
           AppSuccessBurst(
             color: isError ? AppColors.redDot : AppColors.greenDot,
           ),
-          const SizedBox(height: AppSpacing.x20),
-          Text(title, textAlign: TextAlign.center, style: AppTextStyles.h1),
+          const SizedBox(height: AppSpacing.x24),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.h1.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.n900,
+            ),
+          ),
           if (subtitle != null) ...[
             const SizedBox(height: AppSpacing.x8),
             Text(
@@ -66,6 +76,10 @@ class SuccessScreen extends StatelessWidget {
               variant: AppButtonVariant.ghost,
               onPressed: onSecondary ?? () => context.pop(),
             ),
+          ],
+          if (trailing != null) ...[
+            const SizedBox(height: AppSpacing.x16),
+            trailing!,
           ],
         ],
       ),

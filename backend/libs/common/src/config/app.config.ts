@@ -68,7 +68,7 @@ export const appConfigFactory = (env: Record<string, string | undefined>): AppCo
     accessKey: env.MINIO_ACCESS_KEY ?? 'minioadmin',
     secretKey: env.MINIO_SECRET_KEY ?? 'minioadmin',
     bucket: env.MINIO_BUCKET ?? 'repair-control',
-    presignTtlSeconds: Number(env.MINIO_PRESIGN_TTL_SECONDS ?? 300),
+    presignTtlSeconds: Number(env.MINIO_PRESIGN_TTL_SECONDS ?? 900),
     region: env.MINIO_REGION ?? 'us-east-1',
     pathStyle: env.MINIO_PATH_STYLE !== 'false',
   },

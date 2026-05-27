@@ -86,6 +86,11 @@ const mkPrisma = () => {
       // Тесты которым нужна обратная ситуация переопределяют моком.
       count: jest.fn().mockResolvedValue(0),
     },
+    approval: {
+      // submitPlan() проверяет «нет ли уже pending plan-approval» —
+      // дефолтно нет, тест может переопределить.
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     pause: {
       create: jest.fn(({ data }: any) => {
         const p = { id: `ps${++pauseSeq}`, startedAt: new Date(NOW), endedAt: null, ...data };
@@ -128,6 +133,14 @@ const mkApprovals = () =>
 
 const mkChats = () => ({ ensureStageChat: jest.fn().mockResolvedValue({}) }) as any;
 
+// MembersService нужен только для тихого WS-broadcast после assignForeman/assignMaster.
+// Тесты на create/lifecycle/reorder его не дергают — пустые моки достаточно.
+const mkMembers = () =>
+  ({
+    collectRecipientUserIds: jest.fn().mockResolvedValue([]),
+    emitMembershipChanged: jest.fn(),
+  }) as any;
+
 describe('StagesService.create', () => {
   it('создаёт этап и записывает в ленту', async () => {
     const { prisma, projects, stages } = mkPrisma();
@@ -141,6 +154,7 @@ describe('StagesService.create', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -165,6 +179,7 @@ describe('StagesService.create', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     await expect(svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u1' })).rejects.toThrow(
       ConflictError,
@@ -182,6 +197,7 @@ describe('StagesService.create', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     await expect(
       svc.create({ projectId: 'p-missing', title: 'X', actorUserId: 'u1' }),
@@ -205,6 +221,7 @@ describe('StagesService.create', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     await svc.create({
       projectId: 'p1',
@@ -231,6 +248,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -251,6 +269,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -272,6 +291,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -293,6 +313,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -331,6 +352,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -352,6 +374,7 @@ describe('StagesService lifecycle + deadline recalculation', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await expect(svc.pause(s.id, 'u', 'materials')).rejects.toThrow(InvalidInputError);
@@ -371,6 +394,7 @@ describe('StagesService.reorder', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const a = await svc.create({ projectId: 'p1', title: 'A', actorUserId: 'u' });
     const b = await svc.create({ projectId: 'p1', title: 'B', actorUserId: 'u' });
@@ -398,6 +422,7 @@ describe('StagesService.reorder', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     await expect(svc.reorder('p1', [{ id: 's-unknown', orderIndex: 0 }], 'u')).rejects.toThrow(
       InvalidInputError,
@@ -424,6 +449,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await expect(svc.start(s.id, 'u')).rejects.toThrow(ConflictError);
@@ -446,6 +472,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -469,6 +496,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     // mkPrisma по умолчанию проставляет foremanIds=['fm-default']; для
@@ -495,6 +523,7 @@ describe('StagesService.start — plan approval guard (gaps §3.2)', () => {
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'u' });
     await svc.start(s.id, 'u');
@@ -516,6 +545,7 @@ describe('StagesService.update — H.1: правка бюджета после �
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -548,6 +578,7 @@ describe('StagesService.update — H.1: правка бюджета после �
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -576,6 +607,7 @@ describe('StagesService.update — H.2: замена foreman на активно
       clock,
       mkApprovals(),
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({
       projectId: 'p1',
@@ -622,6 +654,7 @@ describe('StagesService.sendToReview — создаёт Approval scope=stage_acc
       clock,
       approvals,
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
     await svc.start(s.id, 'f1');
@@ -635,6 +668,83 @@ describe('StagesService.sendToReview — создаёт Approval scope=stage_acc
         requestedById: 'f1',
       }),
     );
+  });
+
+  it('submitPlan создаёт approval scope=plan c stageId, addresseeId=ownerId', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+      mkMembers(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    await svc.submitPlan(s.id, 'f1');
+    expect(approvals.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'plan',
+        projectId: 'p1',
+        stageId: s.id,
+        addresseeId: 'cust-owner',
+        requestedById: 'f1',
+      }),
+    );
+    // На самом этапе пока planApproved=false (выставится при approve).
+    expect(stages.get(s.id).planApproved).toBeFalsy();
+  });
+
+  it('submitPlan идемпотентен: повторный вызов возвращает существующий pending approval', async () => {
+    const { prisma, projects } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    (prisma as any).approval.findFirst = jest.fn().mockResolvedValue({
+      id: 'a-existing',
+      scope: 'plan',
+      status: 'pending',
+    });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+      mkMembers(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    const result = await svc.submitPlan(s.id, 'f1');
+    expect((result as any).id).toBe('a-existing');
+    expect(approvals.request).not.toHaveBeenCalled();
+  });
+
+  it('submitPlan на уже одобренном плане → ConflictError', async () => {
+    const { prisma, projects, stages } = mkPrisma();
+    projects.set('p1', { id: 'p1', status: 'active', ownerId: 'cust-owner' });
+    const clock = new FixedClock(NOW);
+    const approvals = mkApprovals();
+    const svc = new StagesService(
+      prisma,
+      mkFeed(),
+      new StageLifecycle(),
+      mkCalc(),
+      clock,
+      approvals,
+      mkChats(),
+      mkMembers(),
+    );
+    const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
+    stages.get(s.id).planApproved = true;
+    await expect(svc.submitPlan(s.id, 'f1')).rejects.toThrow(ConflictError);
+    expect(approvals.request).not.toHaveBeenCalled();
   });
 
   it('блокирует sendToReview если есть незавершённые шаги (ТЗ §2.4)', async () => {
@@ -652,6 +762,7 @@ describe('StagesService.sendToReview — создаёт Approval scope=stage_acc
       clock,
       approvals,
       mkChats(),
+      mkMembers(),
     );
     const s = await svc.create({ projectId: 'p1', title: 'X', actorUserId: 'f1' });
     await svc.start(s.id, 'f1');

@@ -25,29 +25,30 @@ class BudgetHeroCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
-        color: AppColors.n0,
+        gradient: AppGradients.surfaceCard,
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.n200),
+        boxShadow: AppShadows.shCard,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Общий бюджет · план',
+            'ОБЩИЙ БЮДЖЕТ · ПЛАН',
             style: AppTextStyles.tiny.copyWith(
               color: AppColors.n400,
               fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
+              letterSpacing: 0.6,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             Money.format(total.planned),
             style: AppTextStyles.screenTitle.copyWith(
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: FontWeight.w900,
               color: AppColors.n900,
-              letterSpacing: -1,
+              letterSpacing: -1.2,
             ),
           ),
           const SizedBox(height: AppSpacing.x6),
@@ -109,6 +110,12 @@ class BudgetHeroCard extends StatelessWidget {
                           colors: [AppColors.brand, AppColors.greenDot],
                         ),
                   borderRadius: BorderRadius.circular(3),
+                  border: const Border(
+                    top: BorderSide(
+                      color: AppShadows.innerHighlight,
+                      width: 1,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -154,9 +161,9 @@ class _MiniCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = bucket.overSpent ? AppColors.redDot : fillColor;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
+      padding: const EdgeInsets.all(AppSpacing.x14),
       decoration: BoxDecoration(
-        color: AppColors.n0,
+        gradient: AppGradients.surfaceCard,
         borderRadius: BorderRadius.circular(AppRadius.r12),
         border: Border.all(color: AppColors.n200),
       ),
@@ -196,12 +203,12 @@ class _MiniCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Container(
-            height: 4,
+            height: 5,
             decoration: BoxDecoration(
               color: AppColors.n100,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(3),
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
@@ -209,7 +216,13 @@ class _MiniCard extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(3),
+                  border: const Border(
+                    top: BorderSide(
+                      color: AppShadows.innerHighlight,
+                      width: 1,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -9,7 +9,9 @@ import '../../../shared/widgets/widgets.dart';
 import '../application/tools_controller.dart';
 import '../domain/tool.dart';
 
-/// s-profile-tools — список «Мои инструменты» со stat-bar и swipe-to-delete.
+/// «Мои инструменты» в профиле пользователя. Self-custody модель:
+/// здесь — только личные инструменты, НЕ привязанные к проектам.
+/// Добавление в проект — отдельным флоу на доске проекта.
 class MyToolsScreen extends ConsumerWidget {
   const MyToolsScreen({super.key});
 
@@ -35,25 +37,19 @@ class MyToolsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(myToolsProvider),
         ),
         data: (tools) {
-          final total = tools.length;
-          final issued = tools.where((t) => t.issuedQty > 0).length;
-          final inStock = tools.where((t) => t.availableQty > 0).length;
-
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(myToolsProvider),
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
               children: [
-                _StatBar(total: total, issued: issued, inStock: inStock),
-                const SizedBox(height: AppSpacing.x12),
-                _Hint(),
+                _Hint(count: tools.length),
                 const SizedBox(height: AppSpacing.x16),
                 if (tools.isEmpty)
                   AppEmptyState(
                     title: 'Инструментов ещё нет',
                     subtitle:
-                        'Добавьте свой инструмент, чтобы выдавать '
-                        'его мастерам на объекте.',
+                        'Добавьте свой инструмент — его можно будет добавить '
+                        'в любой ваш проект одним нажатием.',
                     icon: PhosphorIconsFill.wrench,
                     actionLabel: 'Добавить',
                     onAction: () => context.push(AppRoutes.profileToolAdd),
@@ -83,14 +79,6 @@ class MyToolsScreen extends ConsumerWidget {
     WidgetRef ref,
     ToolItem tool,
   ) async {
-    if (tool.issuedQty > 0) {
-      AppToast.show(
-        context,
-        message: 'Нельзя удалить — инструмент выдан',
-        kind: AppToastKind.error,
-      );
-      return;
-    }
     final ok = await showAppBottomSheet<bool>(
       context: context,
       child: Builder(
@@ -132,101 +120,10 @@ class MyToolsScreen extends ConsumerWidget {
   }
 }
 
-class _StatBar extends StatelessWidget {
-  const _StatBar({
-    required this.total,
-    required this.issued,
-    required this.inStock,
-  });
-
-  final int total;
-  final int issued;
-  final int inStock;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _Stat(
-            value: '$total',
-            label: 'ВСЕГО',
-            bg: AppColors.n0,
-            color: AppColors.n800,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _Stat(
-            value: '$issued',
-            label: 'ВЫДАНО',
-            bg: AppColors.yellowBg,
-            color: AppColors.yellowText,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _Stat(
-            value: '$inStock',
-            label: 'НА СКЛАДЕ',
-            bg: AppColors.greenLight,
-            color: AppColors.greenDark,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.value,
-    required this.label,
-    required this.bg,
-    required this.color,
-  });
-
-  final String value;
-  final String label;
-  final Color bg;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        boxShadow: AppShadows.sh1,
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: color.withValues(alpha: 0.75),
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _Hint extends StatelessWidget {
+  const _Hint({required this.count});
+  final int count;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -240,10 +137,12 @@ class _Hint extends StatelessWidget {
         children: [
           Icon(PhosphorIconsRegular.info, size: 16, color: AppColors.brand),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Список переносится между проектами. Свайп влево — удалить.',
-              style: TextStyle(
+              count == 0
+                  ? 'Здесь будут ваши инструменты. Их можно добавить в проект на доске инструментов проекта.'
+                  : 'Всего инструментов: $count. На доске проекта добавьте их одним нажатием.',
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: AppColors.n700,
@@ -270,10 +169,6 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final issued = tool.issuedQty > 0;
-    final iconBg = issued ? AppColors.yellowBg : AppColors.greenLight;
-    final iconColor = issued ? AppColors.yellowText : AppColors.greenDark;
-
     return Dismissible(
       key: ValueKey('tool-${tool.id}'),
       direction: DismissDirection.endToStart,
@@ -310,12 +205,12 @@ class _ToolCard extends StatelessWidget {
                   height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: iconBg,
+                    color: AppColors.brandLight,
                     borderRadius: BorderRadius.circular(AppRadius.r12),
                   ),
                   child: Icon(
                     PhosphorIconsFill.wrench,
-                    color: iconColor,
+                    color: AppColors.brand,
                     size: 20,
                   ),
                 ),
@@ -334,55 +229,28 @@ class _ToolCard extends StatelessWidget {
                           letterSpacing: -0.1,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Кол-во: ${tool.totalQty}${tool.unit != null ? ' ${tool.unit}' : ''} · '
-                        '${issued ? 'Выдан' : 'На складе'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.n400,
+                      if (tool.serial != null && tool.serial!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '№ ${tool.serial}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.n400,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
-                _Pill(
-                  text: issued ? 'Выдан' : 'На складе',
-                  bg: iconBg,
-                  color: iconColor,
+                Icon(
+                  PhosphorIconsRegular.caretRight,
+                  size: 18,
+                  color: AppColors.n300,
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.text, required this.bg, required this.color});
-
-  final String text;
-  final Color bg;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          color: color,
-          letterSpacing: 0.4,
         ),
       ),
     );

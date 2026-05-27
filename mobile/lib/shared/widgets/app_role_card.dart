@@ -99,22 +99,52 @@ class AppRoleCard extends StatelessWidget {
     final borderColor = selected ? AppColors.brand : AppColors.n200;
     final bgColor = selected ? AppColors.brandLight : AppColors.n0;
 
-    return Material(
-      color: bgColor,
-      borderRadius: AppRadius.card,
-      child: InkWell(
+    return AnimatedContainer(
+      duration: AppDurations.normal,
+      curve: AppCurves.soft,
+      decoration: BoxDecoration(
         borderRadius: AppRadius.card,
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? AppSpacing.x8 : AppSpacing.x14,
-            vertical: AppSpacing.x14,
+        boxShadow: selected
+            ? const [
+                BoxShadow(
+                  color: Color(0x294F6EF7),
+                  offset: Offset(0, 8),
+                  blurRadius: 20,
+                ),
+                BoxShadow(
+                  color: Color(0x1A4F6EF7),
+                  blurRadius: 0,
+                  spreadRadius: 4,
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: bgColor,
+        borderRadius: AppRadius.card,
+        child: InkWell(
+          borderRadius: AppRadius.card,
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: AppDurations.normal,
+            curve: AppCurves.soft,
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? AppSpacing.x8 : AppSpacing.x14,
+              vertical: AppSpacing.x14,
+            ),
+            decoration: BoxDecoration(
+              gradient: selected
+                  ? const LinearGradient(
+                      begin: Alignment(-0.6, -1),
+                      end: Alignment(0.6, 1),
+                      colors: [Color(0xFFEEF3FF), Color(0xFFF4F7FF)],
+                    )
+                  : null,
+              border: Border.all(color: borderColor, width: 2),
+              borderRadius: AppRadius.card,
+            ),
+            child: compact ? _buildCompact() : _buildRow(),
           ),
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: 2),
-            borderRadius: AppRadius.card,
-          ),
-          child: compact ? _buildCompact() : _buildRow(),
         ),
       ),
     );
@@ -194,7 +224,7 @@ class AppRoleCard extends StatelessWidget {
           ),
         ),
         if (onTap != null && !selected)
-          Icon(
+          const Icon(
             PhosphorIconsRegular.caretRight,
             size: 18,
             color: AppColors.n300,
@@ -218,14 +248,28 @@ class AppRoleCard extends StatelessWidget {
   }
 
   Widget _icon(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: gradient ?? AppGradients.avatarGrey,
-        borderRadius: BorderRadius.circular(12),
+    return AnimatedScale(
+      duration: AppDurations.normal,
+      curve: AppCurves.spring,
+      scale: selected ? 1.05 : 1,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: gradient ?? AppGradients.avatarGrey,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x664F6EF7),
+                    offset: Offset(0, 6),
+                    blurRadius: 18,
+                  ),
+                ]
+              : null,
+        ),
+        child: Icon(icon, color: AppColors.n0, size: size * 0.45),
       ),
-      child: Icon(icon, color: AppColors.n0, size: size * 0.45),
     );
   }
 }

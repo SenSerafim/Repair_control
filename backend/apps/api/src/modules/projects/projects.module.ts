@@ -20,6 +20,6 @@ import { ProgressCalculator } from '../stages/progress-calculator';
     // подключаем его как локальный provider — без forwardRef и циклов.
     ProgressCalculator,
   ],
-  exports: [ProjectsService],
+  exports: [ProjectsService, MembersService],
 })
 export class ProjectsModule {}

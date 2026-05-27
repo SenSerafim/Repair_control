@@ -38,6 +38,28 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     return TeamState(members: members, invitations: invitations);
   }
 
+  // Тянет канонический state с сервера и записывает в `state` напрямую (без
+  // invalidateSelf — чтобы избежать flicker в `AsyncLoading` у уже открытых
+  // экранов). Вызывается после каждой мутации: гарантирует, что и текущий
+  // экран команды, и все остальные, которые watch'ат `teamControllerProvider`
+  // (stage assign-sheet, finance picker, chat picker, etc.), видят
+  // изменения без перезахода в приложение, даже если WS-broadcast
+  // `project:membership_changed` был потерян.
+  Future<void> _refresh() async {
+    try {
+      final repo = ref.read(teamRepositoryProvider);
+      final (members, invitations) = await (
+        repo.members(arg),
+        repo.listInvitations(arg),
+      ).wait;
+      state = AsyncData(
+        TeamState(members: members, invitations: invitations),
+      );
+    } catch (_) {
+      // Мутация уже прошла на сервере; не валим тост-flow из-за refresh-сбоя.
+    }
+  }
+
   Future<AuthFailure?> addMember({
     required String userId,
     required MembershipRole role,
@@ -45,7 +67,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     List<String>? stageIds,
   }) async {
     try {
-      final m = await ref
+      await ref
           .read(teamRepositoryProvider)
           .addMember(
             projectId: arg,
@@ -54,10 +76,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
             permissions: permissions,
             stageIds: stageIds,
           );
-      final current = state.value;
-      if (current != null) {
-        state = AsyncData(current.copyWith(members: [...current.members, m]));
-      }
+      await _refresh();
       return null;
     } on TeamException catch (e) {
       return e.failure;
@@ -69,16 +88,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
       await ref
           .read(teamRepositoryProvider)
           .removeMember(projectId: arg, membershipId: membershipId);
-      final current = state.value;
-      if (current != null) {
-        state = AsyncData(
-          current.copyWith(
-            members: current.members
-                .where((m) => m.id != membershipId)
-                .toList(),
-          ),
-        );
-      }
+      await _refresh();
       return null;
     } on TeamException catch (e) {
       return e.failure;
@@ -90,21 +100,14 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     required Map<String, bool> permissions,
   }) async {
     try {
-      final m = await ref
+      await ref
           .read(teamRepositoryProvider)
           .updateMember(
             projectId: arg,
             membershipId: membershipId,
             permissions: permissions,
           );
-      final current = state.value;
-      if (current != null) {
-        state = AsyncData(
-          current.copyWith(
-            members: current.members.map((x) => x.id == m.id ? m : x).toList(),
-          ),
-        );
-      }
+      await _refresh();
       return null;
     } on TeamException catch (e) {
       return e.failure;
@@ -116,15 +119,10 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     required MembershipRole role,
   }) async {
     try {
-      final inv = await ref
+      await ref
           .read(teamRepositoryProvider)
           .invite(projectId: arg, phone: phone, role: role);
-      final current = state.value;
-      if (current != null) {
-        state = AsyncData(
-          current.copyWith(invitations: [inv, ...current.invitations]),
-        );
-      }
+      await _refresh();
       return null;
     } on TeamException catch (e) {
       return e.failure;
@@ -136,16 +134,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
       await ref
           .read(teamRepositoryProvider)
           .cancelInvitation(projectId: arg, invitationId: invitationId);
-      final current = state.value;
-      if (current != null) {
-        state = AsyncData(
-          current.copyWith(
-            invitations: current.invitations
-                .where((i) => i.id != invitationId)
-                .toList(),
-          ),
-        );
-      }
+      await _refresh();
       return null;
     } on TeamException catch (e) {
       return e.failure;

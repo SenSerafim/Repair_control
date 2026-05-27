@@ -7,18 +7,11 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/tools_controller.dart';
 
-/// s-tool-add — форма добавления инструмента (Название/Кол-во/Описание).
-///
-/// Если открыт из контекста проекта (через `?projectId=...`) — новый
-/// инструмент сразу привязывается к проекту и виден на «Инструменты
-/// проекта». Без projectId — попадает только в «Мои инструменты»
-/// (профильный flow, по умолчанию). QA-баг #8.
+/// Форма добавления инструмента в личный профиль (My Tools).
+/// Self-custody модель (2026-05-12): qty=1 — каждый инструмент = одна запись.
+/// Добавление в проект делается отдельным флоу на доске инструментов проекта.
 class AddToolScreen extends ConsumerStatefulWidget {
-  const AddToolScreen({this.projectId, super.key});
-
-  /// Опциональный контекст проекта. Передаётся через GoRouter
-  /// query-param (см. AppRoutes.profileToolAdd).
-  final String? projectId;
+  const AddToolScreen({super.key});
 
   @override
   ConsumerState<AddToolScreen> createState() => _AddToolScreenState();
@@ -26,22 +19,18 @@ class AddToolScreen extends ConsumerStatefulWidget {
 
 class _AddToolScreenState extends ConsumerState<AddToolScreen> {
   final _name = TextEditingController();
-  final _qty = TextEditingController(text: '1');
-  // П2.14 — серийный/инвентарный номер. Свободный текст, опц.
   final _serial = TextEditingController();
   bool _busy = false;
 
   @override
   void dispose() {
     _name.dispose();
-    _qty.dispose();
     _serial.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final name = _name.text.trim();
-    final qty = int.tryParse(_qty.text);
     if (name.isEmpty) {
       AppToast.show(
         context,
@@ -50,34 +39,14 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
       );
       return;
     }
-    if (qty == null || qty <= 0) {
-      AppToast.show(
-        context,
-        message: 'Количество — целое > 0',
-        kind: AppToastKind.error,
-      );
-      return;
-    }
     setState(() => _busy = true);
-    final failure = await ref
-        .read(myToolsProvider.notifier)
-        .create(
+    final failure = await ref.read(myToolsProvider.notifier).create(
           name: name,
-          totalQty: qty,
           serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),
-          projectId: widget.projectId,
         );
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure == null) {
-      // QA-баг #8: если инструмент создан в контексте проекта,
-      // принудительно обновляем registry — иначе экран
-      // «Инструменты проекта» отрисовывает stale empty-state и юзер
-      // считает, что новый инструмент «не отображается».
-      final projectId = widget.projectId;
-      if (projectId != null && projectId.isNotEmpty) {
-        ref.invalidate(projectToolRegistryProvider(projectId));
-      }
       AppToast.show(context, message: 'Добавлено', kind: AppToastKind.success);
       context.pop();
     } else {
@@ -105,25 +74,18 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
           ),
           const SizedBox(height: AppSpacing.x12),
           AppInput(
-            controller: _qty,
-            label: 'Количество',
-            placeholder: '1',
-            keyboardType: TextInputType.number,
+            controller: _serial,
+            label: 'Серийный номер',
+            placeholder: 'Опционально, например: SN-12345',
           ),
           const SizedBox(height: 4),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 8),
             child: Text(
-              'Если нужно учитывать каждый инструмент отдельно — добавьте каждую единицу '
-              'своей записью с уникальным серийным номером.',
+              'Если у вас несколько одинаковых инструментов — добавьте каждый '
+              'отдельной записью, чтобы их можно было отслеживать независимо.',
               style: TextStyle(fontSize: 11, color: AppColors.n400),
             ),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          AppInput(
-            controller: _serial,
-            label: 'Серийный номер',
-            placeholder: 'Опционально, например: SN-12345',
           ),
           const SizedBox(height: AppSpacing.x32),
           AppButton(

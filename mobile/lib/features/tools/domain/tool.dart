@@ -1,141 +1,188 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+/// Self-custody модель инструментов (2026-05-12).
+///
+/// Каждый ToolItem — один физический инструмент. `ownerId` неизменен,
+/// `currentHolderId` меняется только через self-claim (никто не назначает
+/// инструмент другому).
 
-import '../../../shared/widgets/status_pill.dart';
+class PublicUser {
+  const PublicUser({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    this.phone,
+    this.avatarUrl,
+  });
 
-part 'tool.freezed.dart';
+  final String id;
+  final String firstName;
+  final String lastName;
 
-enum ToolIssuanceStatus {
-  /// П2.15 — заявка на инструмент создана, ожидает approve владельца.
-  requested,
-  approved,
-  rejected,
-  issued,
-  confirmed,
-  returnRequested,
-  returned;
+  /// Контактный телефон. Бекенд отдаёт его всем member-ам проекта (Tools API
+  /// согласован с MembersService). Может быть пустым/null для устаревших ответов.
+  final String? phone;
+  final String? avatarUrl;
 
-  static ToolIssuanceStatus fromString(String? raw) {
-    switch (raw) {
-      case 'requested':
-        return ToolIssuanceStatus.requested;
-      case 'approved':
-        return ToolIssuanceStatus.approved;
-      case 'rejected':
-        return ToolIssuanceStatus.rejected;
-      case 'confirmed':
-        return ToolIssuanceStatus.confirmed;
-      case 'return_requested':
-        return ToolIssuanceStatus.returnRequested;
-      case 'returned':
-        return ToolIssuanceStatus.returned;
-      case 'issued':
-      default:
-        return ToolIssuanceStatus.issued;
-    }
+  /// «Иван Петров» / «Иван» / «Петров» / id-fallback.
+  String get displayName {
+    final f = firstName.trim();
+    final l = lastName.trim();
+    if (f.isEmpty && l.isEmpty) return id;
+    return [f, l].where((s) => s.isNotEmpty).join(' ');
   }
 
-  String get apiValue => switch (this) {
-    ToolIssuanceStatus.requested => 'requested',
-    ToolIssuanceStatus.approved => 'approved',
-    ToolIssuanceStatus.rejected => 'rejected',
-    ToolIssuanceStatus.issued => 'issued',
-    ToolIssuanceStatus.confirmed => 'confirmed',
-    ToolIssuanceStatus.returnRequested => 'return_requested',
-    ToolIssuanceStatus.returned => 'returned',
-  };
+  /// Инициалы для аватара-плейсхолдера: «ИП» / «И» / «?».
+  String get initials {
+    final f = firstName.trim();
+    final l = lastName.trim();
+    String pick(String s) => s.isEmpty ? '' : s.substring(0, 1).toUpperCase();
+    final out = '${pick(f)}${pick(l)}';
+    return out.isEmpty ? '?' : out;
+  }
 
-  String get displayName => switch (this) {
-    ToolIssuanceStatus.requested => 'Запрошен',
-    ToolIssuanceStatus.approved => 'Одобрен',
-    ToolIssuanceStatus.rejected => 'Отклонён',
-    ToolIssuanceStatus.issued => 'Выдан',
-    ToolIssuanceStatus.confirmed => 'Подтверждён',
-    ToolIssuanceStatus.returnRequested => 'Возврат',
-    ToolIssuanceStatus.returned => 'Возвращён',
-  };
+  bool get hasPhone => (phone ?? '').trim().isNotEmpty;
 
-  Semaphore get semaphore => switch (this) {
-    ToolIssuanceStatus.requested => Semaphore.yellow,
-    ToolIssuanceStatus.approved => Semaphore.blue,
-    ToolIssuanceStatus.rejected => Semaphore.red,
-    ToolIssuanceStatus.issued => Semaphore.blue,
-    ToolIssuanceStatus.confirmed => Semaphore.green,
-    ToolIssuanceStatus.returnRequested => Semaphore.yellow,
-    ToolIssuanceStatus.returned => Semaphore.plan,
-  };
+  static PublicUser? parseOrNull(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    return PublicUser(
+      id: json['id'] as String,
+      firstName: json['firstName'] as String? ?? '',
+      lastName: json['lastName'] as String? ?? '',
+      phone: json['phone'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PublicUser &&
+          other.id == id &&
+          other.firstName == firstName &&
+          other.lastName == lastName &&
+          other.phone == phone &&
+          other.avatarUrl == avatarUrl);
+
+  @override
+  int get hashCode => Object.hash(id, firstName, lastName, phone, avatarUrl);
 }
 
-@freezed
-class ToolItem with _$ToolItem {
-  const factory ToolItem({
-    required String id,
-    required String ownerId,
-    required String name,
-    required int totalQty,
-    required int issuedQty,
-    String? unit,
+class ToolItem {
+  const ToolItem({
+    required this.id,
+    required this.ownerId,
+    required this.currentHolderId,
+    required this.name,
+    this.photoKey,
+    this.serial,
+    this.projectId,
+    this.owner,
+    this.holder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String ownerId;
+
+  /// У кого инструмент сейчас. Меняется только через self-claim.
+  final String currentHolderId;
+  final String name;
+  final String? photoKey;
+  final String? serial;
+
+  /// Если задан — инструмент привязан к проекту и виден всем участникам.
+  /// null — инструмент только в личном профиле владельца (My Tools).
+  final String? projectId;
+
+  /// Enriched-поля от бекенда (включены в GET /projects/:id/tools).
+  /// На /me/tools обычно null — клиент сам резолвит из users-кеша.
+  final PublicUser? owner;
+  final PublicUser? holder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  bool get isInProject => projectId != null;
+  bool isHeldBy(String userId) => currentHolderId == userId;
+  bool isOwnedBy(String userId) => ownerId == userId;
+
+  ToolItem copyWith({
+    String? name,
+    String? currentHolderId,
     String? photoKey,
-
-    /// П2.14 — серийный/инвентарный номер.
     String? serial,
-
-    /// П2.15 — если задан, инструмент привязан к проекту (виден в реестре).
     String? projectId,
-    required DateTime createdAt,
-    required DateTime updatedAt,
-  }) = _ToolItem;
+    PublicUser? owner,
+    PublicUser? holder,
+    DateTime? updatedAt,
+  }) => ToolItem(
+    id: id,
+    ownerId: ownerId,
+    currentHolderId: currentHolderId ?? this.currentHolderId,
+    name: name ?? this.name,
+    photoKey: photoKey ?? this.photoKey,
+    serial: serial ?? this.serial,
+    projectId: projectId ?? this.projectId,
+    owner: owner ?? this.owner,
+    holder: holder ?? this.holder,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 
   static ToolItem parse(Map<String, dynamic> json) => ToolItem(
     id: json['id'] as String,
     ownerId: json['ownerId'] as String? ?? '',
+    currentHolderId:
+        json['currentHolderId'] as String? ?? json['ownerId'] as String? ?? '',
     name: json['name'] as String,
-    totalQty: (json['totalQty'] as num?)?.toInt() ?? 0,
-    issuedQty: (json['issuedQty'] as num?)?.toInt() ?? 0,
-    unit: json['unit'] as String?,
     photoKey: json['photoKey'] as String?,
     serial: json['serial'] as String?,
     projectId: json['projectId'] as String?,
+    owner: PublicUser.parseOrNull(json['_owner'] as Map<String, dynamic>?),
+    holder: PublicUser.parseOrNull(json['_holder'] as Map<String, dynamic>?),
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
   );
 }
 
-extension ToolItemX on ToolItem {
-  int get availableQty => totalQty - issuedQty;
-  bool get isAllIssued => issuedQty >= totalQty;
-}
+/// Иммутабельное событие передачи инструмента.
+/// `previousHolderId` = null у первого события (initial при добавлении в проект).
+class ToolCustodyEvent {
+  const ToolCustodyEvent({
+    required this.id,
+    required this.toolItemId,
+    required this.projectId,
+    required this.holderId,
+    this.previousHolderId,
+    this.note,
+    this.holder,
+    this.previousHolder,
+    required this.createdAt,
+  });
 
-@freezed
-class ToolIssuance with _$ToolIssuance {
-  const factory ToolIssuance({
-    required String id,
-    required String toolItemId,
-    String? projectId,
-    String? stageId,
-    required String toUserId,
-    required String issuedById,
-    required int qty,
-    int? returnedQty,
-    required ToolIssuanceStatus status,
-    required DateTime createdAt,
-    required DateTime updatedAt,
-    ToolItem? tool,
-  }) = _ToolIssuance;
+  final String id;
+  final String toolItemId;
+  final String projectId;
+  final String holderId;
+  final String? previousHolderId;
+  final String? note;
+  final PublicUser? holder;
+  final PublicUser? previousHolder;
+  final DateTime createdAt;
 
-  static ToolIssuance parse(Map<String, dynamic> json) => ToolIssuance(
+  /// true — самое первое событие (инструмент только что появился в проекте).
+  bool get isInitial => previousHolderId == null;
+
+  static ToolCustodyEvent parse(Map<String, dynamic> json) => ToolCustodyEvent(
     id: json['id'] as String,
     toolItemId: json['toolItemId'] as String,
-    projectId: json['projectId'] as String?,
-    stageId: json['stageId'] as String?,
-    toUserId: json['toUserId'] as String? ?? '',
-    issuedById: json['issuedById'] as String? ?? '',
-    qty: (json['qty'] as num?)?.toInt() ?? 0,
-    returnedQty: (json['returnedQty'] as num?)?.toInt(),
-    status: ToolIssuanceStatus.fromString(json['status'] as String?),
+    projectId: json['projectId'] as String,
+    holderId: json['holderId'] as String,
+    previousHolderId: json['previousHolderId'] as String?,
+    note: json['note'] as String?,
+    holder: PublicUser.parseOrNull(json['_holder'] as Map<String, dynamic>?),
+    previousHolder: PublicUser.parseOrNull(
+      json['_previousHolder'] as Map<String, dynamic>?,
+    ),
     createdAt: DateTime.parse(json['createdAt'] as String),
-    updatedAt: DateTime.parse(json['updatedAt'] as String),
-    tool: json['tool'] is Map<String, dynamic>
-        ? ToolItem.parse(json['tool'] as Map<String, dynamic>)
-        : null,
   );
 }

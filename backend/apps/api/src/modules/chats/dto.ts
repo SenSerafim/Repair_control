@@ -99,7 +99,14 @@ export interface SerializedChat {
   createdById: string;
   createdAt: Date;
   participants: { userId: string; joinedAt: Date; leftAt: Date | null }[];
-  unreadCount?: number;
+  /** Метаданные последнего сообщения — для inbox-превью и сортировки. */
+  lastMessageAt: Date | null;
+  lastMessagePreview: string | null;
+  lastMessageAuthorId: string | null;
+  /** Cnt сообщений с createdAt > GREATEST(joinedAt, lastReadAt), не от
+   *  текущего пользователя и не удалённых. Считается на сервере одним
+   *  батч-запросом, чтобы у клиента не было N+1 и рассинхрона счётчиков. */
+  unreadCount: number;
 }
 
 export interface SerializedMessage {

@@ -9,6 +9,7 @@ import { QUEUE_EXPORTS } from '../queues/queues.module';
 import { ExportService } from './export.service';
 import { ExportsController } from './exports.controller';
 import { PdfRendererService } from './pdf-renderer.service';
+import { ProjectReportPdfService } from './project-report-pdf.service';
 import { ZipPackerService } from './zip-packer.service';
 import { ExportProcessor } from './export-pdf.processor';
 
@@ -23,7 +24,13 @@ import { ExportProcessor } from './export-pdf.processor';
     BullModule.registerQueue({ name: QUEUE_EXPORTS }),
   ],
   controllers: [ExportsController],
-  providers: [ExportService, PdfRendererService, ZipPackerService, ExportProcessor],
+  providers: [
+    ExportService,
+    PdfRendererService,
+    ProjectReportPdfService,
+    ZipPackerService,
+    ExportProcessor,
+  ],
   exports: [ExportService],
 })
 export class ExportsModule {}

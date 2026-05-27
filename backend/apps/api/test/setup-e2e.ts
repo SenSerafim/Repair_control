@@ -62,13 +62,12 @@ export async function truncateAll(prisma: PrismaService): Promise<void> {
     'Chat',
     // S4
     'IdempotencyRecord',
-    'PaymentDispute',
     'Payment',
     'MaterialDispute',
     'MaterialItem',
     'MaterialRequest',
     'SelfPurchase',
-    'ToolIssuance',
+    'ToolCustodyEvent',
     'ToolItem',
     // S3
     'ApprovalAttachment',

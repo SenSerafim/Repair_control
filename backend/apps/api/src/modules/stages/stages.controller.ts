@@ -85,20 +85,10 @@ export class StagesController {
     return this.stages.get(stageId);
   }
 
-  @Patch(':stageId')
-  @RequireAccess({
-    action: 'stage.manage',
-    resource: 'stage',
-    resourceIdFrom: { source: 'params', key: 'stageId' },
-  })
-  async update(
-    @Req() req: { user: AuthenticatedUser },
-    @Param('stageId') stageId: string,
-    @Body() dto: UpdateStageDto,
-  ) {
-    return this.stages.update(stageId, { ...dto, actorUserId: req.user.userId });
-  }
-
+  // ВАЖНО: статический маршрут 'reorder' объявлен ДО динамического ':stageId',
+  // иначе express-роутер NestJS подхватит PATCH /stages/reorder как
+  // update(stageId='reorder') — AccessGuard вызовет hydrateStageContext
+  // с несуществующим id, membership/owner не подтянутся, и RBAC вернёт 403.
   @Patch('reorder')
   @RequireAccess({
     action: 'stage.manage',
@@ -111,6 +101,20 @@ export class StagesController {
     @Body() dto: ReorderStagesDto,
   ) {
     return this.stages.reorder(projectId, dto.items, req.user.userId);
+  }
+
+  @Patch(':stageId')
+  @RequireAccess({
+    action: 'stage.manage',
+    resource: 'stage',
+    resourceIdFrom: { source: 'params', key: 'stageId' },
+  })
+  async update(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('stageId') stageId: string,
+    @Body() dto: UpdateStageDto,
+  ) {
+    return this.stages.update(stageId, { ...dto, actorUserId: req.user.userId });
   }
 
   @Post(':stageId/start')
@@ -155,5 +159,24 @@ export class StagesController {
   })
   async sendToReview(@Req() req: { user: AuthenticatedUser }, @Param('stageId') stageId: string) {
     return this.stages.sendToReview(stageId, req.user.userId);
+  }
+
+  /**
+   * П2.3 / 4.2 — «Отправить план на согласование заказчику».
+   *
+   * Доступно бригадиру (или представителю с canEditStages — оба покрываются
+   * правом `stage.manage`). Мастер блокируется внутри ApprovalsService.validate
+   * — у нас нет отдельной guard-action на это (план семантически = `stage.manage`
+   * + scope=plan). Endpoint идемпотентный: повторный вызов возвращает уже
+   * существующий pending plan-approval для этого этапа.
+   */
+  @Post(':stageId/submit-plan')
+  @RequireAccess({
+    action: 'stage.manage',
+    resource: 'stage',
+    resourceIdFrom: { source: 'params', key: 'stageId' },
+  })
+  async submitPlan(@Req() req: { user: AuthenticatedUser }, @Param('stageId') stageId: string) {
+    return this.stages.submitPlan(stageId, req.user.userId);
   }
 }

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_providers.dart';
+import '../../../core/realtime/socket_service.dart';
 import '../../../core/storage/offline_queue.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../projects/application/project_controller.dart';
@@ -35,12 +38,54 @@ class StepsKey {
 }
 
 class StepsController extends FamilyAsyncNotifier<List<Step>, StepsKey> {
+  StreamSubscription<dynamic>? _stepSub;
+  StreamSubscription<dynamic>? _substepSub;
+  Timer? _refreshDebounce;
+
   @override
   Future<List<Step>> build(StepsKey key) async {
+    final socket = ref.read(socketServiceProvider);
+    // step:changed по этому этапу → перезагрузить список шагов.
+    _stepSub = socket.on(SocketEvents.stepChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != key.projectId) return;
+      if (payload['stageId']?.toString() != key.stageId) return;
+      _scheduleRefresh();
+    });
+    // substep:changed — влияет на progressCache, поэтому тоже триггерим
+    // обновление списка шагов. Конкретный шаг сам обновится через
+    // stepDetailController.
+    _substepSub = socket.on(SocketEvents.substepChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != key.projectId) return;
+      _scheduleRefresh();
+    });
+    ref.onDispose(() {
+      _stepSub?.cancel();
+      _substepSub?.cancel();
+      _refreshDebounce?.cancel();
+    });
+
     final list = await ref
         .read(stepsRepositoryProvider)
         .listForStage(key.stageId);
     return [...list]..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+  }
+
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        final list = await ref
+            .read(stepsRepositoryProvider)
+            .listForStage(arg.stageId);
+        state = AsyncData(
+          [...list]..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
+        );
+      } on StepsException {
+        // тихий refresh
+      }
+    });
   }
 
   StepsRepository get _repo => ref.read(stepsRepositoryProvider);
@@ -144,14 +189,25 @@ class StepsController extends FamilyAsyncNotifier<List<Step>, StepsKey> {
     }
   }
 
-  Future<AuthFailure?> complete(String stepId) async {
+  /// ТЗ §4.1 — закрытие шага одной операцией: текущий черновик отчёта
+  /// («что/как делал») отправляется вместе с complete. Поля опциональны:
+  /// бэкенд игнорирует `null`, а пустая строка не пишется.
+  Future<AuthFailure?> complete(
+    String stepId, {
+    String? whatDid,
+    String? howDid,
+  }) async {
     if (_isOffline()) {
       await _enqueueStepToggle(stepId, complete: true);
       _markLocally(stepId, completed: true);
       return null;
     }
     try {
-      final s = await _repo.completeStep(stepId);
+      final s = await _repo.completeStep(
+        stepId,
+        whatDid: whatDid,
+        howDid: howDid,
+      );
       _replace(s);
       _invalidateStageAndProject();
       return null;

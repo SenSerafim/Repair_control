@@ -139,6 +139,18 @@ class StagesRepository {
     return Stage.parse(r.data!);
   });
 
+  /// П2.3 / 4.2 — отправить план этапа на согласование заказчику.
+  /// Возвращает созданный (или существующий — endpoint идемпотентный)
+  /// Approval scope='plan'. Вызывает бригадир / представитель с canEditStages.
+  Future<void> submitPlan({
+    required String projectId,
+    required String stageId,
+  }) => _call(() async {
+    await _dio.post<Map<String, dynamic>>(
+      '/api/projects/$projectId/stages/$stageId/submit-plan',
+    );
+  });
+
   Future<List<StageTemplate>> listPlatformTemplates() => _call(() async {
     final r = await _dio.get<List<dynamic>>('/api/templates/platform');
     return r.data!

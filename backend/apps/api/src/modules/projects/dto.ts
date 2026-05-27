@@ -53,6 +53,22 @@ export class CreateProjectDto {
   @IsInt()
   @Min(0)
   materialsBudget?: number;
+
+  /// П1.8 — список названий этапов для создания вместе с проектом
+  /// (в одной транзакции). Если поле опущено — бекенд подставит дефолтные 3
+  /// плейсхолдера («Подготовка / Основные работы / Сдача»). Пустой массив
+  /// `[]` подавляет авто-создание (для API-клиентов).
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description:
+      'Названия этапов для создания вместе с проектом. Опустить — 3 плейсхолдера. [] — без этапов.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Length(1, 200, { each: true })
+  initialStages?: string[];
 }
 
 export class UpdateProjectDto {

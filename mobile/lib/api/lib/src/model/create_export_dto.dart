@@ -123,7 +123,11 @@ enum CreateExportDtoKindEnum {
 @JsonValue(r'feed_pdf')
 feedPdf(r'feed_pdf'),
 @JsonValue(r'project_zip')
-projectZip(r'project_zip');
+projectZip(r'project_zip'),
+@JsonValue(r'project_report_pdf')
+projectReportPdf(r'project_report_pdf'),
+@JsonValue(r'project_summary_txt')
+projectSummaryTxt(r'project_summary_txt');
 
 const CreateExportDtoKindEnum(this.value);
 

@@ -7,6 +7,7 @@ import { FeedModule } from '../feed/feed.module';
 import { QUEUE_DOCUMENT_THUMBNAILS } from '../queues/queues.module';
 import { DocumentsService } from './documents.service';
 import { DocumentsController } from './documents.controller';
+import { DocumentsCleanupCron } from './documents-cleanup.cron';
 import { ThumbnailWorker } from './thumbnail-worker.service';
 
 @Module({
@@ -19,7 +20,7 @@ import { ThumbnailWorker } from './thumbnail-worker.service';
     BullModule.registerQueue({ name: QUEUE_DOCUMENT_THUMBNAILS }),
   ],
   controllers: [DocumentsController],
-  providers: [DocumentsService, ThumbnailWorker],
+  providers: [DocumentsService, ThumbnailWorker, DocumentsCleanupCron],
   exports: [DocumentsService],
 })
 export class DocumentsModule {}

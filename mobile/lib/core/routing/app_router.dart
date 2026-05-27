@@ -26,7 +26,6 @@ import '../../features/finance/presentation/create_advance_screen.dart';
 import '../../features/finance/presentation/payment_detail_screen.dart';
 import '../../features/finance/presentation/payments_list_screen.dart';
 import '../../features/materials/presentation/create_material_screen.dart';
-import '../../features/materials/presentation/edit_purchased_item_screen.dart';
 import '../../features/materials/presentation/material_detail_screen.dart';
 import '../../features/materials/presentation/materials_list_screen.dart';
 import '../../features/methodology/presentation/article_screen.dart';
@@ -83,11 +82,9 @@ import '../../features/team/presentation/member_not_found_screen.dart';
 import '../../features/team/presentation/project_rep_rights_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
 import '../../features/tools/presentation/add_tool_screen.dart';
-import '../../features/tools/presentation/issue_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
 import '../../features/tools/presentation/project_tools_screen.dart';
 import '../../features/tools/presentation/tool_detail_screen.dart';
-import '../../features/tools/presentation/tool_issuances_screen.dart';
 import '../../shared/widgets/widgets.dart';
 import 'app_routes.dart';
 import 'transitions.dart';
@@ -463,18 +460,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                             requestId: state.pathParameters['requestId']!,
                           ),
                         ),
-                        routes: [
-                          GoRoute(
-                            path: 'items/:itemId/edit',
-                            pageBuilder: slideUpPage(
-                              (_, state) => EditPurchasedItemScreen(
-                                projectId: state.pathParameters['projectId']!,
-                                requestId: state.pathParameters['requestId']!,
-                                itemId: state.pathParameters['itemId']!,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -516,27 +501,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                       ),
                     ],
                   ),
+                  // Self-custody модель (2026-05-12): единая «Доска инструментов»
+                  // для всех ролей. Добавление, claim, история — в одном экране
+                  // (см. ProjectToolsScreen + bottom-sheet add).
                   GoRoute(
                     path: 'tools',
-                    pageBuilder: slideLeftPage(
-                      (_, state) => ToolIssuancesScreen(
-                        projectId: state.pathParameters['projectId']!,
-                      ),
-                    ),
-                    routes: [
-                      GoRoute(
-                        path: 'new',
-                        pageBuilder: slideUpPage(
-                          (_, state) => IssueToolScreen(
-                            projectId: state.pathParameters['projectId']!,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // П2.15 — реестр инструментов проекта.
-                  GoRoute(
-                    path: 'tool-registry',
                     pageBuilder: slideLeftPage(
                       (_, state) => ProjectToolsScreen(
                         projectId: state.pathParameters['projectId']!,
@@ -607,11 +576,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'add',
-                    pageBuilder: slideUpPage(
-                      (_, state) => AddToolScreen(
-                        projectId: state.uri.queryParameters['projectId'],
-                      ),
-                    ),
+                    pageBuilder:
+                        slideUpPage((_, __) => const AddToolScreen()),
                   ),
                   GoRoute(
                     path: ':toolId',

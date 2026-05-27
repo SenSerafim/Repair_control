@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_providers.dart';
 import '../../../core/error/api_error.dart';
+import '../../../core/realtime/socket_service.dart';
 import '../../../core/storage/offline_queue.dart';
 import '../../../shared/utils/image_compress.dart';
 import '../../auth/domain/auth_failure.dart';
@@ -71,12 +74,54 @@ final stepDetailProvider =
       StepDetailKey
     >(StepDetailController.new);
 
+/// Текущий черновик отчёта по шагу (ТЗ §4.1).
+/// `_ReportSection` обновляет на каждом keystroke, `_ActionCtas` читает
+/// при клике «Отметить выполненным» — чтобы текст и завершение шли одним
+/// запросом, без отдельной кнопки «Сохранить отчёт».
+class StepReportDraft {
+  const StepReportDraft({this.whatDid, this.howDid});
+  final String? whatDid;
+  final String? howDid;
+}
+
+final stepReportDraftProvider =
+    StateProvider.family<StepReportDraft, String>((_, __) => const StepReportDraft());
+
 class StepDetailController
     extends FamilyAsyncNotifier<StepDetailData, StepDetailKey> {
+  StreamSubscription<dynamic>? _substepSub;
+  StreamSubscription<dynamic>? _stepSub;
+  Timer? _refreshDebounce;
+
   @override
   Future<StepDetailData> build(StepDetailKey key) async {
     final dio = ref.read(dioProvider);
     final repo = ref.read(stepsRepositoryProvider);
+    final socket = ref.read(socketServiceProvider);
+
+    // Real-time: бекенд эмитит `substep:changed` при add/update/complete/
+    // uncomplete/delete (см. SubstepsService → feed.emit). Слушаем только
+    // события для текущего шага и тихо перезагружаем — без AsyncLoading,
+    // чтобы UI у заказчика/мастера обновлялся без мигания.
+    _substepSub = socket.on(SocketEvents.substepChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != key.projectId) return;
+      if (payload['stepId']?.toString() != key.stepId) return;
+      _scheduleSilentRefresh();
+    });
+    // step:changed по конкретному шагу — title/description/status/whatDid
+    // могли измениться. Перегружаем детали.
+    _stepSub = socket.on(SocketEvents.stepChanged).listen((payload) {
+      if (payload is! Map) return;
+      if (payload['projectId']?.toString() != key.projectId) return;
+      if (payload['stepId']?.toString() != key.stepId) return;
+      _scheduleSilentRefresh();
+    });
+    ref.onDispose(() {
+      _substepSub?.cancel();
+      _stepSub?.cancel();
+      _refreshDebounce?.cancel();
+    });
 
     // GET /steps/:id возвращает объект с вшитыми substeps/photos/questions
     // через Prisma include. Забираем всё за один запрос + отдельно
@@ -102,6 +147,20 @@ class StepDetailController
       photos: photos,
       questions: questions,
     );
+  }
+
+  /// Тихий refresh — не мигаем AsyncLoading. Дебаунс 300ms, чтобы серия
+  /// событий (substep_added + substep_completed подряд) дала один запрос.
+  void _scheduleSilentRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        final data = await build(arg);
+        state = AsyncData(data);
+      } catch (_) {
+        // тихий refresh: оставляем последнее успешное состояние
+      }
+    });
   }
 
   StepsRepository get _repo => ref.read(stepsRepositoryProvider);
@@ -178,6 +237,32 @@ class StepDetailController
           ),
         );
       }
+      return null;
+    } on StepsException catch (e) {
+      return e.failure;
+    }
+  }
+
+  // ─── Report (П2.8 / ТЗ §4.1) ───
+
+  /// Обновление полей отчёта «что/как делал». Результат применяется in-place,
+  /// чтобы экран не мигал AppLoadingState; sibling-провайдер шагов этапа
+  /// получает invalidate — у списка обновится `hasReport`-флажок.
+  Future<AuthFailure?> updateReport({
+    String? whatDid,
+    String? howDid,
+  }) async {
+    try {
+      final updated = await _repo.updateStep(
+        stepId: arg.stepId,
+        whatDid: whatDid,
+        howDid: howDid,
+      );
+      final cur = state.value;
+      if (cur != null) {
+        state = AsyncData(cur.copyWith(step: updated));
+      }
+      _invalidateSiblings();
       return null;
     } on StepsException catch (e) {
       return e.failure;

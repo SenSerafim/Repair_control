@@ -12,7 +12,6 @@ class MaterialsException implements Exception {
   final ApiError apiError;
 }
 
-/// Один item при создании заявки.
 class MaterialItemInput {
   const MaterialItemInput({
     required this.name,
@@ -59,6 +58,8 @@ class MaterialsRepository {
     return MaterialRequest.parse(r.data!);
   });
 
+  /// Создаёт заявку. customer-owner / representative.canApprove → сразу approved.
+  /// foreman / master → pending_approval + Approval(material_purchase) заказчику.
   Future<MaterialRequest> create({
     required String projectId,
     required MaterialRecipient recipient,
@@ -78,88 +79,6 @@ class MaterialsRepository {
       },
     );
     return MaterialRequest.parse(r.data!);
-  });
-
-  Future<MaterialRequest> send(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>('/api/materials/$id/send');
-    return MaterialRequest.parse(r.data!);
-  });
-
-  Future<MaterialRequest> markBought({
-    required String requestId,
-    required String itemId,
-    required int pricePerUnit,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/materials/$requestId/items/$itemId/bought',
-      data: {'pricePerUnit': pricePerUnit},
-    );
-    return MaterialRequest.parse(r.data!);
-  });
-
-  Future<MaterialRequest> finalizeRequest(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/materials/$id/finalize',
-    );
-    return MaterialRequest.parse(r.data!);
-  });
-
-  Future<MaterialRequest> confirmDelivery(String id) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/materials/$id/confirm-delivery',
-    );
-    return MaterialRequest.parse(r.data!);
-  });
-
-  Future<MaterialRequest> dispute({
-    required String id,
-    required String reason,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/materials/$id/dispute',
-      data: {'reason': reason},
-    );
-    return MaterialRequest.parse(r.data!);
-  });
-
-  Future<MaterialRequest> resolve({
-    required String id,
-    required String resolution,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/materials/$id/resolve',
-      data: {'resolution': resolution},
-    );
-    return MaterialRequest.parse(r.data!);
-  });
-
-  /// §6.1 — заявка от бригадира на согласование закупки материалов.
-  /// Бэкенд создаёт Approval(scope=material_purchase). MaterialRequest появится
-  /// автоматически после approve заказчиком.
-  /// Возвращает payload Approval (не MaterialRequest).
-  Future<Map<String, dynamic>> requestPurchaseApproval({
-    required String projectId,
-    required String title,
-    required int amount,
-    required List<MaterialItemInput> items,
-    String? stageId,
-    String? comment,
-    String? supplier,
-    List<String>? photoKeys,
-  }) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/projects/$projectId/materials/purchase-approvals',
-      data: {
-        'title': title,
-        'amount': amount,
-        'items': items.map((e) => e.toJson()).toList(),
-        if (stageId != null) 'stageId': stageId,
-        if (comment != null && comment.isNotEmpty) 'comment': comment,
-        if (supplier != null && supplier.isNotEmpty) 'supplier': supplier,
-        if (photoKeys != null && photoKeys.isNotEmpty) 'photoKeys': photoKeys,
-      },
-    );
-    return r.data!;
   });
 
   Future<T> _call<T>(Future<T> Function() action) async {

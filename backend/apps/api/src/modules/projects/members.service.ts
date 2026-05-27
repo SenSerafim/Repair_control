@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import {
   ConflictError,
@@ -23,13 +24,58 @@ export interface AddMembershipInput {
   stageIds?: string[];
 }
 
+/**
+ * Event-emitter событие тихой UI-синхронизации (без push). Слушает
+ * `ChatsGateway` и бродкастит `project:membership_changed` в `user:{X}`
+ * комнаты — это закрывает realtime-инвалидацию списков проектов/команды/
+ * чатов у ВСЕХ участников, а не только у адресата push (ТЗ §13.2).
+ */
+export const PROJECT_MEMBERSHIP_CHANGED_EVENT = 'project.membership.changed';
+
+export type MembershipChangeAction = 'added' | 'removed';
+
+export interface ProjectMembershipChangedPayload {
+  projectId: string;
+  userId: string;
+  role: string;
+  action: MembershipChangeAction;
+  /** userId-ы клиентов, которым нужна синхронизация UI (включая затронутого). */
+  recipientUserIds: string[];
+}
+
 @Injectable()
 export class MembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feed: FeedService,
     private readonly chats: ChatsService,
+    private readonly events: EventEmitter2,
   ) {}
+
+  /**
+   * Собирает userId клиентов для тихого WS-broadcast. Включает owner, всех
+   * active-членов и `includeUserId` (затронутого — на случай removed/leave,
+   * когда юзера уже вычеркнули, но ему всё равно нужно убрать проект из списка).
+   */
+  async collectRecipientUserIds(projectId: string, includeUserId?: string): Promise<string[]> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        ownerId: true,
+        memberships: { where: { removedAt: null }, select: { userId: true } },
+      },
+    });
+    if (!project) return includeUserId ? [includeUserId] : [];
+    const ids = new Set<string>();
+    ids.add(project.ownerId);
+    for (const m of project.memberships) ids.add(m.userId);
+    if (includeUserId) ids.add(includeUserId);
+    return Array.from(ids);
+  }
+
+  emitMembershipChanged(payload: ProjectMembershipChangedPayload): void {
+    this.events.emit(PROJECT_MEMBERSHIP_CHANGED_EVENT, payload);
+  }
 
   async addMembership(input: AddMembershipInput) {
     const project = await this.prisma.project.findUnique({ where: { id: input.projectId } });
@@ -46,6 +92,46 @@ export class MembersService {
       throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'only the owner can have role=customer');
     }
 
+    // Defense-in-depth: AccessGuard уже пропустил actor'а через
+    // `project.invite_member`, но матрица разрешает бригадиру эту action
+    // (rbac.matrix.ts:38 «restricted to master role inside service»).
+    // Здесь точечно проверяем приглашаемую роль:
+    //   • бригадир приглашает только мастеров (ТЗ §1.5);
+    //   • представитель приглашает любого, но добавить ещё одного представителя
+    //     может только с canAddRepresentative (rbac.types.ts:105 / П7.x).
+    if (input.actorUserId !== project.ownerId) {
+      const actorMembership = await this.prisma.membership.findFirst({
+        where: {
+          projectId: input.projectId,
+          userId: input.actorUserId,
+          removedAt: null,
+        },
+        select: { role: true, permissions: true },
+      });
+      if (actorMembership?.role === 'foreman' && input.role !== 'master') {
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'foreman can invite only masters');
+      }
+      if (actorMembership?.role === 'representative' && input.role === 'representative') {
+        const actorPerms = (actorMembership.permissions ?? {}) as Record<
+          string,
+          boolean | undefined
+        >;
+        if (!actorPerms.canAddRepresentative) {
+          throw new ForbiddenError(
+            ErrorCodes.FORBIDDEN,
+            'representative needs canAddRepresentative to invite another representative',
+          );
+        }
+      }
+    }
+
+    // Unique-индекс (projectId, userId, role) не учитывает removedAt: после
+    // leaveTeam запись остаётся в БД soft-removed. Если её игнорировать —
+    // повторное добавление падает с P2002. Поэтому проверяем существование
+    // и:
+    //   • active (removedAt = null) → Conflict как и раньше;
+    //   • soft-removed → реанимируем ту же строку (clear removedAt/removedById,
+    //     перезаписываем invitedById/permissions/stageIds).
     const exists = await this.prisma.membership.findUnique({
       where: {
         projectId_userId_role: {
@@ -55,22 +141,36 @@ export class MembersService {
         },
       },
     });
-    if (exists) throw new ConflictError(ErrorCodes.MEMBERSHIP_EXISTS, 'membership exists');
+    if (exists && !exists.removedAt) {
+      throw new ConflictError(ErrorCodes.MEMBERSHIP_EXISTS, 'membership exists');
+    }
 
     const permissions =
       input.role === 'representative' ? sanitizeRepresentativeRights(input.permissions as any) : {};
 
     const created = await this.prisma.$transaction(async (tx) => {
-      const m = await tx.membership.create({
-        data: {
-          projectId: input.projectId,
-          userId: input.userId,
-          role: input.role,
-          invitedById: input.actorUserId,
-          permissions: permissions as Prisma.InputJsonValue,
-          stageIds: input.stageIds ?? [],
-        },
-      });
+      const m = exists
+        ? await tx.membership.update({
+            where: { id: exists.id },
+            data: {
+              removedAt: null,
+              removedById: null,
+              hiddenForUser: false,
+              invitedById: input.actorUserId,
+              permissions: permissions as Prisma.InputJsonValue,
+              stageIds: input.stageIds ?? [],
+            },
+          })
+        : await tx.membership.create({
+            data: {
+              projectId: input.projectId,
+              userId: input.userId,
+              role: input.role,
+              invitedById: input.actorUserId,
+              permissions: permissions as Prisma.InputJsonValue,
+              stageIds: input.stageIds ?? [],
+            },
+          });
       // Появление foreman включает требование согласования плана работ (ТЗ §4.4, gaps §3.2)
       if (input.role === 'foreman') {
         await tx.project.update({
@@ -88,15 +188,30 @@ export class MembersService {
       return m;
     });
 
-    // П2.10 — каждый новый участник проекта автоматически попадает в общий project-чат.
-    // Чат создаётся лениво при первом appearance (foreman, customer-self, etc.).
-    // Вне транзакции, чтобы не блокировать на Redis/socket — но если упадёт, не ронять membership.
+    // По текущему решению заказчика — у проекта один общий чат на всех
+    // участников (см. chats.service.ts: seedProjectParticipants и listForProject
+    // фильтр без stage). Любая роль, включая master, попадает в project-чат
+    // сразу при добавлении в команду и получает доступ ко всей истории
+    // сообщений (messages.list не ограничивает по joinedAt — gaps §6.1).
     try {
       await this.chats.ensureProjectChat(input.projectId, input.actorUserId);
       await this.chats.addProjectChatParticipant(input.projectId, input.userId);
     } catch (e) {
       // logger из FeedService ловит; membership уже создан — не откатываем
     }
+
+    // Тихий WS-broadcast всем участникам — `ChatsGateway` шлёт
+    // `project:membership_changed` в `user:{X}` комнаты, мобайл инвалидирует
+    // список проектов / команду / чаты у всех затронутых клиентов.
+    // Push при этом не плодится — он идёт отдельным каналом только адресату.
+    const recipientUserIds = await this.collectRecipientUserIds(input.projectId, input.userId);
+    this.emitMembershipChanged({
+      projectId: input.projectId,
+      userId: input.userId,
+      role: input.role,
+      action: 'added',
+      recipientUserIds,
+    });
 
     return created;
   }
@@ -106,10 +221,12 @@ export class MembersService {
    * Soft-removal: membership.removedAt = now(), доступ к проекту/чату теряется моментально (см. fillter
    * по removedAt в listForUser/AccessGuard).
    *
-   * Параллельно решает судьбу инструментов (П2.15):
-   *   - transfer_to_owner: ownerId всех инструментов меняется на заказчика, ToolIssuance сохраняется.
-   *   - take_away: инструменты удаляются из проекта (projectId=null), активные ToolIssuance принудительно
-   *     завершаются (force_returned), мастер получает уведомление.
+   * Судьба инструментов (self-custody модель, 2026-05-12):
+   *   - transfer_to_owner: МОИ инструменты в проекте → ownerId меняется на заказчика;
+   *     currentHolderId сбрасывается на нового owner-а.
+   *   - take_away: МОИ инструменты в проекте → отвязываются (projectId=null), holder=я снова.
+   *   Кроме того, инструменты ДРУГИХ owner-ов, которые сейчас у уходящего, автоматически
+   *   возвращаются к их owner-у (custody event пишется).
    */
   async leaveTeam(
     projectId: string,
@@ -183,46 +300,88 @@ export class MembersService {
         });
       }
 
-      // 3. Tools (П2.15).
+      // 3. Tools (self-custody, 2026-05-12).
+      //    a) МОИ инструменты в проекте.
       const myTools = await tx.toolItem.findMany({
         where: { ownerId: userId, projectId },
       });
       if (myTools.length > 0) {
         if (action === 'transfer_to_owner') {
-          await tx.toolItem.updateMany({
-            where: { ownerId: userId, projectId },
-            data: { ownerId: project.ownerId },
-          });
-        } else {
-          // take_away — принудительно завершаем активные issuances + удаляем из проекта.
           for (const tool of myTools) {
-            const active = await tx.toolIssuance.findMany({
-              where: {
+            await tx.toolItem.update({
+              where: { id: tool.id },
+              data: { ownerId: project.ownerId, currentHolderId: project.ownerId },
+            });
+            await tx.toolCustodyEvent.create({
+              data: {
                 toolItemId: tool.id,
-                status: {
-                  in: ['requested', 'approved', 'issued', 'confirmed', 'return_requested'],
-                },
+                projectId,
+                holderId: project.ownerId,
+                previousHolderId: tool.currentHolderId,
+                note: 'Передан заказчику (участник покинул проект)',
               },
             });
-            for (const iss of active) {
-              await tx.toolIssuance.update({
-                where: { id: iss.id },
-                data: { status: 'returned', returnConfirmedAt: new Date() },
-              });
-              await this.feed.emit({
-                tx,
-                kind: 'tool_force_returned',
-                projectId,
-                actorId: actorUserId,
-                payload: { toolId: tool.id, toUserId: iss.toUserId },
-              });
-            }
+            await this.feed.emit({
+              tx,
+              kind: 'tool_custody_changed',
+              projectId,
+              actorId: actorUserId,
+              payload: {
+                toolItemId: tool.id,
+                toolName: tool.name,
+                holderId: project.ownerId,
+                previousHolderId: tool.currentHolderId,
+              },
+            });
           }
-          await tx.toolItem.updateMany({
-            where: { ownerId: userId, projectId },
-            data: { projectId: null },
-          });
+        } else {
+          // take_away — отвязываем от проекта, инструмент возвращается owner-у.
+          for (const tool of myTools) {
+            await tx.toolItem.update({
+              where: { id: tool.id },
+              data: { projectId: null, currentHolderId: userId },
+            });
+            await this.feed.emit({
+              tx,
+              kind: 'tool_removed_from_project',
+              projectId,
+              actorId: actorUserId,
+              payload: { toolItemId: tool.id, toolName: tool.name },
+            });
+          }
         }
+      }
+
+      // b) Чужие инструменты, которые сейчас у уходящего → возвращаем владельцу.
+      const heldByMe = await tx.toolItem.findMany({
+        where: { projectId, currentHolderId: userId, NOT: { ownerId: userId } },
+      });
+      for (const tool of heldByMe) {
+        await tx.toolItem.update({
+          where: { id: tool.id },
+          data: { currentHolderId: tool.ownerId },
+        });
+        await tx.toolCustodyEvent.create({
+          data: {
+            toolItemId: tool.id,
+            projectId,
+            holderId: tool.ownerId,
+            previousHolderId: userId,
+            note: 'Возвращён владельцу (держатель покинул проект)',
+          },
+        });
+        await this.feed.emit({
+          tx,
+          kind: 'tool_custody_changed',
+          projectId,
+          actorId: actorUserId,
+          payload: {
+            toolItemId: tool.id,
+            toolName: tool.name,
+            holderId: tool.ownerId,
+            previousHolderId: userId,
+          },
+        });
       }
 
       // 4. Чат — leftAt у участника.
@@ -240,6 +399,18 @@ export class MembersService {
         actorId: actorUserId,
         payload: { userId, role: membership.role, toolsAction: action },
       });
+    });
+
+    // Тихий WS-broadcast: проект исчезает у вышедшего, состав обновляется
+    // у остальных. recipientUserIds включает ушедшего, чтобы он сам убрал
+    // проект из списка без pull-to-refresh.
+    const recipientUserIds = await this.collectRecipientUserIds(projectId, userId);
+    this.emitMembershipChanged({
+      projectId,
+      userId,
+      role: membership.role,
+      action: 'removed',
+      recipientUserIds,
     });
 
     return { ok: true };
@@ -321,6 +492,47 @@ export class MembersService {
       throw new InvalidInputError(ErrorCodes.FORBIDDEN, 'owner membership cannot be removed');
     }
 
+    // Service-уровневая проверка прав на удаление — AccessGuard пропустил
+    // actor'а через `project.invite_member`, но удаление участника требует
+    // более узких прав, чем приглашение (ТЗ §1.5, П2.12):
+    //   • заказчик-владелец — может всё (через actorUserId === ownerId);
+    //   • представитель — только с canManageTeam (без canInviteMembers);
+    //   • бригадир — только своих мастеров (которых сам пригласил);
+    //   • мастер — не может никого удалять.
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    const isOwner = project?.ownerId === actorUserId;
+    if (!isOwner) {
+      const actorMembership = await this.prisma.membership.findFirst({
+        where: { projectId, userId: actorUserId, removedAt: null },
+        select: { role: true, permissions: true },
+      });
+      if (!actorMembership) {
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'not a project member');
+      }
+      if (actorMembership.role === 'representative') {
+        const perms = (actorMembership.permissions ?? {}) as Record<string, boolean | undefined>;
+        if (!perms.canManageTeam) {
+          throw new ForbiddenError(
+            ErrorCodes.FORBIDDEN,
+            'representative needs canManageTeam to remove members',
+          );
+        }
+      } else if (actorMembership.role === 'foreman') {
+        if (membership.role !== 'master' || membership.invitedById !== actorUserId) {
+          throw new ForbiddenError(
+            ErrorCodes.FORBIDDEN,
+            'foreman can remove only masters they invited',
+          );
+        }
+      } else {
+        // master — не может удалять никого.
+        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'role cannot remove members');
+      }
+    }
+
     // H.2: удаление foreman — чистим его из foremanIds активных стадий,
     // помечаем его pending approvals requiresReassign, эмитим foreman_removed.
     // Удаление master — очищаем его из step.assigneeIds, чтобы не оставлять orphan ссылки.
@@ -384,6 +596,17 @@ export class MembersService {
         payload: { userId: membership.userId, role: membership.role },
       });
     });
+
+    // Тихий WS-broadcast всем оставшимся + удалённому (чтобы он сам убрал
+    // проект из своего списка).
+    const recipientUserIds = await this.collectRecipientUserIds(projectId, membership.userId);
+    this.emitMembershipChanged({
+      projectId,
+      userId: membership.userId,
+      role: membership.role,
+      action: 'removed',
+      recipientUserIds,
+    });
   }
 
   async list(projectId: string) {
@@ -397,6 +620,47 @@ export class MembersService {
         },
       },
     });
+  }
+
+  /**
+   * Видимость команды.
+   *
+   * 2026-05-13 раунд: заказчик подтвердил «мастер — одна сущность, видна всем
+   * в команде проекта независимо от того, кто его пригласил». Это упрощает
+   * прежнюю §1.4-иерархию (где invitedById/stage-intersection скрывали
+   * мастеров от заказчика/представителя/чужого бригадира): теперь каждый
+   * активный участник видит весь активный состав. Outsider'у возвращаем
+   * пустой список (контроллер всё равно отдаст 403 раньше).
+   */
+  async listVisibleForViewer(projectId: string, viewerUserId: string) {
+    const all = await this.list(projectId);
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    if (!project) return [];
+    return this.applyVisibility(all, viewerUserId, project.ownerId, projectId);
+  }
+
+  /**
+   * Чистый фильтр видимости: применяется к уже загруженному списку memberships.
+   * Используется и `listVisibleForViewer` (per-project /members), и
+   * `UsersService.listTeammates` (нижний таб «Команда»), чтобы правила
+   * видимости не дрейфовали между двумя источниками. После раунда 2026-05-13
+   * правило одно: активный участник проекта видит всех активных участников.
+   */
+  async applyVisibility<
+    M extends {
+      userId: string;
+      role: string;
+      invitedById: string | null;
+      stageIds: string[];
+      permissions: unknown;
+    },
+  >(memberships: M[], viewerUserId: string, ownerId: string, _projectId: string): Promise<M[]> {
+    if (viewerUserId === ownerId) return memberships;
+    if (memberships.some((m) => m.userId === viewerUserId)) return memberships;
+    return [];
   }
 
   /** QA-баг #12: используется контроллером для проверки доступа к /members. */

@@ -242,32 +242,76 @@ class _MemberRow extends ConsumerWidget {
         ? 'Участник'
         : '${user.firstName} ${user.lastName}'.trim();
     final isRepresentative = member.role == MembershipRole.representative;
+    final isCustomerRow = member.role == MembershipRole.customer;
+    final me = ref.watch(authControllerProvider).userId;
+    final isSelfRow = me != null && me == member.userId;
     final canManage = ref.watch(
       canInProjectProvider((
         action: DomainAction.projectInviteMember,
         projectId: projectId,
       )),
     );
-
+    // Кнопка «Удалить» не имеет смысла:
+    //   • на самом себе — для self-leave есть отдельная секция «Выйти из команды» внизу.
+    //   • на строке заказчика — owner-membership не удаляется (бэкенд вернёт 400).
+    final canRemoveThisMember = canManage && !isSelfRow && !isCustomerRow;
     final roleTone = _toneFor(member.role);
     return InkWell(
       borderRadius: AppRadius.card,
-      onTap: () => _showCard(context, ref, name: name, canManage: canManage),
+      onTap: () => _showCard(
+        context,
+        ref,
+        name: name,
+        canManage: canManage,
+        canRemove: canRemoveThisMember,
+      ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.n0,
           border: Border.all(color: AppColors.n200),
           borderRadius: AppRadius.card,
-          boxShadow: AppShadows.sh1,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A0D1229),
+              offset: Offset(0, 1),
+              blurRadius: 2,
+            ),
+            BoxShadow(
+              color: Color(0x1F4F6EF7),
+              offset: Offset(0, 10),
+              blurRadius: 24,
+              spreadRadius: -10,
+            ),
+          ],
         ),
         child: Row(
           children: [
-            AppAvatar(
-              seed: member.userId,
-              name: name,
-              imageUrl: user?.avatarUrl,
-              size: 40,
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x290D1229),
+                    offset: Offset(0, 4),
+                    blurRadius: 10,
+                    spreadRadius: -2,
+                  ),
+                ],
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(1.5),
+                decoration: const BoxDecoration(
+                  color: AppColors.n0,
+                  shape: BoxShape.circle,
+                ),
+                child: AppAvatar(
+                  seed: member.userId,
+                  name: name,
+                  imageUrl: user?.avatarUrl,
+                  size: 37,
+                ),
+              ),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
@@ -297,7 +341,7 @@ class _MemberRow extends ConsumerWidget {
                 ],
               ),
             ),
-            if (canManage)
+            if (canManage && (isRepresentative || canRemoveThisMember))
               PopupMenuButton<String>(
                 onSelected: (v) async {
                   if (v == 'rights' && isRepresentative) {
@@ -335,13 +379,14 @@ class _MemberRow extends ConsumerWidget {
                       value: 'rights',
                       child: Text('Настроить права'),
                     ),
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Text(
-                      'Удалить из команды',
-                      style: TextStyle(color: AppColors.redDot),
+                  if (canRemoveThisMember)
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Text(
+                        'Удалить из команды',
+                        style: TextStyle(color: AppColors.redDot),
+                      ),
                     ),
-                  ),
                 ],
                 icon: const Icon(
                   Icons.more_vert_rounded,
@@ -360,6 +405,7 @@ class _MemberRow extends ConsumerWidget {
     WidgetRef ref, {
     required String name,
     required bool canManage,
+    required bool canRemove,
   }) async {
     // QA-баг #6 «не открывается карточка участника»: до этого фикса
     // _showCard молча выходил, если бэк по какой-то причине не вернул
@@ -375,6 +421,8 @@ class _MemberRow extends ConsumerWidget {
         user?.firstName ?? (parts.isNotEmpty ? parts.first : 'Участник');
     final fallbackLastName =
         user?.lastName ?? (parts.length > 1 ? parts.sublist(1).join(' ') : '');
+    final isRepresentativeMember =
+        member.role == MembershipRole.representative;
     await showMemberCardSheet(
       context,
       data: MemberCardData(
@@ -389,7 +437,18 @@ class _MemberRow extends ConsumerWidget {
         commonProjects: commonProjects,
       ),
       onOpenProject: (id) => context.go('/projects/$id'),
-      onRemoveFromTeam: canManage
+      // ROLES §11.8 — карточка представителя ведёт к sheet'у с 13 чекбоксами
+      // DomainAction. Доступно тем, у кого есть управленческие права в проекте
+      // (заказчик/привилегированный представитель).
+      onOpenRepRights: (isRepresentativeMember && canManage)
+          ? () => showRepRightsSheet(
+              context,
+              ref,
+              projectId: projectId,
+              member: member,
+            )
+          : null,
+      onRemoveFromTeam: canRemove
           ? () async {
               final failure = await ref
                   .read(teamControllerProvider(projectId).notifier)

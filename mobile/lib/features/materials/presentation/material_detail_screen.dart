@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/access/access_guard.dart';
-import '../../../core/access/domain_actions.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/materials_controller.dart';
 import '../domain/material_request.dart';
-import '_widgets/checklist_item_card.dart';
-import '_widgets/material_lifecycle_timeline.dart';
 import '_widgets/material_meta_card.dart';
-import '_widgets/purchase_progress_chip.dart';
-import '_widgets/resolve_option_card.dart';
 
+/// Простой и прозрачный поток (UI/UX-упрощение 2026-05):
+///   - foreman/master создаёт → «Ждёт согласования». Заказчик решает.
+///   - customer/representative.canApprove создаёт → сразу «Согласовано».
+///   - Отклонено — остаётся в истории. Все роли видят это сразу.
 class MaterialDetailScreen extends ConsumerWidget {
   const MaterialDetailScreen({
     required this.projectId,
@@ -57,127 +54,37 @@ class MaterialDetailScreen extends ConsumerWidget {
               icon: Icons.error_outline,
             );
           }
-          return Column(
-            children: [
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async =>
-                      ref.invalidate(materialsControllerProvider(projectId)),
-                  child: ListView(
-                    padding: const EdgeInsets.all(AppSpacing.x16),
-                    children: [
-                      _Header(request: request),
-                      const SizedBox(height: AppSpacing.x16),
-                      // Lifecycle (5 шагов: создана → отправлена → куплено →
-                      // доставлено → подтверждено).
-                      const _SectionLabel(label: 'Жизненный цикл'),
-                      const SizedBox(height: AppSpacing.x10),
-                      MaterialLifecycleTimeline(
-                        steps: _lifecycleSteps(request),
-                      ),
-                      const SizedBox(height: AppSpacing.x16),
-                      const _SectionLabel(label: 'Позиции'),
-                      const SizedBox(height: AppSpacing.x10),
-                      for (final item in request.items) ...[
-                        ChecklistItemCard(
-                          item: item,
-                          state: _itemState(request, item),
-                          onEdit: _canEdit(request, item)
-                              ? () => context.push(
-                                  '/projects/$projectId/materials/$requestId/items/${item.id}/edit',
-                                )
-                              : null,
-                        ),
-                        const SizedBox(height: AppSpacing.x8),
-                      ],
-                      const SizedBox(height: AppSpacing.x6),
-                      PurchaseProgressChip(
-                        bought: request.boughtItemsCount,
-                        total: request.items.length,
-                      ),
-                      if (request.comment?.isNotEmpty ?? false) ...[
-                        const SizedBox(height: AppSpacing.x16),
-                        _CommentCard(comment: request.comment!),
-                      ],
-                      const SizedBox(height: AppSpacing.x16),
-                      const _SectionLabel(label: 'Детали'),
-                      const SizedBox(height: AppSpacing.x10),
-                      MaterialMetaCard(rows: _metaRows(request)),
-                      const SizedBox(height: AppSpacing.x20),
-                    ],
-                  ),
-                ),
-              ),
-              _Actions(projectId: projectId, request: request),
-            ],
+          return RefreshIndicator(
+            onRefresh: () async =>
+                ref.invalidate(materialsControllerProvider(projectId)),
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.x16),
+              children: [
+                _Header(request: request),
+                const SizedBox(height: AppSpacing.x16),
+                _StatusBanner(status: request.status),
+                const SizedBox(height: AppSpacing.x16),
+                const _SectionLabel(label: 'Позиции'),
+                const SizedBox(height: AppSpacing.x10),
+                for (final item in request.items) ...[
+                  _ItemRow(item: item),
+                  const SizedBox(height: AppSpacing.x8),
+                ],
+                if (request.comment?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: AppSpacing.x16),
+                  _CommentCard(comment: request.comment!),
+                ],
+                const SizedBox(height: AppSpacing.x16),
+                const _SectionLabel(label: 'Детали'),
+                const SizedBox(height: AppSpacing.x10),
+                MaterialMetaCard(rows: _metaRows(request)),
+                const SizedBox(height: AppSpacing.x20),
+              ],
+            ),
           );
         },
       ),
     );
-  }
-
-  ChecklistItemState _itemState(MaterialRequest req, MaterialItem item) {
-    if (item.isBought) return ChecklistItemState.bought;
-    if (req.status == MaterialRequestStatus.partiallyBought) {
-      return ChecklistItemState.pending;
-    }
-    return ChecklistItemState.pending;
-  }
-
-  bool _canEdit(MaterialRequest req, MaterialItem item) {
-    if (item.isBought) return true;
-    return req.status == MaterialRequestStatus.open ||
-        req.status == MaterialRequestStatus.partiallyBought;
-  }
-
-  List<LifecycleStep> _lifecycleSteps(MaterialRequest r) {
-    final created = LifecycleStep(
-      title: 'Заявка создана',
-      state: LifecycleStepState.done,
-      dateLabel: _fmtDate(r.createdAt),
-      immutable: true,
-    );
-    final sent = LifecycleStep(
-      title: 'Отправлена получателю',
-      state: r.status == MaterialRequestStatus.draft
-          ? LifecycleStepState.pending
-          : LifecycleStepState.done,
-      dateLabel: r.status == MaterialRequestStatus.draft
-          ? '—'
-          : _fmtDate(r.updatedAt),
-    );
-    final bought = LifecycleStep(
-      title: r.status == MaterialRequestStatus.partiallyBought
-          ? 'Куплено: ${r.boughtItemsCount} из ${r.items.length}'
-          : 'Куплено',
-      state: switch (r.status) {
-        MaterialRequestStatus.bought ||
-        MaterialRequestStatus.delivered ||
-        MaterialRequestStatus.resolved => LifecycleStepState.done,
-        MaterialRequestStatus.partiallyBought => LifecycleStepState.active,
-        _ => LifecycleStepState.pending,
-      },
-      dateLabel: r.finalizedAt == null ? '—' : _fmtDate(r.finalizedAt!),
-      immutable:
-          r.status == MaterialRequestStatus.bought ||
-          r.status == MaterialRequestStatus.delivered,
-    );
-    final delivered = LifecycleStep(
-      title: 'Доставлено',
-      state: r.status == MaterialRequestStatus.delivered
-          ? LifecycleStepState.done
-          : LifecycleStepState.pending,
-      dateLabel: r.deliveredAt == null ? '—' : _fmtDate(r.deliveredAt!),
-      immutable: r.status == MaterialRequestStatus.delivered,
-    );
-    final confirmed = LifecycleStep(
-      title: 'Подтверждено получателем',
-      state: r.status == MaterialRequestStatus.delivered
-          ? LifecycleStepState.done
-          : LifecycleStepState.pending,
-      dateLabel: r.deliveredAt == null ? '—' : _fmtDate(r.deliveredAt!),
-    );
-    return [created, sent, bought, delivered, confirmed];
   }
 
   List<MaterialMetaRow> _metaRows(MaterialRequest r) {
@@ -186,10 +93,10 @@ class MaterialDetailScreen extends ConsumerWidget {
       MaterialMetaRow('Этап', r.stageId == null ? 'Без этапа' : 'Привязан'),
       MaterialMetaRow('Создал', _shorten(r.createdById)),
       MaterialMetaRow('Создано', _fmtDate(r.createdAt)),
-      if (r.finalizedAt != null)
+      if (r.finalizedAt != null && r.status == MaterialRequestStatus.approved)
         MaterialMetaRow(
-          'Финализировано',
-          '${_fmtDate(r.finalizedAt!)} (неизменяемая)',
+          'Согласовано',
+          _fmtDate(r.finalizedAt!),
           valueColor: AppColors.greenDark,
         ),
     ];
@@ -211,7 +118,7 @@ class _Header extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
       decoration: BoxDecoration(
-        color: AppColors.n0,
+        gradient: AppGradients.surfaceCard,
         borderRadius: AppRadius.card,
         boxShadow: AppShadows.sh1,
         border: Border.all(color: AppColors.n200),
@@ -221,7 +128,7 @@ class _Header extends StatelessWidget {
         children: [
           Text(
             request.title,
-            style: AppTextStyles.h1.copyWith(fontSize: 20),
+            style: AppTextStyles.h1.copyWith(fontSize: 20, letterSpacing: -0.5),
             maxLines: 3,
           ),
           const SizedBox(height: AppSpacing.x8),
@@ -235,7 +142,7 @@ class _Header extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${request.items.length} позиций · '
-                  '${Money.format(request.totalBoughtPrice)}',
+                  '${Money.format(request.totalEstimatedPrice)}',
                   style: AppTextStyles.tiny.copyWith(
                     color: AppColors.n400,
                     fontWeight: FontWeight.w600,
@@ -250,6 +157,164 @@ class _Header extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.status});
+
+  final MaterialRequestStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (status) {
+      MaterialRequestStatus.pendingApproval => const _Banner(
+        icon: Icons.hourglass_top_rounded,
+        title: 'Ждёт согласования заказчиком',
+        subtitle:
+            'Решение появится у всех ролей сразу. Если заказчик отклонит — '
+            'заявка останется в истории.',
+        color: AppColors.n200,
+        iconColor: AppColors.n600,
+      ),
+      MaterialRequestStatus.approved => const _Banner(
+        icon: Icons.check_circle_outline_rounded,
+        title: 'Согласовано',
+        subtitle:
+            'Сумма заявки списана из materials-бюджета проекта. Видна всем ролям.',
+        color: AppColors.greenLight,
+        iconColor: AppColors.greenDark,
+      ),
+      MaterialRequestStatus.rejected => const _Banner(
+        icon: Icons.cancel_outlined,
+        title: 'Заказчик отклонил заявку',
+        subtitle:
+            'Бюджет не списан. Заявка видна всем участникам проекта в истории.',
+        color: Color(0xFFFFE5E0),
+        iconColor: Color(0xFFB23A2A),
+      ),
+    };
+  }
+}
+
+class _Banner extends StatelessWidget {
+  const _Banner({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.iconColor,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(color: color, borderRadius: AppRadius.card),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: iconColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.n700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ItemRow extends StatelessWidget {
+  const _ItemRow({required this.item});
+
+  final MaterialItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: AppColors.n0,
+        borderRadius: AppRadius.card,
+        border: Border.all(color: AppColors.n200),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.n900,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_fmtQty(item.qty)} ${item.unit ?? ''}',
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.n500,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (item.note != null && item.note!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    item.note!,
+                    style: AppTextStyles.tiny.copyWith(
+                      color: AppColors.n400,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (item.totalPrice != null)
+            Text(
+              Money.format(item.totalPrice!),
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.n800,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _fmtQty(double q) =>
+      q == q.roundToDouble() ? q.toInt().toString() : q.toString();
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -284,344 +349,6 @@ class _CommentCard extends StatelessWidget {
         borderRadius: AppRadius.card,
       ),
       child: Text(comment, style: AppTextStyles.body),
-    );
-  }
-}
-
-class _Actions extends ConsumerWidget {
-  const _Actions({required this.projectId, required this.request});
-
-  final String projectId;
-  final MaterialRequest request;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final buttons = <Widget>[];
-    final ctrl = ref.read(materialsControllerProvider(projectId).notifier);
-    final canManage = ref.watch(canProvider(DomainAction.materialsManage));
-    final canFinalize = ref.watch(canProvider(DomainAction.materialFinalize));
-
-    switch (request.status) {
-      case MaterialRequestStatus.draft:
-        if (canManage) {
-          buttons.add(
-            AppButton(
-              label: 'Отправить заказчику/бригадиру',
-              onPressed: () => ctrl.send(request.id),
-            ),
-          );
-        }
-      case MaterialRequestStatus.partiallyBought:
-      case MaterialRequestStatus.bought:
-        if (request.allItemsBought && canFinalize) {
-          buttons.add(
-            AppButton(
-              label: 'Финализировать (в бюджет)',
-              variant: AppButtonVariant.success,
-              onPressed: () => ctrl.finalizeRequest(request.id),
-            ),
-          );
-        }
-        if (canManage) {
-          if (buttons.isNotEmpty) {
-            buttons.add(const SizedBox(height: AppSpacing.x8));
-          }
-          buttons.add(
-            AppButton(
-              label: 'Открыть спор',
-              variant: AppButtonVariant.destructive,
-              onPressed: () => _dispute(context, ref),
-            ),
-          );
-        }
-      case MaterialRequestStatus.delivered:
-        if (canManage) {
-          buttons.add(
-            AppButton(
-              label: 'Подтвердить доставку',
-              variant: AppButtonVariant.success,
-              onPressed: () => ctrl.confirmDelivery(request.id),
-            ),
-          );
-        }
-      case MaterialRequestStatus.disputed:
-        if (canManage) {
-          buttons.add(
-            AppButton(
-              label: 'Разрешить спор',
-              onPressed: () => _resolve(context, ref),
-            ),
-          );
-        }
-      case MaterialRequestStatus.open:
-        if (canManage) {
-          buttons.add(
-            AppButton(
-              label: 'Открыть спор',
-              variant: AppButtonVariant.destructive,
-              onPressed: () => _dispute(context, ref),
-            ),
-          );
-        }
-      case MaterialRequestStatus.resolved:
-      case MaterialRequestStatus.cancelled:
-        return const SizedBox.shrink();
-    }
-
-    if (buttons.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x16,
-        AppSpacing.x12,
-        AppSpacing.x16,
-        AppSpacing.x16,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.n0,
-        border: Border(top: BorderSide(color: AppColors.n200)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: buttons,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _dispute(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    await showAppBottomSheet<void>(
-      context: context,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const AppBottomSheetHeader(
-            title: 'Открыть спор по заявке',
-            subtitle: 'Опишите проблему — заморозим заявку до разрешения.',
-          ),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.x12),
-            decoration: BoxDecoration(
-              color: AppColors.redBg,
-              border: Border.all(
-                color: AppColors.redDot.withValues(alpha: 0.3),
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.report_problem_outlined,
-                  size: 16,
-                  color: AppColors.redDot,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Заявка будет заморожена, пока спор открыт.',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.redDot,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(
-            controller: controller,
-            autofocus: true,
-            minLines: 3,
-            maxLines: 6,
-            maxLength: 2000,
-            decoration: InputDecoration(
-              hintText: 'Что не так?',
-              filled: true,
-              fillColor: AppColors.n0,
-              contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-                borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x16),
-          Builder(
-            builder: (ctx) => AppButton(
-              label: 'Открыть спор',
-              variant: AppButtonVariant.destructive,
-              onPressed: () async {
-                final reason = controller.text.trim();
-                if (reason.isEmpty) return;
-                await ref
-                    .read(materialsControllerProvider(projectId).notifier)
-                    .dispute(id: request.id, reason: reason);
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-  }
-
-  Future<void> _resolve(BuildContext context, WidgetRef ref) async {
-    await showAppBottomSheet<void>(
-      context: context,
-      child: _ResolveSheet(
-        onSubmit: (resolution) async {
-          await ref
-              .read(materialsControllerProvider(projectId).notifier)
-              .resolve(id: request.id, resolution: resolution);
-        },
-      ),
-    );
-  }
-}
-
-class _ResolveOption {
-  const _ResolveOption(this.key, this.icon, this.title, this.subtitle);
-
-  final String key;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-}
-
-class _ResolveSheet extends StatefulWidget {
-  const _ResolveSheet({required this.onSubmit});
-
-  final Future<void> Function(String resolution) onSubmit;
-
-  @override
-  State<_ResolveSheet> createState() => _ResolveSheetState();
-}
-
-class _ResolveSheetState extends State<_ResolveSheet> {
-  static const _options = [
-    _ResolveOption(
-      'delivered',
-      Icons.local_shipping_outlined,
-      'Довезли остаток',
-      'Недостающие позиции доставлены',
-    ),
-    _ResolveOption(
-      'refund',
-      Icons.payments_outlined,
-      'Возврат денег',
-      'Скорректировать сумму',
-    ),
-    _ResolveOption(
-      'write_off',
-      Icons.event_busy_outlined,
-      'Списать',
-      'Принять как есть, без компенсации',
-    ),
-  ];
-
-  _ResolveOption _selected = _options.first;
-  final _comment = TextEditingController();
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    _comment.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (_busy) return;
-    final text = _comment.text.trim();
-    final resolution = text.isEmpty
-        ? _selected.title
-        : '${_selected.title}. $text';
-    setState(() => _busy = true);
-    try {
-      await widget.onSubmit(resolution);
-      if (mounted) Navigator.of(context).pop();
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const AppBottomSheetHeader(
-          title: 'Закрыть спор',
-          subtitle: 'Как решён спор?',
-        ),
-        for (final o in _options) ...[
-          ResolveOptionCard(
-            icon: o.icon,
-            title: o.title,
-            subtitle: o.subtitle,
-            selected: o == _selected,
-            onTap: () => setState(() => _selected = o),
-          ),
-          const SizedBox(height: AppSpacing.x8),
-        ],
-        const SizedBox(height: AppSpacing.x6),
-        TextField(
-          controller: _comment,
-          minLines: 2,
-          maxLines: 5,
-          maxLength: 2000,
-          decoration: InputDecoration(
-            hintText: 'Комментарий (необязательно)',
-            filled: true,
-            fillColor: AppColors.n50,
-            contentPadding: const EdgeInsets.all(12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-              borderSide: const BorderSide(color: AppColors.n200, width: 1.5),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.x12),
-          decoration: BoxDecoration(
-            color: AppColors.brandLight,
-            borderRadius: BorderRadius.circular(AppRadius.r12),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.info_outline_rounded,
-                size: 14,
-                color: AppColors.brand,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Решение зафиксируется в ленте событий — изменить нельзя.',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.brandDark,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        AppButton(
-          label: 'Подтвердить и закрыть',
-          variant: AppButtonVariant.success,
-          icon: Icons.check_rounded,
-          onPressed: _busy ? null : _submit,
-        ),
-      ],
     );
   }
 }

@@ -136,72 +136,117 @@ class AppRadius {
 class AppShadows {
   const AppShadows._();
 
-  /// Лёгкая, для карточек списков.
+  /// Лёгкая, для карточек списков. 3-слойная: подложка + бренд-тинт +
+  /// далёкая дымка — тактильная глубина без явных линий.
   static const List<BoxShadow> sh1 = [
     BoxShadow(
-      color: Color(0x0F0D1229), // rgba(13,18,41,0.06)
+      color: Color(0x0A0D1229),
       offset: Offset(0, 1),
-      blurRadius: 3,
+      blurRadius: 2,
     ),
     BoxShadow(
-      color: Color(0x124F6EF7), // rgba(79,110,247,0.07)
-      offset: Offset(0, 4),
-      blurRadius: 16,
+      color: Color(0x0D4F6EF7),
+      offset: Offset(0, 2),
+      blurRadius: 8,
+    ),
+    BoxShadow(
+      color: Color(0x0A0D1229),
+      offset: Offset(0, 8),
+      blurRadius: 20,
     ),
   ];
 
   /// Средняя, для инпутов / elevated.
   static const List<BoxShadow> sh2 = [
     BoxShadow(
-      color: Color(0x140D1229), // 0.08
+      color: Color(0x0F0D1229),
       offset: Offset(0, 2),
-      blurRadius: 8,
+      blurRadius: 6,
     ),
     BoxShadow(
-      color: Color(0x1A4F6EF7), // 0.10
+      color: Color(0x1A4F6EF7),
       offset: Offset(0, 8),
-      blurRadius: 24,
+      blurRadius: 22,
+    ),
+    BoxShadow(
+      color: Color(0x0F0D1229),
+      offset: Offset(0, 18),
+      blurRadius: 40,
     ),
   ];
 
   /// Глубокая, для модалок и тостов.
   static const List<BoxShadow> sh3 = [
     BoxShadow(
-      color: Color(0x1A0D1229), // 0.10
+      color: Color(0x1A0D1229),
       offset: Offset(0, 4),
-      blurRadius: 16,
+      blurRadius: 12,
     ),
     BoxShadow(
-      color: Color(0x244F6EF7), // 0.14
-      offset: Offset(0, 16),
-      blurRadius: 40,
+      color: Color(0x294F6EF7),
+      offset: Offset(0, 18),
+      blurRadius: 38,
+    ),
+    BoxShadow(
+      color: Color(0x1F0D1229),
+      offset: Offset(0, 36),
+      blurRadius: 72,
     ),
   ];
 
-  /// Бренд-тень под активные кнопки.
+  /// Бренд-тень под активные кнопки. 2-слойная: насыщ. glow + ближняя тень.
   static const List<BoxShadow> shBlue = [
     BoxShadow(
-      color: Color(0x594F6EF7), // 0.35
-      offset: Offset(0, 4),
-      blurRadius: 20,
+      color: Color(0x6B4F6EF7),
+      offset: Offset(0, 8),
+      blurRadius: 24,
+    ),
+    BoxShadow(
+      color: Color(0x384F6EF7),
+      offset: Offset(0, 2),
+      blurRadius: 6,
     ),
   ];
 
   /// Успех.
   static const List<BoxShadow> shGreen = [
     BoxShadow(
-      color: Color(0x4D059669), // 0.30
-      offset: Offset(0, 4),
-      blurRadius: 16,
+      color: Color(0x52059669),
+      offset: Offset(0, 6),
+      blurRadius: 20,
+    ),
+    BoxShadow(
+      color: Color(0x2E059669),
+      offset: Offset(0, 2),
+      blurRadius: 4,
     ),
   ];
 
   /// Опасность.
   static const List<BoxShadow> shRed = [
     BoxShadow(
-      color: Color(0x40DC2626), // 0.25
+      color: Color(0x47DC2626),
+      offset: Offset(0, 6),
+      blurRadius: 20,
+    ),
+    BoxShadow(
+      color: Color(0x29DC2626),
+      offset: Offset(0, 2),
+      blurRadius: 4,
+    ),
+  ];
+
+  /// Тень под аватаром hero (двухслойная — насыщ. бренд + тёмная подложка).
+  static const List<BoxShadow> avatarHero = [
+    BoxShadow(
+      color: Color(0x754F6EF7),
+      offset: Offset(0, 12),
+      blurRadius: 32,
+    ),
+    BoxShadow(
+      color: Color(0x4D000000),
       offset: Offset(0, 4),
-      blurRadius: 16,
+      blurRadius: 10,
     ),
   ];
 
@@ -251,6 +296,110 @@ class AppShadows {
       spreadRadius: 2,
     ),
   ];
+
+  /// Двойное halo-кольцо вокруг success-circle (d-approved / result-screen).
+  static const List<BoxShadow> haloGreen = [
+    BoxShadow(color: Color(0x1A10B981), spreadRadius: 8),
+    BoxShadow(color: Color(0x0D10B981), spreadRadius: 16),
+    BoxShadow(
+      color: Color(0x2E059669),
+      offset: Offset(0, 12),
+      blurRadius: 28,
+    ),
+  ];
+
+  /// Двойное halo-кольцо вокруг error-circle (d-rejected).
+  static const List<BoxShadow> haloRed = [
+    BoxShadow(color: Color(0x1ADC2626), spreadRadius: 8),
+    BoxShadow(color: Color(0x0DDC2626), spreadRadius: 16),
+    BoxShadow(
+      color: Color(0x2EDC2626),
+      offset: Offset(0, 12),
+      blurRadius: 28,
+    ),
+  ];
+
+  // ──────────────────────────────────────────────────────────────────
+  // Cluster E refresh — focus-ring, hover-tier, inset-highlight.
+  // CSS-эквивалент: `--sh-glow: 0 0 0 4px rgba(79,110,247,0.10)`.
+  // ──────────────────────────────────────────────────────────────────
+
+  /// Brand focus-ring (мягкое 4px-кольцо без offset).
+  /// Применяется на TextField / search-bar / card-press.
+  static const List<BoxShadow> focusRingBlue = [
+    BoxShadow(
+      color: Color(0x1A4F6EF7), // alpha 0.10
+      blurRadius: 0,
+      spreadRadius: 4,
+    ),
+  ];
+
+  /// Hover-tier тень — между sh1 и sh2 (карточки при press / hover).
+  static const List<BoxShadow> shHover = [
+    BoxShadow(
+      color: Color(0x140D1229), // 0.08
+      offset: Offset(0, 2),
+      blurRadius: 6,
+    ),
+    BoxShadow(
+      color: Color(0x1F4F6EF7), // 0.12
+      offset: Offset(0, 10),
+      blurRadius: 26,
+    ),
+  ];
+
+  /// Глубокая brand-подсветка — premium-кнопки в action-bar.
+  static const List<BoxShadow> shBrandDeep = [
+    BoxShadow(
+      color: Color(0x664F6EF7), // 0.40
+      offset: Offset(0, 6),
+      blurRadius: 22,
+      spreadRadius: -2,
+    ),
+  ];
+
+  /// Цвет для имитации CSS inset-highlight (rgba(255,255,255,0.20))
+  /// на иконках/баджах. Применяется как 1px top-border.
+  static const Color innerHighlight = Color(0x33FFFFFF);
+
+  // ──────────────────────────────────────────────────────────────────
+  // Card surface — мягкая утончённая тень для карточек этапов и
+  // строк чек-листа. Менее насыщенный голубой ореол, чем у `sh1`,
+  // и чуть глубже — карточки «всплывают» из подложки.
+  // Используется в StageStripeCard / StageRowCard / ChecklistStepRow /
+  // StageStatsRow / TemplateCard.
+  // ──────────────────────────────────────────────────────────────────
+  static const List<BoxShadow> shCard = [
+    BoxShadow(
+      color: Color(0x0A0D1229), // rgba(13,18,41, 0.04)
+      offset: Offset(0, 1),
+      blurRadius: 2,
+    ),
+    BoxShadow(
+      color: Color(0x0F0D1229), // rgba(13,18,41, 0.06)
+      offset: Offset(0, 4),
+      blurRadius: 14,
+    ),
+  ];
+
+  /// Мягкий зелёный halo для substep-точки 8×8 — мельче, чем
+  /// [glowGreen]; не «забивает» соседний текст в плотных списках.
+  static const List<BoxShadow> haloGreenSmall = [
+    BoxShadow(
+      color: Color(0x2310B981), // rgba(16,185,129, 0.14)
+      blurRadius: 6,
+      spreadRadius: 2,
+    ),
+  ];
+
+  /// Brand-halo для inline-progress (4–5px бар).
+  /// Тонкое сияние под цветной полоской прогресса этапа.
+  static const List<BoxShadow> haloProgress = [
+    BoxShadow(
+      color: Color(0x4D4F6EF7), // rgba(79,110,247, 0.30)
+      blurRadius: 8,
+    ),
+  ];
 }
 
 class AppSpacing {
@@ -287,38 +436,98 @@ class AppDurations {
   static const Duration slow = Duration(milliseconds: 400);
 }
 
+/// Кастомные кривые анимаций — соответствуют CSS-easing из дизайн-референса
+/// (`design/Кластер_A___Профиль.html`). Используются в `AnimatedContainer`,
+/// `AnimatedScale`, transition'ах кнопок/чипов.
+class AppCurves {
+  const AppCurves._();
+
+  /// Плавный «вылет», как `cubic-bezier(0.16, 1, 0.3, 1)`.
+  /// Появление карточек, тостов, шторок.
+  static const Cubic easeOut = Cubic(0.16, 1, 0.3, 1);
+
+  /// Лёгкий «отскок», как `cubic-bezier(0.34, 1.56, 0.64, 1)`.
+  /// Микро-нажатия: кнопки, чекбоксы, role-cards.
+  static const Cubic spring = Cubic(0.34, 1.56, 0.64, 1);
+
+  /// Material-soft, как `cubic-bezier(0.4, 0, 0.2, 1)` — Material Standard.
+  /// Плавные смены цвета/border'а.
+  static const Cubic soft = Cubic(0.4, 0, 0.2, 1);
+}
+
 /// Градиенты дизайна Cluster A (Welcome / Profile-hero / success-CTA / role-cards).
 class AppGradients {
   const AppGradients._();
 
-  /// Фон Welcome-экрана. 155° dark blue → brand.
+  /// Фон Welcome-экрана. 4-stop deep navy → brand с дополнительным
+  /// тёмным акцентом сверху для большей тональной глубины.
   static const LinearGradient heroDark = LinearGradient(
     begin: Alignment(-0.6, -1),
     end: Alignment(0.6, 1),
-    colors: [Color(0xFF0F172A), Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
-    stops: [0, 0.5, 1],
+    colors: [
+      Color(0xFF06091B),
+      Color(0xFF0F172A),
+      Color(0xFF13234A),
+      Color(0xFF1D4ED8),
+    ],
+    stops: [0, 0.25, 0.65, 1],
   );
 
-  /// Hero-блок Профиля. 155° чуть светлее, чтобы аватар-инициалы читались.
+  /// Hero-блок Профиля. 4-stop: чуть светлее heroDark, чтобы аватар-
+  /// инициалы читались; больше тональных переходов для богатства.
   static const LinearGradient heroProfile = LinearGradient(
     begin: Alignment(-0.6, -1),
     end: Alignment(0.6, 1),
-    colors: [Color(0xFF0F172A), Color(0xFF1A2D5A), Color(0xFF2A3F7E)],
-    stops: [0, 0.5, 1],
+    colors: [
+      Color(0xFF0B1024),
+      Color(0xFF13193A),
+      Color(0xFF1A2D5A),
+      Color(0xFF2D45A0),
+    ],
+    stops: [0, 0.3, 0.65, 1],
   );
 
-  /// Success-CTA / role-switched success (135°).
+  /// Success-CTA / role-switched success (135°). 3-stop для глубины.
   static const LinearGradient successHero = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF10B981), Color(0xFF059669)],
+    colors: [Color(0xFF10B981), Color(0xFF059669), Color(0xFF047857)],
+    stops: [0, 0.5, 1],
   );
 
-  /// Бренд-кнопка (135°).
+  /// Бренд-кнопка (135°). 3-stop с осветлённым началом для glossy-эффекта.
   static const LinearGradient brandButton = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.brand, AppColors.brandDark],
+    colors: [Color(0xFF6A8AFF), AppColors.brand, AppColors.brandDark],
+    stops: [0, 0.48, 1],
+  );
+
+  /// Premium 2-stop success-кнопка — для confirm / approved CTA
+  /// (Cluster E: Подтвердить выплату / Закрыть спор / Сдать инструмент).
+  static const LinearGradient successButtonHero = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF047857)],
+  );
+
+  /// Радиальный glow для hero-фона (накладывается поверх heroProfile/heroDark
+  /// для создания эффекта «солнца» в верхнем-левом углу). Применяется в
+  /// AppHeroHeader Stack-overlay.
+  static const RadialGradient heroBlobBrand = RadialGradient(
+    center: Alignment(-0.6, -1.2),
+    radius: 1.1,
+    colors: [Color(0x664F6EF7), Color(0x004F6EF7)],
+    stops: [0, 1],
+  );
+
+  /// Дополнительный фиолетовый blob — второй уровень глубины hero
+  /// (правый-нижний угол).
+  static const RadialGradient heroBlobPurple = RadialGradient(
+    center: Alignment(0.9, 1.2),
+    radius: 1,
+    colors: [Color(0x387C3AED), Color(0x007C3AED)],
+    stops: [0, 1],
   );
 
   /// Plan-info-card в `d-plan-approval`: тёмный navy → brand.
@@ -326,6 +535,24 @@ class AppGradients {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFF1E3A5F), AppColors.brand],
+  );
+
+  /// Plan-info-card rich: 3-stop brandDark → brand → brandMid (135°).
+  /// Pending-approval баннер `d-plan-approval` и approval_detail _PlanBody.
+  static const LinearGradient planInfoRich = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.brandDark, AppColors.brand, AppColors.brandMid],
+    stops: [0, 0.5, 1],
+  );
+
+  /// Soft brand-gradient для photo-плейсхолдеров (approval cards / detail).
+  /// 135° brandLight → промежуточный → n300-tint, статичный shimmer.
+  static const LinearGradient photoPlaceholder = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.brandLight, Color(0xFFDDE5FA), Color(0xFFC9D7F4)],
+    stops: [0, 0.5, 1],
   );
 
   /// Question-карточка в `d-question-reply`: purple-light → purple-mid.
@@ -393,5 +620,61 @@ class AppGradients {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFF5B7EF8), Color(0xFF3A56D4)],
+  );
+
+  // ──────────────────────────────────────────────────────────────────
+  // Card surface — почти невидимый 180° градиент сверху-вниз. Делает
+  // плоскость карточки чуть «живее» под ambient-светом экрана. Для
+  // StageStripeCard / StageRowCard / ChecklistStepRow / StageStatsRow /
+  // TemplateCard.
+  // ──────────────────────────────────────────────────────────────────
+  static const LinearGradient surfaceCard = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [AppColors.n0, Color(0xFFFCFDFF)],
+  );
+
+  /// Слегка тёплый surface для активной строки чек-листа (вместо
+  /// плоской заливки brandLight) — диагональ для лёгкого «свечения».
+  static const LinearGradient activeStepBg = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF5F8FF), AppColors.brandLight],
+  );
+
+  // Stripe-градиенты для верхней полоски карточек этапов
+  // (StageStripeCard `::before`) и левой вертикальной полосы
+  // (StageRowCard). Каждый соответствует Semaphore.
+  static const LinearGradient stripeGreen = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFF34D399), AppColors.greenDark],
+  );
+  static const LinearGradient stripeBrand = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [AppColors.brandMid, AppColors.brand],
+  );
+  static const LinearGradient stripeYellow = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFFCD34D), Color(0xFFD97706)],
+  );
+  static const LinearGradient stripeRed = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFF87171), AppColors.redDot],
+  );
+  static const LinearGradient stripePurple = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFA78BFA), Color(0xFF7C3AED)],
+  );
+
+  /// Plan-stripe — слегка темнее, чтобы waiting-этапы не сливались с фоном.
+  static const LinearGradient stripePlan = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [AppColors.n200, AppColors.n300],
   );
 }

@@ -48,21 +48,104 @@ class StageBudget with _$StageBudget {
   );
 }
 
-@freezed
-class ProjectBudget with _$ProjectBudget {
-  const factory ProjectBudget({
-    required BudgetBucket work,
-    required BudgetBucket materials,
-    required BudgetBucket total,
-    @Default(<StageBudget>[]) List<StageBudget> stages,
-  }) = _ProjectBudget;
+/// Master видит только свои входящие выплаты (toUserId=me) + read-only
+/// movement проекта. Backend заполняет `earnings[]` + `viewerKind='master'`.
+class MasterEarning {
+  const MasterEarning({
+    required this.paymentId,
+    required this.amount,
+    required this.createdAt,
+    this.stageId,
+    this.fromUserId,
+    this.fromUserName,
+    this.fromUserRole,
+  });
 
-  static ProjectBudget parse(Map<String, dynamic> json) => ProjectBudget(
-    work: BudgetBucket.parse(json['work'] as Map<String, dynamic>?),
-    materials: BudgetBucket.parse(json['materials'] as Map<String, dynamic>?),
-    total: BudgetBucket.parse(json['total'] as Map<String, dynamic>?),
-    stages: (json['stages'] as List<dynamic>? ?? const [])
-        .map((e) => StageBudget.parse(e as Map<String, dynamic>))
-        .toList(),
+  final String paymentId;
+  final String? stageId;
+  final int amount;
+  final DateTime createdAt;
+
+  /// Кто заплатил мастеру (заказчик или бригадир). Заполняется backend'ом —
+  /// без этих полей экран мастера не может показать «Выплатил Иван Иванов».
+  final String? fromUserId;
+  final String? fromUserName;
+  final String? fromUserRole;
+
+  static MasterEarning parse(Map<String, dynamic> json) => MasterEarning(
+    paymentId: json['paymentId'] as String,
+    stageId: json['stageId'] as String?,
+    amount: (json['amount'] as num?)?.toInt() ?? 0,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    fromUserId: json['fromUserId'] as String?,
+    fromUserName: json['fromUserName'] as String?,
+    fromUserRole: json['fromUserRole'] as String?,
   );
+
+  /// Локализованное название роли плательщика для подписи «Выплатил …».
+  String get fromRoleLabel {
+    switch (fromUserRole) {
+      case 'customer':
+        return 'заказчик';
+      case 'representative':
+        return 'представитель заказчика';
+      case 'foreman':
+        return 'бригадир';
+      case 'master':
+        return 'мастер';
+      default:
+        return '';
+    }
+  }
+}
+
+enum BudgetViewerKind { owner, representative, foreman, master, unknown }
+
+/// ProjectBudget — plain Dart (не freezed), чтобы можно было добавлять поля
+/// без перегенерации .freezed.dart (build_runner локально не запускается).
+class ProjectBudget {
+  const ProjectBudget({
+    required this.work,
+    required this.materials,
+    required this.total,
+    this.stages = const <StageBudget>[],
+    this.viewerKind = BudgetViewerKind.unknown,
+    this.earnings = const <MasterEarning>[],
+    this.noStageBudget = false,
+  });
+
+  final BudgetBucket work;
+  final BudgetBucket materials;
+  final BudgetBucket total;
+  final List<StageBudget> stages;
+  final BudgetViewerKind viewerKind;
+  final List<MasterEarning> earnings;
+
+  /// true → бригадир видит свои этапы, но workBudget/materialsBudget на них = 0,
+  /// а у Project бюджет задан. UI показывает inline-баннер «Заказчик не разнёс
+  /// бюджет по вашим этапам».
+  final bool noStageBudget;
+
+  static ProjectBudget parse(Map<String, dynamic> json) {
+    final viewer = switch (json['viewerKind'] as String?) {
+      'owner' => BudgetViewerKind.owner,
+      'representative' => BudgetViewerKind.representative,
+      'foreman' => BudgetViewerKind.foreman,
+      'master' => BudgetViewerKind.master,
+      _ => BudgetViewerKind.unknown,
+    };
+    return ProjectBudget(
+      work: BudgetBucket.parse(json['work'] as Map<String, dynamic>?),
+      materials: BudgetBucket.parse(json['materials'] as Map<String, dynamic>?),
+      total: BudgetBucket.parse(json['total'] as Map<String, dynamic>?),
+      stages: (json['stages'] as List<dynamic>? ?? const [])
+          .map((e) => StageBudget.parse(e as Map<String, dynamic>))
+          .toList(),
+      viewerKind: viewer,
+      earnings: (json['earnings'] as List<dynamic>? ?? const [])
+          .map((e) => MasterEarning.parse(e as Map<String, dynamic>))
+          .toList(),
+      noStageBudget: json['noStageBudget'] as bool? ?? false,
+    );
+  }
 }

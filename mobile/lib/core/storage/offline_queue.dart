@@ -23,9 +23,7 @@ enum OfflineActionKind {
   questionAnswer,
   stagePause,
   stageResume,
-  paymentDispute,
   selfpurchaseCreate,
-  materialMarkBought,
 }
 
 class OfflineAction {

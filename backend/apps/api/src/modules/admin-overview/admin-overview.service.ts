@@ -83,7 +83,6 @@ export class AdminOverviewService {
       items: items.map((p) => ({
         ...p,
         amount: p.amount.toString(),
-        resolvedAmount: p.resolvedAmount?.toString() ?? null,
         from: byId[p.fromUserId] ?? null,
         to: byId[p.toUserId] ?? null,
       })),

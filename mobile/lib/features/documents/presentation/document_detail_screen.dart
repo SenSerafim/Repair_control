@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +16,8 @@ import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/config/app_providers.dart';
+import '../../../shared/widgets/app_auth_image.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../chat/data/chats_repository.dart';
 import '../../chat/domain/chat.dart';
@@ -57,7 +58,14 @@ class _DetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canDelete = ref.watch(canProvider(DomainAction.documentDelete));
+    // Удалять может только заказчик (owner) или представитель с canEditStages.
+    // Author/foreman/master НЕ могут удалить документы из общей папки.
+    final canDelete = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.documentDelete,
+        projectId: doc.projectId,
+      )),
+    );
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -210,9 +218,10 @@ class _DetailView extends ConsumerWidget {
     );
   }
 
-  /// Скачивает документ во временную папку. Использует presigned URL
-  /// (он не требует JWT-авторизации). Имя файла — `<id>__<title>` чтобы
-  /// избежать коллизий и сохранить расширение для open_filex.
+  /// Скачивает документ во временную папку. URL у нас теперь относительный
+  /// (`/api/documents/:id/file`) → используем глобальный dio с baseUrl
+  /// и auth-интерсептором. Имя файла — `<id>__<title>` чтобы избежать
+  /// коллизий и сохранить расширение для open_filex.
   Future<File> _downloadToTemp(WidgetRef ref) async {
     final url =
         doc.url ??
@@ -225,12 +234,7 @@ class _DetailView extends ConsumerWidget {
     final filename = '${doc.id}__$safeTitle';
     final ext = p.extension(filename).isEmpty ? _extFromMime(doc.mimeType) : '';
     final file = File(p.join(tmpDir.path, '$filename$ext'));
-    final raw = Dio();
-    try {
-      await raw.download(url, file.path);
-    } finally {
-      raw.close();
-    }
+    await ref.read(dioProvider).download(url, file.path);
     return file;
   }
 
@@ -312,19 +316,10 @@ class _Preview extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: doc.isImage && previewUrl != null
-          ? Image.network(
-              previewUrl,
+          ? AppAuthImage(
+              path: previewUrl,
               fit: BoxFit.cover,
               width: double.infinity,
-              loadingBuilder: (_, child, p) => p == null
-                  ? child
-                  : const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
               errorBuilder: (_, __, ___) => _PlaceholderIcon(doc: doc),
             )
           : _PlaceholderIcon(doc: doc),
@@ -424,6 +419,7 @@ class _MetaCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.r16),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _row('Файл', doc.title),
           _row('Размер', _size(doc.sizeBytes)),
@@ -432,10 +428,32 @@ class _MetaCard extends StatelessWidget {
             doc.category.displayName,
             valueColor: AppColors.brand,
           ),
+          if (doc.documentDate != null)
+            _row(
+              'Дата документа',
+              DateFormat('dd.MM.yyyy', 'ru').format(doc.documentDate!),
+            ),
           _row(
-            'Дата',
+            'Загружено',
             DateFormat('dd.MM.yyyy, HH:mm', 'ru').format(doc.createdAt),
           ),
+          if (doc.description != null && doc.description!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Divider(color: AppColors.n100, height: 1),
+            const SizedBox(height: 8),
+            Text(
+              'Описание',
+              style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              doc.description!,
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.n800,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );

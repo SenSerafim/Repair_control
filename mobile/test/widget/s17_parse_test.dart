@@ -81,7 +81,7 @@ void main() {
 
     test('payment_* → payment', () {
       expect(
-        DeepLinkRouter.categoryOf('payment_confirmed'),
+        DeepLinkRouter.categoryOf('payment_created'),
         NotificationRoute.payment,
       );
     });

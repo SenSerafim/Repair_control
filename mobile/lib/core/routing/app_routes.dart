@@ -153,14 +153,6 @@ class AppRoutes {
   }) => '/projects/$projectId/stages/created?stageId=$stageId';
 
   // Cluster E — финансы/материалы/самозакупы/инструмент.
-  static const materialEditPos =
-      '/projects/:projectId/materials/:requestId/items/:itemId/edit';
-  static String materialEditPosWith({
-    required String projectId,
-    required String requestId,
-    required String itemId,
-  }) => '/projects/$projectId/materials/$requestId/items/$itemId/edit';
-
   static const selfpurchaseCreate = '/projects/:projectId/selfpurchases/new';
   static String selfpurchaseCreateWith(String projectId) =>
       '/projects/$projectId/selfpurchases/new';
@@ -178,14 +170,10 @@ class AppRoutes {
     required String id,
   }) => '/projects/$projectId/selfpurchases/$id/reject';
 
-  static const toolIssue = '/projects/:projectId/tools/new';
-  static String toolIssueWith(String projectId) =>
-      '/projects/$projectId/tools/new';
-
-  /// П2.15 — реестр инструментов проекта (вкладка «Инструменты»).
-  static const projectTools = '/projects/:projectId/tool-registry';
+  /// Доска инструментов проекта (self-custody модель, 2026-05-12).
+  static const projectTools = '/projects/:projectId/tools';
   static String projectToolsWith(String projectId) =>
-      '/projects/$projectId/tool-registry';
+      '/projects/$projectId/tools';
 
   // Payments / Documents / Notifications / Methodology — root-level
   // экраны, вызываемые из FCM-deep-link и из projectDetail-меню.

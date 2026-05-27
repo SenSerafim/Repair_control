@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
+НЕ ТРОГАЙ ГИТ!!! НИЧЕГО НЕ НАДО КОМИТИТЬ ИЛИ ЧТО ЛИБО ЕЗЕ ДЕЛАТЬ БЕЗ МОЕГО ПРЯМОГО УКАЗАНИ!
+
 Репозиторий в активной разработке. Структура:
 
 - `backend/` — NestJS + Prisma + PostgreSQL + Redis + MinIO + Socket.IO + BullMQ. **S1–S5 закрыты**, API заморожен в 1.0.0 (`backend/docs/openapi.v1.json`, 148 путей, 32 модуля, 46 Prisma-моделей, 351 unit + 30 e2e тестов). Admin Panel поднят (коммит `563b23a`).

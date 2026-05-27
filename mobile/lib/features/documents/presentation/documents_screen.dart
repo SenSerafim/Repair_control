@@ -7,6 +7,7 @@ import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/widgets/app_auth_image.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../exports/presentation/export_sheet.dart';
 import '../../stages/application/stages_controller.dart';
@@ -98,8 +99,8 @@ class DocumentsScreen extends ConsumerWidget {
                   return AppEmptyState(
                     title: 'Нет документов',
                     subtitle:
-                        'Загрузите документы проекта: планы, сметы, '
-                        'чертежи',
+                        'Общая папка проекта — загружайте сюда любые '
+                        'документы: фото, видео, PDF, договоры, чеки.',
                     icon: Icons.insert_drive_file_outlined,
                     actionLabel: canWrite ? 'Загрузить документ' : null,
                     onAction: canWrite
@@ -212,7 +213,19 @@ class _DocRow extends StatelessWidget {
             color: AppColors.n0,
             borderRadius: AppRadius.card,
             border: Border.all(color: AppColors.n200),
-            boxShadow: AppShadows.sh1,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A0D1229),
+                offset: Offset(0, 1),
+                blurRadius: 2,
+              ),
+              BoxShadow(
+                color: Color(0x1F4F6EF7),
+                offset: Offset(0, 10),
+                blurRadius: 24,
+                spreadRadius: -10,
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -222,16 +235,31 @@ class _DocRow extends StatelessWidget {
                   child: SizedBox(
                     width: 44,
                     height: 44,
-                    child: Image.network(
-                      doc.thumbUrl ?? doc.url!,
+                    child: AppAuthImage(
+                      path: doc.thumbUrl ?? doc.url!,
                       fit: BoxFit.cover,
+                      width: 44,
+                      height: 44,
                       errorBuilder: (_, __, ___) =>
                           AppDocTypeIcon(mimeType: doc.mimeType),
                     ),
                   ),
                 )
               else
-                AppDocTypeIcon(mimeType: doc.mimeType),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x140D1229),
+                        offset: Offset(0, 3),
+                        blurRadius: 8,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: AppDocTypeIcon(mimeType: doc.mimeType),
+                ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -250,14 +278,28 @@ class _DocRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${doc.category.displayName} · ${_sizeLabel(doc.sizeBytes)} · '
-                      '${DateFormat('d MMM', 'ru').format(doc.createdAt)}',
+                      _metaLine(doc),
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: AppColors.n400,
                       ),
                     ),
+                    if (doc.description != null &&
+                        doc.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        doc.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.n500,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -274,6 +316,13 @@ class _DocRow extends StatelessWidget {
     if (bytes < 1024) return '$bytes Б';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} КБ';
     return '${(bytes / 1024 / 1024).toStringAsFixed(1)} МБ';
+  }
+
+  /// Категория · размер · дата документа (если задана) или загрузки.
+  String _metaLine(Document d) {
+    final date = d.documentDate ?? d.createdAt;
+    final dateLabel = DateFormat('d MMM y', 'ru').format(date);
+    return '${d.category.displayName} · ${_sizeLabel(d.sizeBytes)} · $dateLabel';
   }
 }
 

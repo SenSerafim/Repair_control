@@ -5,18 +5,36 @@ import 'package:repair_control/features/tools/domain/tool.dart';
 
 void main() {
   group('MaterialRequestStatus', () {
-    test('roundtrip всех 8 значений', () {
+    test('roundtrip всех значений', () {
       for (final s in MaterialRequestStatus.values) {
         expect(MaterialRequestStatus.fromString(s.apiValue), s);
       }
     });
 
-    test('isTerminal правильный', () {
-      expect(MaterialRequestStatus.resolved.isTerminal, isTrue);
-      expect(MaterialRequestStatus.cancelled.isTerminal, isTrue);
-      expect(MaterialRequestStatus.delivered.isTerminal, isTrue);
-      expect(MaterialRequestStatus.open.isTerminal, isFalse);
-      expect(MaterialRequestStatus.disputed.isTerminal, isFalse);
+    test('isTerminal: approved/rejected — терминальные, pendingApproval — нет', () {
+      expect(MaterialRequestStatus.approved.isTerminal, isTrue);
+      expect(MaterialRequestStatus.rejected.isTerminal, isTrue);
+      expect(MaterialRequestStatus.pendingApproval.isTerminal, isFalse);
+    });
+
+    test('legacy bought/delivered/resolved/cancelled → approved/rejected', () {
+      // BE-наследие (S15) — пока БД хранит старые значения, парсим в новые.
+      expect(
+        MaterialRequestStatus.fromString('bought'),
+        MaterialRequestStatus.approved,
+      );
+      expect(
+        MaterialRequestStatus.fromString('delivered'),
+        MaterialRequestStatus.approved,
+      );
+      expect(
+        MaterialRequestStatus.fromString('resolved'),
+        MaterialRequestStatus.approved,
+      );
+      expect(
+        MaterialRequestStatus.fromString('cancelled'),
+        MaterialRequestStatus.rejected,
+      );
     });
   });
 
@@ -29,14 +47,14 @@ void main() {
   });
 
   group('MaterialRequest.parse', () {
-    test('с items и расчётом bought', () {
+    test('approved заявка с items + totalEstimatedPrice', () {
       final r = MaterialRequest.parse({
         'id': 'm1',
         'projectId': 'p1',
         'createdById': 'u1',
         'recipient': 'foreman',
         'title': 'Электрика 1',
-        'status': 'partially_bought',
+        'status': 'open',
         'createdAt': '2026-04-22T10:00:00Z',
         'updatedAt': '2026-04-22T10:00:00Z',
         'items': [
@@ -48,7 +66,6 @@ void main() {
             'unit': 'м',
             'pricePerUnit': 50_00,
             'totalPrice': 5000_00,
-            'isBought': true,
             'createdAt': '2026-04-22T10:00:00Z',
             'updatedAt': '2026-04-22T10:00:00Z',
           },
@@ -58,26 +75,26 @@ void main() {
             'name': 'Розетки',
             'qty': 20,
             'unit': 'шт',
-            'isBought': false,
+            'pricePerUnit': 100_00,
+            'totalPrice': 2000_00,
             'createdAt': '2026-04-22T10:00:00Z',
             'updatedAt': '2026-04-22T10:00:00Z',
           },
         ],
       });
+      expect(r.status, MaterialRequestStatus.approved);
       expect(r.items.length, 2);
-      expect(r.boughtItemsCount, 1);
-      expect(r.totalBoughtPrice, 5000_00);
-      expect(r.allItemsBought, isFalse);
+      expect(r.totalEstimatedPrice, 5000_00 + 2000_00);
     });
 
-    test('decimal qty', () {
+    test('decimal qty + pending_approval', () {
       final r = MaterialRequest.parse({
         'id': 'm1',
         'projectId': 'p1',
         'createdById': 'u1',
         'recipient': 'customer',
         'title': 'T',
-        'status': 'draft',
+        'status': 'pending_approval',
         'createdAt': '2026-04-22T10:00:00Z',
         'updatedAt': '2026-04-22T10:00:00Z',
         'items': [
@@ -87,12 +104,12 @@ void main() {
             'name': 'Штукатурка',
             'qty': '12.5',
             'unit': 'кг',
-            'isBought': false,
             'createdAt': '2026-04-22T10:00:00Z',
             'updatedAt': '2026-04-22T10:00:00Z',
           },
         ],
       });
+      expect(r.status, MaterialRequestStatus.pendingApproval);
       expect(r.items.first.qty, 12.5);
     });
   });
@@ -129,68 +146,81 @@ void main() {
     });
   });
 
-  group('ToolIssuanceStatus', () {
-    test('roundtrip', () {
-      for (final s in ToolIssuanceStatus.values) {
-        expect(ToolIssuanceStatus.fromString(s.apiValue), s);
-      }
+  group('ToolItem (self-custody модель, 2026-05-12)', () {
+    test('isInProject / isHeldBy / isOwnedBy', () {
+      final t = ToolItem.parse({
+        'id': 't1',
+        'ownerId': 'u1',
+        'currentHolderId': 'u2',
+        'name': 'Перфоратор',
+        'projectId': 'p1',
+        'createdAt': '2026-04-22T10:00:00Z',
+        'updatedAt': '2026-04-22T10:00:00Z',
+      });
+      expect(t.isInProject, isTrue);
+      expect(t.isOwnedBy('u1'), isTrue);
+      expect(t.isOwnedBy('u2'), isFalse);
+      expect(t.isHeldBy('u2'), isTrue);
+      expect(t.isHeldBy('u1'), isFalse);
     });
-  });
 
-  group('ToolItem extension', () {
-    test('availableQty и isAllIssued', () {
+    test('parse с enriched owner/holder', () {
+      final t = ToolItem.parse({
+        'id': 't1',
+        'ownerId': 'u1',
+        'currentHolderId': 'u2',
+        'name': 'Уровень',
+        'projectId': 'p1',
+        'createdAt': '2026-04-22T10:00:00Z',
+        'updatedAt': '2026-04-22T10:00:00Z',
+        '_owner': {'id': 'u1', 'firstName': 'Иван', 'lastName': 'Петров'},
+        '_holder': {'id': 'u2', 'firstName': 'Пётр', 'lastName': 'Сидоров'},
+      });
+      expect(t.owner?.displayName, 'Иван Петров');
+      expect(t.holder?.displayName, 'Пётр Сидоров');
+    });
+
+    test('currentHolderId fallback на ownerId если поле отсутствует', () {
       final t = ToolItem.parse({
         'id': 't1',
         'ownerId': 'u1',
         'name': 'Перфоратор',
-        'totalQty': 3,
-        'issuedQty': 2,
         'createdAt': '2026-04-22T10:00:00Z',
         'updatedAt': '2026-04-22T10:00:00Z',
       });
-      expect(t.availableQty, 1);
-      expect(t.isAllIssued, isFalse);
-    });
-
-    test('весь выдан', () {
-      final t = ToolItem.parse({
-        'id': 't1',
-        'ownerId': 'u1',
-        'name': 'Перфоратор',
-        'totalQty': 1,
-        'issuedQty': 1,
-        'createdAt': '2026-04-22T10:00:00Z',
-        'updatedAt': '2026-04-22T10:00:00Z',
-      });
-      expect(t.availableQty, 0);
-      expect(t.isAllIssued, isTrue);
+      expect(t.currentHolderId, 'u1');
+      expect(t.isInProject, isFalse);
     });
   });
 
-  group('ToolIssuance.parse', () {
-    test('с вложенным tool', () {
-      final i = ToolIssuance.parse({
-        'id': 'i1',
+  group('ToolCustodyEvent.parse', () {
+    test('initial event имеет previousHolderId == null', () {
+      final e = ToolCustodyEvent.parse({
+        'id': 'ev1',
         'toolItemId': 't1',
         'projectId': 'p1',
-        'toUserId': 'u2',
-        'issuedById': 'u1',
-        'qty': 2,
-        'status': 'issued',
+        'holderId': 'u1',
+        'previousHolderId': null,
         'createdAt': '2026-04-22T10:00:00Z',
-        'updatedAt': '2026-04-22T10:00:00Z',
-        'tool': {
-          'id': 't1',
-          'ownerId': 'u1',
-          'name': 'Уровень',
-          'totalQty': 5,
-          'issuedQty': 2,
-          'createdAt': '2026-04-22T10:00:00Z',
-          'updatedAt': '2026-04-22T10:00:00Z',
-        },
       });
-      expect(i.status, ToolIssuanceStatus.issued);
-      expect(i.tool?.name, 'Уровень');
+      expect(e.isInitial, isTrue);
+      expect(e.previousHolderId, isNull);
+    });
+
+    test('claim event с previousHolderId и note', () {
+      final e = ToolCustodyEvent.parse({
+        'id': 'ev2',
+        'toolItemId': 't1',
+        'projectId': 'p1',
+        'holderId': 'u2',
+        'previousHolderId': 'u1',
+        'note': 'на 3 этаж',
+        'createdAt': '2026-04-22T11:00:00Z',
+      });
+      expect(e.isInitial, isFalse);
+      expect(e.holderId, 'u2');
+      expect(e.previousHolderId, 'u1');
+      expect(e.note, 'на 3 этаж');
     });
   });
 }

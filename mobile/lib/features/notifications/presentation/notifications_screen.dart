@@ -294,24 +294,48 @@ class _NotifTile extends StatelessWidget {
         (bodyText.isEmpty
             ? ''
             : '\n${bodyText.isEmpty ? notification.body : bodyText}');
+    final isUnread = !notification.read;
     return Material(
-      color: notification.read ? AppColors.n0 : AppColors.brandLight,
+      color: AppColors.n0,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Container(
+          decoration: isUnread
+              ? const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Color(0x144F6EF7),
+                      Color(0x0A4F6EF7),
+                    ],
+                  ),
+                  border: Border(
+                    left: BorderSide(color: AppColors.brand, width: 3),
+                  ),
+                )
+              : null,
+          padding: EdgeInsets.fromLTRB(isUnread ? 17 : 20, 14, 20, 14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: bg,
                   borderRadius: BorderRadius.circular(AppRadius.r12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0F0D1229),
+                      offset: Offset(0, 2),
+                      blurRadius: 6,
+                      spreadRadius: -1,
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: fg, size: 16),
+                child: Icon(icon, color: fg, size: 17),
               ),
               const SizedBox(width: 12),
               Expanded(

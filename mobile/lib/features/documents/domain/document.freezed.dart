@@ -23,6 +23,8 @@ mixin _$Document {
   String? get stepId => throw _privateConstructorUsedError;
   DocumentCategory get category => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
+  String? get description => throw _privateConstructorUsedError;
+  DateTime? get documentDate => throw _privateConstructorUsedError;
   String get fileKey => throw _privateConstructorUsedError;
   String? get thumbKey => throw _privateConstructorUsedError;
   String get mimeType => throw _privateConstructorUsedError;
@@ -53,6 +55,8 @@ abstract class $DocumentCopyWith<$Res> {
     String? stepId,
     DocumentCategory category,
     String title,
+    String? description,
+    DateTime? documentDate,
     String fileKey,
     String? thumbKey,
     String mimeType,
@@ -87,6 +91,8 @@ class _$DocumentCopyWithImpl<$Res, $Val extends Document>
     Object? stepId = freezed,
     Object? category = null,
     Object? title = null,
+    Object? description = freezed,
+    Object? documentDate = freezed,
     Object? fileKey = null,
     Object? thumbKey = freezed,
     Object? mimeType = null,
@@ -124,6 +130,14 @@ class _$DocumentCopyWithImpl<$Res, $Val extends Document>
                 ? _value.title
                 : title // ignore: cast_nullable_to_non_nullable
                       as String,
+            description: freezed == description
+                ? _value.description
+                : description // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            documentDate: freezed == documentDate
+                ? _value.documentDate
+                : documentDate // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
             fileKey: null == fileKey
                 ? _value.fileKey
                 : fileKey // ignore: cast_nullable_to_non_nullable
@@ -186,6 +200,8 @@ abstract class _$$DocumentImplCopyWith<$Res>
     String? stepId,
     DocumentCategory category,
     String title,
+    String? description,
+    DateTime? documentDate,
     String fileKey,
     String? thumbKey,
     String mimeType,
@@ -219,6 +235,8 @@ class __$$DocumentImplCopyWithImpl<$Res>
     Object? stepId = freezed,
     Object? category = null,
     Object? title = null,
+    Object? description = freezed,
+    Object? documentDate = freezed,
     Object? fileKey = null,
     Object? thumbKey = freezed,
     Object? mimeType = null,
@@ -256,6 +274,14 @@ class __$$DocumentImplCopyWithImpl<$Res>
             ? _value.title
             : title // ignore: cast_nullable_to_non_nullable
                   as String,
+        description: freezed == description
+            ? _value.description
+            : description // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        documentDate: freezed == documentDate
+            ? _value.documentDate
+            : documentDate // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
         fileKey: null == fileKey
             ? _value.fileKey
             : fileKey // ignore: cast_nullable_to_non_nullable
@@ -311,6 +337,8 @@ class _$DocumentImpl implements _Document {
     this.stepId,
     required this.category,
     required this.title,
+    this.description,
+    this.documentDate,
     required this.fileKey,
     this.thumbKey,
     required this.mimeType,
@@ -336,6 +364,10 @@ class _$DocumentImpl implements _Document {
   @override
   final String title;
   @override
+  final String? description;
+  @override
+  final DateTime? documentDate;
+  @override
   final String fileKey;
   @override
   final String? thumbKey;
@@ -358,7 +390,7 @@ class _$DocumentImpl implements _Document {
 
   @override
   String toString() {
-    return 'Document(id: $id, projectId: $projectId, stageId: $stageId, stepId: $stepId, category: $category, title: $title, fileKey: $fileKey, thumbKey: $thumbKey, mimeType: $mimeType, sizeBytes: $sizeBytes, uploadedBy: $uploadedBy, confirmed: $confirmed, createdAt: $createdAt, updatedAt: $updatedAt, url: $url, thumbUrl: $thumbUrl)';
+    return 'Document(id: $id, projectId: $projectId, stageId: $stageId, stepId: $stepId, category: $category, title: $title, description: $description, documentDate: $documentDate, fileKey: $fileKey, thumbKey: $thumbKey, mimeType: $mimeType, sizeBytes: $sizeBytes, uploadedBy: $uploadedBy, confirmed: $confirmed, createdAt: $createdAt, updatedAt: $updatedAt, url: $url, thumbUrl: $thumbUrl)';
   }
 
   @override
@@ -374,6 +406,10 @@ class _$DocumentImpl implements _Document {
             (identical(other.category, category) ||
                 other.category == category) &&
             (identical(other.title, title) || other.title == title) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
+            (identical(other.documentDate, documentDate) ||
+                other.documentDate == documentDate) &&
             (identical(other.fileKey, fileKey) || other.fileKey == fileKey) &&
             (identical(other.thumbKey, thumbKey) ||
                 other.thumbKey == thumbKey) &&
@@ -403,6 +439,8 @@ class _$DocumentImpl implements _Document {
     stepId,
     category,
     title,
+    description,
+    documentDate,
     fileKey,
     thumbKey,
     mimeType,
@@ -432,6 +470,8 @@ abstract class _Document implements Document {
     final String? stepId,
     required final DocumentCategory category,
     required final String title,
+    final String? description,
+    final DateTime? documentDate,
     required final String fileKey,
     final String? thumbKey,
     required final String mimeType,
@@ -456,6 +496,10 @@ abstract class _Document implements Document {
   DocumentCategory get category;
   @override
   String get title;
+  @override
+  String? get description;
+  @override
+  DateTime? get documentDate;
   @override
   String get fileKey;
   @override

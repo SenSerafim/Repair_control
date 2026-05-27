@@ -44,21 +44,24 @@ class StageStripeCard extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.n0,
+          gradient: AppGradients.surfaceCard,
           borderRadius: AppRadius.card,
           border: Border.all(
-            color: display.semaphore.dot.withValues(alpha: 0.3),
+            color: display.semaphore.dot.withValues(alpha: 0.28),
             width: 1.5,
           ),
-          boxShadow: AppShadows.sh1,
+          boxShadow: AppShadows.shCard,
         ),
         child: ClipRRect(
           borderRadius: AppRadius.card,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top stripe
-              Container(height: 3, color: display.semaphore.dot),
+              // Top stripe — двойной градиент по статусу.
+              Container(
+                height: 4,
+                decoration: BoxDecoration(gradient: display.semaphore.stripe),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                 child: Column(
@@ -121,20 +124,30 @@ class StageStripeCard extends StatelessWidget {
                       colorOverride: _deadlineColor(),
                     ),
                     const SizedBox(height: AppSpacing.x8),
-                    // 4px progress bar
+                    // 5px pill-progress с лёгким halo цветом статуса.
                     Container(
-                      height: 4,
+                      height: 5,
                       decoration: BoxDecoration(
                         color: AppColors.n100,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       child: FractionallySizedBox(
                         alignment: Alignment.centerLeft,
                         widthFactor: progress,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: display.semaphore.dot,
-                            borderRadius: BorderRadius.circular(2),
+                            gradient: display.semaphore.stripe,
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                            boxShadow: progress > 0
+                                ? [
+                                    BoxShadow(
+                                      color: display.semaphore.dot.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      blurRadius: 6,
+                                    ),
+                                  ]
+                                : null,
                           ),
                         ),
                       ),

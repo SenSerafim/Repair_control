@@ -8,11 +8,29 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/domain/membership.dart';
 import '../../stages/application/stages_controller.dart';
+import '../../stages/data/stages_repository.dart';
 import '../../stages/domain/stage.dart';
 import '../application/team_controller.dart';
+import '../data/team_repository.dart';
 import 'add_member_screen.dart';
 
 /// s-assign-stage — выбор этапа для назначения мастером.
+///
+/// Две связанные модели на бэке (см. backend/stages.service.ts:202):
+///   • `Membership` (role=master, stageIds[]) — мастер в команде проекта.
+///   • `Stage.masterId` — single-master FSM конкретного этапа. Эту привязку
+///     создаёт `POST /stages/:id/assign-master` — он же поднимает stage-chat
+///     и approval-flow. `addMember` сам её НЕ создаёт.
+///
+/// Поэтому корректная последовательность:
+///   1. Если юзера ещё нет в команде → addMember(master, stageIds=[stage]).
+///      Если уже master → updateMember расширяет stageIds.
+///      Если уже foreman/rep → ошибка, надо снять текущую роль.
+///   2. После membership → assignMaster, чтобы Stage.masterId был заполнен
+///      и создался stage-chat.
+///
+/// Кнопка «Добавить без этапа» — для случая когда этапов ещё нет либо
+/// назначение делается позже из StageDetailScreen.
 class AssignStageScreen extends ConsumerStatefulWidget {
   const AssignStageScreen({
     required this.projectId,
@@ -31,27 +49,117 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
   bool _busy = false;
 
   Future<void> _pick(Stage stage) async {
+    if (_busy) return;
     setState(() => _busy = true);
-    final failure = await ref
+    try {
+      final teamState =
+          ref.read(teamControllerProvider(widget.projectId)).valueOrNull;
+      final existing = teamState?.members
+          .where((m) => m.userId == widget.args.userId)
+          .toList();
+      final hasMembership = existing != null && existing.isNotEmpty;
+
+      if (hasMembership) {
+        final m = existing.first;
+        if (m.role != MembershipRole.master) {
+          if (!mounted) return;
+          setState(() => _busy = false);
+          AppToast.show(
+            context,
+            message: 'Пользователь уже в команде как '
+                '«${m.role.displayName}». Снимите эту роль перед '
+                'назначением мастером.',
+            kind: AppToastKind.error,
+          );
+          return;
+        }
+        // Уже master — расширим membership.stageIds через PATCH endpoint
+        // (backend members.service:updateMembership поддерживает stageIds).
+        try {
+          await ref.read(teamRepositoryProvider).updateMember(
+            projectId: widget.projectId,
+            membershipId: m.id,
+            stageIds: [stage.id],
+          );
+          ref.invalidate(teamControllerProvider(widget.projectId));
+        } on TeamException catch (e) {
+          throw _AssignFailureMessage(e.failure.userMessage);
+        }
+      } else {
+        final fail = await ref
+            .read(teamControllerProvider(widget.projectId).notifier)
+            .addMember(
+              userId: widget.args.userId,
+              role: MembershipRole.master,
+              stageIds: [stage.id],
+            );
+        if (fail != null) {
+          throw _AssignFailureMessage(fail.userMessage);
+        }
+      }
+
+      // Stage.masterId — single-master FSM. Обязательно после membership.
+      await ref.read(stagesRepositoryProvider).assignMaster(
+        projectId: widget.projectId,
+        stageId: stage.id,
+        masterUserId: widget.args.userId,
+      );
+      ref.invalidate(stagesControllerProvider(widget.projectId));
+      if (!mounted) return;
+      setState(() => _busy = false);
+      AppToast.show(
+        context,
+        message: '✓ ${widget.args.firstName} назначен(а) мастером '
+            'на «${stage.title}»',
+        kind: AppToastKind.success,
+      );
+      context.go(AppRoutes.projectTeamWith(widget.projectId));
+    } on _AssignFailureMessage catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      AppToast.show(context, message: e.message, kind: AppToastKind.error);
+    } on StagesException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      AppToast.show(
+        context,
+        message: e.failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      AppToast.show(
+        context,
+        message: 'Не удалось назначить. Попробуйте ещё раз.',
+        kind: AppToastKind.error,
+      );
+    }
+  }
+
+  Future<void> _addWithoutStage() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final fail = await ref
         .read(teamControllerProvider(widget.projectId).notifier)
         .addMember(
           userId: widget.args.userId,
           role: MembershipRole.master,
-          stageIds: [stage.id],
         );
     if (!mounted) return;
     setState(() => _busy = false);
-    if (failure == null) {
+    if (fail == null) {
       AppToast.show(
         context,
-        message: '✓ Назначен на этап «${stage.title}»',
+        message: '✓ ${widget.args.firstName} добавлен(а) мастером. '
+            'Назначьте на этапы позже из карточки этапа.',
         kind: AppToastKind.success,
       );
       context.go(AppRoutes.projectTeamWith(widget.projectId));
     } else {
       AppToast.show(
         context,
-        message: failure.userMessage,
+        message: fail.userMessage,
         kind: AppToastKind.error,
       );
     }
@@ -69,7 +177,7 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
       padding: EdgeInsets.zero,
       body: Column(
         children: [
-          _Banner(text: '$fullName будет назначен мастером на выбранный этап'),
+          _Banner(text: '$fullName будет назначен(а) мастером на выбранный этап'),
           Expanded(
             child: stagesAsync.when(
               loading: () => const AppLoadingState(),
@@ -81,24 +189,53 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
               data: (stages) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 children: [
-                  const Text(
-                    'ЭТАПЫ ПРОЕКТА',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.n400,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.x10),
-                  for (final stage in stages) ...[
-                    _StageCard(
-                      stage: stage,
-                      enabled: !_busy,
-                      onTap: () => _pick(stage),
+                  if (stages.isNotEmpty) ...[
+                    const Text(
+                      'ЭТАПЫ ПРОЕКТА',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.n400,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.x10),
+                    for (final stage in stages) ...[
+                      _StageCard(
+                        stage: stage,
+                        enabled: !_busy,
+                        onTap: () => _pick(stage),
+                      ),
+                      const SizedBox(height: AppSpacing.x10),
+                    ],
+                    const SizedBox(height: AppSpacing.x12),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.x14),
+                      decoration: BoxDecoration(
+                        color: AppColors.yellowBg,
+                        borderRadius: AppRadius.card,
+                      ),
+                      child: const Text(
+                        'В проекте пока нет этапов. Добавьте мастера сейчас '
+                        '— назначите на этапы позже, когда они появятся.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.yellowText,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.x16),
                   ],
+                  AppButton(
+                    label: 'Добавить без этапа',
+                    variant: AppButtonVariant.secondary,
+                    icon: PhosphorIconsRegular.userPlus,
+                    isLoading: _busy,
+                    onPressed: _addWithoutStage,
+                  ),
                 ],
               ),
             ),
@@ -107,6 +244,11 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
       ),
     );
   }
+}
+
+class _AssignFailureMessage implements Exception {
+  _AssignFailureMessage(this.message);
+  final String message;
 }
 
 class _Banner extends StatelessWidget {

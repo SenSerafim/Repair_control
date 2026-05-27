@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../team/application/team_controller.dart';
@@ -61,7 +62,7 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
     if (failure == null) {
       AppToast.show(
         context,
-        message: 'Аванс отправлен. Ожидает подтверждения.',
+        message: 'Аванс отправлен',
         kind: AppToastKind.success,
       );
       context.pop();
@@ -81,8 +82,9 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
         children: [
           const SizedBox(height: AppSpacing.x16),
           const Text(
-            'Аванс идёт бригадиру. Он подтвердит получение, затем распределит '
-            'суммы мастерам.',
+            'Аванс можно отправить бригадиру (он распределит мастерам) '
+            'или напрямую мастеру. Прямая выплата мастеру будет видна бригадиру '
+            'в общей истории движений — прозрачность сохраняется.',
             style: AppTextStyles.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.x16),
@@ -90,8 +92,6 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
             AppInlineError(message: _error!),
             const SizedBox(height: AppSpacing.x12),
           ],
-          const Text('Бригадир', style: AppTextStyles.caption),
-          const SizedBox(height: AppSpacing.x6),
           teamAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(AppSpacing.x12),
@@ -102,10 +102,22 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
               style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
             ),
             data: (team) {
+              // Защита от self-payment на UI-уровне: даже если заказчик
+              // числится в проекте бригадиром/мастером по legacy membership —
+              // показывать его себе в списке получателей нельзя. Сервер
+              // зеркалит запрет (PAYMENT_SELF_PAYMENT_FORBIDDEN).
+              final meId = ref.watch(authControllerProvider).userId;
               final foremen = team.members
-                  .where((m) => m.role == MembershipRole.foreman)
+                  .where(
+                    (m) => m.role == MembershipRole.foreman && m.userId != meId,
+                  )
                   .toList();
-              if (foremen.isEmpty) {
+              final masters = team.members
+                  .where(
+                    (m) => m.role == MembershipRole.master && m.userId != meId,
+                  )
+                  .toList();
+              if (foremen.isEmpty && masters.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
@@ -113,7 +125,7 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
                     borderRadius: AppRadius.card,
                   ),
                   child: Text(
-                    'В проекте нет бригадира. Пригласите его в команде.',
+                    'В команде нет бригадиров и мастеров. Пригласите их в проекте.',
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.yellowText,
                     ),
@@ -121,15 +133,37 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
                 );
               }
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final m in foremen) ...[
-                    _RecipientTile(
-                      name: _nameOf(m),
-                      phone: m.user?.phone,
-                      selected: _toUserId == m.userId,
-                      onTap: () => setState(() => _toUserId = m.userId),
-                    ),
+                  if (foremen.isNotEmpty) ...[
+                    const Text('Бригадир', style: AppTextStyles.caption),
+                    const SizedBox(height: AppSpacing.x6),
+                    for (final m in foremen) ...[
+                      _RecipientTile(
+                        name: _nameOf(m),
+                        phone: m.user?.phone,
+                        selected: _toUserId == m.userId,
+                        onTap: () => setState(() => _toUserId = m.userId),
+                      ),
+                      const SizedBox(height: AppSpacing.x8),
+                    ],
+                  ],
+                  if (masters.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x8),
+                    const Text(
+                      'Мастера (прямая выплата)',
+                      style: AppTextStyles.caption,
+                    ),
+                    const SizedBox(height: AppSpacing.x6),
+                    for (final m in masters) ...[
+                      _RecipientTile(
+                        name: _nameOf(m),
+                        phone: m.user?.phone,
+                        selected: _toUserId == m.userId,
+                        onTap: () => setState(() => _toUserId = m.userId),
+                      ),
+                      const SizedBox(height: AppSpacing.x8),
+                    ],
                   ],
                 ],
               );

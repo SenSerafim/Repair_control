@@ -37,15 +37,43 @@ export class PushProcessor extends WorkerHost {
       await this.log(data, null, 'failed', 'no_device_tokens');
       return;
     }
+    // FCM data может содержать только string/number, но клиент использует
+    // эти поля для DeepLinkRouter (mobile/lib/core/push/deep_link_router.dart)
+    // — без chatId/approvalId/etc. деплинк падает на fallback `/projects/:id`.
+    const dataFields: Record<string, string> = {
+      kind: data.kind,
+      projectId: data.projectId ?? '',
+      deepLink: data.deepLink ?? '',
+    };
+    const ROUTABLE_PAYLOAD_KEYS = [
+      'chatId',
+      'messageId',
+      'approvalId',
+      'paymentId',
+      'stageId',
+      'stepId',
+      'materialId',
+      'requestId',
+      'documentId',
+      'exportId',
+      'jobId',
+      'toolId',
+      'issuanceId',
+      'selfPurchaseId',
+      'noteId',
+      'questionId',
+    ] as const;
+    for (const k of ROUTABLE_PAYLOAD_KEYS) {
+      const v = (data.payload ?? {})[k];
+      if (typeof v === 'string' && v.length > 0) {
+        dataFields[k] = v;
+      }
+    }
     for (const t of tokens) {
       const res = await this.provider.send(t.token, {
         title: data.title,
         body: data.body,
-        data: {
-          kind: data.kind,
-          projectId: data.projectId ?? '',
-          deepLink: data.deepLink ?? '',
-        },
+        data: dataFields,
       });
       if (res.success) {
         await this.log(data, t.id, 'delivered');

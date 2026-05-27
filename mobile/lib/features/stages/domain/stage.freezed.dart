@@ -29,6 +29,12 @@ mixin _$Stage {
   int get workBudget => throw _privateConstructorUsedError;
   int get materialsBudget => throw _privateConstructorUsedError;
   List<String> get foremanIds => throw _privateConstructorUsedError;
+
+  /// П2.5 — один мастер на этап. null = «мастер не назначен, ведёт сам
+  /// бригадир». Используется UI для индикации в StageStatsRow и в
+  /// двухступенчатом stage_accept (бэк смотрит masterId для решения,
+  /// кому адресовать первый approval).
+  String? get masterId => throw _privateConstructorUsedError;
   int get progressCache => throw _privateConstructorUsedError;
   bool get planApproved => throw _privateConstructorUsedError;
   DateTime? get startedAt => throw _privateConstructorUsedError;
@@ -61,6 +67,7 @@ abstract class $StageCopyWith<$Res> {
     int workBudget,
     int materialsBudget,
     List<String> foremanIds,
+    String? masterId,
     int progressCache,
     bool planApproved,
     DateTime? startedAt,
@@ -98,6 +105,7 @@ class _$StageCopyWithImpl<$Res, $Val extends Stage>
     Object? workBudget = null,
     Object? materialsBudget = null,
     Object? foremanIds = null,
+    Object? masterId = freezed,
     Object? progressCache = null,
     Object? planApproved = null,
     Object? startedAt = freezed,
@@ -156,6 +164,10 @@ class _$StageCopyWithImpl<$Res, $Val extends Stage>
                 ? _value.foremanIds
                 : foremanIds // ignore: cast_nullable_to_non_nullable
                       as List<String>,
+            masterId: freezed == masterId
+                ? _value.masterId
+                : masterId // ignore: cast_nullable_to_non_nullable
+                      as String?,
             progressCache: null == progressCache
                 ? _value.progressCache
                 : progressCache // ignore: cast_nullable_to_non_nullable
@@ -211,6 +223,7 @@ abstract class _$$StageImplCopyWith<$Res> implements $StageCopyWith<$Res> {
     int workBudget,
     int materialsBudget,
     List<String> foremanIds,
+    String? masterId,
     int progressCache,
     bool planApproved,
     DateTime? startedAt,
@@ -247,6 +260,7 @@ class __$$StageImplCopyWithImpl<$Res>
     Object? workBudget = null,
     Object? materialsBudget = null,
     Object? foremanIds = null,
+    Object? masterId = freezed,
     Object? progressCache = null,
     Object? planApproved = null,
     Object? startedAt = freezed,
@@ -305,6 +319,10 @@ class __$$StageImplCopyWithImpl<$Res>
             ? _value._foremanIds
             : foremanIds // ignore: cast_nullable_to_non_nullable
                   as List<String>,
+        masterId: freezed == masterId
+            ? _value.masterId
+            : masterId // ignore: cast_nullable_to_non_nullable
+                  as String?,
         progressCache: null == progressCache
             ? _value.progressCache
             : progressCache // ignore: cast_nullable_to_non_nullable
@@ -354,6 +372,7 @@ class _$StageImpl implements _Stage {
     required this.workBudget,
     required this.materialsBudget,
     final List<String> foremanIds = const <String>[],
+    this.masterId,
     required this.progressCache,
     required this.planApproved,
     this.startedAt,
@@ -394,6 +413,12 @@ class _$StageImpl implements _Stage {
     return EqualUnmodifiableListView(_foremanIds);
   }
 
+  /// П2.5 — один мастер на этап. null = «мастер не назначен, ведёт сам
+  /// бригадир». Используется UI для индикации в StageStatsRow и в
+  /// двухступенчатом stage_accept (бэк смотрит masterId для решения,
+  /// кому адресовать первый approval).
+  @override
+  final String? masterId;
   @override
   final int progressCache;
   @override
@@ -411,7 +436,7 @@ class _$StageImpl implements _Stage {
 
   @override
   String toString() {
-    return 'Stage(id: $id, projectId: $projectId, title: $title, orderIndex: $orderIndex, status: $status, plannedStart: $plannedStart, plannedEnd: $plannedEnd, originalEnd: $originalEnd, pauseDurationMs: $pauseDurationMs, workBudget: $workBudget, materialsBudget: $materialsBudget, foremanIds: $foremanIds, progressCache: $progressCache, planApproved: $planApproved, startedAt: $startedAt, sentToReviewAt: $sentToReviewAt, doneAt: $doneAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Stage(id: $id, projectId: $projectId, title: $title, orderIndex: $orderIndex, status: $status, plannedStart: $plannedStart, plannedEnd: $plannedEnd, originalEnd: $originalEnd, pauseDurationMs: $pauseDurationMs, workBudget: $workBudget, materialsBudget: $materialsBudget, foremanIds: $foremanIds, masterId: $masterId, progressCache: $progressCache, planApproved: $planApproved, startedAt: $startedAt, sentToReviewAt: $sentToReviewAt, doneAt: $doneAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -442,6 +467,8 @@ class _$StageImpl implements _Stage {
               other._foremanIds,
               _foremanIds,
             ) &&
+            (identical(other.masterId, masterId) ||
+                other.masterId == masterId) &&
             (identical(other.progressCache, progressCache) ||
                 other.progressCache == progressCache) &&
             (identical(other.planApproved, planApproved) ||
@@ -472,6 +499,7 @@ class _$StageImpl implements _Stage {
     workBudget,
     materialsBudget,
     const DeepCollectionEquality().hash(_foremanIds),
+    masterId,
     progressCache,
     planApproved,
     startedAt,
@@ -504,6 +532,7 @@ abstract class _Stage implements Stage {
     required final int workBudget,
     required final int materialsBudget,
     final List<String> foremanIds,
+    final String? masterId,
     required final int progressCache,
     required final bool planApproved,
     final DateTime? startedAt,
@@ -537,6 +566,13 @@ abstract class _Stage implements Stage {
   int get materialsBudget;
   @override
   List<String> get foremanIds;
+
+  /// П2.5 — один мастер на этап. null = «мастер не назначен, ведёт сам
+  /// бригадир». Используется UI для индикации в StageStatsRow и в
+  /// двухступенчатом stage_accept (бэк смотрит masterId для решения,
+  /// кому адресовать первый approval).
+  @override
+  String? get masterId;
   @override
   int get progressCache;
   @override

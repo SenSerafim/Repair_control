@@ -51,7 +51,9 @@ class _RejectBodyState extends State<_RejectBody> {
   @override
   Widget build(BuildContext context) {
     final text = _ctrl.text.trim();
-    return Padding(
+    // SingleChildScrollView: 56px icon + header + 4-line TextField + 2 кнопки
+    // на узком экране с открытой клавиатурой легко overflow'ят Column.
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
@@ -59,9 +61,39 @@ class _RejectBodyState extends State<_RejectBody> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              margin: const EdgeInsets.only(bottom: AppSpacing.x14),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFF87171), AppColors.redDot],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Color(0x1ADC2626), spreadRadius: 6),
+                  BoxShadow(
+                    color: Color(0x33DC2626),
+                    offset: Offset(0, 8),
+                    blurRadius: 18,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                color: AppColors.n0,
+                size: 28,
+              ),
+            ),
+          ),
           AppBottomSheetHeader(
             title: 'Отклонить работу',
             subtitle: '${widget.hint}\n«${widget.entityName}»',
+            centered: true,
           ),
           TextField(
             controller: _ctrl,

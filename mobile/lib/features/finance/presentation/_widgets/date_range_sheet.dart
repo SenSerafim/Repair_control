@@ -215,6 +215,15 @@ class _PresetChip extends StatelessWidget {
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: active
+              ? const [
+                  BoxShadow(
+                    color: Color(0x1F4F6EF7),
+                    offset: Offset(0, 2),
+                    blurRadius: 8,
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
@@ -222,6 +231,7 @@ class _PresetChip extends StatelessWidget {
             color: active ? AppColors.brand : AppColors.n600,
             fontWeight: FontWeight.w700,
             fontSize: 12,
+            letterSpacing: -0.2,
           ),
         ),
       ),
@@ -258,10 +268,10 @@ class _DateField extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.r12),
           child: Container(
-            height: 44,
+            height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: AppColors.n50,
+              gradient: AppGradients.surfaceCard,
               border: Border.all(color: AppColors.n200, width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.r12),
             ),

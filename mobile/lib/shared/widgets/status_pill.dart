@@ -30,6 +30,16 @@ extension SemaphoreColors on Semaphore {
     Semaphore.red => AppColors.redText,
     Semaphore.blue => AppColors.blueText,
   };
+
+  /// Stripe-градиент по статусу — для верхней полоски карточек этапов
+  /// (StageStripeCard) и левой вертикальной полосы (StageRowCard).
+  LinearGradient get stripe => switch (this) {
+    Semaphore.plan => AppGradients.stripePlan,
+    Semaphore.green => AppGradients.stripeGreen,
+    Semaphore.yellow => AppGradients.stripeYellow,
+    Semaphore.red => AppGradients.stripeRed,
+    Semaphore.blue => AppGradients.stripeBrand,
+  };
 }
 
 /// Pill-чип со статусом, аналог `.stg-badge` в макетах.
@@ -56,6 +66,10 @@ class StatusPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: semaphore.bg,
         borderRadius: BorderRadius.circular(AppRadius.pill),
+        // Тонкий inset-ring цвета статуса — пилюля «отрывается» от
+        // подложки в плотных списках (Cluster C: stage tile/list) и
+        // там, где bg StatusPill близок к bg карточки.
+        border: Border.all(color: semaphore.dot.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

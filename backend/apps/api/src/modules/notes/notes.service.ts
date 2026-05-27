@@ -54,7 +54,14 @@ export class NotesService {
         kind: 'note_created',
         projectId: input.projectId,
         actorId: input.authorId,
-        payload: { noteId: created.id, scope: input.scope },
+        // addresseeId — без него notification-router (note_created →
+        // note_created_for_me, recipients=addresseeFromPayload) не доходит до получателя.
+        payload: {
+          noteId: created.id,
+          scope: input.scope,
+          ...(created.addresseeId ? { addresseeId: created.addresseeId } : {}),
+          ...(created.stageId ? { stageId: created.stageId } : {}),
+        },
       });
       return created;
     });

@@ -60,11 +60,6 @@ export class AccessGuard implements CanActivate {
       if (selfPurchaseId) {
         await this.hydrateSelfPurchaseContext(accessCtx, selfPurchaseId);
       }
-    } else if (requirement.resource === 'tool_issuance' && requirement.resourceIdFrom) {
-      const issuanceId = this.extractId(req, requirement.resourceIdFrom);
-      if (issuanceId) {
-        await this.hydrateToolIssuanceContext(accessCtx, issuanceId);
-      }
     } else if (requirement.resource === 'chat' && requirement.resourceIdFrom) {
       const chatId = this.extractId(req, requirement.resourceIdFrom);
       if (chatId) {
@@ -79,6 +74,16 @@ export class AccessGuard implements CanActivate {
       const documentId = this.extractId(req, requirement.resourceIdFrom);
       if (documentId) {
         await this.hydrateDocumentContext(accessCtx, documentId);
+      }
+    } else if (requirement.resource === 'payment' && requirement.resourceIdFrom) {
+      const paymentId = this.extractId(req, requirement.resourceIdFrom);
+      if (paymentId) {
+        await this.hydratePaymentContext(accessCtx, paymentId);
+      }
+    } else if (requirement.resource === 'export_job' && requirement.resourceIdFrom) {
+      const jobId = this.extractId(req, requirement.resourceIdFrom);
+      if (jobId) {
+        await this.hydrateExportJobContext(accessCtx, jobId);
       }
     }
 
@@ -181,26 +186,25 @@ export class AccessGuard implements CanActivate {
     }
   }
 
-  private async hydrateToolIssuanceContext(acc: AccessContext, id: string): Promise<void> {
-    const iss = await this.prisma.toolIssuance.findUnique({
-      where: { id },
-      select: { projectId: true, toolItem: { select: { ownerId: true } }, toUserId: true },
+  private async hydratePaymentContext(acc: AccessContext, paymentId: string): Promise<void> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: {
+        projectId: true,
+        project: {
+          select: {
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
+        },
+      },
     });
-    if (!iss) return;
-    // Для tool_issuance используем projectId (если задан), иначе только ownerId хранится как proxy
-    if (iss.projectId) {
-      const project = await this.prisma.project.findUnique({
-        where: { id: iss.projectId },
-        select: { ownerId: true, memberships: { where: { userId: acc.userId, removedAt: null } } },
-      });
-      if (project) {
-        acc.projectOwnerId = project.ownerId;
-        const m = project.memberships[0];
-        if (m) {
-          acc.membershipRole = m.role;
-          acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
-        }
-      }
+    if (!payment) return;
+    acc.projectOwnerId = payment.project.ownerId;
+    const m = payment.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
     }
   }
 
@@ -267,6 +271,28 @@ export class AccessGuard implements CanActivate {
     acc.documentUploadedById = doc.uploadedById;
     acc.projectOwnerId = doc.project.ownerId;
     const m = doc.project.memberships[0];
+    if (m) {
+      acc.membershipRole = m.role;
+      acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
+    }
+  }
+
+  private async hydrateExportJobContext(acc: AccessContext, jobId: string): Promise<void> {
+    const job = await this.prisma.exportJob.findUnique({
+      where: { id: jobId },
+      select: {
+        projectId: true,
+        project: {
+          select: {
+            ownerId: true,
+            memberships: { where: { userId: acc.userId, removedAt: null } },
+          },
+        },
+      },
+    });
+    if (!job) return;
+    acc.projectOwnerId = job.project.ownerId;
+    const m = job.project.memberships[0];
     if (m) {
       acc.membershipRole = m.role;
       acc.representativeRights = sanitizeRepresentativeRights(m.permissions as any);
