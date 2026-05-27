@@ -77,6 +77,14 @@ class Membership with _$Membership {
     if (rights.isNotEmpty) {
       MembershipRights._cache[m.id] = rights;
     }
+    // ТЗ NEWFIX §1.2: «Команда проекта» группирует участников по этапам.
+    // stageIds приходит с бэка отдельным полем (string[]), мобильная freezed
+    // модель Membership без регенерации хранить его не может — используем
+    // тот же паттерн side-channel cache, что и для representativeRights.
+    final stageIds = _parseStageIds(json['stageIds']);
+    if (stageIds.isNotEmpty) {
+      MembershipStageIds._cache[m.id] = stageIds;
+    }
     return m;
   }
 }
@@ -120,4 +128,24 @@ class MembershipRights {
 
 extension MembershipRightsExt on Membership {
   List<String> get representativeRights => MembershipRights.of(id);
+}
+
+class MembershipStageIds {
+  MembershipStageIds._();
+  static final Map<String, List<String>> _cache = {};
+  static List<String> of(String membershipId) =>
+      _cache[membershipId] ?? const <String>[];
+}
+
+extension MembershipStageIdsExt on Membership {
+  /// ID этапов, к которым прикреплён участник (мастер — обычно один или
+  /// несколько; бригадир — все этапы проекта, представитель — `[]`).
+  List<String> get stageIds => MembershipStageIds.of(id);
+}
+
+List<String> _parseStageIds(Object? raw) {
+  if (raw is List) {
+    return raw.map((e) => e.toString()).toList(growable: false);
+  }
+  return const <String>[];
 }

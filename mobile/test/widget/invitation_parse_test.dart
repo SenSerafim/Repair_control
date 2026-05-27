@@ -67,5 +67,30 @@ void main() {
       });
       expect(m.user, isNull);
     });
+
+    // ТЗ NEWFIX §1.2: TeamScreen группирует участников по этапам.
+    // stageIds приходит с бэка, парсится через side-channel cache.
+    test('stageIds — side-channel cache (Membership.stageIds extension)', () {
+      final m = Membership.parse({
+        'id': 'm-stage-test',
+        'projectId': 'p1',
+        'userId': 'u1',
+        'role': 'master',
+        'addedAt': '2026-04-22T00:00:00Z',
+        'stageIds': ['s1', 's2'],
+      });
+      expect(m.stageIds, ['s1', 's2']);
+    });
+
+    test('stageIds пустой — extension возвращает const []', () {
+      final m = Membership.parse({
+        'id': 'm-stage-empty',
+        'projectId': 'p1',
+        'userId': 'u1',
+        'role': 'customer',
+        'addedAt': '2026-04-22T00:00:00Z',
+      });
+      expect(m.stageIds, isEmpty);
+    });
   });
 }
