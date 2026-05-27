@@ -73,6 +73,14 @@ enum PaymentKind {
   correction
 }
 
+enum ExpenseCategory {
+  materials
+  transport
+  rental
+  services
+  other
+}
+
 enum MaterialRequestStatus {
   pending_approval
   open
@@ -465,6 +473,7 @@ model Project {
   payments         Payment[]
   materialRequests MaterialRequest[]
   selfPurchases    SelfPurchase[]
+  expenses         Expense[]
   chats            Chat[]
   documents        Document[]
   exportJobs       ExportJob[]
@@ -563,6 +572,7 @@ model Stage {
   payments         Payment[]
   materialRequests MaterialRequest[]
   selfPurchases    SelfPurchase[]
+  expenses         Expense[]
   chats            Chat[]
 
   @@index([projectId, orderIndex])
@@ -936,6 +946,33 @@ model MaterialDispute {
   request MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId, status])
+}
+
+// ---------- Expenses (ТЗ NEWFIX §5.1) ----------
+
+/// Расход проекта/этапа: «не привязан к получателю» (в отличие от Payment).
+/// Категория (materials/transport/rental/services/other) + опциональное
+/// фото чека (photoKey в S3) + автоматическая привязка к этапу (stageId).
+model Expense {
+  id          String          @id @default(cuid())
+  projectId   String
+  stageId     String?
+  createdById String
+  category    ExpenseCategory @default(other)
+  name        String
+  amount      BigInt
+  comment     String?
+  /// Фото чека (S3 key, scope=expenses/receipts). Опционально.
+  photoKey    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage   Stage?  @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([stageId])
+  @@index([category])
 }
 
 // ---------- SelfPurchase ----------

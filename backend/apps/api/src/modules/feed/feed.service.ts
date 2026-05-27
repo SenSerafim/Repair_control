@@ -75,8 +75,20 @@ export class FeedService {
     });
   }
 
-  async listForProject(projectId: string, viewer?: FeedViewer, limit = 50) {
+  async listForProject(
+    projectId: string,
+    viewer?: FeedViewer,
+    opts?: { limit?: number; from?: Date; to?: Date },
+  ) {
     const where: Prisma.FeedEventWhereInput = { projectId };
+    // ТЗ NEWFIX §12.4: PDF за период требует фильтр по диапазону дат —
+    // тот же `listForProject` обслуживает и UI-ленту, и сервис рендера.
+    if (opts?.from || opts?.to) {
+      where.createdAt = {
+        ...(opts.from ? { gte: opts.from } : {}),
+        ...(opts.to ? { lte: opts.to } : {}),
+      };
+    }
 
     // Видимость по ролям (TODO §2A.2):
     if (viewer && !viewer.isOwner && viewer.membershipRole !== 'representative') {
@@ -96,7 +108,7 @@ export class FeedService {
     return this.prisma.feedEvent.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: limit,
+      take: opts?.limit ?? 50,
     });
   }
 }

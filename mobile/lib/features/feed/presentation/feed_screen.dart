@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../exports/presentation/export_sheet.dart';
 import '../application/feed_controller.dart';
+import '../data/feed_repository.dart';
 import '../domain/feed_event.dart';
 
 /// `f-feed` / `f-feed-empty` / `f-feed-filtered` из дизайна `Кластер F`.
@@ -51,6 +56,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       title: 'Лента событий',
       padding: EdgeInsets.zero,
       actions: [
+        IconButton(
+          tooltip: 'PDF за период',
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          onPressed: () => _exportPeriodPdf(context),
+        ),
         IconButton(
           tooltip: 'Экспорт',
           icon: const Icon(Icons.cloud_download_outlined),
@@ -142,6 +152,52 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _exportPeriodPdf(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 2),
+      lastDate: now.add(const Duration(days: 1)),
+      initialDateRange: DateTimeRange(
+        start: now.subtract(const Duration(days: 7)),
+        end: now,
+      ),
+      helpText: 'Период для PDF',
+      cancelText: 'Отмена',
+      confirmText: 'OK',
+    );
+    if (picked == null || !mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(
+      const SnackBar(
+        content: Text('Готовим PDF за период…'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    try {
+      final bytes = await ref.read(feedRepositoryProvider).downloadPdf(
+            projectId: widget.projectId,
+            dateFrom: DateTime(
+              picked.start.year, picked.start.month, picked.start.day,
+            ),
+            dateTo: DateTime(
+              picked.end.year, picked.end.month, picked.end.day, 23, 59, 59,
+            ),
+          );
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/feed-${widget.projectId}.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'application/pdf')],
+        subject: 'Лента событий за период',
+      );
+    } on FeedException catch (e) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Не удалось: ${e.failure.name}')),
+      );
+    }
   }
 }
 

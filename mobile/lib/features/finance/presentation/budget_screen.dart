@@ -22,6 +22,7 @@ import '_widgets/date_range_sheet.dart';
 import '_widgets/foreman_wallet_card.dart';
 import '_widgets/money_summary_chip.dart';
 import '_widgets/payment_row_card.dart';
+import 'add_expense_sheet.dart';
 import 'payment_sheets.dart';
 
 /// Активный таб бюджета — хранится в ProviderScope `_budgetTabProvider`.
@@ -344,11 +345,30 @@ class _PaymentsTab extends ConsumerWidget {
                   AppSpacing.x16,
                   AppSpacing.x8,
                 ),
-                child: AppButton(
-                  label: 'Новая выплата',
-                  icon: Icons.add_rounded,
-                  onPressed: () =>
-                      context.push('/projects/$projectId/payments/new'),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppButton(
+                        label: 'Новая выплата',
+                        icon: Icons.add_rounded,
+                        onPressed: () =>
+                            context.push('/projects/$projectId/payments/new'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.x8),
+                    // ТЗ NEWFIX §5.1: «+ Расход» — bottom-sheet с CoinKeeper-flow.
+                    // Делит низ экрана пополам с «+ Выплата».
+                    Expanded(
+                      child: AppButton(
+                        label: '+ Расход',
+                        variant: AppButtonVariant.ghost,
+                        onPressed: () => showAddExpenseSheet(
+                          context,
+                          projectId: projectId,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: AppSpacing.x24),

@@ -314,7 +314,12 @@ class _MemberRow extends ConsumerWidget {
     final roleTone = _toneFor(member.role);
     return InkWell(
       borderRadius: AppRadius.card,
-      onTap: () => _showCard(
+      // ТЗ NEWFIX §1.2: тап по строке = переход в полноценный профиль
+      // сотрудника. Меню с действиями уехало в long-press, чтобы
+      // основной жест работал по §3.3.
+      onTap: () =>
+          context.push('/projects/$projectId/team/${member.userId}'),
+      onLongPress: () => _showCard(
         context,
         ref,
         name: name,

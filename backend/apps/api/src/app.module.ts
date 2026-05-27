@@ -20,6 +20,7 @@ import { QuestionsModule } from './modules/questions/questions.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { MethodologyModule } from './modules/methodology/methodology.module';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { MaterialsModule } from './modules/materials/materials.module';
 import { SelfPurchasesModule } from './modules/selfpurchases/selfpurchases.module';
@@ -74,6 +75,7 @@ import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
     MethodologyModule,
     IdempotencyModule,
     PaymentsModule,
+    ExpensesModule,
     MaterialsModule,
     SelfPurchasesModule,
     ToolsModule,

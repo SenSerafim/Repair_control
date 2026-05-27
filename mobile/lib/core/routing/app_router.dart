@@ -22,6 +22,7 @@ import '../../features/documents/presentation/documents_screen.dart';
 import '../../features/exports/presentation/exports_list_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/finance/presentation/budget_screen.dart';
+import '../../features/finance/presentation/stage_budget_screen.dart';
 import '../../features/finance/presentation/create_advance_screen.dart';
 import '../../features/finance/presentation/payment_detail_screen.dart';
 import '../../features/finance/presentation/payments_list_screen.dart';
@@ -81,6 +82,7 @@ import '../../features/team/presentation/member_found_screen.dart';
 import '../../features/team/presentation/member_not_found_screen.dart';
 import '../../features/team/presentation/project_rep_rights_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
+import '../../features/user_profile/presentation/user_profile_screen.dart';
 import '../../features/tools/presentation/add_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
 import '../../features/tools/presentation/project_tools_screen.dart';
@@ -269,6 +271,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                           ),
                         ),
                       ),
+                      // ТЗ NEWFIX §4: профиль сотрудника. URL построен
+                      // относительно `team/`, потому что точка входа —
+                      // тап по строке участника. Сам экран project-agnostic
+                      // (агрегирует все shared-проекты), но мы сохраняем
+                      // контекстную навигацию обратно в команду проекта.
+                      GoRoute(
+                        path: ':userId',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => UserProfileScreen(
+                            userId: state.pathParameters['userId']!,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   GoRoute(
@@ -324,6 +339,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                           ),
                         ),
                         routes: [
+                          // ТЗ NEWFIX §12: новый экран «Бюджет этапа»,
+                          // фильтрованный срез из общего бюджета проекта.
+                          GoRoute(
+                            path: 'budget',
+                            pageBuilder: slideLeftPage(
+                              (_, state) => StageBudgetScreen(
+                                projectId: state.pathParameters['projectId']!,
+                                stageId: state.pathParameters['stageId']!,
+                              ),
+                            ),
+                          ),
                           GoRoute(
                             path: 'steps/:stepId',
                             pageBuilder: slideLeftPage(

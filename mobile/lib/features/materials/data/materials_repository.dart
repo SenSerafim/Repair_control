@@ -168,6 +168,20 @@ class MaterialsRepository {
         return MaterialRequest.parse(r.data!);
       });
 
+  /// ТЗ NEWFIX §5.3: скачать PDF заявки (для share-flow в магазин).
+  /// Backend /api/materials/:id/pdf отдаёт PDF inline; auth-header добавляется
+  /// через основной Dio (interceptor).
+  Future<Uint8List> downloadRequestPdf(String id) => _call(() async {
+    final r = await _dio.get<List<int>>(
+      '/api/materials/$id/pdf',
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: {'Accept': 'application/pdf'},
+      ),
+    );
+    return Uint8List.fromList(r.data!);
+  });
+
   /// Пресайн на загрузку фото позиции (ТЗ NEWFIX §5.2).
   /// Используется общий /api/files/presign-upload, scope='materials/items'.
   /// itemId на этом этапе ещё нет — `MaterialItemPhotoInput.fileKey`
