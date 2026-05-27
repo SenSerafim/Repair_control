@@ -9,19 +9,37 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
+import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../application/materials_controller.dart';
 import '../domain/material_request.dart';
 import '_widgets/material_card.dart';
 
-class MaterialsListScreen extends ConsumerWidget {
+// Sentinel для бакета «без этапа» в _StageFilter (общие заявки проекта).
+const String _noStageKey = '__no_stage__';
+
+class MaterialsListScreen extends ConsumerStatefulWidget {
   const MaterialsListScreen({required this.projectId, super.key});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MaterialsListScreen> createState() => _MaterialsListScreenState();
+}
+
+class _MaterialsListScreenState extends ConsumerState<MaterialsListScreen> {
+  // ТЗ NEWFIX §5.8: фильтр по этапам. 'all' = все, _noStageKey = общие
+  // (stageId=null), либо конкретный stageId.
+  String _stageId = 'all';
+
+  String get projectId => widget.projectId;
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(materialsControllerProvider(projectId));
     final canCreate = ref.watch(canProvider(DomainAction.materialsManage));
+    final stagesAsync = ref.watch(stagesControllerProvider(projectId));
+    final stages = stagesAsync.value ?? const <Stage>[];
 
     return AppScaffold(
       showBack: true,
@@ -54,9 +72,9 @@ class MaterialsListScreen extends ConsumerWidget {
                   : null,
             );
           }
-          // shared (stageId=null) + perStage.
-          final shared = items.where((r) => r.stageId == null).toList();
-          final perStage = items.where((r) => r.stageId != null).toList();
+          // ТЗ NEWFIX §5.8: проектный экран — группировка по этапам.
+          // Фильтр-чипсы сверху + секции «Этап N · Title» в порядке
+          // orderIndex + «Общие материалы проекта» (stageId=null) в конце.
           // Hero-summary: сумма по согласованным + счётчики.
           final totalSpent = items
               .where((r) => r.status == MaterialRequestStatus.approved)
@@ -64,10 +82,31 @@ class MaterialsListScreen extends ConsumerWidget {
           final approved = items
               .where((r) => r.status == MaterialRequestStatus.approved)
               .length;
+          final filtered = items.where((r) {
+            if (_stageId == 'all') return true;
+            if (_stageId == _noStageKey) return r.stageId == null;
+            return r.stageId == _stageId;
+          }).toList();
+          final byStage = <String, List<MaterialRequest>>{};
+          final shared = <MaterialRequest>[];
+          for (final r in filtered) {
+            if (r.stageId == null) {
+              shared.add(r);
+            } else {
+              (byStage[r.stageId!] ??= []).add(r);
+            }
+          }
+          final orderedStages = [
+            for (final s in stages)
+              if ((byStage[s.id] ?? const []).isNotEmpty) s,
+          ];
 
           return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(materialsControllerProvider(projectId)),
+            onRefresh: () async {
+              ref
+                ..invalidate(materialsControllerProvider(projectId))
+                ..invalidate(stagesControllerProvider(projectId));
+            },
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
@@ -77,6 +116,29 @@ class MaterialsListScreen extends ConsumerWidget {
                   approved: approved,
                 ),
                 const SizedBox(height: AppSpacing.x12),
+                _StageFilterChips(
+                  activeId: _stageId,
+                  stages: stages,
+                  hasShared: items.any((r) => r.stageId == null),
+                  onSelect: (id) => setState(() => _stageId = id),
+                ),
+                const SizedBox(height: AppSpacing.x8),
+                for (final stage in orderedStages) ...[
+                  _SectionHeader(
+                    label: 'Этап ${stage.orderIndex + 1} · ${stage.title}',
+                  ),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final r in byStage[stage.id]!) ...[
+                    MaterialCard(
+                      request: r,
+                      onTap: () => context.push(
+                        '/projects/$projectId/materials/${r.id}',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.x10),
+                  ],
+                  const SizedBox(height: AppSpacing.x10),
+                ],
                 if (shared.isNotEmpty) ...[
                   const _SectionHeader(label: 'Общие материалы проекта'),
                   const SizedBox(height: AppSpacing.x8),
@@ -98,20 +160,6 @@ class MaterialsListScreen extends ConsumerWidget {
                           '/projects/$projectId/materials/${shared[i].id}',
                         ),
                       ),
-                    const SizedBox(height: AppSpacing.x10),
-                  ],
-                  const SizedBox(height: AppSpacing.x12),
-                ],
-                if (perStage.isNotEmpty) ...[
-                  const _SectionHeader(label: 'По этапам'),
-                  const SizedBox(height: AppSpacing.x8),
-                  for (final r in perStage) ...[
-                    MaterialCard(
-                      request: r,
-                      onTap: () => context.push(
-                        '/projects/$projectId/materials/${r.id}',
-                      ),
-                    ),
                     const SizedBox(height: AppSpacing.x10),
                   ],
                 ],
@@ -203,6 +251,96 @@ class _SectionHeader extends StatelessWidget {
           color: AppColors.n400,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+/// ТЗ NEWFIX §5.8: горизонтальный фильтр-чипсы по этапам на проектном
+/// экране заявок. Скрываем «Общие», если в проекте нет ни одной заявки
+/// без stageId — чтобы не мусорить интерфейсом.
+class _StageFilterChips extends StatelessWidget {
+  const _StageFilterChips({
+    required this.activeId,
+    required this.stages,
+    required this.hasShared,
+    required this.onSelect,
+  });
+
+  final String activeId;
+  final List<Stage> stages;
+  final bool hasShared;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stages.isEmpty && !hasShared) return const SizedBox.shrink();
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _StageChip(
+            label: 'Все этапы',
+            selected: activeId == 'all',
+            onTap: () => onSelect('all'),
+          ),
+          const SizedBox(width: AppSpacing.x6),
+          for (final s in stages) ...[
+            _StageChip(
+              label: 'Этап ${s.orderIndex + 1}',
+              selected: activeId == s.id,
+              onTap: () => onSelect(s.id),
+            ),
+            const SizedBox(width: AppSpacing.x6),
+          ],
+          if (hasShared)
+            _StageChip(
+              label: 'Общие',
+              selected: activeId == _noStageKey,
+              onTap: () => onSelect(_noStageKey),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StageChip extends StatelessWidget {
+  const _StageChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brand : AppColors.n0,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.n200,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.tiny.copyWith(
+            color: selected ? Colors.white : AppColors.n700,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
