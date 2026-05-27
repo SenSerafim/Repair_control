@@ -184,6 +184,32 @@ class _StatusBanner extends StatelessWidget {
         color: AppColors.greenLight,
         iconColor: AppColors.greenDark,
       ),
+      // ТЗ NEWFIX §5.7 — статусы приёмки.
+      MaterialRequestStatus.delivered => const _Banner(
+        icon: Icons.local_shipping_outlined,
+        title: 'Доставлено, ждёт приёмки',
+        subtitle:
+            'Материал у объекта. Бригадир сверяет позиции с фактическим '
+            'количеством и принимает полностью или частично.',
+        color: AppColors.blueBg,
+        iconColor: AppColors.blueText,
+      ),
+      MaterialRequestStatus.acceptedPartial => const _Banner(
+        icon: Icons.inventory_2_outlined,
+        title: 'Принято частично',
+        subtitle:
+            'Часть позиций принята, остаток в ожидании дополнения. После '
+            'довоза мастер снова отметит «Доставлено».',
+        color: AppColors.yellowBg,
+        iconColor: AppColors.yellowText,
+      ),
+      MaterialRequestStatus.acceptedFull => const _Banner(
+        icon: Icons.task_alt_rounded,
+        title: 'Принято полностью',
+        subtitle: 'Заявка закрыта. Все позиции приняты в полном объёме.',
+        color: AppColors.greenLight,
+        iconColor: AppColors.greenDark,
+      ),
       MaterialRequestStatus.rejected => const _Banner(
         icon: Icons.cancel_outlined,
         title: 'Заказчик отклонил заявку',

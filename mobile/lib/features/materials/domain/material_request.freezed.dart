@@ -16,15 +16,327 @@ final _privateConstructorUsedError = UnsupportedError(
 );
 
 /// @nodoc
+mixin _$MaterialItemPhoto {
+  String get id => throw _privateConstructorUsedError;
+  String get fileKey => throw _privateConstructorUsedError;
+  String? get thumbKey => throw _privateConstructorUsedError;
+  String get mimeType => throw _privateConstructorUsedError;
+  int get sizeBytes => throw _privateConstructorUsedError;
+  String get uploadedBy => throw _privateConstructorUsedError;
+  bool get exifCleared => throw _privateConstructorUsedError;
+  DateTime get createdAt => throw _privateConstructorUsedError;
+
+  /// Create a copy of MaterialItemPhoto
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $MaterialItemPhotoCopyWith<MaterialItemPhoto> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $MaterialItemPhotoCopyWith<$Res> {
+  factory $MaterialItemPhotoCopyWith(
+    MaterialItemPhoto value,
+    $Res Function(MaterialItemPhoto) then,
+  ) = _$MaterialItemPhotoCopyWithImpl<$Res, MaterialItemPhoto>;
+  @useResult
+  $Res call({
+    String id,
+    String fileKey,
+    String? thumbKey,
+    String mimeType,
+    int sizeBytes,
+    String uploadedBy,
+    bool exifCleared,
+    DateTime createdAt,
+  });
+}
+
+/// @nodoc
+class _$MaterialItemPhotoCopyWithImpl<$Res, $Val extends MaterialItemPhoto>
+    implements $MaterialItemPhotoCopyWith<$Res> {
+  _$MaterialItemPhotoCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of MaterialItemPhoto
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? fileKey = null,
+    Object? thumbKey = freezed,
+    Object? mimeType = null,
+    Object? sizeBytes = null,
+    Object? uploadedBy = null,
+    Object? exifCleared = null,
+    Object? createdAt = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            fileKey: null == fileKey
+                ? _value.fileKey
+                : fileKey // ignore: cast_nullable_to_non_nullable
+                      as String,
+            thumbKey: freezed == thumbKey
+                ? _value.thumbKey
+                : thumbKey // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            mimeType: null == mimeType
+                ? _value.mimeType
+                : mimeType // ignore: cast_nullable_to_non_nullable
+                      as String,
+            sizeBytes: null == sizeBytes
+                ? _value.sizeBytes
+                : sizeBytes // ignore: cast_nullable_to_non_nullable
+                      as int,
+            uploadedBy: null == uploadedBy
+                ? _value.uploadedBy
+                : uploadedBy // ignore: cast_nullable_to_non_nullable
+                      as String,
+            exifCleared: null == exifCleared
+                ? _value.exifCleared
+                : exifCleared // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            createdAt: null == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$MaterialItemPhotoImplCopyWith<$Res>
+    implements $MaterialItemPhotoCopyWith<$Res> {
+  factory _$$MaterialItemPhotoImplCopyWith(
+    _$MaterialItemPhotoImpl value,
+    $Res Function(_$MaterialItemPhotoImpl) then,
+  ) = __$$MaterialItemPhotoImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    String id,
+    String fileKey,
+    String? thumbKey,
+    String mimeType,
+    int sizeBytes,
+    String uploadedBy,
+    bool exifCleared,
+    DateTime createdAt,
+  });
+}
+
+/// @nodoc
+class __$$MaterialItemPhotoImplCopyWithImpl<$Res>
+    extends _$MaterialItemPhotoCopyWithImpl<$Res, _$MaterialItemPhotoImpl>
+    implements _$$MaterialItemPhotoImplCopyWith<$Res> {
+  __$$MaterialItemPhotoImplCopyWithImpl(
+    _$MaterialItemPhotoImpl _value,
+    $Res Function(_$MaterialItemPhotoImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of MaterialItemPhoto
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? fileKey = null,
+    Object? thumbKey = freezed,
+    Object? mimeType = null,
+    Object? sizeBytes = null,
+    Object? uploadedBy = null,
+    Object? exifCleared = null,
+    Object? createdAt = null,
+  }) {
+    return _then(
+      _$MaterialItemPhotoImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        fileKey: null == fileKey
+            ? _value.fileKey
+            : fileKey // ignore: cast_nullable_to_non_nullable
+                  as String,
+        thumbKey: freezed == thumbKey
+            ? _value.thumbKey
+            : thumbKey // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        mimeType: null == mimeType
+            ? _value.mimeType
+            : mimeType // ignore: cast_nullable_to_non_nullable
+                  as String,
+        sizeBytes: null == sizeBytes
+            ? _value.sizeBytes
+            : sizeBytes // ignore: cast_nullable_to_non_nullable
+                  as int,
+        uploadedBy: null == uploadedBy
+            ? _value.uploadedBy
+            : uploadedBy // ignore: cast_nullable_to_non_nullable
+                  as String,
+        exifCleared: null == exifCleared
+            ? _value.exifCleared
+            : exifCleared // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        createdAt: null == createdAt
+            ? _value.createdAt
+            : createdAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$MaterialItemPhotoImpl implements _MaterialItemPhoto {
+  const _$MaterialItemPhotoImpl({
+    required this.id,
+    required this.fileKey,
+    this.thumbKey,
+    required this.mimeType,
+    required this.sizeBytes,
+    required this.uploadedBy,
+    required this.exifCleared,
+    required this.createdAt,
+  });
+
+  @override
+  final String id;
+  @override
+  final String fileKey;
+  @override
+  final String? thumbKey;
+  @override
+  final String mimeType;
+  @override
+  final int sizeBytes;
+  @override
+  final String uploadedBy;
+  @override
+  final bool exifCleared;
+  @override
+  final DateTime createdAt;
+
+  @override
+  String toString() {
+    return 'MaterialItemPhoto(id: $id, fileKey: $fileKey, thumbKey: $thumbKey, mimeType: $mimeType, sizeBytes: $sizeBytes, uploadedBy: $uploadedBy, exifCleared: $exifCleared, createdAt: $createdAt)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$MaterialItemPhotoImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.fileKey, fileKey) || other.fileKey == fileKey) &&
+            (identical(other.thumbKey, thumbKey) ||
+                other.thumbKey == thumbKey) &&
+            (identical(other.mimeType, mimeType) ||
+                other.mimeType == mimeType) &&
+            (identical(other.sizeBytes, sizeBytes) ||
+                other.sizeBytes == sizeBytes) &&
+            (identical(other.uploadedBy, uploadedBy) ||
+                other.uploadedBy == uploadedBy) &&
+            (identical(other.exifCleared, exifCleared) ||
+                other.exifCleared == exifCleared) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    fileKey,
+    thumbKey,
+    mimeType,
+    sizeBytes,
+    uploadedBy,
+    exifCleared,
+    createdAt,
+  );
+
+  /// Create a copy of MaterialItemPhoto
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$MaterialItemPhotoImplCopyWith<_$MaterialItemPhotoImpl> get copyWith =>
+      __$$MaterialItemPhotoImplCopyWithImpl<_$MaterialItemPhotoImpl>(
+        this,
+        _$identity,
+      );
+}
+
+abstract class _MaterialItemPhoto implements MaterialItemPhoto {
+  const factory _MaterialItemPhoto({
+    required final String id,
+    required final String fileKey,
+    final String? thumbKey,
+    required final String mimeType,
+    required final int sizeBytes,
+    required final String uploadedBy,
+    required final bool exifCleared,
+    required final DateTime createdAt,
+  }) = _$MaterialItemPhotoImpl;
+
+  @override
+  String get id;
+  @override
+  String get fileKey;
+  @override
+  String? get thumbKey;
+  @override
+  String get mimeType;
+  @override
+  int get sizeBytes;
+  @override
+  String get uploadedBy;
+  @override
+  bool get exifCleared;
+  @override
+  DateTime get createdAt;
+
+  /// Create a copy of MaterialItemPhoto
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$MaterialItemPhotoImplCopyWith<_$MaterialItemPhotoImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$MaterialItem {
   String get id => throw _privateConstructorUsedError;
   String get requestId => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   double get qty => throw _privateConstructorUsedError;
+
+  /// Фактически принятое количество (заполняется при accept-partial/full).
+  /// null до приёмки. ТЗ NEWFIX §5.7.
+  double? get actualQty => throw _privateConstructorUsedError;
   String? get unit => throw _privateConstructorUsedError;
   String? get note => throw _privateConstructorUsedError;
   int? get pricePerUnit => throw _privateConstructorUsedError;
   int? get totalPrice => throw _privateConstructorUsedError;
+
+  /// Срок поставки позиции. ТЗ NEWFIX §5.5. Если прошёл а status=open,
+  /// клиент показывает стикер «Просрочена», бэк эмитит push раз в сутки.
+  DateTime? get dueDate => throw _privateConstructorUsedError;
+  MaterialItemPhoto? get photo => throw _privateConstructorUsedError;
   bool get isBought => throw _privateConstructorUsedError;
   DateTime? get boughtAt => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
@@ -49,15 +361,20 @@ abstract class $MaterialItemCopyWith<$Res> {
     String requestId,
     String name,
     double qty,
+    double? actualQty,
     String? unit,
     String? note,
     int? pricePerUnit,
     int? totalPrice,
+    DateTime? dueDate,
+    MaterialItemPhoto? photo,
     bool isBought,
     DateTime? boughtAt,
     DateTime createdAt,
     DateTime updatedAt,
   });
+
+  $MaterialItemPhotoCopyWith<$Res>? get photo;
 }
 
 /// @nodoc
@@ -79,10 +396,13 @@ class _$MaterialItemCopyWithImpl<$Res, $Val extends MaterialItem>
     Object? requestId = null,
     Object? name = null,
     Object? qty = null,
+    Object? actualQty = freezed,
     Object? unit = freezed,
     Object? note = freezed,
     Object? pricePerUnit = freezed,
     Object? totalPrice = freezed,
+    Object? dueDate = freezed,
+    Object? photo = freezed,
     Object? isBought = null,
     Object? boughtAt = freezed,
     Object? createdAt = null,
@@ -106,6 +426,10 @@ class _$MaterialItemCopyWithImpl<$Res, $Val extends MaterialItem>
                 ? _value.qty
                 : qty // ignore: cast_nullable_to_non_nullable
                       as double,
+            actualQty: freezed == actualQty
+                ? _value.actualQty
+                : actualQty // ignore: cast_nullable_to_non_nullable
+                      as double?,
             unit: freezed == unit
                 ? _value.unit
                 : unit // ignore: cast_nullable_to_non_nullable
@@ -122,6 +446,14 @@ class _$MaterialItemCopyWithImpl<$Res, $Val extends MaterialItem>
                 ? _value.totalPrice
                 : totalPrice // ignore: cast_nullable_to_non_nullable
                       as int?,
+            dueDate: freezed == dueDate
+                ? _value.dueDate
+                : dueDate // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            photo: freezed == photo
+                ? _value.photo
+                : photo // ignore: cast_nullable_to_non_nullable
+                      as MaterialItemPhoto?,
             isBought: null == isBought
                 ? _value.isBought
                 : isBought // ignore: cast_nullable_to_non_nullable
@@ -142,6 +474,20 @@ class _$MaterialItemCopyWithImpl<$Res, $Val extends MaterialItem>
           as $Val,
     );
   }
+
+  /// Create a copy of MaterialItem
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $MaterialItemPhotoCopyWith<$Res>? get photo {
+    if (_value.photo == null) {
+      return null;
+    }
+
+    return $MaterialItemPhotoCopyWith<$Res>(_value.photo!, (value) {
+      return _then(_value.copyWith(photo: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -158,15 +504,21 @@ abstract class _$$MaterialItemImplCopyWith<$Res>
     String requestId,
     String name,
     double qty,
+    double? actualQty,
     String? unit,
     String? note,
     int? pricePerUnit,
     int? totalPrice,
+    DateTime? dueDate,
+    MaterialItemPhoto? photo,
     bool isBought,
     DateTime? boughtAt,
     DateTime createdAt,
     DateTime updatedAt,
   });
+
+  @override
+  $MaterialItemPhotoCopyWith<$Res>? get photo;
 }
 
 /// @nodoc
@@ -187,10 +539,13 @@ class __$$MaterialItemImplCopyWithImpl<$Res>
     Object? requestId = null,
     Object? name = null,
     Object? qty = null,
+    Object? actualQty = freezed,
     Object? unit = freezed,
     Object? note = freezed,
     Object? pricePerUnit = freezed,
     Object? totalPrice = freezed,
+    Object? dueDate = freezed,
+    Object? photo = freezed,
     Object? isBought = null,
     Object? boughtAt = freezed,
     Object? createdAt = null,
@@ -214,6 +569,10 @@ class __$$MaterialItemImplCopyWithImpl<$Res>
             ? _value.qty
             : qty // ignore: cast_nullable_to_non_nullable
                   as double,
+        actualQty: freezed == actualQty
+            ? _value.actualQty
+            : actualQty // ignore: cast_nullable_to_non_nullable
+                  as double?,
         unit: freezed == unit
             ? _value.unit
             : unit // ignore: cast_nullable_to_non_nullable
@@ -230,6 +589,14 @@ class __$$MaterialItemImplCopyWithImpl<$Res>
             ? _value.totalPrice
             : totalPrice // ignore: cast_nullable_to_non_nullable
                   as int?,
+        dueDate: freezed == dueDate
+            ? _value.dueDate
+            : dueDate // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        photo: freezed == photo
+            ? _value.photo
+            : photo // ignore: cast_nullable_to_non_nullable
+                  as MaterialItemPhoto?,
         isBought: null == isBought
             ? _value.isBought
             : isBought // ignore: cast_nullable_to_non_nullable
@@ -259,10 +626,13 @@ class _$MaterialItemImpl implements _MaterialItem {
     required this.requestId,
     required this.name,
     required this.qty,
+    this.actualQty,
     this.unit,
     this.note,
     this.pricePerUnit,
     this.totalPrice,
+    this.dueDate,
+    this.photo,
     required this.isBought,
     this.boughtAt,
     required this.createdAt,
@@ -277,6 +647,11 @@ class _$MaterialItemImpl implements _MaterialItem {
   final String name;
   @override
   final double qty;
+
+  /// Фактически принятое количество (заполняется при accept-partial/full).
+  /// null до приёмки. ТЗ NEWFIX §5.7.
+  @override
+  final double? actualQty;
   @override
   final String? unit;
   @override
@@ -285,6 +660,13 @@ class _$MaterialItemImpl implements _MaterialItem {
   final int? pricePerUnit;
   @override
   final int? totalPrice;
+
+  /// Срок поставки позиции. ТЗ NEWFIX §5.5. Если прошёл а status=open,
+  /// клиент показывает стикер «Просрочена», бэк эмитит push раз в сутки.
+  @override
+  final DateTime? dueDate;
+  @override
+  final MaterialItemPhoto? photo;
   @override
   final bool isBought;
   @override
@@ -296,7 +678,7 @@ class _$MaterialItemImpl implements _MaterialItem {
 
   @override
   String toString() {
-    return 'MaterialItem(id: $id, requestId: $requestId, name: $name, qty: $qty, unit: $unit, note: $note, pricePerUnit: $pricePerUnit, totalPrice: $totalPrice, isBought: $isBought, boughtAt: $boughtAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'MaterialItem(id: $id, requestId: $requestId, name: $name, qty: $qty, actualQty: $actualQty, unit: $unit, note: $note, pricePerUnit: $pricePerUnit, totalPrice: $totalPrice, dueDate: $dueDate, photo: $photo, isBought: $isBought, boughtAt: $boughtAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -309,12 +691,16 @@ class _$MaterialItemImpl implements _MaterialItem {
                 other.requestId == requestId) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.qty, qty) || other.qty == qty) &&
+            (identical(other.actualQty, actualQty) ||
+                other.actualQty == actualQty) &&
             (identical(other.unit, unit) || other.unit == unit) &&
             (identical(other.note, note) || other.note == note) &&
             (identical(other.pricePerUnit, pricePerUnit) ||
                 other.pricePerUnit == pricePerUnit) &&
             (identical(other.totalPrice, totalPrice) ||
                 other.totalPrice == totalPrice) &&
+            (identical(other.dueDate, dueDate) || other.dueDate == dueDate) &&
+            (identical(other.photo, photo) || other.photo == photo) &&
             (identical(other.isBought, isBought) ||
                 other.isBought == isBought) &&
             (identical(other.boughtAt, boughtAt) ||
@@ -332,10 +718,13 @@ class _$MaterialItemImpl implements _MaterialItem {
     requestId,
     name,
     qty,
+    actualQty,
     unit,
     note,
     pricePerUnit,
     totalPrice,
+    dueDate,
+    photo,
     isBought,
     boughtAt,
     createdAt,
@@ -357,10 +746,13 @@ abstract class _MaterialItem implements MaterialItem {
     required final String requestId,
     required final String name,
     required final double qty,
+    final double? actualQty,
     final String? unit,
     final String? note,
     final int? pricePerUnit,
     final int? totalPrice,
+    final DateTime? dueDate,
+    final MaterialItemPhoto? photo,
     required final bool isBought,
     final DateTime? boughtAt,
     required final DateTime createdAt,
@@ -375,6 +767,11 @@ abstract class _MaterialItem implements MaterialItem {
   String get name;
   @override
   double get qty;
+
+  /// Фактически принятое количество (заполняется при accept-partial/full).
+  /// null до приёмки. ТЗ NEWFIX §5.7.
+  @override
+  double? get actualQty;
   @override
   String? get unit;
   @override
@@ -383,6 +780,13 @@ abstract class _MaterialItem implements MaterialItem {
   int? get pricePerUnit;
   @override
   int? get totalPrice;
+
+  /// Срок поставки позиции. ТЗ NEWFIX §5.5. Если прошёл а status=open,
+  /// клиент показывает стикер «Просрочена», бэк эмитит push раз в сутки.
+  @override
+  DateTime? get dueDate;
+  @override
+  MaterialItemPhoto? get photo;
   @override
   bool get isBought;
   @override

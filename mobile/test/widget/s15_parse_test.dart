@@ -11,29 +11,51 @@ void main() {
       }
     });
 
-    test('isTerminal: approved/rejected — терминальные, pendingApproval — нет', () {
-      expect(MaterialRequestStatus.approved.isTerminal, isTrue);
+    test('isTerminal: только acceptedFull/rejected — терминальные (E1a FSM)', () {
+      // ТЗ NEWFIX §5.7: заявка считается закрытой только после полной приёмки
+      // или отказа. approved/delivered/acceptedPartial — промежуточные.
+      expect(MaterialRequestStatus.acceptedFull.isTerminal, isTrue);
       expect(MaterialRequestStatus.rejected.isTerminal, isTrue);
+      expect(MaterialRequestStatus.approved.isTerminal, isFalse);
+      expect(MaterialRequestStatus.delivered.isTerminal, isFalse);
+      expect(MaterialRequestStatus.acceptedPartial.isTerminal, isFalse);
       expect(MaterialRequestStatus.pendingApproval.isTerminal, isFalse);
     });
 
-    test('legacy bought/delivered/resolved/cancelled → approved/rejected', () {
-      // BE-наследие (S15) — пока БД хранит старые значения, парсим в новые.
+    test('legacy / E1a: парсинг всех статусов из API', () {
+      // Активные статусы FSM E1a (ТЗ NEWFIX §5.7).
+      expect(
+        MaterialRequestStatus.fromString('pending_approval'),
+        MaterialRequestStatus.pendingApproval,
+      );
+      expect(
+        MaterialRequestStatus.fromString('open'),
+        MaterialRequestStatus.approved,
+      );
+      expect(
+        MaterialRequestStatus.fromString('delivered'),
+        MaterialRequestStatus.delivered,
+      );
+      expect(
+        MaterialRequestStatus.fromString('accepted_partial'),
+        MaterialRequestStatus.acceptedPartial,
+      );
+      expect(
+        MaterialRequestStatus.fromString('accepted_full'),
+        MaterialRequestStatus.acceptedFull,
+      );
+      expect(
+        MaterialRequestStatus.fromString('cancelled'),
+        MaterialRequestStatus.rejected,
+      );
+      // Legacy-значения БД (bought / resolved) — пока маппим в approved.
       expect(
         MaterialRequestStatus.fromString('bought'),
         MaterialRequestStatus.approved,
       );
       expect(
-        MaterialRequestStatus.fromString('delivered'),
-        MaterialRequestStatus.approved,
-      );
-      expect(
         MaterialRequestStatus.fromString('resolved'),
         MaterialRequestStatus.approved,
-      );
-      expect(
-        MaterialRequestStatus.fromString('cancelled'),
-        MaterialRequestStatus.rejected,
       );
     });
   });
@@ -111,6 +133,148 @@ void main() {
       });
       expect(r.status, MaterialRequestStatus.pendingApproval);
       expect(r.items.first.qty, 12.5);
+    });
+  });
+
+  group('E1a — Заявки 2.0 (NEWFIX §5.7)', () {
+    test('MaterialItem.parse: actualQty + dueDate + photo', () {
+      final item = MaterialItem.parse({
+        'id': 'mi1',
+        'requestId': 'mr1',
+        'name': 'Цемент',
+        'qty': 40,
+        'actualQty': 20,
+        'dueDate': '2026-06-15T00:00:00Z',
+        'photo': {
+          'id': 'mip1',
+          'fileKey': 'materials/items/photos/2026-05-27/abc.jpg',
+          'thumbKey': null,
+          'mimeType': 'image/jpeg',
+          'sizeBytes': 524288,
+          'uploadedBy': 'u1',
+          'exifCleared': true,
+          'createdAt': '2026-05-27T10:00:00Z',
+        },
+        'isBought': false,
+        'createdAt': '2026-05-27T10:00:00Z',
+        'updatedAt': '2026-05-27T10:00:00Z',
+      });
+      expect(item.actualQty, 20);
+      expect(item.dueDate, DateTime.utc(2026, 6, 15));
+      expect(item.photo, isNotNull);
+      expect(item.photo!.fileKey, contains('abc.jpg'));
+      expect(item.photo!.mimeType, 'image/jpeg');
+      expect(item.photo!.exifCleared, isTrue);
+    });
+
+    test('MaterialItem.parse без photo и без dueDate — opt-out поля', () {
+      final item = MaterialItem.parse({
+        'id': 'mi2',
+        'requestId': 'mr2',
+        'name': 'Песок',
+        'qty': 10,
+        'isBought': false,
+        'createdAt': '2026-05-27T10:00:00Z',
+        'updatedAt': '2026-05-27T10:00:00Z',
+      });
+      expect(item.actualQty, isNull);
+      expect(item.dueDate, isNull);
+      expect(item.photo, isNull);
+    });
+
+    test('isOverdue: approved + просроченный dueDate → true', () {
+      final now = DateTime.utc(2026, 7, 1);
+      final r = MaterialRequest(
+        id: 'r1',
+        projectId: 'p1',
+        createdById: 'u1',
+        recipient: MaterialRecipient.foreman,
+        title: 'X',
+        status: MaterialRequestStatus.approved,
+        createdAt: now,
+        updatedAt: now,
+        items: [
+          MaterialItem(
+            id: 'i1',
+            requestId: 'r1',
+            name: 'X',
+            qty: 1,
+            dueDate: DateTime.utc(2026, 6, 15), // в прошлом относительно now
+            isBought: false,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ],
+      );
+      expect(r.isOverdue(now), isTrue);
+    });
+
+    test('isOverdue: delivered/acceptedPartial — НЕ просрочена даже с прошедшим dueDate', () {
+      // ТЗ §5.5: «Просрочена» = ждёт доставки И срок прошёл.
+      // Если уже доставили — статус уже delivered/accepted_*, флаг неактуален.
+      final now = DateTime.utc(2026, 7, 1);
+      final past = DateTime.utc(2026, 6, 15);
+      for (final s in [
+        MaterialRequestStatus.delivered,
+        MaterialRequestStatus.acceptedPartial,
+        MaterialRequestStatus.acceptedFull,
+        MaterialRequestStatus.pendingApproval,
+      ]) {
+        final r = MaterialRequest(
+          id: 'r',
+          projectId: 'p',
+          createdById: 'u',
+          recipient: MaterialRecipient.foreman,
+          title: 'X',
+          status: s,
+          createdAt: now,
+          updatedAt: now,
+          items: [
+            MaterialItem(
+              id: 'i',
+              requestId: 'r',
+              name: 'X',
+              qty: 1,
+              dueDate: past,
+              isBought: false,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ],
+        );
+        expect(r.isOverdue(now), isFalse, reason: 'status=$s');
+      }
+    });
+
+    test('canMarkDelivered / canAccept: матрица переходов FSM', () {
+      MaterialRequest mk(MaterialRequestStatus s) => MaterialRequest(
+        id: 'r',
+        projectId: 'p',
+        createdById: 'u',
+        recipient: MaterialRecipient.foreman,
+        title: 'X',
+        status: s,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      // canMarkDelivered: approved / acceptedPartial
+      expect(mk(MaterialRequestStatus.approved).canMarkDelivered, isTrue);
+      expect(mk(MaterialRequestStatus.acceptedPartial).canMarkDelivered, isTrue);
+      expect(mk(MaterialRequestStatus.pendingApproval).canMarkDelivered, isFalse);
+      expect(mk(MaterialRequestStatus.delivered).canMarkDelivered, isFalse);
+      expect(mk(MaterialRequestStatus.acceptedFull).canMarkDelivered, isFalse);
+      // canAccept: только delivered
+      expect(mk(MaterialRequestStatus.delivered).canAccept, isTrue);
+      expect(mk(MaterialRequestStatus.approved).canAccept, isFalse);
+      expect(mk(MaterialRequestStatus.acceptedPartial).canAccept, isFalse);
+    });
+
+    test('displayName и semaphore для всех 6 статусов уникальны', () {
+      final names = <String>{};
+      for (final s in MaterialRequestStatus.values) {
+        names.add(s.displayName);
+      }
+      expect(names.length, MaterialRequestStatus.values.length);
     });
   });
 
