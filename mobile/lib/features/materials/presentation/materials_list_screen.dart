@@ -25,7 +25,7 @@ class MaterialsListScreen extends ConsumerWidget {
 
     return AppScaffold(
       showBack: true,
-      title: 'Материалы',
+      title: 'Заявки',
       padding: EdgeInsets.zero,
       actions: [
         if (canCreate)

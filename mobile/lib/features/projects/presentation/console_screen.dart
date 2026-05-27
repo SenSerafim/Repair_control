@@ -10,6 +10,8 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/status_pill.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../approvals/application/approvals_controller.dart';
+import '../../chat/application/chats_controller.dart';
 import '../../finance/application/budget_controller.dart';
 import '../../finance/domain/budget.dart';
 import '../../notifications/application/notifications_controller.dart';
@@ -194,6 +196,10 @@ class _BodyState extends ConsumerState<_Body> {
                 const SizedBox(height: AppSpacing.x10),
                 _StagesCarousel(projectId: projectId, stages: stages),
                 const SizedBox(height: AppSpacing.x20),
+                // ТЗ NEWFIX §1.1: блок быстрых кнопок под списком этапов —
+                // Команда / Согласования (badge) / Чаты (badge) / Заявки.
+                _ProjectQuickActions(projectId: projectId),
+                const SizedBox(height: AppSpacing.x16),
                 _NavSections(projectId: projectId),
                 const SizedBox(height: AppSpacing.x24),
               ],
@@ -1024,12 +1030,8 @@ class _NavSections extends ConsumerWidget {
         projectId: projectId,
       )),
     );
-    final canMaterials = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.materialsManage,
-        projectId: projectId,
-      )),
-    );
+    // canMaterials остался полезен для _ProjectQuickActions; в _NavSections
+    // плитка «Материалы»/«Заявки» больше не рисуется (см. ниже комментарий).
     final canSelfPurchase = ref.watch(
       canInProjectProvider((
         action: DomainAction.selfPurchaseCreate,
@@ -1046,50 +1048,11 @@ class _NavSections extends ConsumerWidget {
       )),
     );
     final toolsRoute = '/projects/$projectId/tools';
-    final canApprovals = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.approvalList,
-        projectId: projectId,
-      )),
-    );
-    final canChat = ref.watch(
-      canInProjectProvider((
-        action: DomainAction.chatRead,
-        projectId: projectId,
-      )),
-    );
-
-    final stagesAndWork = <AppNavTileSpec>[
-      AppNavTileSpec(
-        icon: PhosphorIconsFill.lightning,
-        iconColor: AppColors.brand,
-        label: 'Этапы',
-        onTap: () => context.push('/projects/$projectId/stages'),
-      ),
-      if (canApprovals)
-        AppNavTileSpec(
-          icon: PhosphorIconsFill.checkSquare,
-          iconColor: AppColors.purple,
-          label: 'Согласования',
-          onTap: () => context.push('/projects/$projectId/approvals'),
-        ),
-    ];
-
-    final teamAndChat = <AppNavTileSpec>[
-      AppNavTileSpec(
-        icon: PhosphorIconsFill.usersThree,
-        iconColor: AppColors.greenDark,
-        label: 'Команда',
-        onTap: () => context.push('/projects/$projectId/team'),
-      ),
-      if (canChat)
-        AppNavTileSpec(
-          icon: PhosphorIconsFill.chatCircleDots,
-          iconColor: AppColors.brand,
-          label: 'Чаты проекта',
-          onTap: () => context.push('/projects/$projectId/chats'),
-        ),
-    ];
+    // ТЗ NEWFIX §1.1: «Этапы» дублирует карусель выше — убираем; «Команда /
+    // Согласования / Чаты / Заявки» переехали в _ProjectQuickActions.
+    // Здесь оставляем только финансы/документы/ленту/инструмент.
+    final stagesAndWork = <AppNavTileSpec>[];
+    final teamAndChat = <AppNavTileSpec>[];
 
     final finance = <AppNavTileSpec>[
       if (canBudget)
@@ -1099,13 +1062,8 @@ class _NavSections extends ConsumerWidget {
           label: 'Бюджет',
           onTap: () => context.push('/projects/$projectId/budget'),
         ),
-      if (canMaterials)
-        AppNavTileSpec(
-          icon: PhosphorIconsFill.package,
-          iconColor: AppColors.yellowText,
-          label: 'Материалы',
-          onTap: () => context.push('/projects/$projectId/materials'),
-        ),
+      // ТЗ NEWFIX §1.1: «Материалы» → «Заявки», переехали в _ProjectQuickActions.
+      // Здесь плитку не дублируем.
       if (canSelfPurchase)
         AppNavTileSpec(
           icon: PhosphorIconsFill.basket,
@@ -1203,6 +1161,195 @@ class _NavSectionLabel extends StatelessWidget {
           fontWeight: FontWeight.w800,
           color: AppColors.n400,
           letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+/// ТЗ NEWFIX §1.1 — 4 быстрых кнопки под списком этапов.
+/// Команда / Согласования / Чаты / Заявки. На «Согл.» и «Чаты» — бейджи
+/// с числом непрочитанных/незакрытых. RBAC: согласования/чаты/заявки
+/// видны только по соответствующим правам в проекте.
+class _ProjectQuickActions extends ConsumerWidget {
+  const _ProjectQuickActions({required this.projectId});
+
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canApprovals = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.approvalList,
+        projectId: projectId,
+      )),
+    );
+    final canChat = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.chatRead,
+        projectId: projectId,
+      )),
+    );
+    final canMaterials = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.materialsManage,
+        projectId: projectId,
+      )),
+    );
+
+    // Бейдж согласований — кол-во pending. approvalsControllerProvider
+    // и так загружается на экране согласований; здесь watch'им тот же
+    // family — провайдер сам подтянет если ещё не был запрошен.
+    final approvalsAsync = ref.watch(approvalsControllerProvider(projectId));
+    final pendingApprovals = approvalsAsync.maybeWhen(
+      data: (b) => b.pending.length,
+      orElse: () => 0,
+    );
+
+    // Бейдж чатов — сумма unread по всем чатам проекта.
+    final chatsAsync = ref.watch(projectChatsProvider(projectId));
+    final unreadChats = chatsAsync.maybeWhen(
+      data: (chats) =>
+          chats.fold<int>(0, (sum, c) => sum + c.unreadCount),
+      orElse: () => 0,
+    );
+
+    final actions = <_QuickAction>[
+      _QuickAction(
+        icon: PhosphorIconsFill.usersThree,
+        color: AppColors.greenDark,
+        label: 'Команда',
+        onTap: () => context.push('/projects/$projectId/team'),
+      ),
+      if (canApprovals)
+        _QuickAction(
+          icon: PhosphorIconsFill.checkSquare,
+          color: AppColors.purple,
+          label: 'Согл.',
+          badge: pendingApprovals,
+          onTap: () => context.push('/projects/$projectId/approvals'),
+        ),
+      if (canChat)
+        _QuickAction(
+          icon: PhosphorIconsFill.chatCircleDots,
+          color: AppColors.brand,
+          label: 'Чаты',
+          badge: unreadChats,
+          onTap: () => context.push('/projects/$projectId/chats'),
+        ),
+      if (canMaterials)
+        _QuickAction(
+          icon: PhosphorIconsFill.package,
+          color: AppColors.yellowText,
+          label: 'Заявки',
+          onTap: () => context.push('/projects/$projectId/materials'),
+        ),
+    ];
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: AppSpacing.x10,
+      crossAxisSpacing: AppSpacing.x10,
+      childAspectRatio: 3.0,
+      children: [for (final a in actions) _QuickActionTile(action: a)],
+    );
+  }
+}
+
+class _QuickAction {
+  const _QuickAction({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+  final int badge;
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({required this.action});
+
+  final _QuickAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r16),
+      onTap: action.onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x12,
+          vertical: AppSpacing.x10,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.n0,
+          borderRadius: BorderRadius.circular(AppRadius.r16),
+          border: Border.all(color: AppColors.n200, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: action.color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                  ),
+                  child: Icon(action.icon, color: action.color, size: 20),
+                ),
+                if (action.badge > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: AppColors.redDot,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        action.badge > 99 ? '99+' : '${action.badge}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: AppSpacing.x10),
+            Expanded(
+              child: Text(
+                action.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.n900,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
