@@ -148,6 +148,24 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       if (ctx.membershipRole === 'master') return true;
       return false;
 
+    case 'materials.mark_delivered':
+      // ТЗ NEWFIX §5.7 шаг 1: «доставка фиксируется первым лицом, кто получил
+      // материал» — любой активный member проекта (включая мастера).
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return true;
+      if (ctx.membershipRole === 'foreman') return true;
+      if (ctx.membershipRole === 'master') return true;
+      return false;
+
+    case 'materials.accept':
+      // ТЗ NEWFIX §5.7 шаг 4: принимать (полностью/частично) и менять
+      // фактические количества — только бригадир или заказчик (или
+      // представитель с canApprove). Мастер не принимает.
+      if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+      if (ctx.membershipRole === 'representative') return !!ctx.representativeRights?.canApprove;
+      if (ctx.membershipRole === 'foreman') return true;
+      return false;
+
     case 'tools.view_project':
     case 'tools.add_to_project':
     case 'tools.claim':

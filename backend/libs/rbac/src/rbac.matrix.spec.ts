@@ -509,6 +509,52 @@ describe('RBAC matrix — ТЗ §1.5', () => {
   });
 });
 
+describe('materials.mark_delivered / materials.accept (E1a — ТЗ NEWFIX §5.7)', () => {
+  describe('materials.mark_delivered (любой active member)', () => {
+    it('owner-customer может', () => {
+      expect(canAccess('materials.mark_delivered', customer(true))).toBe(true);
+    });
+    it('foreman может', () => {
+      expect(canAccess('materials.mark_delivered', foreman())).toBe(true);
+    });
+    it('master может (он первый принимает материал)', () => {
+      expect(canAccess('materials.mark_delivered', master())).toBe(true);
+    });
+    it('representative может (даже без специальных rights)', () => {
+      expect(canAccess('materials.mark_delivered', representative())).toBe(true);
+    });
+    it('non-owner customer без membership — не может', () => {
+      const noMember: AccessContext = {
+        userId: 'u-stranger',
+        systemRole: 'customer',
+        projectOwnerId: 'u-other',
+      };
+      expect(canAccess('materials.mark_delivered', noMember)).toBe(false);
+    });
+  });
+
+  describe('materials.accept (foreman / customer-owner / representative с canApprove)', () => {
+    it('owner-customer может', () => {
+      expect(canAccess('materials.accept', customer(true))).toBe(true);
+    });
+    it('foreman может', () => {
+      expect(canAccess('materials.accept', foreman())).toBe(true);
+    });
+    it('master НЕ может — мастер только фиксирует доставку, не принимает', () => {
+      expect(canAccess('materials.accept', master())).toBe(false);
+    });
+    it('representative с canApprove — может', () => {
+      expect(canAccess('materials.accept', representative({ canApprove: true }))).toBe(true);
+    });
+    it('representative без canApprove — НЕ может', () => {
+      expect(canAccess('materials.accept', representative({ canApprove: false }))).toBe(false);
+    });
+    it('admin — bypass', () => {
+      expect(canAccess('materials.accept', admin())).toBe(true);
+    });
+  });
+});
+
 describe('mergeRepresentativeRights', () => {
   it('fills defaults and overrides', () => {
     const merged = mergeRepresentativeRights(undefined, { canApprove: true });

@@ -21,6 +21,8 @@ export const DOMAIN_ACTIONS = [
   'finance.payment.create_advance',
   'finance.payment.distribute',
   'materials.manage',
+  'materials.mark_delivered',
+  'materials.accept',
   'material.finalize',
   'tools.add_to_project',
   'tools.claim',
