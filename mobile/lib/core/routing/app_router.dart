@@ -81,6 +81,7 @@ import '../../features/team/presentation/member_found_screen.dart';
 import '../../features/team/presentation/member_not_found_screen.dart';
 import '../../features/team/presentation/project_rep_rights_screen.dart';
 import '../../features/team/presentation/team_screen.dart';
+import '../../features/user_profile/presentation/user_profile_screen.dart';
 import '../../features/tools/presentation/add_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
 import '../../features/tools/presentation/project_tools_screen.dart';
@@ -266,6 +267,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                           (_, state) => ProjectRepRightsScreen(
                             projectId: state.pathParameters['projectId']!,
                             user: state.extra! as ProjectMemberUser,
+                          ),
+                        ),
+                      ),
+                      // ТЗ NEWFIX §4: профиль сотрудника. URL построен
+                      // относительно `team/`, потому что точка входа —
+                      // тап по строке участника. Сам экран project-agnostic
+                      // (агрегирует все shared-проекты), но мы сохраняем
+                      // контекстную навигацию обратно в команду проекта.
+                      GoRoute(
+                        path: ':userId',
+                        pageBuilder: slideLeftPage(
+                          (_, state) => UserProfileScreen(
+                            userId: state.pathParameters['userId']!,
                           ),
                         ),
                       ),

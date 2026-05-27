@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { UserProfileService } from './user-profile.service';
 import { UsersController } from './users.controller';
+import { UserProfileController } from './user-profile.controller';
 import { ProjectsModule } from '../projects/projects.module';
 import { AuthModule } from '../auth/auth.module';
 
@@ -9,8 +11,8 @@ import { AuthModule } from '../auth/auth.module';
   // которым пользуется UsersService.listTeammates (нижний таб «Команда»).
   // AuthModule — для перевыпуска токенов при смене активной роли.
   imports: [ProjectsModule, AuthModule],
-  controllers: [UsersController],
-  providers: [UsersService],
+  controllers: [UsersController, UserProfileController],
+  providers: [UsersService, UserProfileService],
   exports: [UsersService],
 })
 export class UsersModule {}
