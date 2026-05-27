@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,6 +63,27 @@ class FeedRepository {
       );
     }
     return const FeedPage(items: []);
+  });
+
+  /// ТЗ NEWFIX §12.4: PDF-отчёт за период [dateFrom..dateTo].
+  /// Backend GET /api/projects/:id/feed/pdf вернёт PDF inline.
+  Future<Uint8List> downloadPdf({
+    required String projectId,
+    required DateTime dateFrom,
+    required DateTime dateTo,
+  }) => _call(() async {
+    final r = await _dio.get<List<int>>(
+      '/api/projects/$projectId/feed/pdf',
+      queryParameters: {
+        'dateFrom': dateFrom.toIso8601String(),
+        'dateTo': dateTo.toIso8601String(),
+      },
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: {'Accept': 'application/pdf'},
+      ),
+    );
+    return Uint8List.fromList(r.data!);
   });
 
   Future<T> _call<T>(Future<T> Function() action) async {
