@@ -9,6 +9,8 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
+import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../application/approvals_controller.dart';
 import '../domain/approval.dart';
 import 'approval_widgets.dart';
@@ -29,6 +31,11 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
   // dispose-before-build (бывает в /tour при быстром переключении экранов).
   TabController? _tabs;
   String _scopeId = 'all';
+  // ТЗ NEWFIX §1.3: фильтр по этапам сверху. 'all' = все этапы,
+  // _noStageKey = согласования без stageId (например, materialPurchase
+  // общей заявки на проект).
+  static const String _noStageKey = '__no_stage__';
+  String _stageId = 'all';
 
   // Polling safety-net: пока экран открыт, каждые 30s тихо обновляем список
   // ТОЛЬКО если WS-соединение упало. Это страховка для случаев Doze mode,
@@ -99,13 +106,28 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
         ),
         data: (buckets) {
           final tabs = _tabs!;
+          final stagesAsync = ref.watch(stagesControllerProvider(widget.projectId));
+          final stages = stagesAsync.value ?? const <Stage>[];
+          final stageMap = {for (final s in stages) s.id: s};
           final pendingCount = _filter(buckets.pending).length;
+          String? labelFor(Approval a) {
+            final s = a.stageId == null ? null : stageMap[a.stageId];
+            if (s == null) return null;
+            return 'Этап ${s.orderIndex + 1} · ${s.title}';
+          }
+
           return Column(
             children: [
               _Tabs(controller: tabs, pendingCount: pendingCount),
               _ScopeFilter(
                 activeId: _scopeId,
                 onSelect: (id) => setState(() => _scopeId = id),
+              ),
+              _StageFilter(
+                activeId: _stageId,
+                stages: stages,
+                onSelect: (id) => setState(() => _stageId = id),
+                noStageKey: _noStageKey,
               ),
               Expanded(
                 child: TabBarView(
@@ -114,6 +136,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                     _ListBody(
                       projectId: widget.projectId,
                       items: _filter(buckets.pending),
+                      stageLabelOf: labelFor,
                       emptyTitle: 'Нет согласований',
                       emptyHint:
                           'Согласования появятся когда бригадир '
@@ -124,6 +147,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
                     _ListBody(
                       projectId: widget.projectId,
                       items: _filter(buckets.history),
+                      stageLabelOf: labelFor,
                       emptyTitle: 'История пуста',
                       emptyHint:
                           'Решённые и отклонённые согласования '
@@ -141,8 +165,12 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
   }
 
   List<Approval> _filter(List<Approval> src) {
-    if (_scopeId == 'all') return src;
-    return src.where((a) => a.scope.apiValue == _scopeId).toList();
+    return src.where((a) {
+      if (_scopeId != 'all' && a.scope.apiValue != _scopeId) return false;
+      if (_stageId == 'all') return true;
+      if (_stageId == _noStageKey) return a.stageId == null;
+      return a.stageId == _stageId;
+    }).toList();
   }
 }
 
@@ -245,6 +273,7 @@ class _ListBody extends StatelessWidget {
     required this.emptyTitle,
     required this.emptyHint,
     required this.onRefresh,
+    this.stageLabelOf,
     this.withTourAnchor = false,
   });
 
@@ -253,6 +282,8 @@ class _ListBody extends StatelessWidget {
   final String emptyTitle;
   final String emptyHint;
   final Future<void> Function() onRefresh;
+  // ТЗ NEWFIX §1.3: подпись этапа в каждой строке для проектного списка.
+  final String? Function(Approval)? stageLabelOf;
   // TabBarView держит обе вкладки одновременно — чтобы не получить
   // дубль GlobalKey, anchor подключаем только в активной вкладке (pending).
   final bool withTourAnchor;
@@ -294,6 +325,7 @@ class _ListBody extends StatelessWidget {
         itemBuilder: (_, i) {
           final card = ApprovalCard(
             approval: items[i],
+            stageLabel: stageLabelOf?.call(items[i]),
             onTap: () =>
                 context.push('/projects/$projectId/approvals/${items[i].id}'),
           );
@@ -301,6 +333,103 @@ class _ListBody extends StatelessWidget {
               ? TourAnchor(id: 'approvals.first_approval', child: card)
               : card;
         },
+      ),
+    );
+  }
+}
+
+/// ТЗ NEWFIX §1.3: горизонтальные чипсы фильтра по этапам:
+/// `Все · Этап 1 · Этап 2 · … · Без этапа`. Скрываем «Без этапа», если
+/// в проекте нет ни одного approval без stageId — иначе мусор в UI.
+class _StageFilter extends StatelessWidget {
+  const _StageFilter({
+    required this.activeId,
+    required this.stages,
+    required this.onSelect,
+    required this.noStageKey,
+  });
+
+  final String activeId;
+  final List<Stage> stages;
+  final ValueChanged<String> onSelect;
+  final String noStageKey;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stages.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x16,
+        AppSpacing.x6,
+        AppSpacing.x16,
+        AppSpacing.x4,
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _StageChip(
+              label: 'Все этапы',
+              selected: activeId == 'all',
+              onTap: () => onSelect('all'),
+            ),
+            const SizedBox(width: AppSpacing.x6),
+            for (final s in stages) ...[
+              _StageChip(
+                label: 'Этап ${s.orderIndex + 1}',
+                selected: activeId == s.id,
+                onTap: () => onSelect(s.id),
+              ),
+              const SizedBox(width: AppSpacing.x6),
+            ],
+            _StageChip(
+              label: 'Без этапа',
+              selected: activeId == noStageKey,
+              onTap: () => onSelect(noStageKey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StageChip extends StatelessWidget {
+  const _StageChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brand : AppColors.n0,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.n200,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.tiny.copyWith(
+            color: selected ? Colors.white : AppColors.n700,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

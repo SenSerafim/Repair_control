@@ -10,6 +10,8 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
+import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../application/team_controller.dart';
 import '../data/team_repository.dart';
 import '../domain/invitation.dart';
@@ -17,6 +19,36 @@ import 'generate_invite_code_sheet.dart';
 import 'rep_rights_sheet.dart';
 
 /// s-team — команда проекта.
+// Ключ-сентинел для бакета «Без привязки к этапу» в _groupByStage.
+const String _unassignedKey = '__unassigned__';
+
+/// Группирует участников по `stageIds`. Один человек попадает во столько
+/// групп, на сколько этапов он назначен. Участники с пустым `stageIds`
+/// (заказчик, представитель, бригадир «на весь проект») идут в
+/// бакет `_unassignedKey`. Группы для несуществующих stageId
+/// (мастер на удалённом этапе) пропускаются.
+Map<String, List<Membership>> _groupByStage(
+  List<Membership> members,
+  List<Stage> stages,
+) {
+  final stageSet = {for (final s in stages) s.id};
+  final result = <String, List<Membership>>{
+    _unassignedKey: <Membership>[],
+    for (final s in stages) s.id: <Membership>[],
+  };
+  for (final m in members) {
+    final ids = m.stageIds.where(stageSet.contains).toList();
+    if (ids.isEmpty) {
+      result[_unassignedKey]!.add(m);
+    } else {
+      for (final id in ids) {
+        result[id]!.add(m);
+      }
+    }
+  }
+  return result;
+}
+
 class TeamScreen extends ConsumerWidget {
   const TeamScreen({required this.projectId, super.key});
 
@@ -80,28 +112,52 @@ class TeamScreen extends ConsumerWidget {
                   : null,
             );
           }
-          final grouped = <MembershipRole, List<Membership>>{
-            for (final role in MembershipRole.values)
-              role: team.members.where((m) => m.role == role).toList(),
-          };
+          // ТЗ NEWFIX §1.2: команда группируется по этапам, один человек
+          // может появляться в нескольких группах. «Без привязки к этапу» —
+          // для тех, чей stageIds пуст (заказчик / представитель / бригадир
+          // на проекте целиком). Список этапов берём из stagesController —
+          // даёт порядок и человекочитаемые названия.
+          final stagesAsync = ref.watch(stagesControllerProvider(projectId));
+          final stages = stagesAsync.value ?? const <Stage>[];
+          final grouped = _groupByStage(team.members, stages);
+          final stageOrder = [
+            for (final s in stages)
+              if ((grouped[s.id] ?? const []).isNotEmpty) s,
+          ];
+          final unassigned = grouped[_unassignedKey] ?? const <Membership>[];
           return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(teamControllerProvider(projectId)),
+            onRefresh: () async {
+              ref
+                ..invalidate(teamControllerProvider(projectId))
+                ..invalidate(stagesControllerProvider(projectId));
+            },
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                for (final role in MembershipRole.values)
-                  if (grouped[role]!.isNotEmpty) ...[
-                    _SectionHeader(label: role.displayName),
-                    const SizedBox(height: AppSpacing.x8),
-                    ...grouped[role]!.map(
-                      (m) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.x10),
-                        child: _MemberRow(projectId: projectId, member: m),
-                      ),
+                for (final stage in stageOrder) ...[
+                  _SectionHeader(
+                    label: 'Этап ${stage.orderIndex + 1} · ${stage.title}',
+                  ),
+                  const SizedBox(height: AppSpacing.x8),
+                  ...grouped[stage.id]!.map(
+                    (m) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+                      child: _MemberRow(projectId: projectId, member: m),
                     ),
-                    const SizedBox(height: AppSpacing.x12),
-                  ],
+                  ),
+                  const SizedBox(height: AppSpacing.x12),
+                ],
+                if (unassigned.isNotEmpty) ...[
+                  const _SectionHeader(label: 'Без привязки к этапу'),
+                  const SizedBox(height: AppSpacing.x8),
+                  ...unassigned.map(
+                    (m) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+                      child: _MemberRow(projectId: projectId, member: m),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.x12),
+                ],
                 if (team.invitations.isNotEmpty) ...[
                   const _SectionHeader(label: 'Приглашения'),
                   const SizedBox(height: AppSpacing.x8),
