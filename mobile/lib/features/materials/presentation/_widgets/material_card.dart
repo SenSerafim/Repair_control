@@ -16,7 +16,9 @@ class MaterialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final semaphore = request.status.semaphore;
+    final overdue = request.isOverdue(DateTime.now());
+    // ТЗ NEWFIX §5.5: визуальный стикер «Просрочена» поверх обычного статуса.
+    final semaphore = overdue ? Semaphore.red : request.status.semaphore;
     final iconBg = semaphore.bg;
     final iconColor = semaphore.text;
     final amount = request.totalEstimatedPrice;
@@ -112,7 +114,7 @@ class MaterialCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: Text(
-                      request.status.displayName,
+                      overdue ? 'Просрочена' : request.status.displayName,
                       style: AppTextStyles.tiny.copyWith(
                         color: iconColor,
                         fontWeight: FontWeight.w800,
