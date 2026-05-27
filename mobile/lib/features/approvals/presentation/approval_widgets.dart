@@ -15,10 +15,19 @@ import '../domain/approval.dart';
 /// при наличии attachments — photo-row 32×32 + «+N». Снизу chevron.
 /// `stageAccept`-карточка выделяется синей рамкой 1.5px.
 class ApprovalCard extends StatelessWidget {
-  const ApprovalCard({required this.approval, required this.onTap, super.key});
+  const ApprovalCard({
+    required this.approval,
+    required this.onTap,
+    this.stageLabel,
+    super.key,
+  });
 
   final Approval approval;
   final VoidCallback onTap;
+  // ТЗ NEWFIX §1.3: в проектном списке согласований у каждой строки
+  // подписан этап (заказчику нужно видеть «к чему» согласование). На
+  // экране одного этапа stageLabel не имеет смысла — поэтому опциональное.
+  final String? stageLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +71,7 @@ class ApprovalCard extends StatelessWidget {
               children: [
                 _Thumb(approval: approval),
                 const SizedBox(width: AppSpacing.x12),
-                Expanded(child: _Body(approval: approval)),
+                Expanded(child: _Body(approval: approval, stageLabel: stageLabel)),
                 const SizedBox(width: AppSpacing.x6),
                 const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
               ],
@@ -119,9 +128,10 @@ class _IconFallback extends StatelessWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.approval});
+  const _Body({required this.approval, this.stageLabel});
 
   final Approval approval;
+  final String? stageLabel;
 
   String get _title {
     final raw = approval.payload['title'];
@@ -170,6 +180,18 @@ class _Body extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        if (stageLabel != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            stageLabel!,
+            style: AppTextStyles.tiny.copyWith(
+              color: AppColors.brand,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
         if (approval.attachments.length > 1) ...[
           const SizedBox(height: 8),
           _PhotoRow(attachments: approval.attachments),
