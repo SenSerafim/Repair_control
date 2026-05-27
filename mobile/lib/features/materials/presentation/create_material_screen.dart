@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/utils/image_compress.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../stages/application/stages_controller.dart';
@@ -44,6 +48,61 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
     super.dispose();
   }
 
+  Future<void> _pickItemPhoto(_ItemDraft draft) async {
+    // ТЗ NEWFIX §5.2: фото к позиции (упаковка/чек/образец). Mobile-flow —
+    // image_picker → compressImage (1920/80, EXIF zero) → presign → S3 PUT.
+    // itemId на этом этапе ещё не создан, поэтому fileKey уходит в backend
+    // и сохраняется как MaterialItemPhoto при createRequest.
+    if (draft.uploadingPhoto) return;
+    final picker = ImagePicker();
+    final XFile? picked;
+    try {
+      picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 100,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Не удалось открыть галерею');
+      }
+      return;
+    }
+    if (picked == null || !mounted) return;
+    setState(() => draft.uploadingPhoto = true);
+    try {
+      final bytes = await File(picked.path).readAsBytes();
+      final compressed = compressImage(bytes);
+      if (compressed == null) {
+        if (mounted) setState(() => _error = 'Файл не похож на фото');
+        return;
+      }
+      final repo = ref.read(materialsRepositoryProvider);
+      final presigned = await repo.presignItemPhoto(
+        mimeType: compressed.mimeType,
+        sizeBytes: compressed.sizeBytes,
+        originalName: picked.name,
+      );
+      await repo.uploadToStorage(
+        presigned: presigned,
+        bytes: compressed.bytes,
+        mimeType: compressed.mimeType,
+      );
+      if (!mounted) return;
+      setState(() {
+        draft.photo = MaterialItemPhotoInput(
+          fileKey: presigned.fileKey,
+          mimeType: compressed.mimeType,
+          sizeBytes: compressed.sizeBytes,
+          exifCleared: true,
+        );
+      });
+    } on MaterialsException catch (e) {
+      if (mounted) setState(() => _error = 'Не удалось загрузить фото: ${e.failure.name}');
+    } finally {
+      if (mounted) setState(() => draft.uploadingPhoto = false);
+    }
+  }
+
   Future<void> _pickDueDate(_ItemDraft draft) async {
     final now = DateTime.now();
     final initial = draft.dueDate ?? now.add(const Duration(days: 7));
@@ -77,6 +136,7 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
           unit: draft.unit.text.trim().isEmpty ? null : draft.unit.text.trim(),
           pricePerUnit: MoneyInput.readKopecks(draft.price),
           dueDate: draft.dueDate,
+          photo: draft.photo,
         ),
       );
     }
@@ -166,6 +226,8 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
                   _items.removeAt(i);
                 }),
                 onPickDueDate: () => _pickDueDate(_items[i]),
+                onPickPhoto: () => _pickItemPhoto(_items[i]),
+                onRemovePhoto: () => setState(() => _items[i].photo = null),
               ),
               const SizedBox(height: AppSpacing.x10),
             ],
@@ -258,6 +320,10 @@ class _ItemDraft {
   // ТЗ NEWFIX §5.5: срок поставки позиции — показывается на карточке заявки,
   // cron эмитит overdue если статус всё ещё open после dueDate.
   DateTime? dueDate;
+  // ТЗ NEWFIX §5.2: фото к позиции. Поле fileKey валидно после успешного
+  // presign+PUT — отправляем в createRequest, бекенд сохранит MaterialItemPhoto.
+  MaterialItemPhotoInput? photo;
+  bool uploadingPhoto = false;
 
   void dispose() {
     name.dispose();
@@ -274,6 +340,8 @@ class _ItemCard extends StatelessWidget {
     required this.canRemove,
     required this.onRemove,
     required this.onPickDueDate,
+    required this.onPickPhoto,
+    required this.onRemovePhoto,
   });
 
   final _ItemDraft draft;
@@ -281,6 +349,8 @@ class _ItemCard extends StatelessWidget {
   final bool canRemove;
   final VoidCallback onRemove;
   final VoidCallback onPickDueDate;
+  final VoidCallback onPickPhoto;
+  final VoidCallback onRemovePhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -389,6 +459,70 @@ class _ItemCard extends StatelessWidget {
                       Icons.edit_outlined,
                       size: 16,
                       color: AppColors.n400,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          // ТЗ NEWFIX §5.2: фото к позиции. Стиль плиты — как у dueDate выше.
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            onTap: draft.uploadingPhoto ? null : onPickPhoto,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x12,
+                vertical: AppSpacing.x10,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.n0,
+                border: Border.all(color: AppColors.n200, width: 1.5),
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    draft.photo != null
+                        ? Icons.check_circle_outline
+                        : Icons.add_photo_alternate_outlined,
+                    size: 18,
+                    color: draft.photo != null
+                        ? AppColors.greenDark
+                        : AppColors.n500,
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text(
+                      draft.uploadingPhoto
+                          ? 'Загрузка фото…'
+                          : draft.photo == null
+                              ? 'Фото (опционально)'
+                              : 'Фото прикреплено',
+                      style: AppTextStyles.body.copyWith(
+                        color: draft.photo == null
+                            ? AppColors.n400
+                            : AppColors.n900,
+                      ),
+                    ),
+                  ),
+                  if (draft.uploadingPhoto)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else if (draft.photo != null)
+                    InkWell(
+                      onTap: onRemovePhoto,
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: AppColors.n400,
+                        ),
+                      ),
                     ),
                 ],
               ),
