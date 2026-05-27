@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ClockModule, PrismaModule } from '@app/common';
 import { RbacModule } from '@app/rbac';
@@ -18,7 +18,11 @@ import { ExportProcessor } from './export-pdf.processor';
     PrismaModule,
     ClockModule,
     RbacModule,
-    FeedModule,
+    // forwardRef из-за двусторонней зависимости: FeedModule теперь
+    // импортирует ExportsModule для PDF-за-период (E9). NestJS не
+    // даёт обоим жадно резолвить друг друга — без обёрток
+    // ExportsModule.imports[FeedModule] = undefined при boot.
+    forwardRef(() => FeedModule),
     IdempotencyModule,
     FilesModule.forRoot(),
     BullModule.registerQueue({ name: QUEUE_EXPORTS }),
