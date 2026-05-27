@@ -7,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../application/materials_controller.dart';
+import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
 import '_widgets/material_meta_card.dart';
 
@@ -78,6 +79,8 @@ class MaterialDetailScreen extends ConsumerWidget {
                 const _SectionLabel(label: 'Детали'),
                 const SizedBox(height: AppSpacing.x10),
                 MaterialMetaCard(rows: _metaRows(request)),
+                const SizedBox(height: AppSpacing.x16),
+                _AcceptanceActions(request: request),
                 const SizedBox(height: AppSpacing.x20),
               ],
             ),
@@ -376,5 +379,295 @@ class _CommentCard extends StatelessWidget {
       ),
       child: Text(comment, style: AppTextStyles.body),
     );
+  }
+}
+
+/// Блок кнопок приёмки. ТЗ NEWFIX §5.7.
+///
+/// Видимость кнопок определяется статусом заявки (RBAC на сервере):
+///   approved | acceptedPartial → «Отметить доставку» (любой member)
+///   delivered                  → «Принять полностью» + «Принять частично»
+///                                (foreman/customer-owner/представитель)
+///
+/// Если backend возвращает 403 — показываем snackbar. Прятать кнопку по
+/// клиентскому RBAC мы не можем без точного знания membershipRole (пока
+/// получаем его через ProfileController на верхнем уровне).
+class _AcceptanceActions extends ConsumerWidget {
+  const _AcceptanceActions({required this.request});
+
+  final MaterialRequest request;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (request.canMarkDelivered) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          icon: const Icon(Icons.local_shipping_outlined),
+          label: const Text('Отметить «Доставлено»'),
+          onPressed: () => _onMarkDelivered(context, ref),
+        ),
+      );
+    }
+    if (request.canAccept) {
+      return Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              icon: const Icon(Icons.task_alt_rounded),
+              label: const Text('Принять полностью'),
+              onPressed: () => _onAcceptFull(context, ref),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: const Text('Принять частично…'),
+              onPressed: () => _onAcceptPartial(context, ref),
+            ),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Future<void> _onMarkDelivered(BuildContext context, WidgetRef ref) async {
+    final failure = await ref
+        .read(materialDetailProvider(request.id).notifier)
+        .markDelivered();
+    if (!context.mounted) return;
+    if (failure != null) {
+      _showError(context, failure.toString());
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Доставка отмечена')),
+      );
+    }
+  }
+
+  Future<void> _onAcceptFull(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Принять полностью?'),
+        content: const Text(
+          'Все позиции будут отмечены как принятые в полном объёме. Это закроет заявку.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Принять'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final failure = await ref
+        .read(materialDetailProvider(request.id).notifier)
+        .acceptFull();
+    if (!context.mounted) return;
+    if (failure != null) {
+      _showError(context, failure.toString());
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заявка принята полностью')),
+      );
+    }
+  }
+
+  Future<void> _onAcceptPartial(BuildContext context, WidgetRef ref) async {
+    final result = await showModalBottomSheet<List<AcceptedItemInput>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.n0,
+      builder: (_) => _AcceptPartialSheet(items: request.items),
+    );
+    if (result == null || result.isEmpty || !context.mounted) return;
+    final failure = await ref
+        .read(materialDetailProvider(request.id).notifier)
+        .acceptPartial(items: result);
+    if (!context.mounted) return;
+    if (failure != null) {
+      _showError(context, failure.toString());
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Принято частично')),
+      );
+    }
+  }
+
+  void _showError(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.redDot,
+        content: Text(msg, style: const TextStyle(color: Colors.white)),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet ввода фактических количеств per item. ТЗ NEWFIX §5.7.
+class _AcceptPartialSheet extends StatefulWidget {
+  const _AcceptPartialSheet({required this.items});
+
+  final List<MaterialItem> items;
+
+  @override
+  State<_AcceptPartialSheet> createState() => _AcceptPartialSheetState();
+}
+
+class _AcceptPartialSheetState extends State<_AcceptPartialSheet> {
+  late final Map<String, TextEditingController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = {
+      for (final item in widget.items)
+        item.id: TextEditingController(text: item.qty.toString()),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Принять частично',
+              style: AppTextStyles.h2,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.x4),
+            Text(
+              'Укажи фактически принятое количество по каждой позиции.\n'
+              'Остаток уйдёт в ожидание дополнения — мастер отметит «Доставлено» снова при довозе.',
+              style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            for (final item in widget.items) ...[
+              _PartialItemRow(
+                item: item,
+                controller: _controllers[item.id]!,
+              ),
+              const SizedBox(height: AppSpacing.x12),
+            ],
+            const SizedBox(height: AppSpacing.x8),
+            FilledButton(
+              onPressed: _onSubmit,
+              child: const Text('Принять'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onSubmit() {
+    final results = <AcceptedItemInput>[];
+    for (final item in widget.items) {
+      final raw = _controllers[item.id]!.text.trim().replaceAll(',', '.');
+      final v = double.tryParse(raw);
+      if (v == null || v < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Некорректное число для позиции «${item.name}»',
+            ),
+          ),
+        );
+        return;
+      }
+      if (v > item.qty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Нельзя принять больше заявленного для «${item.name}»',
+            ),
+          ),
+        );
+        return;
+      }
+      results.add(AcceptedItemInput(itemId: item.id, actualQty: v));
+    }
+    Navigator.pop(context, results);
+  }
+}
+
+class _PartialItemRow extends StatelessWidget {
+  const _PartialItemRow({required this.item, required this.controller});
+
+  final MaterialItem item;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.name, style: AppTextStyles.body),
+              Text(
+                'Заявлено: ${_fmtQty(item.qty)}${item.unit != null ? ' ${item.unit}' : ''}',
+                style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(
+          flex: 2,
+          child: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Принято',
+              suffixText: item.unit,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x10,
+                vertical: AppSpacing.x8,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _fmtQty(double v) {
+    final i = v.toInt();
+    return i.toDouble() == v ? '$i' : v.toString();
   }
 }
