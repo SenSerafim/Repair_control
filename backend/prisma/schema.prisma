@@ -78,6 +78,8 @@ enum MaterialRequestStatus {
   open
   bought
   delivered
+  accepted_partial
+  accepted_full
   disputed
   resolved
   cancelled
@@ -199,6 +201,9 @@ enum FeedEventKind {
   material_delivered
   material_disputed
   material_resolved
+  material_request_accepted_partial
+  material_request_accepted_full
+  material_request_overdue
   selfpurchase_created
   selfpurchase_approved
   selfpurchase_rejected
@@ -881,8 +886,10 @@ model MaterialItem {
   requestId    String
   name         String
   qty          Decimal   @db.Decimal(12, 3)
+  actualQty    Decimal?  @db.Decimal(12, 3)
   unit         String?
   note         String?
+  dueDate      DateTime?
   pricePerUnit BigInt?
   totalPrice   BigInt?
   isBought     Boolean   @default(false)
@@ -890,9 +897,25 @@ model MaterialItem {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  request MaterialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request MaterialRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  photo   MaterialItemPhoto?
 
   @@index([requestId])
+  @@index([dueDate])
+}
+
+model MaterialItemPhoto {
+  id          String   @id @default(cuid())
+  itemId      String   @unique
+  fileKey     String
+  thumbKey    String?
+  mimeType    String
+  sizeBytes   Int
+  uploadedBy  String
+  exifCleared Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  item MaterialItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model MaterialDispute {
