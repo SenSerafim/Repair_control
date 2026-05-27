@@ -4,7 +4,7 @@ import { AccessGuard, RequireAccess } from '@app/rbac';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
 import { MaterialsService } from './materials.service';
-import { CreateMaterialRequestDto } from './dto';
+import { AcceptFullDto, AcceptPartialDto, CreateMaterialRequestDto, MarkDeliveredDto } from './dto';
 
 @ApiTags('materials')
 @ApiBearerAuth()
@@ -56,5 +56,73 @@ export class MaterialsController {
   @Get('materials/:id')
   async get(@Param('id') id: string) {
     return this.materials.get(id);
+  }
+
+  /**
+   * Отметить заявку «Доставлено». ТЗ NEWFIX §5.7 шаг 1.
+   * RBAC: любой активный member проекта (materials.mark_delivered).
+   * Допустимые переходы: open → delivered, accepted_partial → delivered (довоз).
+   * Идемпотентно из delivered.
+   */
+  @Post('materials/:id/mark-delivered')
+  @RequireAccess({
+    action: 'materials.mark_delivered',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async markDelivered(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+    @Body() _dto: MarkDeliveredDto,
+  ) {
+    return this.materials.markDelivered({
+      requestId: id,
+      actorUserId: req.user.userId,
+    });
+  }
+
+  /**
+   * Частичная приёмка. ТЗ NEWFIX §5.7 шаги 4–5.
+   * RBAC: foreman / customer-owner / representative.canApprove (materials.accept).
+   */
+  @Post('materials/:id/accept-partial')
+  @RequireAccess({
+    action: 'materials.accept',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async acceptPartial(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+    @Body() dto: AcceptPartialDto,
+  ) {
+    return this.materials.acceptPartial({
+      requestId: id,
+      actorUserId: req.user.userId,
+      items: dto.items,
+      comment: dto.comment,
+    });
+  }
+
+  /**
+   * Полная приёмка. ТЗ NEWFIX §5.7 шаг 4.
+   * RBAC: foreman / customer-owner / representative.canApprove (materials.accept).
+   */
+  @Post('materials/:id/accept-full')
+  @RequireAccess({
+    action: 'materials.accept',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async acceptFull(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+    @Body() dto: AcceptFullDto,
+  ) {
+    return this.materials.acceptFull({
+      requestId: id,
+      actorUserId: req.user.userId,
+      comment: dto.comment,
+    });
   }
 }
