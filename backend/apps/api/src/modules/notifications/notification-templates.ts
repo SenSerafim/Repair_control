@@ -70,6 +70,21 @@ export const NOTIFICATION_TEMPLATES: Partial<Record<NotificationKind, Notificati
   material_delivered: t('material_delivered', 'critical', 'Материалы доставлены', (p) =>
     String(p.title ?? 'Доставка подтверждена'),
   ),
+  material_request_accepted_partial: t(
+    'material_request_accepted_partial',
+    'critical',
+    'Заявка принята частично',
+    (p) => String(p.title ?? 'Бригадир принял часть позиций'),
+  ),
+  material_request_accepted_full: t(
+    'material_request_accepted_full',
+    'critical',
+    'Заявка принята полностью',
+    (p) => String(p.title ?? 'Заявка закрыта'),
+  ),
+  material_request_overdue: t('material_request_overdue', 'critical', 'Заявка просрочена', (p) =>
+    String(p.title ?? 'Срок поставки прошёл, заявка не закрыта'),
+  ),
   selfpurchase_created: t(
     'selfpurchase_created',
     'critical',

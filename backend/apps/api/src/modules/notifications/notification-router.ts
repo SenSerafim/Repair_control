@@ -386,6 +386,24 @@ const MAPPINGS: Partial<Record<FeedEventKind, RoutingRule>> = {
     recipients: projectMembers,
     enrich: enrichMaterialRequestTitle,
   },
+  // E1a — ТЗ NEWFIX §5.7: уведомления о состоянии приёмки.
+  material_request_accepted_partial: {
+    kind: 'material_request_accepted_partial',
+    recipients: projectMembers,
+    enrich: enrichMaterialRequestTitle,
+  },
+  material_request_accepted_full: {
+    kind: 'material_request_accepted_full',
+    recipients: projectMembers,
+    enrich: enrichMaterialRequestTitle,
+  },
+  // ТЗ NEWFIX §5.5: эмитится из MaterialsScheduler один раз в день для каждой
+  // заявки, у которой dueDate прошёл, а статус всё ещё open.
+  material_request_overdue: {
+    kind: 'material_request_overdue',
+    recipients: projectMembers,
+    enrich: enrichMaterialRequestTitle,
+  },
   // ---- Self-purchases ----
   selfpurchase_created: { kind: 'selfpurchase_created', recipients: addresseeFromPayload },
   selfpurchase_forwarded: {

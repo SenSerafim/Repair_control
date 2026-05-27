@@ -304,6 +304,10 @@ enum NotificationKind {
   tool_request_created
   tool_request_decided
   tool_custody_changed
+  // --- E1a — заявки 2.0 (2026-05-27) ---
+  material_request_accepted_partial
+  material_request_accepted_full
+  material_request_overdue
 }
 
 enum NotificationPriority {
