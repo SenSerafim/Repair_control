@@ -69,6 +69,15 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
       showBack: true,
       title: 'Этап',
       padding: EdgeInsets.zero,
+      actions: [
+        IconButton(
+          tooltip: 'Бюджет этапа',
+          icon: const Icon(Icons.currency_ruble_rounded),
+          onPressed: () => context.push(
+            '/projects/${widget.projectId}/stages/${widget.stageId}/budget',
+          ),
+        ),
+      ],
       body: stagesAsync.when(
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(

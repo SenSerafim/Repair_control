@@ -22,6 +22,7 @@ import '../../features/documents/presentation/documents_screen.dart';
 import '../../features/exports/presentation/exports_list_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/finance/presentation/budget_screen.dart';
+import '../../features/finance/presentation/stage_budget_screen.dart';
 import '../../features/finance/presentation/create_advance_screen.dart';
 import '../../features/finance/presentation/payment_detail_screen.dart';
 import '../../features/finance/presentation/payments_list_screen.dart';
@@ -338,6 +339,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                           ),
                         ),
                         routes: [
+                          // ТЗ NEWFIX §12: новый экран «Бюджет этапа»,
+                          // фильтрованный срез из общего бюджета проекта.
+                          GoRoute(
+                            path: 'budget',
+                            pageBuilder: slideLeftPage(
+                              (_, state) => StageBudgetScreen(
+                                projectId: state.pathParameters['projectId']!,
+                                stageId: state.pathParameters['stageId']!,
+                              ),
+                            ),
+                          ),
                           GoRoute(
                             path: 'steps/:stepId',
                             pageBuilder: slideLeftPage(
