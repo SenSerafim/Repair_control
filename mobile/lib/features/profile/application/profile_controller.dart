@@ -71,8 +71,12 @@ class ProfileController extends AsyncNotifier<UserProfile> {
   Future<AuthFailure?> setActiveRole(SystemRole role) async {
     try {
       final repo = ref.read(profileRepositoryProvider);
-      await repo.setActiveRole(role);
-      await ref.read(authControllerProvider.notifier).setActiveRole(role);
+      final auth = ref.read(authControllerProvider.notifier);
+      // `deviceId` нужен бекенду, чтобы корректно записать новую сессию;
+      // тот же id мы шлём в /auth/login и /auth/refresh.
+      final deviceId = await auth.ensureDeviceId();
+      final tokens = await repo.setActiveRole(role, deviceId: deviceId);
+      await auth.setActiveRole(role, tokens);
       final current = state.value;
       if (current != null) {
         state = AsyncData(

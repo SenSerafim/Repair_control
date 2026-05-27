@@ -8,6 +8,7 @@ import {
 } from '@app/common';
 import { SystemRole } from '@app/rbac';
 import { MembersService } from '../projects/members.service';
+import { AuthService } from '../auth/auth.service';
 
 export interface UpdateProfileInput {
   firstName?: string;
@@ -27,6 +28,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly members: MembersService,
+    private readonly auth: AuthService,
   ) {}
 
   async getProfile(userId: string) {
@@ -175,13 +177,20 @@ export class UsersService {
     return this.listRoles(userId);
   }
 
-  async setActiveRole(userId: string, role: SystemRole) {
+  async setActiveRole(
+    userId: string,
+    role: SystemRole,
+    ctx: { deviceId: string; ip: string; userAgent?: string },
+  ) {
     const has = await this.prisma.userRole.findUnique({
       where: { userId_role: { userId, role } },
     });
     if (!has) throw new NotFoundError(ErrorCodes.ROLE_NOT_FOUND, 'role not added');
     await this.prisma.user.update({ where: { id: userId }, data: { activeRole: role } });
-    return { activeRole: role };
+    // RBAC: `systemRole` сидит в JWT — без перевыпуска токенов клиент
+    // продолжит ходить со старой ролью и схватит 403 на новые действия.
+    const tokens = await this.auth.reissueAfterRoleSwitch(userId, role, ctx);
+    return { activeRole: role, ...tokens };
   }
 
   async listRoles(userId: string) {

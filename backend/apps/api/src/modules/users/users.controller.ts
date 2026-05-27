@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { AddRoleDto, RegisterDeviceDto, SetActiveRoleDto, UpdateProfileDto } from './dto';
@@ -57,8 +58,15 @@ export class UsersController {
   }
 
   @Put('active-role')
-  async setActive(@Req() req: { user: AuthenticatedUser }, @Body() dto: SetActiveRoleDto) {
-    return this.users.setActiveRole(req.user.userId, dto.role as SystemRole);
+  async setActive(
+    @Req() req: Request & { user: AuthenticatedUser },
+    @Body() dto: SetActiveRoleDto,
+  ) {
+    return this.users.setActiveRole(req.user.userId, dto.role as SystemRole, {
+      deviceId: dto.deviceId ?? 'unknown',
+      ip: req.ip ?? '0.0.0.0',
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @Post('devices')

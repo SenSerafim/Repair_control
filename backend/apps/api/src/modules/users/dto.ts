@@ -42,6 +42,12 @@ export class SetActiveRoleDto {
   @ApiProperty({ enum: ['customer', 'representative', 'contractor', 'master'] })
   @IsEnum(['customer', 'representative', 'contractor', 'master'])
   role!: Exclude<SystemRole, 'admin'>;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @Length(1, 200)
+  deviceId?: string;
 }
 
 export class RegisterDeviceDto {
