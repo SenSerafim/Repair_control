@@ -26,12 +26,20 @@ const mkPrisma = () => {
   const stages = new Map<string, any>();
   const requests = new Map<string, any>();
   const items = new Map<string, any>();
+  const photos = new Map<string, any>();
   const memberships: MembershipRow[] = [];
   let rSeq = 0;
   let iSeq = 0;
+  let pSeq = 0;
 
-  const itemsOf = (requestId: string) =>
-    [...items.values()].filter((it) => it.requestId === requestId);
+  const itemsOf = (requestId: string, includePhoto = false) =>
+    [...items.values()]
+      .filter((it) => it.requestId === requestId)
+      .map((it) =>
+        includePhoto
+          ? { ...it, photo: [...photos.values()].find((p) => p.itemId === it.id) ?? null }
+          : it,
+      );
 
   const prisma: any = {
     project: {
@@ -89,19 +97,38 @@ const mkPrisma = () => {
               requestId: r.id,
               name: it.name,
               qty: new Prisma.Decimal(it.qty),
+              actualQty: null as null | InstanceType<typeof Prisma.Decimal>,
               unit: it.unit ?? null,
               note: it.note ?? null,
               pricePerUnit: it.pricePerUnit ?? null,
               totalPrice: it.totalPrice ?? null,
+              dueDate: it.dueDate ?? null,
               isBought: false,
               boughtAt: null,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
             items.set(item.id, item);
+            if (it.photo?.create) {
+              const p = {
+                id: `mip${++pSeq}`,
+                itemId: item.id,
+                fileKey: it.photo.create.fileKey,
+                thumbKey: it.photo.create.thumbKey ?? null,
+                mimeType: it.photo.create.mimeType,
+                sizeBytes: it.photo.create.sizeBytes,
+                uploadedBy: it.photo.create.uploadedBy,
+                exifCleared: it.photo.create.exifCleared ?? false,
+                createdAt: new Date(),
+              };
+              photos.set(p.id, p);
+            }
           }
         }
-        if (include?.items) return { ...r, items: itemsOf(r.id) };
+        if (include?.items) {
+          const includePhoto = typeof include.items === 'object' && include.items.include?.photo;
+          return { ...r, items: itemsOf(r.id, includePhoto) };
+        }
         return r;
       }),
       findUnique: jest.fn(({ where, include }: any) => {
@@ -147,6 +174,7 @@ const mkPrisma = () => {
     stages,
     requests,
     items,
+    photos,
     memberships,
   };
 };
@@ -651,5 +679,89 @@ describe('MaterialsService.acceptFull', () => {
     await expect(
       ctx.svc.acceptFull({ requestId: req.id, actorUserId: 'foreman1' }),
     ).rejects.toThrow(ConflictError);
+  });
+});
+
+/**
+ * E1a — поддержка photo / dueDate в позициях при createRequest. ТЗ NEWFIX §5.2 / §5.5.
+ */
+describe('MaterialsService.createRequest with photo/dueDate', () => {
+  it('сохраняет dueDate в позиции', async () => {
+    const { svc, st } = baseSetup();
+    const r = await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'С дедлайном',
+      items: [{ name: 'Кнауф', qty: 5, dueDate: '2026-06-30' }],
+      actorUserId: 'c1',
+    });
+    const item = [...st.items.values()].find((i) => i.requestId === r.id)!;
+    expect(item.dueDate).toEqual(new Date('2026-06-30'));
+  });
+
+  it('создаёт MaterialItemPhoto через nested-create с правильным uploadedBy', async () => {
+    const { svc, st } = baseSetup();
+    const r = await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'С фото',
+      items: [
+        {
+          name: 'Кнауф',
+          qty: 5,
+          photo: {
+            fileKey: 'materials/items/photos/2026-05-27/abc.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 524288,
+            exifCleared: true,
+          },
+        },
+      ],
+      actorUserId: 'c1',
+    });
+    const item = [...st.items.values()].find((i) => i.requestId === r.id)!;
+    const photo = [...st.photos.values()].find((p) => p.itemId === item.id)!;
+    expect(photo).toBeDefined();
+    expect(photo.fileKey).toBe('materials/items/photos/2026-05-27/abc.jpg');
+    expect(photo.mimeType).toBe('image/jpeg');
+    expect(photo.sizeBytes).toBe(524288);
+    expect(photo.exifCleared).toBe(true);
+    expect(photo.uploadedBy).toBe('c1');
+  });
+
+  it('позиция без photo: photos-таблица остаётся пустой', async () => {
+    const { svc, st } = baseSetup();
+    await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'Без фото',
+      items: [{ name: 'Гвозди', qty: 100 }],
+      actorUserId: 'c1',
+    });
+    expect([...st.photos.values()].length).toBe(0);
+  });
+
+  it('thumbKey опционален: undefined → null в БД', async () => {
+    const { svc, st } = baseSetup();
+    await svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'Без thumb',
+      items: [
+        {
+          name: 'X',
+          qty: 1,
+          photo: {
+            fileKey: 'x.jpg',
+            mimeType: 'image/png',
+            sizeBytes: 1000,
+          },
+        },
+      ],
+      actorUserId: 'c1',
+    });
+    const photo = [...st.photos.values()][0];
+    expect(photo.thumbKey).toBeNull();
+    expect(photo.exifCleared).toBe(false); // default
   });
 });

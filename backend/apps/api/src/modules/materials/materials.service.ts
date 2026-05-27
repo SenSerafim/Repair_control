@@ -46,6 +46,16 @@ export interface CreateRequestInput {
     unit?: string;
     note?: string;
     pricePerUnit?: number;
+    /** Срок поставки позиции (ISO date) — ТЗ NEWFIX §5.5. */
+    dueDate?: string;
+    /** Фото позиции (presigned-загружено) — ТЗ NEWFIX §5.2. */
+    photo?: {
+      fileKey: string;
+      thumbKey?: string;
+      mimeType: string;
+      sizeBytes: number;
+      exifCleared?: boolean;
+    };
   }>;
   actorUserId: string;
 }
@@ -118,10 +128,23 @@ export class MaterialsService {
               pricePerUnit: it.pricePerUnit != null ? BigInt(it.pricePerUnit) : null,
               totalPrice:
                 it.pricePerUnit != null ? BigInt(Math.round(it.pricePerUnit * it.qty)) : null,
+              dueDate: it.dueDate ? new Date(it.dueDate) : null,
+              photo: it.photo
+                ? {
+                    create: {
+                      fileKey: it.photo.fileKey,
+                      thumbKey: it.photo.thumbKey ?? null,
+                      mimeType: it.photo.mimeType,
+                      sizeBytes: it.photo.sizeBytes,
+                      uploadedBy: input.actorUserId,
+                      exifCleared: it.photo.exifCleared ?? false,
+                    },
+                  }
+                : undefined,
             })),
           },
         },
-        include: { items: true },
+        include: { items: { include: { photo: true } } },
       });
 
       await this.feed.emit({
