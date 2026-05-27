@@ -130,6 +130,14 @@ const mkPrisma = () => {
     materialItem: {
       findUnique: jest.fn(({ where }: any) => items.get(where.id) ?? null),
       findMany: jest.fn(({ where }: any) => itemsOf(where.requestId)),
+      update: jest.fn(({ where, data }: any) => {
+        const it = items.get(where.id);
+        if (!it) throw new Error('material item not found');
+        if (data.actualQty != null) {
+          it.actualQty = new Prisma.Decimal(data.actualQty);
+        }
+        return it;
+      }),
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
   };
@@ -172,8 +180,9 @@ const baseSetup = () => {
   const approvalsMock = {
     request: jest.fn().mockResolvedValue({ id: 'ap-mirror' }),
   };
-  const svc = new MaterialsService(st.prisma, mkFeed(), new FixedClock(NOW), approvalsMock as any);
-  return { st, svc, approvalsMock };
+  const feed = mkFeed();
+  const svc = new MaterialsService(st.prisma, feed, new FixedClock(NOW), approvalsMock as any);
+  return { st, svc, approvalsMock, feed };
 };
 
 describe('MaterialsService.createRequest', () => {
@@ -424,5 +433,223 @@ describe('MaterialsService.get / listForProject', () => {
     expect(all).toHaveLength(2);
     const statuses = all.map((r) => r.status).sort();
     expect(statuses).toEqual(['open', 'pending_approval']);
+  });
+});
+
+/**
+ * E1a — Заявки 2.0. Флоу приёмки по ТЗ NEWFIX §5.7.
+ *   open → markDelivered → delivered
+ *   delivered → acceptPartial → accepted_partial
+ *   accepted_partial → markDelivered (довоз) → delivered
+ *   delivered → acceptFull → accepted_full
+ */
+describe('MaterialsService.markDelivered', () => {
+  async function seedRequestWithStatus(
+    status: 'pending_approval' | 'open' | 'delivered' | 'accepted_partial',
+  ) {
+    const ctx = baseSetup();
+    // Через createRequest как customer-owner → сразу open.
+    const req = await ctx.svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'Цемент',
+      items: [{ name: 'Цемент', qty: 10, pricePerUnit: 100 }],
+      actorUserId: 'c1',
+    });
+    if (status !== 'open') {
+      // Перевести в нужный статус напрямую через мок (имитируем последующие переходы).
+      ctx.st.requests.get(req.id)!.status = status;
+    }
+    return { ...ctx, requestId: req.id };
+  }
+
+  it('open → delivered, выставляет deliveredAt/deliveredById, эмитит material_delivered', async () => {
+    const { svc, feed, requestId } = await seedRequestWithStatus('open');
+    const result = await svc.markDelivered({ requestId, actorUserId: 'master1' });
+
+    expect(result.status).toBe('delivered');
+    expect(result.deliveredAt).toEqual(NOW);
+    expect(result.deliveredById).toBe('master1');
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'material_delivered',
+        projectId: 'p1',
+        actorId: 'master1',
+        payload: expect.objectContaining({ requestId, title: 'Цемент' }),
+      }),
+    );
+  });
+
+  it('accepted_partial → delivered (довоз остатка по ТЗ §5.7 шаг 6)', async () => {
+    const { svc, feed, requestId } = await seedRequestWithStatus('accepted_partial');
+    const result = await svc.markDelivered({ requestId, actorUserId: 'master1' });
+    expect(result.status).toBe('delivered');
+    expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'material_delivered' }));
+  });
+
+  it('idempotent: повторный markDelivered из delivered — no-op, без второго feed-события', async () => {
+    const { svc, feed, requestId } = await seedRequestWithStatus('delivered');
+    (feed.emit as jest.Mock).mockClear();
+    const result = await svc.markDelivered({ requestId, actorUserId: 'master1' });
+    expect(result.status).toBe('delivered');
+    expect(feed.emit).not.toHaveBeenCalled();
+  });
+
+  it('из pending_approval — ConflictError(MATERIAL_INVALID_STATUS)', async () => {
+    const { svc, requestId } = await seedRequestWithStatus('pending_approval');
+    await expect(svc.markDelivered({ requestId, actorUserId: 'master1' })).rejects.toThrow(
+      ConflictError,
+    );
+  });
+
+  it('несуществующая заявка → NotFoundError', async () => {
+    const { svc } = baseSetup();
+    await expect(
+      svc.markDelivered({ requestId: 'missing', actorUserId: 'master1' }),
+    ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe('MaterialsService.acceptPartial', () => {
+  async function seedDelivered(items: Array<{ name: string; qty: number }>) {
+    const ctx = baseSetup();
+    const req = await ctx.svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'Стяжка',
+      items: items.map((i) => ({ ...i, pricePerUnit: 100 })),
+      actorUserId: 'c1',
+    });
+    ctx.st.requests.get(req.id)!.status = 'delivered';
+    const itemsList = [...ctx.st.items.values()].filter((i) => i.requestId === req.id);
+    return { ...ctx, requestId: req.id, itemsList };
+  }
+
+  it('delivered → accepted_partial, сохраняет actualQty по позициям', async () => {
+    const { svc, st, requestId, itemsList } = await seedDelivered([
+      { name: 'Цемент', qty: 40 },
+      { name: 'Песок', qty: 10 },
+    ]);
+    const [cement, sand] = itemsList;
+
+    const result = await svc.acceptPartial({
+      requestId,
+      actorUserId: 'foreman1',
+      items: [
+        { itemId: cement.id, actualQty: 20 },
+        { itemId: sand.id, actualQty: 10 },
+      ],
+    });
+
+    expect(result.status).toBe('accepted_partial');
+    expect(st.items.get(cement.id)?.actualQty?.toString()).toBe('20');
+    expect(st.items.get(sand.id)?.actualQty?.toString()).toBe('10');
+  });
+
+  it('эмитит material_request_accepted_partial', async () => {
+    const { svc, feed, requestId, itemsList } = await seedDelivered([{ name: 'X', qty: 5 }]);
+    await svc.acceptPartial({
+      requestId,
+      actorUserId: 'foreman1',
+      items: [{ itemId: itemsList[0].id, actualQty: 3 }],
+    });
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'material_request_accepted_partial',
+        actorId: 'foreman1',
+      }),
+    );
+  });
+
+  it('actualQty > qty → InvalidInputError', async () => {
+    const { svc, requestId, itemsList } = await seedDelivered([{ name: 'X', qty: 10 }]);
+    await expect(
+      svc.acceptPartial({
+        requestId,
+        actorUserId: 'foreman1',
+        items: [{ itemId: itemsList[0].id, actualQty: 15 }],
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it('itemId из другой заявки → InvalidInputError(MATERIAL_ITEM_NOT_FOUND)', async () => {
+    const { svc, requestId } = await seedDelivered([{ name: 'X', qty: 5 }]);
+    await expect(
+      svc.acceptPartial({
+        requestId,
+        actorUserId: 'foreman1',
+        items: [{ itemId: 'mi-foreign', actualQty: 1 }],
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it('из open — ConflictError(требуется delivered)', async () => {
+    const ctx = baseSetup();
+    const req = await ctx.svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'X',
+      items: [{ name: 'A', qty: 1, pricePerUnit: 100 }],
+      actorUserId: 'c1',
+    });
+    // status остаётся 'open' (customer-owner создал)
+    const items = [...ctx.st.items.values()].filter((i) => i.requestId === req.id);
+    await expect(
+      ctx.svc.acceptPartial({
+        requestId: req.id,
+        actorUserId: 'foreman1',
+        items: [{ itemId: items[0].id, actualQty: 1 }],
+      }),
+    ).rejects.toThrow(ConflictError);
+  });
+});
+
+describe('MaterialsService.acceptFull', () => {
+  async function seedDelivered() {
+    const ctx = baseSetup();
+    const req = await ctx.svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'Финал',
+      items: [
+        { name: 'A', qty: 7, pricePerUnit: 100 },
+        { name: 'B', qty: 3, pricePerUnit: 100 },
+      ],
+      actorUserId: 'c1',
+    });
+    ctx.st.requests.get(req.id)!.status = 'delivered';
+    return { ...ctx, requestId: req.id };
+  }
+
+  it('delivered → accepted_full, выставляет actualQty=qty для всех позиций', async () => {
+    const { svc, st, requestId } = await seedDelivered();
+    const result = await svc.acceptFull({ requestId, actorUserId: 'foreman1' });
+    expect(result.status).toBe('accepted_full');
+    const items = [...st.items.values()].filter((i) => i.requestId === requestId);
+    for (const it of items) {
+      expect(it.actualQty?.toString()).toBe(it.qty.toString());
+    }
+  });
+
+  it('эмитит material_request_accepted_full', async () => {
+    const { svc, feed, requestId } = await seedDelivered();
+    await svc.acceptFull({ requestId, actorUserId: 'foreman1' });
+    expect(feed.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'material_request_accepted_full' }),
+    );
+  });
+
+  it('из open — ConflictError', async () => {
+    const ctx = baseSetup();
+    const req = await ctx.svc.createRequest({
+      projectId: 'p1',
+      recipient: 'foreman',
+      title: 'X',
+      items: [{ name: 'A', qty: 1, pricePerUnit: 100 }],
+      actorUserId: 'c1',
+    });
+    await expect(
+      ctx.svc.acceptFull({ requestId: req.id, actorUserId: 'foreman1' }),
+    ).rejects.toThrow(ConflictError);
   });
 });

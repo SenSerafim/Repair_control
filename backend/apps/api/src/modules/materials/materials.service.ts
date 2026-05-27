@@ -293,4 +293,181 @@ export class MaterialsService {
       include: { items: true },
     });
   }
+
+  /**
+   * Отметить факт доставки заявки. ТЗ NEWFIX §5.7 шаг 1:
+   * «Доставка фиксируется первым лицом, кто получил материал».
+   * Разрешено любому активному member'у проекта (RBAC: materials.mark_delivered).
+   *
+   * Допустимые исходные статусы:
+   *   - open → delivered (первая доставка)
+   *   - accepted_partial → delivered (довоз остатка, §5.7 шаг 6)
+   *   - delivered → delivered (idempotent no-op)
+   */
+  async markDelivered(input: { requestId: string; actorUserId: string }): Promise<MaterialRequest> {
+    const existing = await this.prisma.materialRequest.findUnique({
+      where: { id: input.requestId },
+    });
+    if (!existing) {
+      throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');
+    }
+
+    if (existing.status === 'delivered') {
+      return existing;
+    }
+
+    if (existing.status !== 'open' && existing.status !== 'accepted_partial') {
+      throw new ConflictError(
+        ErrorCodes.MATERIAL_INVALID_STATUS,
+        `mark-delivered требует статус open или accepted_partial, получен "${existing.status}"`,
+      );
+    }
+
+    const now = this.clock.now();
+    const updated = await this.prisma.materialRequest.update({
+      where: { id: input.requestId },
+      data: {
+        status: 'delivered',
+        deliveredAt: now,
+        deliveredById: input.actorUserId,
+      },
+    });
+
+    await this.feed.emit({
+      kind: 'material_delivered',
+      projectId: updated.projectId,
+      stageId: updated.stageId,
+      actorId: input.actorUserId,
+      payload: { requestId: updated.id, title: updated.title },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Частичная приёмка заявки. ТЗ NEWFIX §5.7 шаги 4–5:
+   * бригадир сверяет фактически привезённое с заявкой, фиксирует actualQty,
+   * остаток уходит «в ожидание дополнения».
+   *
+   * RBAC: materials.accept (foreman / customer_owner / representative.canApprove).
+   */
+  async acceptPartial(input: {
+    requestId: string;
+    actorUserId: string;
+    items: Array<{ itemId: string; actualQty: number }>;
+    comment?: string;
+  }): Promise<MaterialRequest> {
+    const existing = await this.prisma.materialRequest.findUnique({
+      where: { id: input.requestId },
+      include: { items: true },
+    });
+    if (!existing) {
+      throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');
+    }
+    if (existing.status !== 'delivered') {
+      throw new ConflictError(
+        ErrorCodes.MATERIAL_INVALID_STATUS,
+        `accept-partial требует статус delivered, получен "${existing.status}"`,
+      );
+    }
+
+    const requestItems = existing.items;
+    const byId = new Map(requestItems.map((it) => [it.id, it]));
+    for (const inp of input.items) {
+      const item = byId.get(inp.itemId);
+      if (!item) {
+        throw new InvalidInputError(
+          ErrorCodes.MATERIAL_ITEM_NOT_FOUND,
+          `позиция ${inp.itemId} не принадлежит заявке ${input.requestId}`,
+        );
+      }
+      if (inp.actualQty > Number(item.qty)) {
+        throw new InvalidInputError(
+          ErrorCodes.INVALID_INPUT,
+          `actualQty=${inp.actualQty} превышает qty=${item.qty.toString()} для позиции "${item.name}"`,
+        );
+      }
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      for (const inp of input.items) {
+        await tx.materialItem.update({
+          where: { id: inp.itemId },
+          data: { actualQty: inp.actualQty },
+        });
+      }
+      return tx.materialRequest.update({
+        where: { id: input.requestId },
+        data: { status: 'accepted_partial' },
+      });
+    });
+
+    await this.feed.emit({
+      kind: 'material_request_accepted_partial',
+      projectId: result.projectId,
+      stageId: result.stageId,
+      actorId: input.actorUserId,
+      payload: {
+        requestId: result.id,
+        title: result.title,
+        comment: input.comment ?? null,
+      },
+    });
+    return result;
+  }
+
+  /**
+   * Полная приёмка заявки. ТЗ NEWFIX §5.7 шаг 4:
+   * «всё привезли по позициям и количеству → отмечает Принято полностью».
+   * actualQty проставляется = qty для всех позиций.
+   *
+   * RBAC: materials.accept.
+   */
+  async acceptFull(input: {
+    requestId: string;
+    actorUserId: string;
+    comment?: string;
+  }): Promise<MaterialRequest> {
+    const existing = await this.prisma.materialRequest.findUnique({
+      where: { id: input.requestId },
+      include: { items: true },
+    });
+    if (!existing) {
+      throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');
+    }
+    if (existing.status !== 'delivered') {
+      throw new ConflictError(
+        ErrorCodes.MATERIAL_INVALID_STATUS,
+        `accept-full требует статус delivered, получен "${existing.status}"`,
+      );
+    }
+
+    const requestItems = existing.items;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      for (const item of requestItems) {
+        await tx.materialItem.update({
+          where: { id: item.id },
+          data: { actualQty: item.qty },
+        });
+      }
+      return tx.materialRequest.update({
+        where: { id: input.requestId },
+        data: { status: 'accepted_full' },
+      });
+    });
+
+    await this.feed.emit({
+      kind: 'material_request_accepted_full',
+      projectId: result.projectId,
+      stageId: result.stageId,
+      actorId: input.actorUserId,
+      payload: {
+        requestId: result.id,
+        title: result.title,
+        comment: input.comment ?? null,
+      },
+    });
+    return result;
+  }
 }
