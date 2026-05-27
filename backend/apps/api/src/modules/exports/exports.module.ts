@@ -31,6 +31,6 @@ import { ExportProcessor } from './export-pdf.processor';
     ZipPackerService,
     ExportProcessor,
   ],
-  exports: [ExportService],
+  exports: [ExportService, PdfRendererService],
 })
 export class ExportsModule {}

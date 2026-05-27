@@ -1,8 +1,21 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
+import { MaterialsPdfService } from './materials-pdf.service';
 import { MaterialsService } from './materials.service';
 import { AcceptFullDto, AcceptPartialDto, CreateMaterialRequestDto, MarkDeliveredDto } from './dto';
 
@@ -11,7 +24,10 @@ import { AcceptFullDto, AcceptPartialDto, CreateMaterialRequestDto, MarkDelivere
 @UseGuards(JwtAuthGuard, AccessGuard)
 @Controller()
 export class MaterialsController {
-  constructor(private readonly materials: MaterialsService) {}
+  constructor(
+    private readonly materials: MaterialsService,
+    private readonly pdf: MaterialsPdfService,
+  ) {}
 
   /**
    * Создать заявку. customer-owner / representative.canApprove → сразу «Согласовано» (`open`).
@@ -56,6 +72,26 @@ export class MaterialsController {
   @Get('materials/:id')
   async get(@Param('id') id: string) {
     return this.materials.get(id);
+  }
+
+  /**
+   * ТЗ NEWFIX §5.3: «Сформировать PDF» по заявке. RBAC reuse'нем тот же
+   * `materials.manage` — все, кому видна сама заявка, могут скачать PDF.
+   * Возвращаем поток напрямую (inline), без записи в S3 — документ короткий
+   * (десяток позиций) и одноразовый.
+   */
+  @Get('materials/:id/pdf')
+  @RequireAccess({
+    action: 'materials.manage',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  @Header('Content-Type', 'application/pdf')
+  async pdfForRequest(@Param('id') id: string, @Res({ passthrough: false }) res: Response) {
+    const buffer = await this.pdf.renderForRequest(id);
+    res.setHeader('Content-Disposition', `inline; filename="request-${id}.pdf"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.end(buffer);
   }
 
   /**

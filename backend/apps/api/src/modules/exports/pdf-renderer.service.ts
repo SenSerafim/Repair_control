@@ -20,12 +20,23 @@ export class PdfRendererService {
     }>;
     pdfLogoUrl?: string;
   }): Promise<Buffer> {
+    const html = this.buildHtml(data);
+    const pdf = await this.renderHtmlToPdf(html);
+    return pdf ?? this.fallbackText(data);
+  }
+
+  /**
+   * Универсальный рендер HTML → A4 PDF через puppeteer-core + chromium.
+   * Возвращает `null` если puppeteer недоступен (тесты / dev-окружение
+   * без chromium-binary); вызывающая сторона решает, что делать с
+   * fallback'ом (для feed — plain text, для materials — выкинуть 503).
+   */
+  async renderHtmlToPdf(html: string): Promise<Buffer | null> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const chromium = require('@sparticuz/chromium');
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const puppeteer = require('puppeteer-core');
-      const html = this.buildHtml(data);
       const browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
@@ -45,10 +56,8 @@ export class PdfRendererService {
         await browser.close();
       }
     } catch (e) {
-      this.logger.warn(
-        `puppeteer unavailable, falling back to plain text: ${(e as Error).message}`,
-      );
-      return this.fallbackText(data);
+      this.logger.warn(`puppeteer unavailable: ${(e as Error).message}`);
+      return null;
     }
   }
 

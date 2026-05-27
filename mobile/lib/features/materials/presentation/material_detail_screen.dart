@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -42,6 +46,19 @@ class MaterialDetailScreen extends ConsumerWidget {
       showBack: true,
       title: 'Заявка',
       padding: EdgeInsets.zero,
+      actions: [
+        Builder(builder: (ctx) {
+          final r = async.valueOrNull;
+          // ТЗ NEWFIX §5.3: кнопка «Сформировать PDF». Активна, когда
+          // заявка загружена и в ней есть хотя бы одна позиция.
+          final canExport = r != null && r.items.isNotEmpty;
+          return IconButton(
+            tooltip: 'Сформировать PDF',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: canExport ? () => _sharePdf(ctx, ref, r) : null,
+          );
+        }),
+      ],
       body: async.when(
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
@@ -109,6 +126,29 @@ class MaterialDetailScreen extends ConsumerWidget {
 
   String _shorten(String id) =>
       id.length <= 12 ? id : '${id.substring(0, 12)}…';
+
+  Future<void> _sharePdf(BuildContext ctx, WidgetRef ref, MaterialRequest r) async {
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    messenger?.showSnackBar(
+      const SnackBar(content: Text('Готовим PDF…'), duration: Duration(seconds: 2)),
+    );
+    try {
+      final repo = ref.read(materialsRepositoryProvider);
+      final bytes = await repo.downloadRequestPdf(r.id);
+      final dir = await getTemporaryDirectory();
+      final safeTitle = r.title.replaceAll(RegExp(r'[^\wа-яА-Я\- ]+'), '').trim();
+      final file = File('${dir.path}/zayavka-${r.id}.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'application/pdf')],
+        subject: safeTitle.isEmpty ? 'Заявка' : safeTitle,
+      );
+    } on MaterialsException catch (e) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Не удалось сформировать PDF: ${e.failure.name}')),
+      );
+    }
+  }
 }
 
 class _Header extends StatelessWidget {
