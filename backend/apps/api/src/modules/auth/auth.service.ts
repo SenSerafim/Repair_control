@@ -132,6 +132,24 @@ export class AuthService {
     return this.issueSession(user.id, user.activeRole as SystemRole, { deviceId, ip });
   }
 
+  /**
+   * Перевыпуск токенов после смены активной роли пользователем.
+   * Безопасность: ревочим все активные сессии — старый refresh с прежней
+   * `systemRole` использовать нельзя, иначе обход RBAC через старый JWT.
+   * Возвращаем новую пару access/refresh с актуальной ролью в payload.
+   */
+  async reissueAfterRoleSwitch(
+    userId: string,
+    role: SystemRole,
+    ctx: { deviceId: string; ip: string; userAgent?: string },
+  ): Promise<AuthTokens> {
+    await this.prisma.session.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: this.clock.now() },
+    });
+    return this.issueSession(userId, role, ctx);
+  }
+
   async logout(refreshToken: string): Promise<void> {
     try {
       const payload = await this.tokens.verifyRefresh(refreshToken);

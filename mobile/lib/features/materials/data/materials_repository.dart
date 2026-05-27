@@ -12,6 +12,30 @@ class MaterialsException implements Exception {
   final ApiError apiError;
 }
 
+class MaterialItemPhotoInput {
+  const MaterialItemPhotoInput({
+    required this.fileKey,
+    required this.mimeType,
+    required this.sizeBytes,
+    this.thumbKey,
+    this.exifCleared = false,
+  });
+
+  final String fileKey;
+  final String? thumbKey;
+  final String mimeType;
+  final int sizeBytes;
+  final bool exifCleared;
+
+  Map<String, dynamic> toJson() => {
+    'fileKey': fileKey,
+    if (thumbKey != null) 'thumbKey': thumbKey,
+    'mimeType': mimeType,
+    'sizeBytes': sizeBytes,
+    'exifCleared': exifCleared,
+  };
+}
+
 class MaterialItemInput {
   const MaterialItemInput({
     required this.name,
@@ -19,6 +43,8 @@ class MaterialItemInput {
     this.unit,
     this.note,
     this.pricePerUnit,
+    this.dueDate,
+    this.photo,
   });
 
   final String name;
@@ -26,6 +52,10 @@ class MaterialItemInput {
   final String? unit;
   final String? note;
   final int? pricePerUnit;
+  /// Срок поставки позиции (ISO date 'YYYY-MM-DD'). ТЗ NEWFIX §5.5.
+  final DateTime? dueDate;
+  /// Фото позиции (presigned-загружено). ТЗ NEWFIX §5.2.
+  final MaterialItemPhotoInput? photo;
 
   Map<String, dynamic> toJson() => {
     'name': name,
@@ -33,6 +63,20 @@ class MaterialItemInput {
     if (unit != null) 'unit': unit,
     if (note != null && note!.isNotEmpty) 'note': note,
     if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+    if (dueDate != null) 'dueDate': dueDate!.toIso8601String().substring(0, 10),
+    if (photo != null) 'photo': photo!.toJson(),
+  };
+}
+
+/// Позиция для частичной приёмки — itemId + actualQty. ТЗ NEWFIX §5.7.
+class AcceptedItemInput {
+  const AcceptedItemInput({required this.itemId, required this.actualQty});
+  final String itemId;
+  final double actualQty;
+
+  Map<String, dynamic> toJson() => {
+    'itemId': itemId,
+    'actualQty': actualQty,
   };
 }
 
@@ -80,6 +124,47 @@ class MaterialsRepository {
     );
     return MaterialRequest.parse(r.data!);
   });
+
+  /// Отметить заявку «Доставлено». ТЗ NEWFIX §5.7 шаг 1.
+  /// RBAC: любой member проекта (materials.mark_delivered).
+  /// FSM: approved | acceptedPartial → delivered. Идемпотентно из delivered.
+  Future<MaterialRequest> markDelivered(String id, {String? comment}) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/materials/$id/mark-delivered',
+          data: {if (comment != null && comment.isNotEmpty) 'comment': comment},
+        );
+        return MaterialRequest.parse(r.data!);
+      });
+
+  /// Частичная приёмка с указанием actualQty по позициям. ТЗ NEWFIX §5.7 шаги 4–5.
+  /// RBAC: foreman | customer-owner | representative.canApprove.
+  /// FSM: delivered → accepted_partial.
+  Future<MaterialRequest> acceptPartial(
+    String id, {
+    required List<AcceptedItemInput> items,
+    String? comment,
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/materials/$id/accept-partial',
+      data: {
+        'items': items.map((e) => e.toJson()).toList(),
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      },
+    );
+    return MaterialRequest.parse(r.data!);
+  });
+
+  /// Полная приёмка — все позиции принимаются по заявленному количеству.
+  /// FSM: delivered → accepted_full.
+  Future<MaterialRequest> acceptFull(String id, {String? comment}) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/materials/$id/accept-full',
+          data: {if (comment != null && comment.isNotEmpty) 'comment': comment},
+        );
+        return MaterialRequest.parse(r.data!);
+      });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

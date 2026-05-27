@@ -55,7 +55,10 @@ const mkPrisma = () => {
       updateMany: jest.fn(async ({ where, data }: any) => {
         let count = 0;
         for (const s of sessions.values()) {
-          if (s.id === where.id && s.revokedAt === null) {
+          const idMatch = where.id === undefined || s.id === where.id;
+          const userMatch = where.userId === undefined || s.userId === where.userId;
+          const revokedMatch = where.revokedAt === undefined || s.revokedAt === where.revokedAt;
+          if (idMatch && userMatch && revokedMatch) {
             Object.assign(s, data);
             count++;
           }
@@ -230,5 +233,55 @@ describe('AuthService.logout', () => {
     } as unknown as TokenService;
     const svc = new AuthService(prisma, tokens, makeConfig() as any, new FixedClock(new Date()));
     await expect(svc.logout('bad-token')).resolves.toBeUndefined();
+  });
+});
+
+describe('AuthService.reissueAfterRoleSwitch', () => {
+  it('ревочит все активные сессии пользователя и выдаёт новую', async () => {
+    const { prisma, sessions } = mkPrisma();
+    // две активные сессии под одним юзером (разные устройства)
+    sessions.set('s-old1', {
+      id: 's-old1',
+      userId: 'u1',
+      refreshTokenHash: 'h1',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 1_000_000),
+    });
+    sessions.set('s-old2', {
+      id: 's-old2',
+      userId: 'u1',
+      refreshTokenHash: 'h2',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 1_000_000),
+    });
+    // и одна чужая — её трогать нельзя
+    sessions.set('s-other', {
+      id: 's-other',
+      userId: 'u2',
+      refreshTokenHash: 'h3',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 1_000_000),
+    });
+    const tokens = mkTokens();
+    const svc = new AuthService(prisma, tokens, makeConfig() as any, new FixedClock(new Date()));
+
+    const out = await svc.reissueAfterRoleSwitch('u1', 'contractor', {
+      deviceId: 'd1',
+      ip: '1.2.3.4',
+      userAgent: 'jest',
+    });
+
+    expect(out).toEqual({
+      accessToken: 'access-jwt',
+      refreshToken: 'refresh-jwt',
+      expiresIn: 900,
+    });
+    expect(sessions.get('s-old1').revokedAt).not.toBeNull();
+    expect(sessions.get('s-old2').revokedAt).not.toBeNull();
+    expect(sessions.get('s-other').revokedAt).toBeNull();
+    // в access-токен должна попасть НОВАЯ роль
+    expect((tokens as any).signAccess).toHaveBeenCalledWith(
+      expect.objectContaining({ sub: 'u1', systemRole: 'contractor' }),
+    );
   });
 });

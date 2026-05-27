@@ -5,6 +5,7 @@ import '../../../core/access/system_role.dart';
 import '../../../core/config/app_providers.dart';
 import '../../../core/error/api_error.dart';
 import '../../auth/domain/auth_failure.dart';
+import '../../auth/domain/auth_tokens.dart';
 import '../domain/faq.dart';
 import '../domain/notification_setting.dart';
 import '../domain/user_profile.dart';
@@ -72,9 +73,26 @@ class ProfileRepository {
         .toList();
   });
 
-  Future<void> setActiveRole(SystemRole role) => _call(() async {
-    await _dio.put<void>('/api/me/active-role', data: {'role': role.name});
-  });
+  /// PUT /api/me/active-role.
+  /// Бекенд ревочит старые сессии и отдаёт свежую пару токенов с новой
+  /// `systemRole` в payload — без перевыпуска RBAC бы 403'ил все
+  /// действия, доступные только новой роли.
+  Future<AuthTokens> setActiveRole(SystemRole role, {String? deviceId}) =>
+      _call(() async {
+        final r = await _dio.put<Map<String, dynamic>>(
+          '/api/me/active-role',
+          data: {
+            'role': role.name,
+            if (deviceId != null) 'deviceId': deviceId,
+          },
+        );
+        final body = r.data!;
+        return AuthTokens(
+          accessToken: body['accessToken'] as String,
+          refreshToken: body['refreshToken'] as String,
+          expiresIn: (body['expiresIn'] as num).toInt(),
+        );
+      });
 
   Future<List<NotificationSetting>> listNotificationSettings() => _call(
     () async {

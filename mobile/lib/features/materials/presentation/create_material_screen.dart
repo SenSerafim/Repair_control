@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -43,6 +44,22 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
     super.dispose();
   }
 
+  Future<void> _pickDueDate(_ItemDraft draft) async {
+    final now = DateTime.now();
+    final initial = draft.dueDate ?? now.add(const Duration(days: 7));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: now.subtract(const Duration(days: 1)),
+      lastDate: now.add(const Duration(days: 365)),
+      helpText: 'Срок поставки',
+      cancelText: 'Отмена',
+      confirmText: 'OK',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => draft.dueDate = picked);
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final items = <MaterialItemInput>[];
@@ -59,6 +76,7 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
           qty: qty,
           unit: draft.unit.text.trim().isEmpty ? null : draft.unit.text.trim(),
           pricePerUnit: MoneyInput.readKopecks(draft.price),
+          dueDate: draft.dueDate,
         ),
       );
     }
@@ -147,6 +165,7 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
                   _items[i].dispose();
                   _items.removeAt(i);
                 }),
+                onPickDueDate: () => _pickDueDate(_items[i]),
               ),
               const SizedBox(height: AppSpacing.x10),
             ],
@@ -236,6 +255,9 @@ class _ItemDraft {
   final qty = TextEditingController();
   final unit = TextEditingController(text: 'шт');
   final price = TextEditingController();
+  // ТЗ NEWFIX §5.5: срок поставки позиции — показывается на карточке заявки,
+  // cron эмитит overdue если статус всё ещё open после dueDate.
+  DateTime? dueDate;
 
   void dispose() {
     name.dispose();
@@ -251,12 +273,14 @@ class _ItemCard extends StatelessWidget {
     required this.index,
     required this.canRemove,
     required this.onRemove,
+    required this.onPickDueDate,
   });
 
   final _ItemDraft draft;
   final int index;
   final bool canRemove;
   final VoidCallback onRemove;
+  final VoidCallback onPickDueDate;
 
   @override
   Widget build(BuildContext context) {
@@ -324,6 +348,51 @@ class _ItemCard extends StatelessWidget {
           MoneyInput(
             controller: draft.price,
             label: 'Цена за единицу (опционально)',
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          // ТЗ NEWFIX §5.5: срок поставки позиции.
+          InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+            onTap: onPickDueDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.x12,
+                vertical: AppSpacing.x10,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.n0,
+                border: Border.all(color: AppColors.n200, width: 1.5),
+                borderRadius: BorderRadius.circular(AppRadius.r12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.event_outlined,
+                    size: 18,
+                    color: AppColors.n500,
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: Text(
+                      draft.dueDate == null
+                          ? 'Срок поставки (опционально)'
+                          : 'Срок: ${DateFormat('d MMMM', 'ru').format(draft.dueDate!)}',
+                      style: AppTextStyles.body.copyWith(
+                        color: draft.dueDate == null
+                            ? AppColors.n400
+                            : AppColors.n900,
+                      ),
+                    ),
+                  ),
+                  if (draft.dueDate != null)
+                    const Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: AppColors.n400,
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

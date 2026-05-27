@@ -67,4 +67,47 @@ class MaterialDetailController
   @override
   Future<MaterialRequest> build(String id) =>
       ref.read(materialsRepositoryProvider).get(id);
+
+  MaterialsRepository get _repo => ref.read(materialsRepositoryProvider);
+
+  /// Обновляет state на новую версию заявки (после mark-delivered / accept-*).
+  void _setRequest(MaterialRequest r) {
+    state = AsyncData(r);
+  }
+
+  /// Master/foreman/customer: «Доставлено». ТЗ NEWFIX §5.7 шаг 1.
+  Future<AuthFailure?> markDelivered({String? comment}) async {
+    try {
+      final r = await _repo.markDelivered(arg, comment: comment);
+      _setRequest(r);
+      return null;
+    } on MaterialsException catch (e) {
+      return e.failure;
+    }
+  }
+
+  /// Foreman/customer: «Принять частично». ТЗ NEWFIX §5.7 шаги 4–5.
+  Future<AuthFailure?> acceptPartial({
+    required List<AcceptedItemInput> items,
+    String? comment,
+  }) async {
+    try {
+      final r = await _repo.acceptPartial(arg, items: items, comment: comment);
+      _setRequest(r);
+      return null;
+    } on MaterialsException catch (e) {
+      return e.failure;
+    }
+  }
+
+  /// Foreman/customer: «Принять полностью». ТЗ NEWFIX §5.7 шаг 4.
+  Future<AuthFailure?> acceptFull({String? comment}) async {
+    try {
+      final r = await _repo.acceptFull(arg, comment: comment);
+      _setRequest(r);
+      return null;
+    } on MaterialsException catch (e) {
+      return e.failure;
+    }
+  }
 }

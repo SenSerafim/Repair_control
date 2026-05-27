@@ -1,6 +1,7 @@
 import { UsersService } from './users.service';
 import { ConflictError, InvalidInputError, NotFoundError, PrismaService } from '@app/common';
 import { MembersService } from '../projects/members.service';
+import { AuthService } from '../auth/auth.service';
 
 // Юниты UsersService по addRole/removeRole/registerDevice не дергают
 // listTeammates, поэтому MembersService — заглушка с no-op applyVisibility.
@@ -8,6 +9,17 @@ const mkMembersStub = () =>
   ({
     applyVisibility: jest.fn(async (rows: unknown[]) => rows),
   }) as unknown as MembersService;
+
+// setActiveRole перевыпускает токены через AuthService — заглушаем стабом,
+// чтобы юниты не тащили JWT/Prisma session-таблицу.
+const mkAuthStub = () =>
+  ({
+    reissueAfterRoleSwitch: jest.fn(async () => ({
+      accessToken: 'acc',
+      refreshToken: 'ref',
+      expiresIn: 900,
+    })),
+  }) as unknown as AuthService;
 
 interface Fake {
   users: Map<string, any>;
@@ -73,7 +85,7 @@ describe('UsersService.addRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await svc.addRole('u1', 'contractor');
     expect(state.roles.some((r) => r.role === 'contractor')).toBe(true);
   });
@@ -82,13 +94,13 @@ describe('UsersService.addRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await expect(svc.addRole('u1', 'customer')).rejects.toThrow(ConflictError);
   });
 
   it('нельзя самостоятельно назначать admin', async () => {
     const { prisma } = mkPrisma();
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await expect(svc.addRole('u1', 'admin')).rejects.toThrow(InvalidInputError);
   });
 });
@@ -101,7 +113,7 @@ describe('UsersService.removeRole', () => {
       { userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true },
       { userId: 'u1', role: 'contractor', addedAt: new Date(), isActive: true },
     );
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await svc.removeRole('u1', 'customer');
     expect(state.roles.find((r) => r.role === 'customer')).toBeUndefined();
     expect(state.users.get('u1').activeRole).toBe('contractor');
@@ -111,7 +123,7 @@ describe('UsersService.removeRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await expect(svc.removeRole('u1', 'customer')).rejects.toThrow(InvalidInputError);
   });
 
@@ -119,37 +131,46 @@ describe('UsersService.removeRole', () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await expect(svc.removeRole('u1', 'master')).rejects.toThrow(NotFoundError);
   });
 });
 
 describe('UsersService.setActiveRole', () => {
-  it('переключает active если роль у пользователя есть', async () => {
+  const ctx = { deviceId: 'd1', ip: '1.2.3.4', userAgent: 'jest' };
+
+  it('переключает active если роль у пользователя есть и возвращает свежие токены', async () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push(
       { userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true },
       { userId: 'u1', role: 'contractor', addedAt: new Date(), isActive: true },
     );
-    const svc = new UsersService(prisma, mkMembersStub());
-    const res = await svc.setActiveRole('u1', 'contractor');
+    const auth = mkAuthStub();
+    const svc = new UsersService(prisma, mkMembersStub(), auth);
+    const res = await svc.setActiveRole('u1', 'contractor', ctx);
     expect(res.activeRole).toBe('contractor');
+    expect(res.accessToken).toBe('acc');
+    expect(res.refreshToken).toBe('ref');
+    expect(res.expiresIn).toBe(900);
+    expect(auth.reissueAfterRoleSwitch).toHaveBeenCalledWith('u1', 'contractor', ctx);
   });
 
   it('404 если роль не добавлена', async () => {
     const { prisma, state } = mkPrisma();
     state.users.set('u1', { id: 'u1', activeRole: 'customer' });
     state.roles.push({ userId: 'u1', role: 'customer', addedAt: new Date(), isActive: true });
-    const svc = new UsersService(prisma, mkMembersStub());
-    await expect(svc.setActiveRole('u1', 'master')).rejects.toThrow(NotFoundError);
+    const auth = mkAuthStub();
+    const svc = new UsersService(prisma, mkMembersStub(), auth);
+    await expect(svc.setActiveRole('u1', 'master', ctx)).rejects.toThrow(NotFoundError);
+    expect(auth.reissueAfterRoleSwitch).not.toHaveBeenCalled();
   });
 });
 
 describe('UsersService.registerDevice', () => {
   it('upsert по токену', async () => {
     const { prisma, state } = mkPrisma();
-    const svc = new UsersService(prisma, mkMembersStub());
+    const svc = new UsersService(prisma, mkMembersStub(), mkAuthStub());
     await svc.registerDevice('u1', { platform: 'ios', token: 'abcdef0123456789' });
     expect(state.devices.length).toBe(1);
     // повторный upsert не создаёт дубликат

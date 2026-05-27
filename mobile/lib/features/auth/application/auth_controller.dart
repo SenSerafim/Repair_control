@@ -192,10 +192,17 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 
-  Future<void> setActiveRole(SystemRole role) async {
+  /// Используется только под Riverpod-флоу смены роли — `tokens`
+  /// перевыпускаются бэком (`PUT /me/active-role`) с новой `systemRole`
+  /// в JWT-payload. Без этой замены RBAC бы 403'ил все действия новой
+  /// роли, так как старый access-токен по-прежнему сидит со старой.
+  Future<void> setActiveRole(SystemRole role, AuthTokens tokens) async {
+    await _persistTokens(tokens);
     await _storage.writeActiveRole(role.name);
     state = state.copyWith(activeRole: role);
   }
+
+  Future<String> ensureDeviceId() => _ensureDeviceId();
 
   Future<void> _persistTokens(AuthTokens t) async {
     await _storage.writeAccessToken(t.accessToken);
