@@ -62,7 +62,12 @@ export class FilesService implements OnModuleInit {
   }
 
   private policyForScope(scope: string): { allowedMimes: Set<string>; maxSizeBytes: number } {
-    const match = this.scopePolicies.find((p) => scope.startsWith(p.prefix));
+    // Префиксы в политиках задаются с trailing slash (например 'notes/audio/'),
+    // чтобы 'notes/audio_other' не матчился. Но клиенты часто шлют scope без
+    // слеша на конце ('notes/audio'). Нормализуем — иначе такой запрос падает
+    // в default-mimes и получает 400 files.mime_not_allowed.
+    const haystack = scope.endsWith('/') ? scope : `${scope}/`;
+    const match = this.scopePolicies.find((p) => haystack.startsWith(p.prefix));
     if (match) return { allowedMimes: match.allowedMimes, maxSizeBytes: match.maxSizeBytes };
     return { allowedMimes: this.defaultAllowedMimes, maxSizeBytes: this.defaultMaxSizeBytes };
   }

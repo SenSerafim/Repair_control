@@ -159,6 +159,32 @@ describe('FilesService.validate с per-scope policy', () => {
       }),
     ).toThrow(InvalidInputError);
   });
+
+  it('scope без trailing slash попадает в policy с тем же префиксом', () => {
+    const minio = {} as any;
+    const config = {
+      endPoint: 'localhost',
+      port: 9000,
+      useSSL: false,
+      accessKey: 'a',
+      secretKey: 'b',
+      bucket: 'test',
+      presignTtlSeconds: 300,
+      region: 'us-east-1',
+      pathStyle: true,
+    };
+    const service = new FilesService(minio, config, ['image/jpeg'], 10, [
+      { prefix: 'notes/audio/', allowedMimes: ['audio/mp4'], maxSizeMb: 25 },
+    ]);
+    expect(() =>
+      service.validate({
+        originalName: 'voice.m4a',
+        mimeType: 'audio/mp4',
+        sizeBytes: 1024,
+        scope: 'notes/audio',
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe('FilesService.buildKey', () => {
