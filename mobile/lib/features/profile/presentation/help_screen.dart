@@ -62,6 +62,24 @@ class HelpScreen extends ConsumerWidget {
                   value: 'Обучающие материалы',
                   onTap: () => context.push(AppRoutes.knowledge),
                 ),
+                // NEWFIX-2 §15.2 — плейсхолдер под обучающее видео.
+                // Заказчик планирует записать 5-минутный обзор приложения;
+                // пока показываем заглушку.
+                AppMenuRow(
+                  icon: PhosphorIconsFill.playCircle,
+                  iconBg: AppColors.brandLight,
+                  iconColor: AppColors.purple,
+                  label: 'Обучающее видео',
+                  value: 'Скоро · обзор приложения',
+                  onTap: () {
+                    AppToast.show(
+                      context,
+                      message:
+                          'Обучающее видео скоро появится в этом разделе.',
+                      kind: AppToastKind.info,
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.x20),

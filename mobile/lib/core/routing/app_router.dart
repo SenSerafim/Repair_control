@@ -15,6 +15,7 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/welcome_screen.dart';
 import '../../features/chat/presentation/chat_conversation_screen.dart';
 import '../../features/chat/presentation/chats_screen.dart';
+import '../../features/chat/presentation/team_aggregate_screen.dart';
 import '../../features/documents/presentation/document_detail_screen.dart';
 import '../../features/documents/presentation/document_upload_screen.dart';
 import '../../features/documents/presentation/document_viewer_screen.dart';
@@ -591,6 +592,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.chats,
             builder: (_, __) => const ChatsScreen(),
+            routes: [
+              // NEWFIX-2 §3 — агрегированный экран «Команда» внутри Чатов
+              // (по всем проектам пользователя).
+              GoRoute(
+                path: 'team',
+                pageBuilder: slideLeftPage(
+                  (_, __) => const TeamAggregateScreen(),
+                ),
+                routes: [
+                  // Тап по строке участника → полный профиль (E4).
+                  GoRoute(
+                    path: ':userId',
+                    pageBuilder: slideLeftPage(
+                      (_, state) => UserProfileScreen(
+                        userId: state.pathParameters['userId']!,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GoRoute(
             path: AppRoutes.profile,
