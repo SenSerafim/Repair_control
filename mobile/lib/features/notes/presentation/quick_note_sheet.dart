@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -71,42 +72,52 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const AppBottomSheetHeader(title: 'Новая заметка'),
-        const SizedBox(height: AppSpacing.x14),
-        _ModeSwitcher(
-          mode: _mode,
-          hasRecording: _recordedPath != null,
-          onChanged: _isRecording ? null : (m) => setState(() => _mode = m),
-        ),
-        const SizedBox(height: AppSpacing.x16),
-        if (_mode == _Mode.text) _TextField(controller: _text),
-        if (_mode == _Mode.voice)
-          _VoiceRecorder(
-            isRecording: _isRecording,
-            recordedFor: _recordedFor,
-            recordedPath: _recordedPath,
-            recordedDuration: _recordedDuration,
-            player: _player,
-            onStart: _startRecording,
-            onStop: _stopRecording,
-            onDiscard: _discardRecording,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AppBottomSheetHeader(title: 'Новая заметка'),
+          const SizedBox(height: AppSpacing.x14),
+          _ModeSwitcher(
+            mode: _mode,
+            hasRecording: _recordedPath != null,
+            onChanged: _isRecording ? null : (m) => setState(() => _mode = m),
           ),
-        const SizedBox(height: AppSpacing.x20),
-        _VisibilityChooser(
-          selected: _visibility,
-          onChanged: (v) => setState(() => _visibility = v),
-        ),
-        const SizedBox(height: AppSpacing.x20),
-        AppButton(
-          label: 'Сохранить',
-          onPressed: _canSave ? _save : null,
-        ),
-        const SizedBox(height: AppSpacing.x6),
-      ],
+          const SizedBox(height: AppSpacing.x16),
+          if (_mode == _Mode.text) _TextField(controller: _text),
+          if (_mode == _Mode.voice)
+            _VoiceRecorder(
+              isRecording: _isRecording,
+              recordedFor: _recordedFor,
+              recordedPath: _recordedPath,
+              recordedDuration: _recordedDuration,
+              player: _player,
+              onStart: _startRecording,
+              onStop: _stopRecording,
+              onDiscard: _discardRecording,
+            ),
+          const SizedBox(height: AppSpacing.x20),
+          _VisibilityChooser(
+            selected: _visibility,
+            onChanged: (v) => setState(() => _visibility = v),
+          ),
+          const SizedBox(height: AppSpacing.x20),
+          AppButton(
+            label: 'Сохранить',
+            onPressed: _canSave ? _save : null,
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          TextButton(
+            onPressed: () {
+              final router = GoRouter.of(context);
+              Navigator.of(context).pop();
+              router.push('/projects/${widget.projectId}/notes');
+            },
+            child: const Text('Все заметки проекта'),
+          ),
+        ],
+      ),
     );
   }
 
