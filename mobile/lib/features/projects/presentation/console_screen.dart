@@ -1039,7 +1039,8 @@ class _ConsoleSkeleton extends StatelessWidget {
 /// — «Этапы и работа» (Этапы / Согласования)
 /// — «Команда и общение» (Команда / Чаты)
 /// — «Финансы» (Бюджет / Материалы / Самозакуп / Инструмент) — role-gated
-/// — «Документы и лента» (Заметки / Документы / Лента / Экспорты / Методология)
+/// — «Документы и лента» (Документы / Лента / Методология) — без «Экспорты»
+///   (NEWFIX-2 §14.3) и без «Заметки» (§11.6, вход в шапке).
 ///
 /// Сетка адаптивная: 2 в строку, последняя плитка может быть `wide`.
 class _NavSections extends ConsumerWidget {
@@ -1120,12 +1121,9 @@ class _NavSections extends ConsumerWidget {
         label: 'Лента',
         onTap: () => context.push('/projects/$projectId/feed'),
       ),
-      AppNavTileSpec(
-        icon: PhosphorIconsFill.downloadSimple,
-        iconColor: AppColors.purple,
-        label: 'Экспорты',
-        onTap: () => context.push('/projects/$projectId/exports'),
-      ),
+      // NEWFIX-2 §14.3 — глобальную плитку «Экспорты» убрали. Экспорт PDF
+      // теперь делается прямо внутри Заявок (§5.3), Ленты (§12.4) и
+      // Документов (§13.1), а не отдельной кнопкой на карточке проекта.
       AppNavTileSpec(
         icon: PhosphorIconsFill.bookOpen,
         iconColor: AppColors.brand,

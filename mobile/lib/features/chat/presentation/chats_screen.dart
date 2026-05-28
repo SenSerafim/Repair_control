@@ -38,6 +38,14 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
     return AppScaffold(
       title: 'Чаты',
       padding: EdgeInsets.zero,
+      // NEWFIX-2 §3.1 — точка входа в агрегированный экран «Команда».
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.groups_outlined),
+          tooltip: 'Команда',
+          onPressed: () => context.push('/chats/team'),
+        ),
+      ],
       body: async.when(
         loading: () => const AppLoadingState(skeleton: AppChatListSkeleton()),
         error: (e, _) => AppErrorState(
