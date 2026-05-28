@@ -8,10 +8,11 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { AccessGuard, RequireAccess } from '@app/rbac';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/jwt.strategy';
@@ -38,14 +39,52 @@ export class ToolsController {
     return this.tools.createMyTool({
       ownerId: req.user.userId,
       name: dto.name,
+      article: dto.article,
       photoKey: dto.photoKey,
       serial: dto.serial,
+      status: dto.status,
+      storageLocation: dto.storageLocation,
+      assignedEmployeeId: dto.assignedEmployeeId,
     });
   }
 
   @Get('me/tools')
-  async listMine(@Req() req: { user: AuthenticatedUser }) {
-    return this.tools.listMyTools(req.user.userId);
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'NEWFIX-2 §7.2 — поиск по подстроке `name` (case-insensitive)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['in_storage', 'on_project', 'with_employee'],
+  })
+  async listMine(
+    @Req() req: { user: AuthenticatedUser },
+    @Query('search') search?: string,
+    @Query('status') status?: 'in_storage' | 'on_project' | 'with_employee',
+  ) {
+    return this.tools.listMyTools({
+      ownerId: req.user.userId,
+      search,
+      status,
+    });
+  }
+
+  /**
+   * NEWFIX-2 §9 — выдать «Мой» инструмент конкретному сотруднику.
+   * Точка входа из профиля сотрудника (UI), но REST доступ открыт любому
+   * владельцу инструмента — RBAC проверяется в сервисе (только owner).
+   */
+  @Post('tools/:id/assign-to-employee')
+  @HttpCode(HttpStatus.OK)
+  async assignToEmployee(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+    @Body() dto: { employeeUserId: string },
+  ) {
+    return this.tools.assignToEmployee(id, dto.employeeUserId, req.user.userId);
   }
 
   @Get('tools/:id')
@@ -105,6 +144,7 @@ export class ToolsController {
       actorUserId: req.user.userId,
       ownerId: dto.ownerId,
       name: dto.name,
+      article: dto.article,
       photoKey: dto.photoKey,
       serial: dto.serial,
     });
@@ -124,7 +164,12 @@ export class ToolsController {
     @Param('projectId') projectId: string,
     @Body() dto: AttachToolsToProjectDto,
   ) {
-    return this.tools.attachFromMy(projectId, dto.toolItemIds, req.user.userId);
+    return this.tools.attachFromMy(
+      projectId,
+      dto.toolItemIds,
+      req.user.userId,
+      dto.responsibleUserId,
+    );
   }
 
   /**

@@ -6,8 +6,23 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../tools/application/tools_controller.dart' as tc;
+import '../../tools/domain/tool.dart';
 import '../data/user_profile_repository.dart';
 import '../domain/user_profile_aggregate.dart';
+
+/// Локальный provider — список «Моих» инструментов, доступных для выдачи
+/// (т.е. не закреплённых ни за проектом, ни за сотрудником). Использует
+/// существующий [tc.myToolsProvider], добавляя фильтр по статусу in_storage.
+final _myToolsForAssignProvider = Provider.autoDispose<AsyncValue<List<ToolItem>>>((ref) {
+  final all = ref.watch(tc.myToolsProvider);
+  return all.whenData(
+    (tools) => tools.where((t) => t.status == ToolStatus.inStorage).toList(),
+  );
+});
+
+/// Удобный шорткат на основной контроллер «Моих инструментов».
+final _myToolsCtrlProvider = tc.myToolsProvider;
 
 /// ТЗ NEWFIX §4: новый экран профиля сотрудника. 5 секций (объекты /
 /// статистика / инструмент / рекламации / выплаты) + шапка с
@@ -44,7 +59,7 @@ class UserProfileScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x16),
               _MonthStatsSection(stats: data.monthStats),
               const SizedBox(height: AppSpacing.x16),
-              _ToolsSection(items: data.tools),
+              _ToolsSection(items: data.tools, employeeUserId: userId),
               const SizedBox(height: AppSpacing.x16),
               _ReclamationsSection(value: data.reclamations),
               const SizedBox(height: AppSpacing.x16),
@@ -277,43 +292,218 @@ class _MonthStatsSection extends StatelessWidget {
   }
 }
 
-class _ToolsSection extends StatelessWidget {
-  const _ToolsSection({required this.items});
+class _ToolsSection extends ConsumerWidget {
+  const _ToolsSection({required this.items, required this.employeeUserId});
   final List<UserProfileTool> items;
+  final String employeeUserId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _SectionCard(
       icon: Icons.build_outlined,
       title: 'ИНСТРУМЕНТ ЗА СОТРУДНИКОМ',
-      child: items.isEmpty
-          ? const Text(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (items.isEmpty)
+            const Text(
               'Закреплённого инструмента нет',
               style: TextStyle(color: AppColors.n400),
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final t in items)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.circle, size: 6, color: AppColors.n300),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            t.serial == null || t.serial!.isEmpty
-                                ? t.name
-                                : '${t.name} · ${t.serial}',
-                            style: const TextStyle(color: AppColors.n900),
-                          ),
-                        ),
-                      ],
+          else
+            for (final t in items)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.circle, size: 6, color: AppColors.n300),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        t.serial == null || t.serial!.isEmpty
+                            ? t.name
+                            : '${t.name} · ${t.serial}',
+                        style: const TextStyle(color: AppColors.n900),
+                      ),
                     ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
+          const SizedBox(height: AppSpacing.x12),
+          // NEWFIX-2 §9.2 — точка входа выдачи инструмента сотруднику.
+          _AssignToolButton(employeeUserId: employeeUserId),
+        ],
+      ),
+    );
+  }
+}
+
+/// Кнопка «+ Выдать инструмент» — открывает sheet «Мои инструменты» и
+/// после выбора вызывает POST /tools/:id/assign-to-employee. После выдачи
+/// инвалидируем агрегат, чтобы список «Инструмент за сотрудником» обновился.
+class _AssignToolButton extends ConsumerWidget {
+  const _AssignToolButton({required this.employeeUserId});
+  final String employeeUserId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Выдать инструмент'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.brand,
+          side: BorderSide(color: AppColors.brand.withValues(alpha: 0.4)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.r12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () => _showAssignSheet(context, ref, employeeUserId),
+      ),
+    );
+  }
+}
+
+Future<void> _showAssignSheet(
+  BuildContext context,
+  WidgetRef ref,
+  String employeeUserId,
+) async {
+  await showAppBottomSheet<void>(
+    context: context,
+    child: _AssignToolSheet(employeeUserId: employeeUserId),
+  );
+}
+
+class _AssignToolSheet extends ConsumerWidget {
+  const _AssignToolSheet({required this.employeeUserId});
+  final String employeeUserId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(_myToolsForAssignProvider);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const AppBottomSheetHeader(title: 'Выдать инструмент'),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Не удалось загрузить: $e'),
+            ),
+            data: (tools) {
+              if (tools.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Свободных инструментов нет.\n'
+                    'Добавьте инструмент в «Мои инструменты» (Профиль).',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.n400),
+                  ),
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                itemCount: tools.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (_, i) {
+                  final t = tools[i];
+                  return Material(
+                    color: AppColors.n50,
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                      onTap: () async {
+                        Navigator.of(context).pop();
+                        final failure = await ref
+                            .read(
+                              // тут импорт tools controller внизу файла
+                              _myToolsCtrlProvider.notifier,
+                            )
+                            .assignToEmployee(
+                              toolId: t.id,
+                              employeeUserId: employeeUserId,
+                            );
+                        if (!context.mounted) return;
+                        if (failure != null) {
+                          AppToast.show(
+                            context,
+                            message: failure.userMessage,
+                            kind: AppToastKind.error,
+                          );
+                        } else {
+                          AppToast.show(
+                            context,
+                            message: 'Инструмент выдан',
+                            kind: AppToastKind.success,
+                          );
+                          // Перечитать профиль, чтобы список обновился.
+                          ref.invalidate(
+                            userProfileAggregateProvider(employeeUserId),
+                          );
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppColors.brandLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.build_outlined,
+                                color: AppColors.brand,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    t.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.n800,
+                                    ),
+                                  ),
+                                  if (t.serial != null && t.serial!.isNotEmpty)
+                                    Text(
+                                      'Серийный: ${t.serial}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.n500,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

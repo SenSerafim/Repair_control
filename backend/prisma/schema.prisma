@@ -380,6 +380,7 @@ model User {
   memberships     Membership[]
   invitationsSent ProjectInvitation[] @relation("InvitationInvitedBy")
   subscriptions   Subscription[]
+  assignedTools   ToolItem[]          @relation("ToolAssignedEmployee")
 
   @@index([deletedAt])
 }
@@ -1039,26 +1040,45 @@ model SelfPurchase {
 //   • `ToolCustodyEvent` — иммутабельный лог передач (история).
 //   • `projectId` — если задан, инструмент видим всем участникам проекта.
 
+enum ToolStatus {
+  in_storage
+  on_project
+  with_employee
+}
+
 model ToolItem {
   id              String   @id @default(cuid())
   ownerId         String
   /// У кого инструмент сейчас. При создании = ownerId. Меняется только через self-claim.
   currentHolderId String
   name            String
+  /// Артикул производителя (NEWFIX-2 §7.1) — нужен для общей базы по моделям.
+  article         String?
   photoKey        String?
   /// Серийный/инвентарный номер инструмента (опциональный, свободный текст).
   serial          String?
+  /// NEWFIX-2 §7.1 — формальный статус (in_storage / on_project / with_employee).
+  /// Связан с projectId / assignedEmployeeId, но хранится отдельно как явный признак.
+  status          ToolStatus @default(in_storage)
+  /// Свободный текст: «Склад №1», адрес, «Гараж». Заполняется при status=in_storage.
+  storageLocation String?
   /// Если задан — инструмент привязан к проекту и видим всем его участникам.
   /// Если null — инструмент только в личном профиле владельца (My Tools).
   projectId       String?
+  /// NEWFIX-2 §9 — инструмент «ездит» с сотрудником. Заполняется при
+  /// status=with_employee. При уходе сотрудника из команды FK SET NULL.
+  assignedEmployeeId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   custodyEvents ToolCustodyEvent[]
+  assignedEmployee User? @relation("ToolAssignedEmployee", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
 
   @@index([ownerId])
   @@index([projectId])
   @@index([currentHolderId])
+  @@index([status])
+  @@index([assignedEmployeeId])
 }
 
 model ToolCustodyEvent {

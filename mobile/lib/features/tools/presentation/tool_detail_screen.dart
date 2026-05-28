@@ -265,9 +265,21 @@ class _InfoCard extends StatelessWidget {
             label: 'Владелец',
             value: tool.owner?.displayName ?? '—',
           ),
+          if (tool.article != null && tool.article!.isNotEmpty) ...[
+            const _Divider(),
+            _DetailRow(label: 'Артикул', value: tool.article!),
+          ],
           if (tool.serial != null && tool.serial!.isNotEmpty) ...[
             const _Divider(),
             _DetailRow(label: 'Серийный №', value: tool.serial!),
+          ],
+          const _Divider(),
+          _DetailRow(label: 'Статус', value: tool.status.displayName),
+          if (tool.status == ToolStatus.inStorage &&
+              tool.storageLocation != null &&
+              tool.storageLocation!.isNotEmpty) ...[
+            const _Divider(),
+            _DetailRow(label: 'Место', value: tool.storageLocation!),
           ],
           const _Divider(),
           _DetailRow(label: 'Добавлен', value: df.format(tool.createdAt)),

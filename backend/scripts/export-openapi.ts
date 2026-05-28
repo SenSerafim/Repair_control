@@ -36,9 +36,13 @@ async function main(): Promise<void> {
         'S19+ (NEWFIX, роль «Заказчик»): расширение FSM заявок (частичная/полная ' +
         'приёмка), фото и дедлайн позиций, PDF-экспорт заявки, cron для overdue. ' +
         'E11 (2.1.0): заметки проекта с аудио — поля kind/audioKey/audioMimeType/' +
-        'audioDurationMs + transcript-задел для варианта B (фоновый STT).',
+        'audioDurationMs + transcript-задел для варианта B (фоновый STT). ' +
+        'E12/E13 (2.2.0): инструменты — артикул, статус (in_storage/on_project/' +
+        'with_employee), storageLocation, assignedEmployeeId; новый эндпоинт ' +
+        '/tools/:id/assign-to-employee; query search/status на /me/tools; ' +
+        'responsibleUserId в attach + блокировка дублей §8.4.',
     )
-    .setVersion('2.1.0')
+    .setVersion('2.2.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swagger);

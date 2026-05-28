@@ -38,14 +38,22 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
 
   Future<AuthFailure?> create({
     required String name,
+    String? article,
     String? photoKey,
     String? serial,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
   }) async {
     try {
       final t = await _repo.createMyTool(
         name: name,
+        article: article,
         photoKey: photoKey,
         serial: serial,
+        status: status,
+        storageLocation: storageLocation,
+        assignedEmployeeId: assignedEmployeeId,
       );
       _upsert(t);
       return null;
@@ -57,15 +65,23 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
   Future<AuthFailure?> saveUpdate({
     required String id,
     String? name,
+    String? article,
     String? serial,
     String? photoKey,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
   }) async {
     try {
       final t = await _repo.updateTool(
         id: id,
         name: name,
+        article: article,
         serial: serial,
         photoKey: photoKey,
+        status: status,
+        storageLocation: storageLocation,
+        assignedEmployeeId: assignedEmployeeId,
       );
       _upsert(t);
       return null;
@@ -84,7 +100,35 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
       return e.failure;
     }
   }
+
+  /// NEWFIX-2 §9 — выдать инструмент сотруднику (с точки входа из user_profile).
+  Future<AuthFailure?> assignToEmployee({
+    required String toolId,
+    required String employeeUserId,
+  }) async {
+    try {
+      final t = await _repo.assignToEmployee(
+        toolId: toolId,
+        employeeUserId: employeeUserId,
+      );
+      _upsert(t);
+      return null;
+    } on ToolsException catch (e) {
+      return e.failure;
+    }
+  }
 }
+
+/// NEWFIX-2 §7.2 — отфильтрованный список «Моих инструментов».
+final filteredMyToolsProvider =
+    FutureProvider.autoDispose.family<List<ToolItem>, ({String? search, ToolStatus? status})>((ref, args) {
+  // Watch myToolsProvider, чтобы при create/update/delete фильтрованный
+  // список тоже инвалидировался автоматически.
+  ref.watch(myToolsProvider);
+  return ref
+      .read(toolsRepositoryProvider)
+      .myTools(search: args.search, status: args.status);
+});
 
 /// Один инструмент по id (для tool detail / редактирования).
 final toolDetailProvider = FutureProvider.family<ToolItem, String>((ref, id) {
@@ -159,6 +203,7 @@ class ProjectToolsBoardController
   Future<AuthFailure?> createInProject({
     required String name,
     String? ownerId,
+    String? article,
     String? photoKey,
     String? serial,
   }) async {
@@ -167,6 +212,7 @@ class ProjectToolsBoardController
         projectId: arg,
         name: name,
         ownerId: ownerId,
+        article: article,
         photoKey: photoKey,
         serial: serial,
       );
@@ -178,11 +224,16 @@ class ProjectToolsBoardController
   }
 
   /// Bulk attach «из моих инструментов в проект».
-  Future<AuthFailure?> attachFromMy(List<String> toolItemIds) async {
+  /// NEWFIX-2 §8.3 — `responsibleUserId` опционален; default = бригадир.
+  Future<AuthFailure?> attachFromMy(
+    List<String> toolItemIds, {
+    String? responsibleUserId,
+  }) async {
     try {
       final added = await _repo.attachFromMy(
         projectId: arg,
         toolItemIds: toolItemIds,
+        responsibleUserId: responsibleUserId,
       );
       for (final t in added) {
         _upsert(t);

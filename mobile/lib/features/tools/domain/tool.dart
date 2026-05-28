@@ -66,14 +66,56 @@ class PublicUser {
   int get hashCode => Object.hash(id, firstName, lastName, phone, avatarUrl);
 }
 
+/// NEWFIX-2 §7.1 — формальный статус инструмента.
+enum ToolStatus {
+  inStorage,
+  onProject,
+  withEmployee;
+
+  String get apiValue => switch (this) {
+    ToolStatus.inStorage => 'in_storage',
+    ToolStatus.onProject => 'on_project',
+    ToolStatus.withEmployee => 'with_employee',
+  };
+
+  static ToolStatus fromString(String? raw) {
+    switch (raw) {
+      case 'on_project':
+        return ToolStatus.onProject;
+      case 'with_employee':
+        return ToolStatus.withEmployee;
+      case 'in_storage':
+      default:
+        return ToolStatus.inStorage;
+    }
+  }
+
+  String get displayName => switch (this) {
+    ToolStatus.inStorage => 'На складе',
+    ToolStatus.onProject => 'На объекте',
+    ToolStatus.withEmployee => 'У сотрудника',
+  };
+
+  /// Короткая форма для фильтр-чипа: «Склад», «Объект», «У сотр.»
+  String get filterChipLabel => switch (this) {
+    ToolStatus.inStorage => 'На складе',
+    ToolStatus.onProject => 'На объекте',
+    ToolStatus.withEmployee => 'У сотр.',
+  };
+}
+
 class ToolItem {
   const ToolItem({
     required this.id,
     required this.ownerId,
     required this.currentHolderId,
     required this.name,
+    this.article,
     this.photoKey,
     this.serial,
+    this.status = ToolStatus.inStorage,
+    this.storageLocation,
+    this.assignedEmployeeId,
     this.projectId,
     this.owner,
     this.holder,
@@ -87,8 +129,20 @@ class ToolItem {
   /// У кого инструмент сейчас. Меняется только через self-claim.
   final String currentHolderId;
   final String name;
+
+  /// NEWFIX-2 §7.1 — артикул производителя.
+  final String? article;
   final String? photoKey;
   final String? serial;
+
+  /// NEWFIX-2 §7.1 — формальный статус.
+  final ToolStatus status;
+
+  /// Свободный текст склада/гаража (для status=in_storage).
+  final String? storageLocation;
+
+  /// ID сотрудника, за которым закреплён (для status=with_employee).
+  final String? assignedEmployeeId;
 
   /// Если задан — инструмент привязан к проекту и виден всем участникам.
   /// null — инструмент только в личном профиле владельца (My Tools).
@@ -107,9 +161,13 @@ class ToolItem {
 
   ToolItem copyWith({
     String? name,
+    String? article,
     String? currentHolderId,
     String? photoKey,
     String? serial,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
     String? projectId,
     PublicUser? owner,
     PublicUser? holder,
@@ -119,8 +177,12 @@ class ToolItem {
     ownerId: ownerId,
     currentHolderId: currentHolderId ?? this.currentHolderId,
     name: name ?? this.name,
+    article: article ?? this.article,
     photoKey: photoKey ?? this.photoKey,
     serial: serial ?? this.serial,
+    status: status ?? this.status,
+    storageLocation: storageLocation ?? this.storageLocation,
+    assignedEmployeeId: assignedEmployeeId ?? this.assignedEmployeeId,
     projectId: projectId ?? this.projectId,
     owner: owner ?? this.owner,
     holder: holder ?? this.holder,
@@ -134,8 +196,12 @@ class ToolItem {
     currentHolderId:
         json['currentHolderId'] as String? ?? json['ownerId'] as String? ?? '',
     name: json['name'] as String,
+    article: json['article'] as String?,
     photoKey: json['photoKey'] as String?,
     serial: json['serial'] as String?,
+    status: ToolStatus.fromString(json['status'] as String?),
+    storageLocation: json['storageLocation'] as String?,
+    assignedEmployeeId: json['assignedEmployeeId'] as String?,
     projectId: json['projectId'] as String?,
     owner: PublicUser.parseOrNull(json['_owner'] as Map<String, dynamic>?),
     holder: PublicUser.parseOrNull(json['_holder'] as Map<String, dynamic>?),

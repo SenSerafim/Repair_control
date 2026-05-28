@@ -6047,7 +6047,7 @@
   "info": {
     "title": "Repair Control API",
     "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта Cluster A; v1.2 (S18) — Knowledge Base, Legal PDF publications, контакты поддержки, broadcast по платформе; v1.2.1 — общая папка документов (description/documentDate, любые типы файлов 200MB, delete только заказчик+rep.canEditStages); v1.3.0 — упрощённый FSM материалов: enum MaterialRequestStatus теряет draft/partially_bought, получает pending_approval; удалены endpoints /materials/:id/send и /materials/:id/finalize (последняя купленная позиция автоматически переводит заявку в bought и тратит бюджет один раз); единственная точка создания заявки — POST /projects/:id/materials (foreman/master → pending_approval + Approval material_purchase, customer-owner/representative.canApprove → сразу open); confirm-delivery доступен любому активному участнику проекта. v1.4.0 — упрощённый FSM платежей: enum PaymentStatus удалён (платёж = факт передачи денег), удалены endpoints /payments/:id/{confirm,cancel,dispute,resolve}, удалены модель PaymentDispute и scope payment_dispute, удалены notification kinds payment_{confirmed,disputed,resolved,dispute_requested}; бюджет = sum(advance.amount) — distributions не уменьшают бюджет повторно.",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "contact": {}
   },
   "tags": [],

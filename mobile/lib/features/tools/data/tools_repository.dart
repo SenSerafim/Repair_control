@@ -30,22 +30,41 @@ class ToolsRepository {
 
   // ─────────── My Tools (профиль) ───────────
 
-  Future<List<ToolItem>> myTools() => _call(() async {
-    final r = await _dio.get<List<dynamic>>('/api/me/tools');
-    return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
-  });
+  /// NEWFIX-2 §7.2 — поддержка search/filter на бэке.
+  Future<List<ToolItem>> myTools({String? search, ToolStatus? status}) =>
+      _call(() async {
+        final r = await _dio.get<List<dynamic>>(
+          '/api/me/tools',
+          queryParameters: {
+            if (search != null && search.isNotEmpty) 'search': search,
+            if (status != null) 'status': status.apiValue,
+          },
+        );
+        return r.data!
+            .map((e) => ToolItem.parse(e as Map<String, dynamic>))
+            .toList();
+      });
 
   Future<ToolItem> createMyTool({
     required String name,
+    String? article,
     String? photoKey,
     String? serial,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/me/tools',
       data: {
         'name': name,
+        if (article != null && article.isNotEmpty) 'article': article,
         if (photoKey != null) 'photoKey': photoKey,
         if (serial != null && serial.isNotEmpty) 'serial': serial,
+        if (status != null) 'status': status.apiValue,
+        if (storageLocation != null && storageLocation.isNotEmpty)
+          'storageLocation': storageLocation,
+        if (assignedEmployeeId != null) 'assignedEmployeeId': assignedEmployeeId,
       },
     );
     return ToolItem.parse(r.data!);
@@ -54,16 +73,36 @@ class ToolsRepository {
   Future<ToolItem> updateTool({
     required String id,
     String? name,
+    String? article,
     String? photoKey,
     String? serial,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
   }) => _call(() async {
     final r = await _dio.patch<Map<String, dynamic>>(
       '/api/tools/$id',
       data: {
         if (name != null) 'name': name,
+        if (article != null) 'article': article,
         if (photoKey != null) 'photoKey': photoKey,
         if (serial != null) 'serial': serial,
+        if (status != null) 'status': status.apiValue,
+        if (storageLocation != null) 'storageLocation': storageLocation,
+        if (assignedEmployeeId != null) 'assignedEmployeeId': assignedEmployeeId,
       },
+    );
+    return ToolItem.parse(r.data!);
+  });
+
+  /// NEWFIX-2 §9 — выдать инструмент конкретному сотруднику.
+  Future<ToolItem> assignToEmployee({
+    required String toolId,
+    required String employeeUserId,
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/tools/$toolId/assign-to-employee',
+      data: {'employeeUserId': employeeUserId},
     );
     return ToolItem.parse(r.data!);
   });
@@ -90,6 +129,7 @@ class ToolsRepository {
     required String projectId,
     required String name,
     String? ownerId,
+    String? article,
     String? photoKey,
     String? serial,
   }) => _call(() async {
@@ -98,6 +138,7 @@ class ToolsRepository {
       data: {
         'name': name,
         if (ownerId != null) 'ownerId': ownerId,
+        if (article != null && article.isNotEmpty) 'article': article,
         if (photoKey != null) 'photoKey': photoKey,
         if (serial != null && serial.isNotEmpty) 'serial': serial,
       },
@@ -106,13 +147,18 @@ class ToolsRepository {
   });
 
   /// Bulk attach — добавить инструменты из «Моих» в проект.
+  /// NEWFIX-2 §8.3 — `responsibleUserId` опционален; на бэке default = бригадир.
   Future<List<ToolItem>> attachFromMy({
     required String projectId,
     required List<String> toolItemIds,
+    String? responsibleUserId,
   }) => _call(() async {
     final r = await _dio.post<List<dynamic>>(
       '/api/projects/$projectId/tools/attach',
-      data: {'toolItemIds': toolItemIds},
+      data: {
+        'toolItemIds': toolItemIds,
+        if (responsibleUserId != null) 'responsibleUserId': responsibleUserId,
+      },
     );
     return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
   });
