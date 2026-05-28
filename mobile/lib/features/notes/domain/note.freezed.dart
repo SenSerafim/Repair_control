@@ -19,11 +19,19 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$Note {
   String get id => throw _privateConstructorUsedError;
   NoteScope get scope => throw _privateConstructorUsedError;
+  NoteKind get kind => throw _privateConstructorUsedError;
   String get authorId => throw _privateConstructorUsedError;
   String? get addresseeId => throw _privateConstructorUsedError;
   String? get projectId => throw _privateConstructorUsedError;
   String? get stageId => throw _privateConstructorUsedError;
-  String get text => throw _privateConstructorUsedError;
+  String? get text => throw _privateConstructorUsedError;
+  String? get audioKey => throw _privateConstructorUsedError;
+  String? get audioMimeType => throw _privateConstructorUsedError;
+  int? get audioDurationMs => throw _privateConstructorUsedError;
+  String? get audioUrl => throw _privateConstructorUsedError;
+  String? get transcript => throw _privateConstructorUsedError;
+  TranscriptStatus? get transcriptStatus => throw _privateConstructorUsedError;
+  String? get transcriptProvider => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
@@ -41,11 +49,19 @@ abstract class $NoteCopyWith<$Res> {
   $Res call({
     String id,
     NoteScope scope,
+    NoteKind kind,
     String authorId,
     String? addresseeId,
     String? projectId,
     String? stageId,
-    String text,
+    String? text,
+    String? audioKey,
+    String? audioMimeType,
+    int? audioDurationMs,
+    String? audioUrl,
+    String? transcript,
+    TranscriptStatus? transcriptStatus,
+    String? transcriptProvider,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -68,11 +84,19 @@ class _$NoteCopyWithImpl<$Res, $Val extends Note>
   $Res call({
     Object? id = null,
     Object? scope = null,
+    Object? kind = null,
     Object? authorId = null,
     Object? addresseeId = freezed,
     Object? projectId = freezed,
     Object? stageId = freezed,
-    Object? text = null,
+    Object? text = freezed,
+    Object? audioKey = freezed,
+    Object? audioMimeType = freezed,
+    Object? audioDurationMs = freezed,
+    Object? audioUrl = freezed,
+    Object? transcript = freezed,
+    Object? transcriptStatus = freezed,
+    Object? transcriptProvider = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -86,6 +110,10 @@ class _$NoteCopyWithImpl<$Res, $Val extends Note>
                 ? _value.scope
                 : scope // ignore: cast_nullable_to_non_nullable
                       as NoteScope,
+            kind: null == kind
+                ? _value.kind
+                : kind // ignore: cast_nullable_to_non_nullable
+                      as NoteKind,
             authorId: null == authorId
                 ? _value.authorId
                 : authorId // ignore: cast_nullable_to_non_nullable
@@ -102,10 +130,38 @@ class _$NoteCopyWithImpl<$Res, $Val extends Note>
                 ? _value.stageId
                 : stageId // ignore: cast_nullable_to_non_nullable
                       as String?,
-            text: null == text
+            text: freezed == text
                 ? _value.text
                 : text // ignore: cast_nullable_to_non_nullable
-                      as String,
+                      as String?,
+            audioKey: freezed == audioKey
+                ? _value.audioKey
+                : audioKey // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            audioMimeType: freezed == audioMimeType
+                ? _value.audioMimeType
+                : audioMimeType // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            audioDurationMs: freezed == audioDurationMs
+                ? _value.audioDurationMs
+                : audioDurationMs // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            audioUrl: freezed == audioUrl
+                ? _value.audioUrl
+                : audioUrl // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            transcript: freezed == transcript
+                ? _value.transcript
+                : transcript // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            transcriptStatus: freezed == transcriptStatus
+                ? _value.transcriptStatus
+                : transcriptStatus // ignore: cast_nullable_to_non_nullable
+                      as TranscriptStatus?,
+            transcriptProvider: freezed == transcriptProvider
+                ? _value.transcriptProvider
+                : transcriptProvider // ignore: cast_nullable_to_non_nullable
+                      as String?,
             createdAt: null == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -131,11 +187,19 @@ abstract class _$$NoteImplCopyWith<$Res> implements $NoteCopyWith<$Res> {
   $Res call({
     String id,
     NoteScope scope,
+    NoteKind kind,
     String authorId,
     String? addresseeId,
     String? projectId,
     String? stageId,
-    String text,
+    String? text,
+    String? audioKey,
+    String? audioMimeType,
+    int? audioDurationMs,
+    String? audioUrl,
+    String? transcript,
+    TranscriptStatus? transcriptStatus,
+    String? transcriptProvider,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -155,11 +219,19 @@ class __$$NoteImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? scope = null,
+    Object? kind = null,
     Object? authorId = null,
     Object? addresseeId = freezed,
     Object? projectId = freezed,
     Object? stageId = freezed,
-    Object? text = null,
+    Object? text = freezed,
+    Object? audioKey = freezed,
+    Object? audioMimeType = freezed,
+    Object? audioDurationMs = freezed,
+    Object? audioUrl = freezed,
+    Object? transcript = freezed,
+    Object? transcriptStatus = freezed,
+    Object? transcriptProvider = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -173,6 +245,10 @@ class __$$NoteImplCopyWithImpl<$Res>
             ? _value.scope
             : scope // ignore: cast_nullable_to_non_nullable
                   as NoteScope,
+        kind: null == kind
+            ? _value.kind
+            : kind // ignore: cast_nullable_to_non_nullable
+                  as NoteKind,
         authorId: null == authorId
             ? _value.authorId
             : authorId // ignore: cast_nullable_to_non_nullable
@@ -189,10 +265,38 @@ class __$$NoteImplCopyWithImpl<$Res>
             ? _value.stageId
             : stageId // ignore: cast_nullable_to_non_nullable
                   as String?,
-        text: null == text
+        text: freezed == text
             ? _value.text
             : text // ignore: cast_nullable_to_non_nullable
-                  as String,
+                  as String?,
+        audioKey: freezed == audioKey
+            ? _value.audioKey
+            : audioKey // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        audioMimeType: freezed == audioMimeType
+            ? _value.audioMimeType
+            : audioMimeType // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        audioDurationMs: freezed == audioDurationMs
+            ? _value.audioDurationMs
+            : audioDurationMs // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        audioUrl: freezed == audioUrl
+            ? _value.audioUrl
+            : audioUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        transcript: freezed == transcript
+            ? _value.transcript
+            : transcript // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        transcriptStatus: freezed == transcriptStatus
+            ? _value.transcriptStatus
+            : transcriptStatus // ignore: cast_nullable_to_non_nullable
+                  as TranscriptStatus?,
+        transcriptProvider: freezed == transcriptProvider
+            ? _value.transcriptProvider
+            : transcriptProvider // ignore: cast_nullable_to_non_nullable
+                  as String?,
         createdAt: null == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -212,11 +316,19 @@ class _$NoteImpl implements _Note {
   const _$NoteImpl({
     required this.id,
     required this.scope,
+    required this.kind,
     required this.authorId,
     this.addresseeId,
     this.projectId,
     this.stageId,
-    required this.text,
+    this.text,
+    this.audioKey,
+    this.audioMimeType,
+    this.audioDurationMs,
+    this.audioUrl,
+    this.transcript,
+    this.transcriptStatus,
+    this.transcriptProvider,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -226,6 +338,8 @@ class _$NoteImpl implements _Note {
   @override
   final NoteScope scope;
   @override
+  final NoteKind kind;
+  @override
   final String authorId;
   @override
   final String? addresseeId;
@@ -234,7 +348,21 @@ class _$NoteImpl implements _Note {
   @override
   final String? stageId;
   @override
-  final String text;
+  final String? text;
+  @override
+  final String? audioKey;
+  @override
+  final String? audioMimeType;
+  @override
+  final int? audioDurationMs;
+  @override
+  final String? audioUrl;
+  @override
+  final String? transcript;
+  @override
+  final TranscriptStatus? transcriptStatus;
+  @override
+  final String? transcriptProvider;
   @override
   final DateTime createdAt;
   @override
@@ -242,7 +370,7 @@ class _$NoteImpl implements _Note {
 
   @override
   String toString() {
-    return 'Note(id: $id, scope: $scope, authorId: $authorId, addresseeId: $addresseeId, projectId: $projectId, stageId: $stageId, text: $text, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Note(id: $id, scope: $scope, kind: $kind, authorId: $authorId, addresseeId: $addresseeId, projectId: $projectId, stageId: $stageId, text: $text, audioKey: $audioKey, audioMimeType: $audioMimeType, audioDurationMs: $audioDurationMs, audioUrl: $audioUrl, transcript: $transcript, transcriptStatus: $transcriptStatus, transcriptProvider: $transcriptProvider, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -252,6 +380,7 @@ class _$NoteImpl implements _Note {
             other is _$NoteImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.scope, scope) || other.scope == scope) &&
+            (identical(other.kind, kind) || other.kind == kind) &&
             (identical(other.authorId, authorId) ||
                 other.authorId == authorId) &&
             (identical(other.addresseeId, addresseeId) ||
@@ -260,6 +389,20 @@ class _$NoteImpl implements _Note {
                 other.projectId == projectId) &&
             (identical(other.stageId, stageId) || other.stageId == stageId) &&
             (identical(other.text, text) || other.text == text) &&
+            (identical(other.audioKey, audioKey) ||
+                other.audioKey == audioKey) &&
+            (identical(other.audioMimeType, audioMimeType) ||
+                other.audioMimeType == audioMimeType) &&
+            (identical(other.audioDurationMs, audioDurationMs) ||
+                other.audioDurationMs == audioDurationMs) &&
+            (identical(other.audioUrl, audioUrl) ||
+                other.audioUrl == audioUrl) &&
+            (identical(other.transcript, transcript) ||
+                other.transcript == transcript) &&
+            (identical(other.transcriptStatus, transcriptStatus) ||
+                other.transcriptStatus == transcriptStatus) &&
+            (identical(other.transcriptProvider, transcriptProvider) ||
+                other.transcriptProvider == transcriptProvider) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -271,11 +414,19 @@ class _$NoteImpl implements _Note {
     runtimeType,
     id,
     scope,
+    kind,
     authorId,
     addresseeId,
     projectId,
     stageId,
     text,
+    audioKey,
+    audioMimeType,
+    audioDurationMs,
+    audioUrl,
+    transcript,
+    transcriptStatus,
+    transcriptProvider,
     createdAt,
     updatedAt,
   );
@@ -293,11 +444,19 @@ abstract class _Note implements Note {
   const factory _Note({
     required final String id,
     required final NoteScope scope,
+    required final NoteKind kind,
     required final String authorId,
     final String? addresseeId,
     final String? projectId,
     final String? stageId,
-    required final String text,
+    final String? text,
+    final String? audioKey,
+    final String? audioMimeType,
+    final int? audioDurationMs,
+    final String? audioUrl,
+    final String? transcript,
+    final TranscriptStatus? transcriptStatus,
+    final String? transcriptProvider,
     required final DateTime createdAt,
     required final DateTime updatedAt,
   }) = _$NoteImpl;
@@ -307,6 +466,8 @@ abstract class _Note implements Note {
   @override
   NoteScope get scope;
   @override
+  NoteKind get kind;
+  @override
   String get authorId;
   @override
   String? get addresseeId;
@@ -315,7 +476,21 @@ abstract class _Note implements Note {
   @override
   String? get stageId;
   @override
-  String get text;
+  String? get text;
+  @override
+  String? get audioKey;
+  @override
+  String? get audioMimeType;
+  @override
+  int? get audioDurationMs;
+  @override
+  String? get audioUrl;
+  @override
+  String? get transcript;
+  @override
+  TranscriptStatus? get transcriptStatus;
+  @override
+  String? get transcriptProvider;
   @override
   DateTime get createdAt;
   @override

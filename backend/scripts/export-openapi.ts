@@ -32,11 +32,13 @@ async function main(): Promise<void> {
   const swagger = new DocumentBuilder()
     .setTitle('Repair Control API')
     .setDescription(
-      'OpenAPI v2.0-draft контракт. Источник истины для Flutter retrofit-клиентов. ' +
+      'OpenAPI v2.x-draft контракт. Источник истины для Flutter retrofit-клиентов. ' +
         'S19+ (NEWFIX, роль «Заказчик»): расширение FSM заявок (частичная/полная ' +
-        'приёмка), фото и дедлайн позиций, PDF-экспорт заявки, cron для overdue.',
+        'приёмка), фото и дедлайн позиций, PDF-экспорт заявки, cron для overdue. ' +
+        'E11 (2.1.0): заметки проекта с аудио — поля kind/audioKey/audioMimeType/' +
+        'audioDurationMs + transcript-задел для варианта B (фоновый STT).',
     )
-    .setVersion('2.0.0')
+    .setVersion('2.1.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swagger);

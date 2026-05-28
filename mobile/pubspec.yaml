@@ -85,6 +85,10 @@ dependencies:
   video_player: ^2.9.2
   chewie: ^1.10.0
 
+  # E11: voice notes — record + playback
+  record: ^5.1.2
+  just_audio: ^0.9.40
+
   # Monitoring
   sentry_flutter: ^8.14.0
   logger: ^2.5.0

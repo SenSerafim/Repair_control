@@ -397,6 +397,34 @@
         ]
       }
     },
+    "/api/users/{id}/profile-aggregate": {
+      "get": {
+        "operationId": "UserProfileController_aggregate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "users"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/projects": {
       "post": {
         "operationId": "ProjectsController_create",
@@ -1649,6 +1677,265 @@
         },
         "tags": [
           "chats"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/feed": {
+      "get": {
+        "operationId": "ExportsController_listFeed",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "stageId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "feed-exports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/feed/pdf": {
+      "get": {
+        "operationId": "FeedController_exportPdf",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "feed"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/exports": {
+      "post": {
+        "operationId": "ExportsController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "feed-exports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ExportsController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "feed-exports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/exports/{id}": {
+      "get": {
+        "operationId": "ExportsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "feed-exports"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/exports/{id}/file": {
+      "get": {
+        "operationId": "ExportsController_streamFile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "feed-exports"
         ],
         "security": [
           {
@@ -2915,6 +3202,34 @@
         ]
       }
     },
+    "/api/materials/{id}/pdf": {
+      "get": {
+        "operationId": "MaterialsController_pdfForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "materials"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/materials/{id}/mark-delivered": {
       "post": {
         "operationId": "MaterialsController_markDelivered",
@@ -3716,6 +4031,20 @@
             }
           },
           {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "NEWFIX-2 §11.5 — фильтры экрана «Заметки проекта».",
+            "schema": {
+              "enum": [
+                "all",
+                "mine",
+                "team"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "stageId",
             "required": false,
             "in": "query",
@@ -3748,6 +4077,32 @@
       }
     },
     "/api/notes/{noteId}": {
+      "get": {
+        "operationId": "NotesController_getOne",
+        "parameters": [
+          {
+            "name": "noteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "notes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
       "patch": {
         "operationId": "NotesController_update",
         "parameters": [
@@ -4267,6 +4622,86 @@
         },
         "tags": [
           "methodology"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/expenses": {
+      "post": {
+        "operationId": "ExpensesController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExpenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "expenses"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ExpensesController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "expenses"
         ],
         "security": [
           {
@@ -5072,221 +5507,6 @@
         },
         "tags": [
           "notifications"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/projects/{projectId}/feed": {
-      "get": {
-        "operationId": "ExportsController_listFeed",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "kind",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          {
-            "name": "stageId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "dateFrom",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "dateTo",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "actorId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "feed-exports"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/projects/{projectId}/exports": {
-      "post": {
-        "operationId": "ExportsController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "idempotency-key",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateExportDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "feed-exports"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      },
-      "get": {
-        "operationId": "ExportsController_list",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "feed-exports"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/exports/{id}": {
-      "get": {
-        "operationId": "ExportsController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "feed-exports"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/exports/{id}/file": {
-      "get": {
-        "operationId": "ExportsController_streamFile",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "feed-exports"
         ],
         "security": [
           {
@@ -7652,7 +7872,7 @@
   "info": {
     "title": "Repair Control API",
     "description": "OpenAPI v2.0-draft контракт. Источник истины для Flutter retrofit-клиентов. S19+ (NEWFIX, роль «Заказчик»): расширение FSM заявок (частичная/полная приёмка), фото и дедлайн позиций, PDF-экспорт заявки, cron для overdue.",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "contact": {}
   },
   "tags": [],
@@ -7842,6 +8062,9 @@
               "contractor",
               "master"
             ]
+          },
+          "deviceId": {
+            "type": "string"
           }
         },
         "required": [
@@ -8167,6 +8390,38 @@
         },
         "required": [
           "messageId"
+        ]
+      },
+      "CreateExportDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "feed_pdf",
+              "project_zip",
+              "project_summary_txt",
+              "project_report_pdf"
+            ]
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "dateFrom": {
+            "type": "string"
+          },
+          "dateTo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
         ]
       },
       "CreateStageDto": {
@@ -8802,9 +9057,30 @@
             ],
             "description": "team_broadcast (П1.10/П2.19) — заметка для всей команды проекта."
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio"
+            ],
+            "description": "NEWFIX-2 §11.4. По умолчанию text. Для audio обязателен audioKey."
+          },
           "text": {
             "type": "string",
-            "maxLength": 5000
+            "maxLength": 5000,
+            "description": "Для kind=text — обязателен. Для kind=audio — опциональная подпись/caption."
+          },
+          "audioKey": {
+            "type": "string",
+            "description": "S3 key, полученный из POST /files/presign-upload (scope=notes/audio)."
+          },
+          "audioMimeType": {
+            "type": "string",
+            "description": "MIME аудио-файла, должен совпадать со значением при presign."
+          },
+          "audioDurationMs": {
+            "type": "number",
+            "description": "Длительность аудио в миллисекундах."
           },
           "addresseeId": {
             "type": "string"
@@ -8814,8 +9090,7 @@
           }
         },
         "required": [
-          "scope",
-          "text"
+          "scope"
         ]
       },
       "UpdateNoteDto": {
@@ -8823,7 +9098,8 @@
         "properties": {
           "text": {
             "type": "string",
-            "maxLength": 5000
+            "maxLength": 5000,
+            "description": "Для text-заметок — новый текст (1..5000). Для audio — caption (можно пустую строку)."
           }
         },
         "required": [
@@ -8915,6 +9191,42 @@
             "type": "number"
           }
         }
+      },
+      "CreateExpenseDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "materials",
+              "transport",
+              "rental",
+              "services",
+              "other"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number",
+            "description": "kopecks (int64)"
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "photoKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "name",
+          "amount"
+        ]
       },
       "CreateToolDto": {
         "type": "object",
@@ -9161,38 +9473,6 @@
         "required": [
           "kind",
           "pushEnabled"
-        ]
-      },
-      "CreateExportDto": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "feed_pdf",
-              "project_zip",
-              "project_summary_txt",
-              "project_report_pdf"
-            ]
-          },
-          "kinds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "stageId": {
-            "type": "string"
-          },
-          "dateFrom": {
-            "type": "string"
-          },
-          "dateTo": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind"
         ]
       },
       "CreateFeedbackDto": {

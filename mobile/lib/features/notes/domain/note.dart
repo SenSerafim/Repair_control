@@ -54,16 +54,67 @@ enum NoteScope {
   };
 }
 
+/// NEWFIX-2 §11.4 — формат заметки.
+enum NoteKind {
+  text,
+  audio;
+
+  String get apiValue => switch (this) {
+    NoteKind.text => 'text',
+    NoteKind.audio => 'audio',
+  };
+
+  static NoteKind fromString(String? raw) {
+    switch (raw) {
+      case 'audio':
+        return NoteKind.audio;
+      case 'text':
+      default:
+        return NoteKind.text;
+    }
+  }
+}
+
+/// Задел для варианта B (фоновый STT) — статус расшифровки голосовой заметки.
+/// Сейчас бекенд возвращает только `null` (вариант A); enum нужен для
+/// корректного парсинга, когда STT-pipeline появится.
+enum TranscriptStatus {
+  pending,
+  done,
+  failed;
+
+  static TranscriptStatus? fromString(String? raw) {
+    switch (raw) {
+      case 'pending':
+        return TranscriptStatus.pending;
+      case 'done':
+        return TranscriptStatus.done;
+      case 'failed':
+        return TranscriptStatus.failed;
+      default:
+        return null;
+    }
+  }
+}
+
 @freezed
 class Note with _$Note {
   const factory Note({
     required String id,
     required NoteScope scope,
+    required NoteKind kind,
     required String authorId,
     String? addresseeId,
     String? projectId,
     String? stageId,
-    required String text,
+    String? text,
+    String? audioKey,
+    String? audioMimeType,
+    int? audioDurationMs,
+    String? audioUrl,
+    String? transcript,
+    TranscriptStatus? transcriptStatus,
+    String? transcriptProvider,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _Note;
@@ -71,11 +122,21 @@ class Note with _$Note {
   static Note parse(Map<String, dynamic> json) => Note(
     id: json['id'] as String,
     scope: NoteScope.fromString(json['scope'] as String?),
+    kind: NoteKind.fromString(json['kind'] as String?),
     authorId: json['authorId'] as String? ?? '',
     addresseeId: json['addresseeId'] as String?,
     projectId: json['projectId'] as String?,
     stageId: json['stageId'] as String?,
-    text: json['text'] as String,
+    text: json['text'] as String?,
+    audioKey: json['audioKey'] as String?,
+    audioMimeType: json['audioMimeType'] as String?,
+    audioDurationMs: (json['audioDurationMs'] as num?)?.toInt(),
+    audioUrl: json['audioUrl'] as String?,
+    transcript: json['transcript'] as String?,
+    transcriptStatus: TranscriptStatus.fromString(
+      json['transcriptStatus'] as String?,
+    ),
+    transcriptProvider: json['transcriptProvider'] as String?,
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
   );

@@ -2677,6 +2677,20 @@
             }
           },
           {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "NEWFIX-2 §11.5 — фильтры экрана «Заметки проекта».",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "mine",
+                "team"
+              ]
+            }
+          },
+          {
             "name": "stageId",
             "required": false,
             "in": "query",
@@ -2709,6 +2723,32 @@
       }
     },
     "/api/notes/{noteId}": {
+      "get": {
+        "operationId": "NotesController_getOne",
+        "parameters": [
+          {
+            "name": "noteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "notes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
       "patch": {
         "operationId": "NotesController_update",
         "parameters": [
@@ -6007,7 +6047,7 @@
   "info": {
     "title": "Repair Control API",
     "description": "OpenAPI v1.x. v1.0 — основной контракт для Flutter retrofit-клиентов; v1.1 добавляет 3 эндпоинта Cluster A; v1.2 (S18) — Knowledge Base, Legal PDF publications, контакты поддержки, broadcast по платформе; v1.2.1 — общая папка документов (description/documentDate, любые типы файлов 200MB, delete только заказчик+rep.canEditStages); v1.3.0 — упрощённый FSM материалов: enum MaterialRequestStatus теряет draft/partially_bought, получает pending_approval; удалены endpoints /materials/:id/send и /materials/:id/finalize (последняя купленная позиция автоматически переводит заявку в bought и тратит бюджет один раз); единственная точка создания заявки — POST /projects/:id/materials (foreman/master → pending_approval + Approval material_purchase, customer-owner/representative.canApprove → сразу open); confirm-delivery доступен любому активному участнику проекта. v1.4.0 — упрощённый FSM платежей: enum PaymentStatus удалён (платёж = факт передачи денег), удалены endpoints /payments/:id/{confirm,cancel,dispute,resolve}, удалены модель PaymentDispute и scope payment_dispute, удалены notification kinds payment_{confirmed,disputed,resolved,dispute_requested}; бюджет = sum(advance.amount) — distributions не уменьшают бюджет повторно.",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "contact": {}
   },
   "tags": [],
@@ -6802,11 +6842,33 @@
               "for_me",
               "stage",
               "team_broadcast"
-            ]
+            ],
+            "description": "team_broadcast (П1.10/П2.19) — заметка для всей команды проекта."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio"
+            ],
+            "description": "NEWFIX-2 §11.4. По умолчанию text. Для audio обязателен audioKey."
           },
           "text": {
             "type": "string",
-            "maxLength": 5000
+            "maxLength": 5000,
+            "description": "Для kind=text — обязателен. Для kind=audio — опциональная подпись/caption."
+          },
+          "audioKey": {
+            "type": "string",
+            "description": "S3 key, полученный из POST /files/presign-upload (scope=notes/audio)."
+          },
+          "audioMimeType": {
+            "type": "string",
+            "description": "MIME аудио-файла, должен совпадать со значением при presign."
+          },
+          "audioDurationMs": {
+            "type": "number",
+            "description": "Длительность аудио в миллисекундах."
           },
           "addresseeId": {
             "type": "string"
@@ -6816,8 +6878,7 @@
           }
         },
         "required": [
-          "scope",
-          "text"
+          "scope"
         ]
       },
       "UpdateNoteDto": {
@@ -6825,7 +6886,8 @@
         "properties": {
           "text": {
             "type": "string",
-            "maxLength": 5000
+            "maxLength": 5000,
+            "description": "Для text-заметок — новый текст (1..5000). Для audio — caption (можно пустую строку)."
           }
         },
         "required": [

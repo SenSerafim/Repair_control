@@ -40,7 +40,11 @@ export class NotesController {
       projectId,
       authorId: req.user.userId,
       scope: dto.scope,
+      kind: dto.kind,
       text: dto.text,
+      audioKey: dto.audioKey,
+      audioMimeType: dto.audioMimeType,
+      audioDurationMs: dto.audioDurationMs,
       addresseeId: dto.addresseeId,
       stageId: dto.stageId,
     });
@@ -57,12 +61,19 @@ export class NotesController {
     required: false,
     enum: ['personal', 'for_me', 'stage', 'team_broadcast'],
   })
+  @ApiQuery({
+    name: 'filter',
+    required: false,
+    enum: ['all', 'mine', 'team'],
+    description: 'NEWFIX-2 §11.5 — фильтры экрана «Заметки проекта».',
+  })
   @ApiQuery({ name: 'stageId', required: false, type: String })
   @ApiQuery({ name: 'search', required: false, type: String })
   async list(
     @Req() req: { user: AuthenticatedUser },
     @Param('projectId') projectId: string,
     @Query('scope') scope?: 'personal' | 'for_me' | 'stage' | 'team_broadcast',
+    @Query('filter') filter?: 'all' | 'mine' | 'team',
     @Query('stageId') stageId?: string,
     @Query('search') search?: string,
   ) {
@@ -70,9 +81,15 @@ export class NotesController {
       userId: req.user.userId,
       projectId,
       scope,
+      filter,
       stageId,
       search,
     });
+  }
+
+  @Get('notes/:noteId')
+  async getOne(@Req() req: { user: AuthenticatedUser }, @Param('noteId') noteId: string) {
+    return this.notes.get(noteId, req.user.userId);
   }
 
   @Patch('notes/:noteId')

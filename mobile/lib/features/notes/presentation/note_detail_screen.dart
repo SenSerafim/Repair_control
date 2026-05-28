@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
@@ -169,9 +170,11 @@ class _Content extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lines = note.text.split('\n');
+    final text = note.text ?? '';
+    final lines = text.split('\n');
     final title = lines.first.trim();
     final body = lines.length > 1 ? lines.sublist(1).join('\n').trim() : '';
+    final hasText = text.isNotEmpty;
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -179,6 +182,23 @@ class _Content extends StatelessWidget {
           children: [
             AppRoleBadge(label: note.scope.displayName, tone: _badgeTone),
             const SizedBox(width: 8),
+            if (note.kind == NoteKind.audio) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.brandLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Голос',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.brand,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             Text(
               DateFormat('d MMMM · HH:mm', 'ru').format(note.createdAt),
               style: const TextStyle(
@@ -190,16 +210,24 @@ class _Content extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        Text(
-          title.isEmpty ? 'Заметка' : title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: AppColors.n900,
-            height: 1.3,
-            letterSpacing: -0.4,
+        if (note.kind == NoteKind.audio) ...[
+          _NoteDetailAudioPlayer(
+            url: note.audioUrl,
+            durationMs: note.audioDurationMs,
           ),
-        ),
+          const SizedBox(height: 18),
+        ],
+        if (hasText)
+          Text(
+            title.isEmpty ? 'Заметка' : title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+              height: 1.3,
+              letterSpacing: -0.4,
+            ),
+          ),
         if (body.isNotEmpty) ...[
           const SizedBox(height: 14),
           Text(
@@ -212,8 +240,156 @@ class _Content extends StatelessWidget {
             ),
           ),
         ],
+        if (!hasText && note.kind == NoteKind.audio)
+          Text(
+            'Голосовая заметка без подписи',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.n400,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
       ],
     );
+  }
+}
+
+/// Плеер с прогресс-баром для детального экрана. В будущем (вариант B) сюда
+/// добавится transcript-блок ниже плеера.
+class _NoteDetailAudioPlayer extends StatefulWidget {
+  const _NoteDetailAudioPlayer({required this.url, required this.durationMs});
+  final String? url;
+  final int? durationMs;
+
+  @override
+  State<_NoteDetailAudioPlayer> createState() => _NoteDetailAudioPlayerState();
+}
+
+class _NoteDetailAudioPlayerState extends State<_NoteDetailAudioPlayer> {
+  final _player = AudioPlayer();
+  bool _loaded = false;
+  bool _playing = false;
+  Duration _position = Duration.zero;
+  Duration? _total;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.durationMs != null) {
+      _total = Duration(milliseconds: widget.durationMs!);
+    }
+    _player.playerStateStream.listen((s) {
+      if (!mounted) return;
+      setState(() {
+        _playing =
+            s.playing && s.processingState != ProcessingState.completed;
+      });
+    });
+    _player.positionStream.listen((d) {
+      if (!mounted) return;
+      setState(() => _position = d);
+    });
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    final url = widget.url;
+    if (url == null) return;
+    if (!_loaded) {
+      try {
+        final d = await _player.setUrl(url);
+        _loaded = true;
+        if (d != null && _total == null && mounted) {
+          setState(() => _total = d);
+        }
+      } on Object {
+        if (!mounted) return;
+        AppToast.show(
+          context,
+          message: 'Не удалось загрузить аудио',
+          kind: AppToastKind.error,
+        );
+        return;
+      }
+    }
+    if (_playing) {
+      await _player.pause();
+    } else {
+      if (_player.processingState == ProcessingState.completed) {
+        await _player.seek(Duration.zero);
+      }
+      await _player.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _total ?? Duration.zero;
+    final progress = total.inMilliseconds == 0
+        ? 0.0
+        : (_position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x14),
+      decoration: BoxDecoration(
+        color: AppColors.brandLight,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: AppColors.brand,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: AppColors.n0,
+                size: 26,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: AppColors.n0,
+                    color: AppColors.brand,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${_fmt(_position)} / ${_fmt(total)}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.brand,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(1, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 }
 
@@ -230,7 +406,7 @@ class _EditNoteBody extends ConsumerStatefulWidget {
 
 class _EditNoteBodyState extends ConsumerState<_EditNoteBody> {
   late final TextEditingController _text = TextEditingController(
-    text: widget.note.text,
+    text: widget.note.text ?? '',
   );
   bool _submitting = false;
   String? _error;
@@ -243,11 +419,11 @@ class _EditNoteBodyState extends ConsumerState<_EditNoteBody> {
 
   Future<void> _submit() async {
     final value = _text.text.trim();
-    if (value.isEmpty) {
+    if (value.isEmpty && widget.note.kind == NoteKind.text) {
       setState(() => _error = 'Введите текст');
       return;
     }
-    if (value == widget.note.text) {
+    if (value == (widget.note.text ?? '')) {
       Navigator.of(context).pop();
       return;
     }
