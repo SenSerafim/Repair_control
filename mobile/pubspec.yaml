@@ -1,7 +1,7 @@
 name: repair_control
 description: "Repair Control — мобильное приложение для контроля ремонтных работ."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.8.0+8
 
 environment:
   sdk: ^3.11.4
@@ -92,6 +92,12 @@ dependencies:
   # Monitoring
   sentry_flutter: ^8.14.0
   logger: ^2.5.0
+
+dependency_overrides:
+  # record_linux 0.7.2 (resolved transitively) is incompatible with
+  # record_platform_interface 1.6.0 — Android build kernel snapshot
+  # fails compiling Linux impl. 1.3.1 matches the 1.5+ interface.
+  record_linux: 1.3.1
 
 dev_dependencies:
   flutter_test:
