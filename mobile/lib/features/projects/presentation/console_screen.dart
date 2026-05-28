@@ -14,6 +14,7 @@ import '../../approvals/application/approvals_controller.dart';
 import '../../chat/application/chats_controller.dart';
 import '../../finance/application/budget_controller.dart';
 import '../../finance/domain/budget.dart';
+import '../../notes/presentation/quick_note_sheet.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../stages/application/stages_controller.dart';
@@ -152,6 +153,11 @@ class _BodyState extends ConsumerState<_Body> {
           canInviteMember: canInviteMember,
           onAddMember: () => context.push('/projects/$projectId/team'),
           onMenu: () => showCardMenuSheet(context, ref, project: p),
+          onAddNote: () => showQuickNoteSheet(
+            context: context,
+            projectId: projectId,
+          ),
+          onOpenNotes: () => context.push('/projects/$projectId/notes'),
         ),
         Expanded(
           child: RefreshIndicator(
@@ -271,6 +277,8 @@ class _ConHeader extends StatelessWidget {
     required this.canInviteMember,
     required this.onAddMember,
     required this.onMenu,
+    required this.onAddNote,
+    required this.onOpenNotes,
   });
 
   final Project project;
@@ -278,6 +286,12 @@ class _ConHeader extends StatelessWidget {
   final bool canInviteMember;
   final VoidCallback onAddMember;
   final VoidCallback onMenu;
+
+  /// NEWFIX-2 §11.2 — иконка «Заметка» в шапке карточки проекта.
+  /// Короткий тап — модалка «Новая заметка». Долгий тап — открыть экран
+  /// «Заметки проекта» (§11.5).
+  final VoidCallback onAddNote;
+  final VoidCallback onOpenNotes;
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +333,17 @@ class _ConHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                 ],
+                // NEWFIX-2 §11.2 — точка входа в Заметки прямо из шапки.
+                // Долгий тап ведёт на экран «Заметки проекта», короткий —
+                // открывает быструю модалку создания.
+                GestureDetector(
+                  onLongPress: onOpenNotes,
+                  child: _IconShellBtn(
+                    icon: PhosphorIconsRegular.notepad,
+                    onTap: onAddNote,
+                  ),
+                ),
+                const SizedBox(width: 4),
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -1081,12 +1106,8 @@ class _NavSections extends ConsumerWidget {
     ];
 
     final docsAndFeed = <AppNavTileSpec>[
-      AppNavTileSpec(
-        icon: PhosphorIconsFill.notepad,
-        iconColor: AppColors.brand,
-        label: 'Заметки',
-        onTap: () => context.push('/projects/$projectId/notes'),
-      ),
+      // NEWFIX-2 §11.6 — плитка «Заметки» убрана: вход теперь через иконку
+      // в шапке проекта, дублирование в NavGrid не нужно.
       AppNavTileSpec(
         icon: PhosphorIconsFill.fileText,
         iconColor: AppColors.n700,

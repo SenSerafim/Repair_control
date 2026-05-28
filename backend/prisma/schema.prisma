@@ -67,6 +67,17 @@ enum NoteScope {
   team_broadcast
 }
 
+enum NoteKind {
+  text
+  audio
+}
+
+enum TranscriptStatus {
+  pending
+  done
+  failed
+}
+
 enum PaymentKind {
   advance
   distribution
@@ -694,20 +705,28 @@ model StepPhoto {
 // ---------- Notes / Questions ----------
 
 model Note {
-  id          String    @id @default(cuid())
-  scope       NoteScope
-  authorId    String
-  addresseeId String?
-  projectId   String?
-  stageId     String?
-  text        String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String            @id @default(cuid())
+  scope              NoteScope
+  authorId           String
+  addresseeId        String?
+  projectId          String?
+  stageId            String?
+  text               String?
+  kind               NoteKind          @default(text)
+  audioKey           String?
+  audioMimeType      String?
+  audioDurationMs    Int?
+  transcript         String?
+  transcriptStatus   TranscriptStatus?
+  transcriptProvider String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   @@index([authorId, scope, createdAt])
   @@index([addresseeId, scope])
   @@index([stageId])
   @@index([projectId])
+  @@index([kind])
 }
 
 model Question {

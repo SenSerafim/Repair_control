@@ -15,6 +15,15 @@ const ALLOWED = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'video/mp4',
   'video/quicktime',
+  // E11 — голосовые заметки (NEWFIX-2 §11.4)
+  'audio/mp4',
+  'audio/aac',
+  'audio/mpeg',
+  'audio/m4a',
+  'audio/x-m4a',
+  'audio/webm',
+  'audio/ogg',
+  'audio/wav',
 ];
 
 class PresignDto {

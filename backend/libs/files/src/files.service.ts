@@ -187,6 +187,20 @@ const extensionFromMime = (mime: string): string => {
       return '.mp4';
     case 'video/quicktime':
       return '.mov';
+    case 'audio/mp4':
+    case 'audio/m4a':
+    case 'audio/x-m4a':
+      return '.m4a';
+    case 'audio/aac':
+      return '.aac';
+    case 'audio/mpeg':
+      return '.mp3';
+    case 'audio/webm':
+      return '.webm';
+    case 'audio/ogg':
+      return '.ogg';
+    case 'audio/wav':
+      return '.wav';
     default:
       return '';
   }

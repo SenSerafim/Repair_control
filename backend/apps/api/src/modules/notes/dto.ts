@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 
 export class CreateNoteDto {
   @ApiProperty({
@@ -9,10 +9,45 @@ export class CreateNoteDto {
   @IsEnum(['personal', 'for_me', 'stage', 'team_broadcast'])
   scope!: 'personal' | 'for_me' | 'stage' | 'team_broadcast';
 
-  @ApiProperty({ maxLength: 5000 })
+  @ApiPropertyOptional({
+    enum: ['text', 'audio'],
+    description: 'NEWFIX-2 §11.4. По умолчанию text. Для audio обязателен audioKey.',
+  })
+  @IsOptional()
+  @IsEnum(['text', 'audio'])
+  kind?: 'text' | 'audio';
+
+  @ApiPropertyOptional({
+    maxLength: 5000,
+    description: 'Для kind=text — обязателен. Для kind=audio — опциональная подпись/caption.',
+  })
+  @IsOptional()
   @IsString()
-  @Length(1, 5000)
-  text!: string;
+  @Length(0, 5000)
+  text?: string;
+
+  @ApiPropertyOptional({
+    description: 'S3 key, полученный из POST /files/presign-upload (scope=notes/audio).',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(1, 500)
+  audioKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'MIME аудио-файла, должен совпадать со значением при presign.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  audioMimeType?: string;
+
+  @ApiPropertyOptional({ description: 'Длительность аудио в миллисекундах.' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(60 * 60 * 1000)
+  audioDurationMs?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -26,8 +61,12 @@ export class CreateNoteDto {
 }
 
 export class UpdateNoteDto {
-  @ApiProperty({ maxLength: 5000 })
+  @ApiProperty({
+    maxLength: 5000,
+    description:
+      'Для text-заметок — новый текст (1..5000). Для audio — caption (можно пустую строку).',
+  })
   @IsString()
-  @Length(1, 5000)
+  @Length(0, 5000)
   text!: string;
 }

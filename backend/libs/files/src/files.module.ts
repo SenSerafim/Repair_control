@@ -15,6 +15,22 @@ const DEFAULT_SCOPE_POLICIES: ScopePolicy[] = [
     maxSizeMb: 25,
   },
   {
+    // E11 — голосовые заметки на проекте (NEWFIX-2 §11.4). Лимит — 25 MB,
+    // что ≈ 25 минут в m4a/aac@128kbps; больше для quick-capture не нужно.
+    prefix: 'notes/audio/',
+    allowedMimes: [
+      'audio/mp4',
+      'audio/aac',
+      'audio/mpeg',
+      'audio/m4a',
+      'audio/x-m4a',
+      'audio/webm',
+      'audio/ogg',
+      'audio/wav',
+    ],
+    maxSizeMb: 25,
+  },
+  {
     // Общая папка документов проекта: пользователи кладут «любое» —
     // фото, видео, PDF, договоры, чеки. Удаление — только заказчик.
     prefix: 'docs/',

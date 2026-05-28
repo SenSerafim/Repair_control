@@ -19,13 +19,19 @@ class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
 
   Future<AuthFailure?> create({
     required NoteScope scope,
-    required String text,
+    NoteKind kind = NoteKind.text,
+    String? text,
+    String? audioKey,
+    String? audioMimeType,
+    int? audioDurationMs,
     String? addresseeId,
     String? stageId,
   }) async {
     final isOffline =
         ref.read(connectivityProvider).value == ConnectivityStatus.offline;
-    if (isOffline) {
+    if (isOffline && kind == NoteKind.text) {
+      // Аудио — отложенно не сохраняем: presign+PUT требуют сеть.
+      // Оффлайн-очередь раньше использовалась только для text, оставляем как было.
       await ref
           .read(offlineQueueProvider)
           .enqueue(
@@ -33,7 +39,7 @@ class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
             payload: {
               'projectId': arg,
               'scope': scope.apiValue,
-              'text': text,
+              'text': text ?? '',
               if (addresseeId != null) 'addresseeId': addresseeId,
               if (stageId != null) 'stageId': stageId,
             },
@@ -46,7 +52,11 @@ class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
           .create(
             projectId: arg,
             scope: scope,
+            kind: kind,
             text: text,
+            audioKey: audioKey,
+            audioMimeType: audioMimeType,
+            audioDurationMs: audioDurationMs,
             addresseeId: addresseeId,
             stageId: stageId,
           );
@@ -85,4 +95,26 @@ class NotesController extends FamilyAsyncNotifier<List<Note>, String> {
       return e.failure;
     }
   }
+
+  Future<void> reload() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(notesRepositoryProvider).list(projectId: arg),
+    );
+  }
 }
+
+/// NEWFIX-2 §11.5 — server-side фильтрация для нового ProjectNotesScreen.
+/// Возвращает плоский список Note под выбранным фильтром. При изменении
+/// notesControllerProvider (create/update/delete) — автоматически
+/// инвалидируется через watch.
+final projectNotesByFilterProvider = FutureProvider.autoDispose
+    .family<List<Note>, ({String projectId, NotesListFilter filter})>((
+      ref,
+      args,
+    ) async {
+      ref.watch(notesControllerProvider(args.projectId));
+      return ref
+          .read(notesRepositoryProvider)
+          .list(projectId: args.projectId, filter: args.filter);
+    });
