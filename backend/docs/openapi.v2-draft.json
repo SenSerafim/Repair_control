@@ -7872,7 +7872,7 @@
   "info": {
     "title": "Repair Control API",
     "description": "OpenAPI v2.0-draft контракт. Источник истины для Flutter retrofit-клиентов. S19+ (NEWFIX, роль «Заказчик»): расширение FSM заявок (частичная/полная приёмка), фото и дедлайн позиций, PDF-экспорт заявки, cron для overdue.",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "contact": {}
   },
   "tags": [],

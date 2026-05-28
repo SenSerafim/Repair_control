@@ -141,6 +141,7 @@ export const ErrorCodes = {
   TOOL_ALREADY_HELD_BY_YOU: 'tools.already_held_by_you',
   TOOL_NOT_PROJECT_MEMBER: 'tools.not_project_member',
   TOOL_OWNER_NOT_PROJECT_MEMBER: 'tools.owner_not_project_member',
+  TOOL_ALREADY_ON_OTHER_PROJECT: 'tools.already_on_other_project',
   // S5 — Chats
   CHAT_NOT_FOUND: 'chats.not_found',
   CHAT_ARCHIVED: 'chats.archived',
