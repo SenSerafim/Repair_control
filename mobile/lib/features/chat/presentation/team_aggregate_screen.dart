@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/access/access_guard.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/domain/membership.dart';
 import '../../team/data/team_repository.dart';
+import '../application/team_visibility.dart';
 
 /// NEWFIX-2 §3 — Агрегированный экран «Команда» внутри Чатов.
 /// Вход: Чаты → шапка → иконка «Команда». Сверху — табы-фильтры по проектам;
@@ -55,11 +57,20 @@ class _TeamAggregateScreenState extends ConsumerState<TeamAggregateScreen> {
           final filtered = _projectFilter == null
               ? groups
               : groups.where((g) => g.projectId == _projectFilter).toList();
+          // NEWFIX-2 §6.1 — клиентская оборона: заказчик не должен видеть
+          // мастеров. Сервер уже фильтрует (`/api/me/teammates`), но клиент
+          // дублирует проверку, чтобы приватность держалась даже если бек
+          // когда-нибудь вернёт «лишних» (defense-in-depth).
+          final viewerRole = ref.watch(activeRoleProvider);
           // Плоский dedup по userId — один и тот же сотрудник может быть в
           // нескольких проектах, в общем списке показываем одной строкой.
           final byUserId = <String, _Row>{};
           for (final g in filtered) {
-            for (final m in g.members) {
+            final visibleMembers = filterMembershipsForRole(
+              g.members,
+              viewerRole,
+            );
+            for (final m in visibleMembers) {
               final id = m.userId;
               final existing = byUserId[id];
               if (existing == null) {

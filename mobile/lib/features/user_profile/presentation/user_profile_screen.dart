@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../chat/data/chats_repository.dart';
 import '../../tools/application/tools_controller.dart' as tc;
 import '../../tools/domain/tool.dart';
 import '../data/user_profile_repository.dart';
@@ -53,7 +57,11 @@ class UserProfileScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
-              _Header(header: data.user),
+              _Header(
+                header: data.user,
+                objects: data.objects,
+                viewedUserId: userId,
+              ),
               const SizedBox(height: AppSpacing.x16),
               _ObjectsSection(items: data.objects),
               const SizedBox(height: AppSpacing.x16),
@@ -73,12 +81,18 @@ class UserProfileScreen extends ConsumerWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.header});
+class _Header extends ConsumerWidget {
+  const _Header({
+    required this.header,
+    required this.objects,
+    required this.viewedUserId,
+  });
   final UserProfileHeader header;
+  final List<UserProfileObject> objects;
+  final String viewedUserId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final initials = (header.firstName.isNotEmpty
             ? header.firstName.substring(0, 1)
             : '?') +
@@ -131,17 +145,53 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          // ТЗ §4.3: «Позвонить» и «Написать в чат» — пока без обработчика
-          // (диплинки в звонилку и чат пользователя — отдельные эпики).
+          // ТЗ §4.3: «Позвонить» — открывает системный звонок через tel:
+          // (NEWFIX gaps Task 1.1). «Написать в чат» — отдельный эпик.
           IconButton(
+            key: const ValueKey('user_profile_phone_button'),
             icon: const Icon(Icons.phone_outlined),
             tooltip: header.phone,
-            onPressed: header.phone.isEmpty ? null : () {},
+            onPressed: header.phone.isEmpty
+                ? null
+                : () => launchUrl(Uri(scheme: 'tel', path: header.phone)),
           ),
+          // NEWFIX gaps Task 1.2: «Написать в чат» — backend имеет только
+          // POST /api/projects/:projectId/chats/personal (нет глобального
+          // direct-чата). Поэтому используем первый общий проект.
           IconButton(
+            key: const ValueKey('user_profile_chat_button'),
             icon: const Icon(Icons.chat_bubble_outline),
             tooltip: 'Написать в чат',
-            onPressed: () {},
+            onPressed: () async {
+              if (objects.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Нет общих проектов с этим сотрудником'),
+                  ),
+                );
+                return;
+              }
+              final projectId = objects.first.projectId;
+              try {
+                final chat = await ref
+                    .read(chatsRepositoryProvider)
+                    .createPersonal(
+                      projectId: projectId,
+                      withUserId: viewedUserId,
+                    );
+                if (context.mounted) {
+                  unawaited(context.push('/chats/${chat.id}'));
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Не удалось открыть чат'),
+                    ),
+                  );
+                }
+              }
+            },
           ),
         ],
       ),

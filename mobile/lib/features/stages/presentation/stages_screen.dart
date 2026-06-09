@@ -12,6 +12,7 @@ import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../projects/application/project_controller.dart';
 import '../application/stages_controller.dart';
 import '../domain/stage.dart';
+import '../domain/stage_status_filter.dart';
 import '_widgets/stage_row_card.dart';
 import '_widgets/stage_stripe_card.dart';
 import 'stage_widgets.dart' show StageDisplayStatus;
@@ -32,43 +33,9 @@ class StagesScreen extends ConsumerStatefulWidget {
 
 enum _ViewMode { tile, list }
 
-enum _Filter {
-  all,
-  active,
-  pending,
-  paused,
-  done,
-  noContractor;
-
-  String get label => switch (this) {
-    _Filter.all => 'Все',
-    _Filter.active => 'В работе',
-    _Filter.pending => 'Ожидает',
-    _Filter.paused => 'На паузе',
-    _Filter.done => 'Завершён',
-    _Filter.noContractor => 'Без бригадира',
-  };
-
-  bool match(Stage s) {
-    final display = StageDisplayStatus.of(s);
-    return switch (this) {
-      _Filter.all => true,
-      _Filter.active =>
-        display == StageDisplayStatus.active ||
-            display == StageDisplayStatus.overdue,
-      _Filter.pending =>
-        display == StageDisplayStatus.pending ||
-            display == StageDisplayStatus.lateStart,
-      _Filter.paused => display == StageDisplayStatus.paused,
-      _Filter.done => display == StageDisplayStatus.done,
-      _Filter.noContractor => s.foremanIds.isEmpty,
-    };
-  }
-}
-
 class _StagesScreenState extends ConsumerState<StagesScreen> {
   _ViewMode _mode = _ViewMode.list;
-  _Filter _filter = _Filter.all;
+  StageStatusFilter _filter = StageStatusFilter.all;
 
   Future<void> _reorder(List<Stage> current, int oldIndex, int newIndex) async {
     var targetIndex = newIndex;
@@ -112,7 +79,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
         ),
         data: (stages) {
           final canManage = ref.watch(canProvider(DomainAction.stageManage));
-          final filtered = stages.where((s) => _filter.match(s)).toList();
+          final filtered = stages.where(_filter.match).toList();
           if (stages.isEmpty) {
             return AppEmptyState(
               title: 'Пока нет этапов',
@@ -134,7 +101,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                 onMode: (m) => setState(() => _mode = m),
                 filter: _filter,
                 filterCounts: {
-                  for (final f in _Filter.values)
+                  for (final f in StageStatusFilter.values)
                     f: stages.where(f.match).length,
                 },
                 onFilter: (f) => setState(() => _filter = f),
@@ -152,7 +119,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                           projectId: widget.projectId,
                           stages: filtered,
                           filter: _filter,
-                          onReorder: _filter == _Filter.all
+                          onReorder: _filter == StageStatusFilter.all
                               ? (o, n) => _reorder(filtered, o, n)
                               : null,
                         ),
@@ -231,9 +198,9 @@ class _Toolbar extends StatelessWidget {
 
   final _ViewMode mode;
   final ValueChanged<_ViewMode> onMode;
-  final _Filter filter;
-  final Map<_Filter, int> filterCounts;
-  final ValueChanged<_Filter> onFilter;
+  final StageStatusFilter filter;
+  final Map<StageStatusFilter, int> filterCounts;
+  final ValueChanged<StageStatusFilter> onFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -252,13 +219,13 @@ class _Toolbar extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  for (var i = 0; i < _Filter.values.length; i++) ...[
+                  for (var i = 0; i < StageStatusFilter.values.length; i++) ...[
                     if (i > 0) const SizedBox(width: AppSpacing.x6),
                     _Chip(
-                      filter: _Filter.values[i],
-                      active: filter == _Filter.values[i],
-                      count: filterCounts[_Filter.values[i]] ?? 0,
-                      onTap: () => onFilter(_Filter.values[i]),
+                      filter: StageStatusFilter.values[i],
+                      active: filter == StageStatusFilter.values[i],
+                      count: filterCounts[StageStatusFilter.values[i]] ?? 0,
+                      onTap: () => onFilter(StageStatusFilter.values[i]),
                     ),
                   ],
                 ],
@@ -329,7 +296,7 @@ class _Chip extends StatelessWidget {
     required this.onTap,
   });
 
-  final _Filter filter;
+  final StageStatusFilter filter;
   final bool active;
   final int count;
   final VoidCallback onTap;
@@ -337,7 +304,7 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = active ? AppColors.n0 : AppColors.n600;
-    final label = filter == _Filter.all
+    final label = filter == StageStatusFilter.all
         ? '${filter.label} ($count)'
         : filter.label;
     return Material(
@@ -376,7 +343,7 @@ class _Chip extends StatelessWidget {
 class _FilterEmpty extends StatelessWidget {
   const _FilterEmpty({required this.filter});
 
-  final _Filter filter;
+  final StageStatusFilter filter;
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +407,7 @@ class _ListView extends StatelessWidget {
 
   final String projectId;
   final List<Stage> stages;
-  final _Filter filter;
+  final StageStatusFilter filter;
 
   /// Если null — drag-reorder отключён (когда применён фильтр).
   final void Function(int oldIndex, int newIndex)? onReorder;

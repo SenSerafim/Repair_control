@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
@@ -29,6 +30,22 @@ class ToolDetailScreen extends ConsumerWidget {
       title: 'Инструмент',
       backgroundColor: AppColors.n50,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
+      actions: [
+        // Task 6.2 — кнопка-вход в full-screen «История инструмента».
+        IconButton(
+          tooltip: 'История передач',
+          icon: const Icon(
+            PhosphorIconsRegular.clockCounterClockwise,
+            color: AppColors.brand,
+          ),
+          onPressed: () => context.push(
+            AppRoutes.toolCustodyHistoryWith(
+              toolId,
+              name: async.valueOrNull?.name,
+            ),
+          ),
+        ),
+      ],
       body: async.when(
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(

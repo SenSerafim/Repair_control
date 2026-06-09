@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/application/auth_controller.dart' show secureStorageProvider;
 import '../../auth/domain/auth_failure.dart';
 import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
@@ -52,6 +53,35 @@ class MaterialsController
     } on MaterialsException catch (e) {
       return e.failure;
     }
+  }
+}
+
+/// Task 8.2 (TZ-2 §5.4): timestamp последнего просмотра списка заявок
+/// проекта. Источник истины — `SecureStorage`. Если ключа нет — `null`,
+/// и счётчик «новых» равен 0 (не мигаем бейджем при первом заходе).
+///
+/// Чисто клиентское решение: бекенд про seen-state не знает. При выходе
+/// из аккаунта значения остаются в Keychain/EncryptedSharedPrefs — это
+/// ОК, ключи привязаны к projectId, а не к userId, и при смене юзера
+/// заявки сами по себе тоже сменятся.
+final materialsLastSeenProvider =
+    AsyncNotifierProvider.family<MaterialsLastSeenController, DateTime?, String>(
+      MaterialsLastSeenController.new,
+    );
+
+class MaterialsLastSeenController
+    extends FamilyAsyncNotifier<DateTime?, String> {
+  @override
+  Future<DateTime?> build(String projectId) async {
+    return ref.read(secureStorageProvider).readMaterialsLastSeen(projectId);
+  }
+
+  /// Отмечает «всё видел» — сохраняем `DateTime.now()` (UTC) и обновляем
+  /// state. После этого бейдж сразу пропадает.
+  Future<void> markAllSeen() async {
+    final now = DateTime.now().toUtc();
+    await ref.read(secureStorageProvider).writeMaterialsLastSeen(arg, now);
+    state = AsyncData(now);
   }
 }
 

@@ -49,7 +49,7 @@ type StepRow = {
 
 type ApprovalRow = {
   id: string;
-  scope: 'plan' | 'step' | 'extra_work' | 'deadline_change' | 'stage_accept';
+  scope: 'plan' | 'step' | 'extra_work' | 'deadline_change' | 'stage_accept' | 'defect';
   projectId: string;
   stageId: string | null;
   stepId: string | null;
@@ -71,6 +71,7 @@ const mkPrisma = () => {
   const steps = new Map<string, StepRow>();
   const approvals = new Map<string, ApprovalRow>();
   const attempts: any[] = [];
+  const attachments: any[] = [];
   const memberships: any[] = [];
   let aSeq = 0;
   let atSeq = 0;
@@ -177,7 +178,11 @@ const mkPrisma = () => {
       }),
     },
     approvalAttachment: {
-      create: jest.fn(({ data }: any) => ({ id: 'att1', ...data })),
+      create: jest.fn(({ data }: any) => {
+        const row = { id: `att${attachments.length + 1}`, ...data };
+        attachments.push(row);
+        return row;
+      }),
     },
     membership: {
       findFirst: jest.fn(
@@ -197,6 +202,7 @@ const mkPrisma = () => {
     steps,
     approvals,
     attempts,
+    attachments,
     memberships,
   };
 };
@@ -325,6 +331,103 @@ describe('ApprovalsService.request — валидация scope', () => {
     expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'approval_requested' }));
     expect(st.attempts).toHaveLength(1);
     expect(st.attempts[0].action).toBe('created');
+  });
+
+  it('scope=defect без stepId → InvalidInputError', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubMaterials,
+    );
+    await expect(
+      svc.request({
+        scope: 'defect' as any,
+        projectId: 'p1',
+        addresseeId: 'foreman',
+        requestedById: 'customer',
+        payload: { description: 'плохо положена плитка' },
+        attachmentKeys: ['photos/defect-1.jpg'],
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it('scope=defect без описания → InvalidInputError', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubMaterials,
+    );
+    await expect(
+      svc.request({
+        scope: 'defect' as any,
+        projectId: 'p1',
+        stepId: 'step1',
+        addresseeId: 'foreman',
+        requestedById: 'customer',
+        payload: {},
+        attachmentKeys: ['photos/defect-1.jpg'],
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it('scope=defect без фото → InvalidInputError', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
+    const svc = new ApprovalsService(
+      st.prisma,
+      mkFeed(),
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubMaterials,
+    );
+    await expect(
+      svc.request({
+        scope: 'defect' as any,
+        projectId: 'p1',
+        stepId: 'step1',
+        addresseeId: 'foreman',
+        requestedById: 'customer',
+        payload: { description: 'плохо положена плитка' },
+      }),
+    ).rejects.toThrow(InvalidInputError);
+  });
+
+  it('scope=defect успешно: запрос создан с фото', async () => {
+    const st = mkPrisma();
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner', status: 'active' });
+    const feed = mkFeed();
+    const svc = new ApprovalsService(
+      st.prisma,
+      feed,
+      mkCalc(),
+      new FixedClock(NOW),
+      stubSelfPurchases,
+      stubMaterials,
+    );
+    const a = await svc.request({
+      scope: 'defect' as any,
+      projectId: 'p1',
+      stepId: 'step1',
+      addresseeId: 'foreman',
+      requestedById: 'customer',
+      payload: { description: 'плохо положена плитка' },
+      attachmentKeys: ['photos/defect-1.jpg', 'photos/defect-2.jpg'],
+    });
+    expect(a.status).toBe('pending');
+    expect(a.scope).toBe('defect');
+    expect(st.attachments).toHaveLength(2);
+    expect(feed.emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'approval_requested' }));
   });
 });
 

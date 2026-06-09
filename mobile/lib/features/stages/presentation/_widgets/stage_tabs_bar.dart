@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/tokens.dart';
 
-enum StageTab { checklist, approvals, docs }
+enum StageTab { checklist, approvals, docs, requests }
 
 extension StageTabX on StageTab {
   String get label => switch (this) {
     StageTab.checklist => 'Чек-лист',
     StageTab.approvals => 'Согл.',
     StageTab.docs => 'Докум.',
+    StageTab.requests => 'Заявки',
   };
 }
 
-/// 3-таб панель в детали этапа.
+/// 4-таб панель в детали этапа (Task 2.1, TZ-фронт §11).
 ///
 /// Дизайн c-stage-active: 2.5px brand-underline на active, brand text на active,
 /// n400 на остальных. На вкладке «Согл.» — 16×16 красный badge с числом, если

@@ -7,11 +7,13 @@ part 'export_job.freezed.dart';
 enum ExportKind {
   feedPdf,
   projectReportPdf,
-  projectZip;
+  projectZip,
+  stageReportPdf;
 
   static ExportKind fromString(String? raw) => switch (raw) {
     'project_zip' => ExportKind.projectZip,
     'project_report_pdf' => ExportKind.projectReportPdf,
+    'stage_report_pdf' => ExportKind.stageReportPdf,
     // Историческое значение TXT — больше не предлагаем, но если бэкенд вернёт
     // запись со старым kind, считаем её отчётом PDF (бекенд тоже отдаёт PDF
     // для legacy-jobs, см. ExportProcessor).
@@ -23,12 +25,14 @@ enum ExportKind {
     ExportKind.feedPdf => 'feed_pdf',
     ExportKind.projectReportPdf => 'project_report_pdf',
     ExportKind.projectZip => 'project_zip',
+    ExportKind.stageReportPdf => 'stage_report_pdf',
   };
 
   String get displayName => switch (this) {
     ExportKind.feedPdf => 'PDF ленты',
     ExportKind.projectReportPdf => 'Полный отчёт (PDF)',
     ExportKind.projectZip => 'ZIP проекта',
+    ExportKind.stageReportPdf => 'Отчёт по этапу (PDF)',
   };
 
   String get subtitle => switch (this) {
@@ -38,6 +42,8 @@ enum ExportKind {
       'Юридически оформленный отчёт: команда, бюджет, движения средств, этапы и шаги с фото, материалы, инструменты, документы и лента событий.',
     ExportKind.projectZip =>
       'Архив со всеми документами проекта и фотофиксацией шагов плюс PDF-отчёт.',
+    ExportKind.stageReportPdf =>
+      'Отчёт по одному этапу: фото шагов, материалы, документы, бюджет этапа.',
   };
 }
 

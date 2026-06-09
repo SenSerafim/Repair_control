@@ -174,6 +174,7 @@ String _titleFor(Approval a) {
     ApprovalScope.stageCreate => 'Этап от бригадира',
     ApprovalScope.materialPurchase => 'Закупка материалов',
     ApprovalScope.selfPurchase => 'Самокуп мастера',
+    ApprovalScope.defect => 'Шаг на доработку',
   };
 }
 
@@ -194,6 +195,8 @@ String _subtitleFor(Approval a) {
       'Бригадир запрашивает закупку. После approve сумма спишется из бюджета.',
     ApprovalScope.selfPurchase =>
       'Мастер просит возместить расходы на материалы.',
+    ApprovalScope.defect =>
+      'Заказчик отправил шаг на доработку. Проверьте фото и описание.',
   };
 }
 
@@ -207,6 +210,7 @@ ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
   ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
   ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
   ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
+  ApprovalScope.defect => ScopeBadgeTone.deadline,
 };
 
 class _DecisionBlock extends StatelessWidget {
@@ -265,7 +269,36 @@ class _ScopeBody extends StatelessWidget {
         return _MaterialPurchaseBody(approval: approval);
       case ApprovalScope.selfPurchase:
         return _SelfPurchaseBody(approval: approval);
+      case ApprovalScope.defect:
+        return _DefectBody(approval: approval);
     }
+  }
+}
+
+class _DefectBody extends StatelessWidget {
+  const _DefectBody({required this.approval});
+
+  final Approval approval;
+
+  @override
+  Widget build(BuildContext context) {
+    final description = approval.payload['description'] as String?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionLabel('Что доработать'),
+        const SizedBox(height: AppSpacing.x8),
+        _CommentBox(
+          text: description != null && description.isNotEmpty
+              ? description
+              : '—',
+        ),
+        const SizedBox(height: AppSpacing.x16),
+        const _SectionLabel('Фото-доказательства'),
+        const SizedBox(height: AppSpacing.x8),
+        _DetailPhotoGrid(attachments: approval.attachments, columns: 3),
+      ],
+    );
   }
 }
 

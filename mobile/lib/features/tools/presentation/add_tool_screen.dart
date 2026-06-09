@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
+import '../domain/responsible_resolver.dart';
 import '../domain/tool.dart';
 
 /// NEWFIX-2 §7.1 — Форма добавления инструмента в личный профиль.
 /// Поля: название, артикул, серийник, статус, локация (или сотрудник).
+///
+/// NEWFIX TЗ-2 §8.3 (Task 6.4): если экран открыт в контексте проекта
+/// ([projectId] != null) и выбран статус «у сотрудника», ответственный
+/// заполняется бригадиром проекта по умолчанию (но пользователь может
+/// поменять). Если бригадира в проекте нет — оставляем поле пустым.
 class AddToolScreen extends ConsumerStatefulWidget {
-  const AddToolScreen({super.key});
+  const AddToolScreen({this.projectId, super.key});
+
+  /// Если задан — форма открыта в контексте проекта (например, со страницы
+  /// «Инструменты проекта»). В этом случае «ответственный сотрудник»
+  /// pre-fill'ится бригадиром проекта.
+  ///
+  /// `null` — обычный flow «Мои инструменты» (без pre-fill).
+  final String? projectId;
 
   @override
   ConsumerState<AddToolScreen> createState() => _AddToolScreenState();
@@ -24,7 +39,18 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
   final _serial = TextEditingController();
   final _storage = TextEditingController();
   ToolStatus _status = ToolStatus.inStorage;
+  DateTime? _purchaseDate;
+  ToolCondition? _condition;
   bool _busy = false;
+
+  /// NEWFIX TЗ-2 §8.3 — id ответственного сотрудника (только когда
+  /// статус = `withEmployee`). Если экран открыт с `projectId`, инициализируется
+  /// бригадиром проекта; иначе остаётся null. Перезаписывается выбором юзера.
+  String? _assignedEmployeeId;
+
+  /// Был ли уже выполнен pre-fill из teamControllerProvider — чтобы не
+  /// переписывать выбор пользователя при последующих ребилдах.
+  bool _foremanPrefillApplied = false;
 
   @override
   void dispose() {
@@ -55,6 +81,10 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
                   _storage.text.trim().isNotEmpty
               ? _storage.text.trim()
               : null,
+          assignedEmployeeId:
+              _status == ToolStatus.withEmployee ? _assignedEmployeeId : null,
+          purchaseDate: _purchaseDate,
+          condition: _condition,
         );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -72,6 +102,23 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // NEWFIX TЗ-2 §8.3 (Task 6.4): когда экран открыт в контексте проекта,
+    // подписываемся на teamControllerProvider и pre-fill'им бригадира как
+    // ответственного сотрудника. Делаем только один раз, чтобы не затирать
+    // выбор пользователя.
+    final projectId = widget.projectId;
+    if (projectId != null && !_foremanPrefillApplied) {
+      final teamAsync = ref.watch(teamControllerProvider(projectId));
+      final foremanId = teamAsync.maybeWhen(
+        data: (s) => resolveProjectForemanId(s.members),
+        orElse: () => null,
+      );
+      if (foremanId != null) {
+        _assignedEmployeeId = foremanId;
+        _foremanPrefillApplied = true;
+      }
+    }
+
     return AppScaffold(
       showBack: true,
       title: 'Добавить инструмент',
@@ -95,6 +142,16 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
             controller: _serial,
             label: 'Серийный номер',
             placeholder: 'Опционально: SN-12345',
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          _PurchaseDateField(
+            value: _purchaseDate,
+            onChanged: (d) => setState(() => _purchaseDate = d),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          _ConditionField(
+            value: _condition,
+            onChanged: (c) => setState(() => _condition = c),
           ),
           const SizedBox(height: AppSpacing.x16),
           Text(
@@ -124,33 +181,170 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
           ],
           if (_status == ToolStatus.withEmployee) ...[
             const SizedBox(height: AppSpacing.x12),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.x12),
-              decoration: BoxDecoration(
-                color: AppColors.brandLight,
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-              ),
-              child: Text(
-                'Выдача инструмента сотруднику — через профиль сотрудника '
-                '(Чаты → Команда → выбрать → «+ Выдать инструмент»). Здесь '
-                'мы только заведём карточку, а выдадите позже.',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.brand,
-                  fontWeight: FontWeight.w600,
+            if (widget.projectId != null && _assignedEmployeeId != null) ...[
+              // NEWFIX TЗ-2 §8.3: pre-fill бригадира как ответственного.
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.x12),
+                decoration: BoxDecoration(
+                  color: AppColors.brandLight,
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                child: Text(
+                  'По умолчанию — бригадир',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.brand,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.x12),
+                decoration: BoxDecoration(
+                  color: AppColors.brandLight,
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                child: Text(
+                  'Выдача инструмента сотруднику — через профиль сотрудника '
+                  '(Чаты → Команда → выбрать → «+ Выдать инструмент»). Здесь '
+                  'мы только заведём карточку, а выдадите позже.',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.brand,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: AppSpacing.x32),
           AppButton(
             label: 'Добавить',
             icon: PhosphorIconsBold.plus,
             isLoading: _busy,
-            // Если выбран with_employee — пока не разрешаем сохранять отсюда:
-            // по §9 выдача всегда через профиль сотрудника. Заводим как in_storage.
-            onPressed: _status == ToolStatus.withEmployee ? null : _save,
+            // Личный flow (projectId == null): withEmployee без явного выбора
+            // ответственного сохранять нельзя (§9 — выдача через профиль).
+            // В контексте проекта (projectId != null) — разрешаем: бригадир
+            // уже подставлен по умолчанию.
+            onPressed: _status == ToolStatus.withEmployee &&
+                    (widget.projectId == null || _assignedEmployeeId == null)
+                ? null
+                : _save,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PurchaseDateField extends StatelessWidget {
+  const _PurchaseDateField({required this.value, required this.onChanged});
+
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final formatted = value == null
+        ? 'Опционально'
+        : DateFormat('d MMM y', 'ru').format(value!);
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.r12),
+      onTap: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: value ?? now,
+          firstDate: DateTime(2000),
+          lastDate: now,
+          locale: const Locale('ru'),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x12,
+          vertical: AppSpacing.x12,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.n50,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Дата покупки',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.n400),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatted,
+                    style: AppTextStyles.body.copyWith(
+                      color: value == null ? AppColors.n400 : AppColors.n800,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (value != null)
+              IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () => onChanged(null),
+              )
+            else
+              const Icon(Icons.calendar_today, size: 18, color: AppColors.n400),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConditionField extends StatelessWidget {
+  const _ConditionField({required this.value, required this.onChanged});
+
+  final ToolCondition? value;
+  final ValueChanged<ToolCondition?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x12,
+        vertical: AppSpacing.x4,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.n50,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<ToolCondition?>(
+          isExpanded: true,
+          value: value,
+          hint: Text(
+            'Состояние (опционально)',
+            style: AppTextStyles.body.copyWith(color: AppColors.n400),
+          ),
+          items: [
+            DropdownMenuItem<ToolCondition?>(
+              value: null,
+              child: Text(
+                '— не указано —',
+                style: AppTextStyles.body.copyWith(color: AppColors.n400),
+              ),
+            ),
+            for (final c in ToolCondition.values)
+              DropdownMenuItem<ToolCondition?>(
+                value: c,
+                child: Text(c.displayName),
+              ),
+          ],
+          onChanged: onChanged,
+        ),
       ),
     );
   }

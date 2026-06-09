@@ -18,7 +18,8 @@ enum ApprovalScope {
   stageAccept,
   stageCreate,
   materialPurchase,
-  selfPurchase;
+  selfPurchase,
+  defect;
 
   static ApprovalScope fromString(String? raw) {
     switch (raw) {
@@ -38,6 +39,8 @@ enum ApprovalScope {
         return ApprovalScope.materialPurchase;
       case 'self_purchase':
         return ApprovalScope.selfPurchase;
+      case 'defect':
+        return ApprovalScope.defect;
       default:
         return ApprovalScope.step;
     }
@@ -52,6 +55,7 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => 'stage_create',
     ApprovalScope.materialPurchase => 'material_purchase',
     ApprovalScope.selfPurchase => 'self_purchase',
+    ApprovalScope.defect => 'defect',
   };
 
   String get displayName => switch (this) {
@@ -63,6 +67,7 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => 'Создание этапа',
     ApprovalScope.materialPurchase => 'Закупка материалов',
     ApprovalScope.selfPurchase => 'Самокуп',
+    ApprovalScope.defect => 'Доработка',
   };
 
   String get shortHint => switch (this) {
@@ -74,6 +79,7 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => 'Этап от бригадира',
     ApprovalScope.materialPurchase => 'Купить материалы',
     ApprovalScope.selfPurchase => 'Возмещение мастеру',
+    ApprovalScope.defect => 'Шаг на доработку',
   };
 
   IconData get icon => switch (this) {
@@ -85,6 +91,7 @@ enum ApprovalScope {
     ApprovalScope.stageCreate => Icons.layers_outlined,
     ApprovalScope.materialPurchase => Icons.shopping_cart_outlined,
     ApprovalScope.selfPurchase => Icons.payments_outlined,
+    ApprovalScope.defect => Icons.report_problem_outlined,
   };
 }
 

@@ -97,6 +97,25 @@ export class ChatsController {
     return this.chats.createGroup(projectId, req.user.userId, dto.title, dto.participantUserIds);
   }
 
+  /**
+   * NEWFIX Task 2.3 — обеспечить наличие чата этапа.
+   *
+   * Идемпотентен (повторный POST вернёт уже существующий чат). RBAC `chat.read`
+   * на `stage` достаточен: матрица проверяет `membershipRole` (любой участник
+   * проекта в этапе может открыть чат), а сама `ensureStageChat` внутри
+   * сидирует participants только из foremanIds + master'ов на этом этапе —
+   * случайный customer/representative автоматически в чат не попадёт.
+   */
+  @Post('stages/:stageId/chat')
+  @RequireAccess({
+    action: 'chat.read',
+    resource: 'stage',
+    resourceIdFrom: { source: 'params', key: 'stageId' },
+  })
+  ensureStageChat(@Param('stageId') stageId: string, @Req() req: any) {
+    return this.chats.ensureStageChat(stageId, req.user.userId);
+  }
+
   @Patch('chats/:chatId')
   @RequireAccess({
     action: 'chat.toggle_customer_visibility',

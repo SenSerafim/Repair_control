@@ -40,6 +40,15 @@ class _MaterialsListScreenState extends ConsumerState<MaterialsListScreen> {
     final canCreate = ref.watch(canProvider(DomainAction.materialsManage));
     final stagesAsync = ref.watch(stagesControllerProvider(projectId));
     final stages = stagesAsync.value ?? const <Stage>[];
+    // Task 8.2 (TZ-2 §5.4): счётчик новых заявок с момента предыдущего
+    // просмотра. Чисто клиентская выкладка — `lastSeenAt` хранится в
+    // SecureStorage, при первом заходе считаем всё «просмотренным» (0).
+    final lastSeenAsync = ref.watch(materialsLastSeenProvider(projectId));
+    final lastSeen = lastSeenAsync.value;
+    final loadedItems = async.value ?? const <MaterialRequest>[];
+    final unreadCount = lastSeen == null
+        ? 0
+        : loadedItems.where((r) => r.createdAt.isAfter(lastSeen)).length;
 
     return AppScaffold(
       showBack: true,
@@ -110,6 +119,17 @@ class _MaterialsListScreenState extends ConsumerState<MaterialsListScreen> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
+                if (unreadCount > 0) ...[
+                  _UnreadPill(
+                    count: unreadCount,
+                    onTap: () => ref
+                        .read(
+                          materialsLastSeenProvider(projectId).notifier,
+                        )
+                        .markAllSeen(),
+                  ),
+                  const SizedBox(height: AppSpacing.x10),
+                ],
                 _SummaryChip(
                   totalSpent: totalSpent,
                   count: items.length,
@@ -231,6 +251,71 @@ class _SummaryChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Task 8.2 (TZ-2 §5.4): «колокольчик» сверху списка заявок. Тап по пилюле
+/// сохраняет текущий timestamp как `lastSeenAt` — счётчик обнуляется. Без
+/// бекенда: всё чисто клиентское, между устройствами не синхронизируется.
+class _UnreadPill extends StatelessWidget {
+  const _UnreadPill({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  String get _label {
+    // RU pluralization: 1 заявка, 2-4 заявки, 5+ заявок.
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) return '$count новая заявка';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      return '$count новые заявки';
+    }
+    return '$count новых заявок';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Semantics(
+        button: true,
+        label: _label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x12,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.blueBg,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              border: Border.all(color: AppColors.brand),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.notifications_active_rounded,
+                  size: 14,
+                  color: AppColors.brand,
+                ),
+                const SizedBox(width: AppSpacing.x6),
+                Text(
+                  _label,
+                  style: AppTextStyles.tiny.copyWith(
+                    color: AppColors.blueText,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,8 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMinSize, IsArray, IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+} from 'class-validator';
 
 /// NEWFIX-2 §7.1 — статус инструмента; синхронизирован с enum Prisma `ToolStatus`.
 export type ToolStatusValue = 'in_storage' | 'on_project' | 'with_employee';
+
+/// NEWFIX §6.1 — состояние инструмента; синхронизирован с enum Prisma `ToolCondition`.
+export type ToolConditionValue = 'new_tool' | 'good' | 'worn' | 'broken';
+
+const TOOL_CONDITIONS: ToolConditionValue[] = ['new_tool', 'good', 'worn', 'broken'];
 
 /**
  * Создание инструмента в личном профиле (My Tools), без привязки к проекту.
@@ -54,6 +67,21 @@ export class CreateToolDto {
   @IsOptional()
   @IsString()
   assignedEmployeeId?: string;
+
+  @ApiPropertyOptional({
+    description: 'NEWFIX §6.1 — дата покупки (ISO 8601).',
+  })
+  @IsOptional()
+  @IsDateString()
+  purchaseDate?: string;
+
+  @ApiPropertyOptional({
+    enum: TOOL_CONDITIONS,
+    description: 'NEWFIX §6.1 — состояние инструмента.',
+  })
+  @IsOptional()
+  @IsEnum(TOOL_CONDITIONS)
+  condition?: ToolConditionValue;
 }
 
 /**
@@ -91,6 +119,16 @@ export class CreateProjectToolDto {
   @IsOptional()
   @IsString()
   ownerId?: string;
+
+  @ApiPropertyOptional({ description: 'NEWFIX §6.1 — дата покупки (ISO 8601).' })
+  @IsOptional()
+  @IsDateString()
+  purchaseDate?: string;
+
+  @ApiPropertyOptional({ enum: TOOL_CONDITIONS, description: 'NEWFIX §6.1 — состояние.' })
+  @IsOptional()
+  @IsEnum(TOOL_CONDITIONS)
+  condition?: ToolConditionValue;
 }
 
 /**
@@ -136,6 +174,16 @@ export class UpdateToolDto {
   @IsOptional()
   @IsString()
   assignedEmployeeId?: string;
+
+  @ApiPropertyOptional({ description: 'NEWFIX §6.1 — дата покупки (ISO 8601).' })
+  @IsOptional()
+  @IsDateString()
+  purchaseDate?: string;
+
+  @ApiPropertyOptional({ enum: TOOL_CONDITIONS, description: 'NEWFIX §6.1 — состояние.' })
+  @IsOptional()
+  @IsEnum(TOOL_CONDITIONS)
+  condition?: ToolConditionValue;
 }
 
 export class AttachToolsToProjectDto {

@@ -129,6 +129,7 @@ enum ApprovalScope {
   stage_create
   material_purchase
   self_purchase
+  defect
 }
 
 enum ApprovalStatus {
@@ -340,6 +341,7 @@ enum ExportKind {
   project_zip
   project_summary_txt // deprecated — TXT-сводка больше не предлагается, оставлено для совместимости
   project_report_pdf
+  stage_report_pdf
 }
 
 enum ExportStatus {
@@ -1046,6 +1048,13 @@ enum ToolStatus {
   with_employee
 }
 
+enum ToolCondition {
+  new_tool
+  good
+  worn
+  broken
+}
+
 model ToolItem {
   id              String   @id @default(cuid())
   ownerId         String
@@ -1057,6 +1066,10 @@ model ToolItem {
   photoKey        String?
   /// Серийный/инвентарный номер инструмента (опциональный, свободный текст).
   serial          String?
+  /// NEWFIX §6.1 — дата покупки. Для предупреждения о гарантии и оценки износа.
+  purchaseDate    DateTime?
+  /// NEWFIX §6.1 — состояние (new/good/worn/broken). Заполняется владельцем.
+  condition       ToolCondition?
   /// NEWFIX-2 §7.1 — формальный статус (in_storage / on_project / with_employee).
   /// Связан с projectId / assignedEmployeeId, но хранится отдельно как явный признак.
   status          ToolStatus @default(in_storage)

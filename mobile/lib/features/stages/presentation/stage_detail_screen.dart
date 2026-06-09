@@ -13,6 +13,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../../approvals/application/approvals_controller.dart';
 import '../../approvals/domain/approval.dart';
 import '../../approvals/presentation/_widgets/reject_sheet.dart';
+import '../../exports/data/exports_repository.dart';
+import '../../exports/domain/export_job.dart';
 import '../../projects/application/project_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
@@ -27,6 +29,8 @@ import '_widgets/stage_banner_data.dart';
 import '_widgets/stage_checklist_tab.dart';
 import '_widgets/stage_docs_tab.dart';
 import '_widgets/stage_executors_row.dart';
+import '_widgets/stage_quick_actions_row.dart';
+import '_widgets/stage_requests_tab.dart';
 import '_widgets/stage_status_banner.dart';
 import '_widgets/stage_stats_row.dart';
 import '_widgets/stage_tabs_bar.dart';
@@ -37,7 +41,7 @@ import 'stage_widgets.dart' show StageDisplayStatus, StageStatusBadge;
 /// Детали этапа — пиксель-в-пиксель редизайн c-stage-* (8 состояний).
 ///
 /// Layout: header (back+title+badge+menu) → StageStatsRow → StageStatusBanner
-/// → StageTabsBar → IndexedStack из 3 табов → state-aware bottom action bar.
+/// → StageTabsBar → IndexedStack из 4 табов → state-aware bottom action bar.
 /// Вкладка «Чат» убрана: коммуникации по этапу ведутся через раздел чатов
 /// проекта (overdue-баннер показывает CTA «Связаться»).
 class StageDetailScreen extends ConsumerStatefulWidget {
@@ -69,13 +73,28 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
       showBack: true,
       title: 'Этап',
       padding: EdgeInsets.zero,
+      // NEWFIX Task 2.2 — иконка «Бюджет этапа» убрана из шапки: бюджет
+      // теперь доступен через StageQuickActionsRow между исполнителями и
+      // табами. Дублирование точки входа порождало визуальный шум.
       actions: [
-        IconButton(
-          tooltip: 'Бюджет этапа',
-          icon: const Icon(Icons.currency_ruble_rounded),
-          onPressed: () => context.push(
-            '/projects/${widget.projectId}/stages/${widget.stageId}/budget',
-          ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded),
+          tooltip: 'Действия',
+          onSelected: (v) {
+            if (v == 'export_pdf') {
+              _requestStagePdfExport(context, ref);
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem<String>(
+              value: 'export_pdf',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.picture_as_pdf_outlined),
+                title: Text('Экспорт отчёта (PDF)'),
+              ),
+            ),
+          ],
         ),
       ],
       body: stagesAsync.when(
@@ -127,6 +146,40 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             orElse: () => 0,
           );
 
+          // Счётчик доработок для StageStatsRow (Task 1.4, TZ-фронт §6.2):
+          // open = pending approvals scope=extra_work для этого этапа,
+          // total = pending + history. Бэкенд отдельного counter'а пока не
+          // отдаёт — выводим из approvalsControllerProvider, который и так
+          // уже подписан в этом экране.
+          final reworkOpen = approvalsAsync.maybeWhen(
+            data: (b) => b.pending
+                .where(
+                  (a) =>
+                      a.scope == ApprovalScope.extraWork &&
+                      approvalBelongsToStage(a, stage.id),
+                )
+                .length,
+            orElse: () => 0,
+          );
+          final reworkTotal = approvalsAsync.maybeWhen(
+            data: (b) =>
+                b.pending
+                    .where(
+                      (a) =>
+                          a.scope == ApprovalScope.extraWork &&
+                          approvalBelongsToStage(a, stage.id),
+                    )
+                    .length +
+                b.history
+                    .where(
+                      (a) =>
+                          a.scope == ApprovalScope.extraWork &&
+                          approvalBelongsToStage(a, stage.id),
+                    )
+                    .length,
+            orElse: () => 0,
+          );
+
           // Есть ли уже отправленный (pending) approval scope=plan по этому
           // этапу — нужно для CTA в action bar (показать «На согласовании» вместо
           // «Отправить план»).
@@ -172,7 +225,8 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   stepsDone: stepsDone,
                   stepsTotal: stepsTotal,
                   photosCount: photosTotal,
-                  filesCount: 0,
+                  reworkOpen: reworkOpen,
+                  reworkTotal: reworkTotal,
                 ),
               ),
               Padding(
@@ -197,6 +251,18 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     stage,
                     kind: _AssignKind.master,
                   ),
+                ),
+              ),
+              // NEWFIX Task 2.2 / TZ-фронт §6 — статический ряд из двух
+              // CTA («Чат этапа» + «Бюджет этапа») между исполнителями и
+              // статус-баннером/табами. Чат-шим (`/stages/:stageId/chat`)
+              // резолвит chatId; бюджет — фильтрованный срез из общего
+              // бюджета проекта (`stages/:stageId/budget`).
+              StageQuickActionsRow(
+                onOpenChat: () =>
+                    context.push('/stages/${stage.id}/chat'),
+                onOpenBudget: () => context.push(
+                  '/projects/${widget.projectId}/stages/${stage.id}/budget',
                 ),
               ),
               if (StageBannerData.fromStage(stage, display) != null)
@@ -241,6 +307,14 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                       stageId: stage.id,
                     ),
                     StageDocsTab(
+                      projectId: widget.projectId,
+                      stageId: stage.id,
+                    ),
+                    // Task 2.1 / TZ-фронт §11 — 4-й таб «Заявки».
+                    // Порядок child'ов IndexedStack должен совпадать с
+                    // порядком значений enum StageTab: 0=checklist, 1=approvals,
+                    // 2=docs, 3=requests.
+                    StageRequestsTab(
                       projectId: widget.projectId,
                       stageId: stage.id,
                     ),
@@ -318,6 +392,32 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
         context,
         message: failure == null ? 'Шаг добавлен' : failure.userMessage,
         kind: failure == null ? AppToastKind.success : AppToastKind.error,
+      );
+    }
+  }
+
+  /// NEWFIX §7.1 — запрос асинхронной генерации PDF-отчёта по этапу.
+  /// Бэкенд кладёт задачу в BullMQ-очередь и возвращает jobId; пользователь
+  /// найдёт результат в общем списке экспортов (Профиль → Экспорты).
+  Future<void> _requestStagePdfExport(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(exportsRepositoryProvider).create(
+            projectId: widget.projectId,
+            kind: ExportKind.stageReportPdf,
+            stageId: widget.stageId,
+          );
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: 'Запрос на PDF принят — отчёт появится в «Экспортах»',
+        kind: AppToastKind.success,
+      );
+    } on ExportsException catch (e) {
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: e.failure.userMessage,
+        kind: AppToastKind.error,
       );
     }
   }

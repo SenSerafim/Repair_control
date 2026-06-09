@@ -41,15 +41,14 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   final _budgetComment = TextEditingController();
 
   // Step 3 — этапы.
-  final _selectedStages = <_StageTemplate>{
-    _StageTemplate.demolition,
-    _StageTemplate.electrical,
-    _StageTemplate.finishing,
-  };
-
-  // П1.8 / 4.4 — кастомные этапы, которые пользователь добавил руками
-  // в wizard'е. Title-only (без сроков и бюджета — задаются позже на этапе).
-  final _customStageTitles = <String>[];
+  // ТЗ-фронт §2: единый упорядоченный список выбранных этапов (пресеты + кастом).
+  // Порядок управляется пользователем через ReorderableListView (drag-and-drop).
+  // Дефолт совпадает с прежним поведением: демонтаж → электрика → чистовая.
+  final _selectedStages = <_StageItem>[
+    const _StageItem.preset(_StageTemplate.demolition),
+    const _StageItem.preset(_StageTemplate.electrical),
+    const _StageItem.preset(_StageTemplate.finishing),
+  ];
 
   bool _submitting = false;
   String? _submitError;
@@ -100,11 +99,39 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
     );
     if (title != null && title.isNotEmpty && mounted) {
       setState(() {
-        if (!_customStageTitles.contains(title)) {
-          _customStageTitles.add(title);
+        final exists = _selectedStages.any(
+          (e) => e.isCustom && e.customTitle == title,
+        );
+        if (!exists) {
+          _selectedStages.add(_StageItem.custom(title));
         }
       });
     }
+  }
+
+  void _togglePreset(_StageTemplate s) {
+    setState(() {
+      final idx = _selectedStages.indexWhere(
+        (e) => !e.isCustom && e.preset == s,
+      );
+      if (idx >= 0) {
+        _selectedStages.removeAt(idx);
+      } else {
+        _selectedStages.add(_StageItem.preset(s));
+      }
+    });
+  }
+
+  void _removeAt(int index) {
+    setState(() => _selectedStages.removeAt(index));
+  }
+
+  void _reorderSelected(int oldIndex, int newIndex) {
+    setState(() {
+      final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
+      final moved = _selectedStages.removeAt(oldIndex);
+      _selectedStages.insert(adjusted, moved);
+    });
   }
 
   void _back() {
@@ -126,16 +153,13 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
       _submitError = null;
     });
     try {
-      // П1.8 / 4.4 — этапы создаются в одной транзакции с проектом через
-      // `initialStages`. Порядок: пресеты в порядке enum `_StageTemplate`,
-      // затем кастомные. Если пользователь снял все галочки — передаём `[]`,
-      // чтобы бекенд НЕ подставил дефолтные плейсхолдеры (он подставляет их,
-      // только когда поле не передано — для API-юзеров).
-      final orderedPresets = _StageTemplate.values
-          .where(_selectedStages.contains)
-          .map((s) => s.title)
-          .toList();
-      final stageTitles = [...orderedPresets, ..._customStageTitles];
+      // П1.8 / 4.4 + ТЗ-фронт §2 — этапы создаются в одной транзакции с
+      // проектом через `initialStages`. Порядок ровно тот, который пользователь
+      // выставил drag-and-drop'ом в шаге 3 (пресеты + кастом перемешаны в одном
+      // списке). Если пользователь снял все галочки — передаём `[]`, чтобы
+      // бекенд НЕ подставил дефолтные плейсхолдеры (он подставляет их, только
+      // когда поле не передано — для API-юзеров).
+      final stageTitles = _selectedStages.map((e) => e.title).toList();
       final created = await ref
           .read(projectCreatorProvider)
           .create(
@@ -170,7 +194,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
     final canProceed = switch (_step) {
       1 => _canStep1,
       2 => true,
-      3 => _selectedStages.isNotEmpty || _customStageTitles.isNotEmpty,
+      3 => _selectedStages.isNotEmpty,
       _ => false,
     };
 
@@ -212,17 +236,10 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                   ),
                   _Step3(
                     selected: _selectedStages,
-                    customStageTitles: _customStageTitles,
                     onAddCustom: _promptCustomStage,
-                    onRemoveCustom: (title) =>
-                        setState(() => _customStageTitles.remove(title)),
-                    onToggle: (s) => setState(() {
-                      if (_selectedStages.contains(s)) {
-                        _selectedStages.remove(s);
-                      } else {
-                        _selectedStages.add(s);
-                      }
-                    }),
+                    onRemoveAt: _removeAt,
+                    onReorder: _reorderSelected,
+                    onTogglePreset: _togglePreset,
                   ),
                 ],
               ),
@@ -437,21 +454,32 @@ class _Step2 extends StatelessWidget {
 class _Step3 extends StatelessWidget {
   const _Step3({
     required this.selected,
-    required this.customStageTitles,
-    required this.onToggle,
+    required this.onTogglePreset,
     required this.onAddCustom,
-    required this.onRemoveCustom,
+    required this.onRemoveAt,
+    required this.onReorder,
   });
 
-  final Set<_StageTemplate> selected;
-  final List<String> customStageTitles;
-  final ValueChanged<_StageTemplate> onToggle;
+  /// Упорядоченный список выбранных этапов (пресеты + кастом в одном списке).
+  /// Порядок == порядок, в котором они будут созданы на бекенде.
+  final List<_StageItem> selected;
+  final ValueChanged<_StageTemplate> onTogglePreset;
   final VoidCallback onAddCustom;
-  final ValueChanged<String> onRemoveCustom;
+  final ValueChanged<int> onRemoveAt;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   @override
   Widget build(BuildContext context) {
-    final pickedCount = selected.length + customStageTitles.length;
+    final pickedCount = selected.length;
+    final selectedPresets = <_StageTemplate>{
+      for (final e in selected)
+        if (!e.isCustom) e.preset,
+    };
+    // «Доступные шаблоны» — все пресеты, которых ещё нет в выбранных.
+    final availablePresets = _StageTemplate.values
+        .where((s) => !selectedPresets.contains(s))
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x20),
       children: [
@@ -461,7 +489,7 @@ class _Step3 extends StatelessWidget {
             children: [
               const Expanded(
                 child: Text(
-                  'Выберите этапы — потом добавите свои.',
+                  'Перетащите для смены порядка — потом добавите свои.',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -496,21 +524,61 @@ class _Step3 extends StatelessWidget {
             ],
           ),
         ),
-        for (final s in _StageTemplate.values) ...[
-          _StageRow(
-            template: s,
-            selected: selected.contains(s),
-            onToggle: () => onToggle(s),
-          ),
+        // ТЗ-фронт §2 — раздел «Этапы проекта (порядок)»: упорядоченный
+        // список выбранных пресетов и кастомных этапов; drag-and-drop для
+        // изменения порядка, × для удаления.
+        if (selected.isNotEmpty) ...[
+          const _SectionLabel(text: 'ЭТАПЫ ПРОЕКТА (ПОРЯДОК)'),
           const SizedBox(height: AppSpacing.x8),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            itemCount: selected.length,
+            onReorder: onReorder,
+            proxyDecorator: (child, index, animation) => AnimatedBuilder(
+              animation: animation,
+              builder: (context, c) {
+                final t = Curves.easeOut.transform(animation.value);
+                return Transform.scale(
+                  scale: 1.0 + 0.03 * t,
+                  child: Material(
+                    color: Colors.transparent,
+                    elevation: 8 * t,
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    shadowColor: Colors.black.withValues(alpha: 0.25),
+                    child: Opacity(opacity: 0.95, child: c),
+                  ),
+                );
+              },
+              child: child,
+            ),
+            itemBuilder: (context, i) {
+              final item = selected[i];
+              return Padding(
+                key: ValueKey('selected_${item.key}'),
+                padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+                child: ReorderableDelayedDragStartListener(
+                  index: i,
+                  child: _SelectedStageRow(
+                    item: item,
+                    onRemove: () => onRemoveAt(i),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.x6),
         ],
-        // П1.8 / 4.4 — список добавленных пользователем кастомных этапов.
-        if (customStageTitles.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.x12),
-          for (final title in customStageTitles) ...[
-            _CustomStageRow(
-              title: title,
-              onRemove: () => onRemoveCustom(title),
+        // «Доступные шаблоны» — невыбранные пресеты. Tap → добавляет в конец.
+        if (availablePresets.isNotEmpty) ...[
+          const _SectionLabel(text: 'ДОСТУПНЫЕ ШАБЛОНЫ'),
+          const SizedBox(height: AppSpacing.x8),
+          for (final s in availablePresets) ...[
+            _StageRow(
+              template: s,
+              selected: false,
+              onToggle: () => onTogglePreset(s),
             ),
             const SizedBox(height: AppSpacing.x8),
           ],
@@ -543,6 +611,86 @@ class _Step3 extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Строка из секции «Этапы проекта (порядок)» — отображает выбранный пресет
+/// или кастомный этап. Слева — drag-handle, справа — кнопка удаления.
+class _SelectedStageRow extends StatelessWidget {
+  const _SelectedStageRow({required this.item, required this.onRemove});
+
+  final _StageItem item;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCustom = item.isCustom;
+    final icon = isCustom ? PhosphorIconsRegular.note : item.preset.icon;
+    final title = item.title;
+    final meta = isCustom ? 'Свой этап' : item.preset.meta;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.brandLight,
+        borderRadius: BorderRadius.circular(AppRadius.r12),
+        border: Border.all(color: AppColors.brand, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            PhosphorIconsRegular.dotsSixVertical,
+            size: 18,
+            color: AppColors.n500,
+          ),
+          const SizedBox(width: 6),
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.brand.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.brand),
+          ),
+          const SizedBox(width: AppSpacing.x10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.brand,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  meta,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.n400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Удалить из проекта',
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: AppColors.n500,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -612,49 +760,6 @@ class _CustomStageSheetState extends State<_CustomStageSheet> {
           onPressed: () => Navigator.of(context).pop(null),
         ),
       ],
-    );
-  }
-}
-
-class _CustomStageRow extends StatelessWidget {
-  const _CustomStageRow({required this.title, required this.onRemove});
-
-  final String title;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.n0,
-        borderRadius: BorderRadius.circular(AppRadius.r12),
-        border: Border.all(color: AppColors.brandLight, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Icon(PhosphorIconsRegular.note, size: 18, color: AppColors.brand),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.n900,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          IconButton(
-            onPressed: onRemove,
-            icon: const Icon(Icons.close_rounded, size: 18),
-            color: AppColors.n400,
-            visualDensity: VisualDensity.compact,
-          ),
-        ],
-      ),
     );
   }
 }
@@ -929,4 +1034,31 @@ enum _StageTemplate {
   final String title;
   final IconData icon;
   final String meta;
+}
+
+/// ТЗ-фронт §2. Запись в ordered-списке шага 3: либо пресет (`_StageTemplate`),
+/// либо кастомный этап (вводится пользователем через bottom-sheet). Используется
+/// для одного `ReorderableListView`, где пресеты и кастом перемешаны и
+/// сохраняют пользовательский порядок.
+class _StageItem {
+  const _StageItem.preset(_StageTemplate preset)
+    : _preset = preset,
+      _customTitle = null;
+  const _StageItem.custom(String title)
+    : _preset = null,
+      _customTitle = title;
+
+  final _StageTemplate? _preset;
+  final String? _customTitle;
+
+  bool get isCustom => _preset == null;
+  _StageTemplate get preset => _preset!;
+  String get customTitle => _customTitle!;
+
+  String get title => isCustom ? _customTitle! : _preset!.title;
+
+  /// Стабильный ключ для `ValueKey` в `ReorderableListView` — пресеты
+  /// идентифицируются по enum-имени, кастомные — по заголовку (он уникален
+  /// в пределах wizard'а — `_promptCustomStage` дедуплицирует).
+  String get key => isCustom ? 'custom:${_customTitle!}' : 'preset:${_preset!.name}';
 }

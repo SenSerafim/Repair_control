@@ -28,6 +28,12 @@ class ExtraWorkPendingAnnotation extends StepAnnotation {
 /// Слева 24×24 чекбокс (зелёный при done), eyebrow + название, опц. подзадачи
 /// (раскрываются при done — chevron) и аннотация-pill (вопрос / доп.работа).
 /// brand-light bg для активного шага.
+///
+/// `hasPendingApproval` — Task 3.3 (TZ-фронт §7.4): если у шага есть открытое
+/// согласование scope=step, под названием показываем pill «На согласование».
+/// Источник истины — родительский `StageChecklistTab`, который один раз
+/// подтягивает approvals и формирует set step-id'шек, чтобы не дёргать
+/// провайдер из каждой строки списка.
 class ChecklistStepRow extends StatefulWidget {
   const ChecklistStepRow({
     required this.step,
@@ -40,6 +46,7 @@ class ChecklistStepRow extends StatefulWidget {
     this.annotation,
     this.substeps = const [],
     this.onToggleSubstep,
+    this.hasPendingApproval = false,
     super.key,
   });
 
@@ -53,6 +60,7 @@ class ChecklistStepRow extends StatefulWidget {
   final StepAnnotation? annotation;
   final List<Substep> substeps;
   final ValueChanged<Substep>? onToggleSubstep;
+  final bool hasPendingApproval;
 
   @override
   State<ChecklistStepRow> createState() => _ChecklistStepRowState();
@@ -152,6 +160,10 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
                               ),
                             ),
                           ],
+                          if (widget.hasPendingApproval) ...[
+                            const SizedBox(height: AppSpacing.x6),
+                            const _PendingApprovalPill(),
+                          ],
                           if (widget.annotation != null) ...[
                             const SizedBox(height: AppSpacing.x6),
                             _AnnotationPill(annotation: widget.annotation!),
@@ -198,6 +210,45 @@ class _ChecklistStepRowState extends State<ChecklistStepRow> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Task 3.3 (TZ-фронт §7.4): маленький пилл «На согласование» под названием
+/// шага, когда по этому шагу открыта approval scope=step. Yellow-tokens, как
+/// и прочие attention-аннотации, чтобы не плодить визуальную грамматику.
+class _PendingApprovalPill extends StatelessWidget {
+  const _PendingApprovalPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.yellowBg,
+        borderRadius: BorderRadius.circular(AppRadius.r8),
+        border: Border.all(color: AppColors.yellowText, width: 1),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.schedule_rounded,
+            size: 12,
+            color: AppColors.yellowText,
+          ),
+          SizedBox(width: 4),
+          Text(
+            'На согласование',
+            style: TextStyle(
+              fontFamily: 'Manrope',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.yellowText,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -45,6 +45,8 @@ export class ToolsController {
       status: dto.status,
       storageLocation: dto.storageLocation,
       assignedEmployeeId: dto.assignedEmployeeId,
+      purchaseDate: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
+      condition: dto.condition,
     });
   }
 
@@ -98,7 +100,14 @@ export class ToolsController {
     @Param('id') id: string,
     @Body() dto: UpdateToolDto,
   ) {
-    return this.tools.updateTool(id, dto, req.user.userId);
+    return this.tools.updateTool(
+      id,
+      {
+        ...dto,
+        purchaseDate: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
+      },
+      req.user.userId,
+    );
   }
 
   @Delete('tools/:id')
@@ -147,6 +156,8 @@ export class ToolsController {
       article: dto.article,
       photoKey: dto.photoKey,
       serial: dto.serial,
+      purchaseDate: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
+      condition: dto.condition,
     });
   }
 

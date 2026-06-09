@@ -26,6 +26,7 @@ export 'app_message_bubble.dart';
 export 'app_micro_animations.dart';
 export 'app_nav_tile.dart';
 export 'app_notif_cta.dart';
+export 'app_notifications_bell.dart';
 export 'app_online_dot.dart';
 export 'app_option_row.dart';
 export 'app_photo_grid.dart';

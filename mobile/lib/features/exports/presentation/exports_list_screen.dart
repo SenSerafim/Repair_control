@@ -200,6 +200,7 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
     switch (kind) {
       case ExportKind.feedPdf:
       case ExportKind.projectReportPdf:
+      case ExportKind.stageReportPdf:
         return '.pdf';
       case ExportKind.projectZip:
         return '.zip';
@@ -284,6 +285,8 @@ class _ExportCardState extends ConsumerState<_ExportCard> {
                                 Icons.picture_as_pdf_outlined,
                               ExportKind.projectReportPdf =>
                                 Icons.description_outlined,
+                              ExportKind.stageReportPdf =>
+                                Icons.article_outlined,
                               ExportKind.projectZip =>
                                 Icons.folder_zip_outlined,
                             },

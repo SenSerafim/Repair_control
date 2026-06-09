@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -66,6 +67,24 @@ class ProjectCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          // NEWFIX-2 §19 — точка входа «Заметки проекта»
+                          // прямо с карточки в списке (рядом с ⋮). Раньше
+                          // иконка жила только в шапке открытой консоли —
+                          // спека требует доступ из списка.
+                          IconButton(
+                            icon: const Icon(
+                              PhosphorIconsRegular.note,
+                              size: 20,
+                            ),
+                            tooltip: 'Заметки проекта',
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.all(AppSpacing.x6),
+                            constraints: const BoxConstraints(),
+                            color: AppColors.n400,
+                            onPressed: () => context.push(
+                              '/projects/${project.id}/notes',
+                            ),
+                          ),
                           if (onMenu != null)
                             GestureDetector(
                               onTap: onMenu,
@@ -103,6 +122,13 @@ class ProjectCard extends StatelessWidget {
                           ],
                         ),
                       ],
+                      // NEWFIX §1 — мини-дашборд: до дедлайна · этапы
+                      // done/total · сколько «в работе». Карточка в списке
+                      // не подтягивает этапы (только /projects), поэтому
+                      // 2 из 3 счётчиков рендерим как `—` с TODO — ждём
+                      // расширения payload или отдельного агрегата.
+                      const SizedBox(height: AppSpacing.x8),
+                      _MiniDashboardRow(project: project),
                       const SizedBox(height: AppSpacing.x10),
                       Row(
                         children: [
@@ -309,4 +335,92 @@ class _ProgressBar extends StatelessWidget {
     Semaphore.red => AppColors.redDot,
     _ => AppColors.brand,
   };
+}
+
+/// NEWFIX §1 — мини-дашборд под адресом карточки проекта.
+///
+/// 3 ячейки:
+///   • дни до дедлайна (из `project.plannedEnd`),
+///   • этапы done/total — TODO: пока `—` (Project payload не несёт счётчики этапов),
+///   • этапов «в работе»  — TODO: пока `—` (то же).
+///
+/// Когда бэкенд расширит `/projects` или появится агрегат-провайдер,
+/// замените `—` на реальные значения. Сейчас компонент даёт визуальный
+/// якорь и сохраняет контракт верстки (`Row` с 3 stats).
+class _MiniDashboardRow extends StatelessWidget {
+  const _MiniDashboardRow({required this.project});
+
+  final Project project;
+
+  @override
+  Widget build(BuildContext context) {
+    final daysToDeadline = project.plannedEnd
+        ?.difference(DateTime.now())
+        .inDays;
+    final isOverdue = daysToDeadline != null && daysToDeadline < 0;
+
+    final String daysLabel;
+    if (daysToDeadline == null) {
+      daysLabel = '—';
+    } else if (daysToDeadline >= 0) {
+      // Кириллица «д» — валидный identifier char в Dart, поэтому
+      // оборачиваем подстановку в `${...}`, иначе парсер съест букву.
+      // ignore: unnecessary_brace_in_string_interps
+      daysLabel = '${daysToDeadline}д';
+    } else {
+      daysLabel = '${daysToDeadline.abs()}д просрочено';
+    }
+
+    return Row(
+      children: [
+        _CardStat(
+          icon: PhosphorIconsRegular.calendar,
+          value: daysLabel,
+          color: isOverdue ? AppColors.redDot : null,
+        ),
+        const SizedBox(width: AppSpacing.x12),
+        // TODO(newfix-§1): подставить project.stagesDone / project.stagesTotal,
+        // когда payload `/projects` начнёт их отдавать (или появится
+        // агрегатный провайдер). Сейчас — заглушка `—/—`.
+        const _CardStat(
+          icon: PhosphorIconsRegular.listChecks,
+          value: '—/—',
+        ),
+        const SizedBox(width: AppSpacing.x12),
+        // TODO(newfix-§1): подставить project.stagesInProgress, см. выше.
+        const _CardStat(
+          icon: PhosphorIconsRegular.gear,
+          value: '— в работе',
+        ),
+      ],
+    );
+  }
+}
+
+class _CardStat extends StatelessWidget {
+  const _CardStat({required this.icon, required this.value, this.color});
+
+  final IconData icon;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color ?? AppColors.n400),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'Manrope',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: color ?? AppColors.n600,
+          ),
+        ),
+      ],
+    );
+  }
 }

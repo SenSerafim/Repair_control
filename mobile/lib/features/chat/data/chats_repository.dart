@@ -76,6 +76,14 @@ class ChatsRepository {
     }).toList();
   });
 
+  /// NEWFIX Task 2.3 — ensure-or-create stage chat (idempotent on backend).
+  Future<Chat> ensureStageChat(String stageId) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/stages/$stageId/chat',
+    );
+    return Chat.parse(r.data!);
+  });
+
   Future<Chat> createPersonal({
     required String projectId,
     required String withUserId,

@@ -66,6 +66,43 @@ class PublicUser {
   int get hashCode => Object.hash(id, firstName, lastName, phone, avatarUrl);
 }
 
+/// NEWFIX §6.1 — состояние инструмента (заполняется владельцем).
+enum ToolCondition {
+  newTool,
+  good,
+  worn,
+  broken;
+
+  String get apiValue => switch (this) {
+    ToolCondition.newTool => 'new_tool',
+    ToolCondition.good => 'good',
+    ToolCondition.worn => 'worn',
+    ToolCondition.broken => 'broken',
+  };
+
+  static ToolCondition? fromString(String? raw) {
+    switch (raw) {
+      case 'new_tool':
+        return ToolCondition.newTool;
+      case 'good':
+        return ToolCondition.good;
+      case 'worn':
+        return ToolCondition.worn;
+      case 'broken':
+        return ToolCondition.broken;
+      default:
+        return null;
+    }
+  }
+
+  String get displayName => switch (this) {
+    ToolCondition.newTool => 'Новый',
+    ToolCondition.good => 'Хорошее',
+    ToolCondition.worn => 'Изношенный',
+    ToolCondition.broken => 'Сломан',
+  };
+}
+
 /// NEWFIX-2 §7.1 — формальный статус инструмента.
 enum ToolStatus {
   inStorage,
@@ -113,6 +150,8 @@ class ToolItem {
     this.article,
     this.photoKey,
     this.serial,
+    this.purchaseDate,
+    this.condition,
     this.status = ToolStatus.inStorage,
     this.storageLocation,
     this.assignedEmployeeId,
@@ -134,6 +173,12 @@ class ToolItem {
   final String? article;
   final String? photoKey;
   final String? serial;
+
+  /// NEWFIX §6.1 — дата покупки.
+  final DateTime? purchaseDate;
+
+  /// NEWFIX §6.1 — состояние инструмента.
+  final ToolCondition? condition;
 
   /// NEWFIX-2 §7.1 — формальный статус.
   final ToolStatus status;
@@ -165,6 +210,8 @@ class ToolItem {
     String? currentHolderId,
     String? photoKey,
     String? serial,
+    DateTime? purchaseDate,
+    ToolCondition? condition,
     ToolStatus? status,
     String? storageLocation,
     String? assignedEmployeeId,
@@ -180,6 +227,8 @@ class ToolItem {
     article: article ?? this.article,
     photoKey: photoKey ?? this.photoKey,
     serial: serial ?? this.serial,
+    purchaseDate: purchaseDate ?? this.purchaseDate,
+    condition: condition ?? this.condition,
     status: status ?? this.status,
     storageLocation: storageLocation ?? this.storageLocation,
     assignedEmployeeId: assignedEmployeeId ?? this.assignedEmployeeId,
@@ -199,6 +248,10 @@ class ToolItem {
     article: json['article'] as String?,
     photoKey: json['photoKey'] as String?,
     serial: json['serial'] as String?,
+    purchaseDate: json['purchaseDate'] != null
+        ? DateTime.parse(json['purchaseDate'] as String)
+        : null,
+    condition: ToolCondition.fromString(json['condition'] as String?),
     status: ToolStatus.fromString(json['status'] as String?),
     storageLocation: json['storageLocation'] as String?,
     assignedEmployeeId: json['assignedEmployeeId'] as String?,

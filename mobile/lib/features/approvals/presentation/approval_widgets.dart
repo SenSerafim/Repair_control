@@ -283,6 +283,7 @@ ScopeBadgeTone _toneFor(ApprovalScope scope) => switch (scope) {
   ApprovalScope.stageCreate => ScopeBadgeTone.stageAccept,
   ApprovalScope.materialPurchase => ScopeBadgeTone.extraWork,
   ApprovalScope.selfPurchase => ScopeBadgeTone.extraWork,
+  ApprovalScope.defect => ScopeBadgeTone.deadline,
 };
 
 ScopeBadgeTone _statusTone(ApprovalStatus s) => switch (s) {
@@ -319,6 +320,9 @@ String _subtitleFor(Approval a) {
     case ApprovalScope.selfPurchase:
       final amount = (a.payload['amount'] as num?)?.toInt();
       return amount != null ? Money.format(amount) : 'Самокуп';
+    case ApprovalScope.defect:
+      final desc = a.payload['description'] as String?;
+      return desc != null && desc.isNotEmpty ? desc : 'Шаг на доработку';
   }
 }
 

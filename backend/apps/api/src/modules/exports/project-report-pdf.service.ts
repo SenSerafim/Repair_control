@@ -200,8 +200,8 @@ export class ProjectReportPdfService {
     private readonly files: FilesService,
   ) {}
 
-  async build(projectId: string, viewer: ReportViewer): Promise<Buffer> {
-    const data = await this.collect(projectId, viewer);
+  async build(projectId: string, viewer: ReportViewer, stageId?: string): Promise<Buffer> {
+    const data = await this.collect(projectId, viewer, stageId);
     if (!data) {
       return this.fallbackPlain(`Проект ${projectId} не найден.`);
     }
@@ -211,7 +211,13 @@ export class ProjectReportPdfService {
 
   // -------------------- DATA COLLECTION --------------------
 
-  async collect(projectId: string, viewer: ReportViewer): Promise<ReportData | null> {
+  /// NEWFIX §7.1 — если задан `stageIdFilter`, отчёт ограничивается одним
+  /// этапом (после применения RBAC-фильтра видимости).
+  async collect(
+    projectId: string,
+    viewer: ReportViewer,
+    stageIdFilter?: string,
+  ): Promise<ReportData | null> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -222,15 +228,19 @@ export class ProjectReportPdfService {
 
     const visibleStageIdSet = this.computeVisibleStageIds(viewer);
 
+    const baseStageWhere =
+      viewer.isOwner ||
+      viewer.membershipRole === 'representative' ||
+      viewer.membershipRole === 'customer'
+        ? { projectId }
+        : visibleStageIdSet
+          ? { projectId, id: { in: [...visibleStageIdSet] } }
+          : { projectId, id: { in: [] } };
+    // NEWFIX §7.1 — Stage-level отчёт: дополнительный фильтр по конкретному
+    // stageId (поверх RBAC visibility-фильтра).
+    const stageWhere = stageIdFilter ? { ...baseStageWhere, id: stageIdFilter } : baseStageWhere;
     const stagesRaw = await this.prisma.stage.findMany({
-      where:
-        viewer.isOwner ||
-        viewer.membershipRole === 'representative' ||
-        viewer.membershipRole === 'customer'
-          ? { projectId }
-          : visibleStageIdSet
-            ? { projectId, id: { in: [...visibleStageIdSet] } }
-            : { projectId, id: { in: [] } },
+      where: stageWhere,
       orderBy: { orderIndex: 'asc' },
       include: {
         pauses: { orderBy: { startedAt: 'asc' } },

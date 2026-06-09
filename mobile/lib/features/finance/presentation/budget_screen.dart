@@ -11,6 +11,10 @@ import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../approvals/application/approvals_controller.dart';
 import '../../approvals/domain/approval.dart';
+import '../../materials/application/materials_controller.dart';
+import '../../selfpurchase/application/selfpurchase_controller.dart';
+import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../application/budget_controller.dart';
 import '../application/payments_controller.dart';
 import '../domain/budget.dart';
@@ -100,6 +104,8 @@ class BudgetScreen extends ConsumerWidget {
       showBack: true,
       title: 'Бюджет проекта',
       padding: EdgeInsets.zero,
+      // NEWFIX Task 8.1 — общий «звоночек» уведомлений в шапке.
+      actions: const [AppNotificationsBell()],
       body: async.when(
         loading: () => const AppLoadingState(),
         error: (e, _) => AppErrorState(
@@ -434,6 +440,36 @@ class _PendingExtrasBanner extends StatelessWidget {
   }
 }
 
+/// NEWFIX Task 1.5: чистая функция фильтрации `MaterialPurchaseFlow` по
+/// `stageId`. Вынесена для unit-теста — UI-таб приватный (`_MaterialsTab`),
+/// поэтому проще тестировать саму логику, чем pump-ить экран с цепочкой
+/// провайдеров (budget/material/selfpurchase/stages + AccessGuard).
+@visibleForTesting
+List<MaterialPurchaseFlow> filterMaterialPurchasesByStage({
+  required List<MaterialPurchaseFlow> rows,
+  required Map<String, String?> stageByRequestId,
+  required String activeStageId,
+}) {
+  if (activeStageId == 'all') return rows;
+  return rows
+      .where((m) => stageByRequestId[m.requestId] == activeStageId)
+      .toList();
+}
+
+/// Аналогичная фильтрация по этапу для самозакупов
+/// (используется в табе «Материалы» бюджета).
+@visibleForTesting
+List<ApprovedSelfpurchaseFlow> filterSelfpurchasesByStage({
+  required List<ApprovedSelfpurchaseFlow> rows,
+  required Map<String, String?> stageBySelfpurchaseId,
+  required String activeStageId,
+}) {
+  if (activeStageId == 'all') return rows;
+  return rows
+      .where((sp) => stageBySelfpurchaseId[sp.id] == activeStageId)
+      .toList();
+}
+
 /// Таб «Материалы»: search + filter chips + date-range chip + table.
 class _MaterialsTab extends ConsumerStatefulWidget {
   const _MaterialsTab({required this.projectId});
@@ -445,6 +481,13 @@ class _MaterialsTab extends ConsumerStatefulWidget {
 }
 
 class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
+  // NEWFIX Task 1.5 (TZ-встреча-2 §10.2, TZ-фронт §5): фильтр по этапам в табе
+  // «Материалы» бюджета. 'all' = все этапы; конкретный stageId = срез.
+  // API `MoneyFlow` не возвращает stageId в `materialPurchases` /
+  // `approvedSelfpurchases`, поэтому маппим по `requestId/id` через
+  // `materialsControllerProvider` и `selfpurchasesControllerProvider`. Это
+  // фронт-only решение в условиях замороженной OpenAPI 1.0.0.
+  String _stageId = 'all';
   String _search = '';
 
   @override
@@ -456,6 +499,25 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
       to: range.to,
     );
     final flowAsync = ref.watch(moneyFlowFilteredProvider(query));
+    // Список этапов и подмаппинги request/selfpurchase → stageId. Подгружаем
+    // тихо — если этапов нет, бар отрисует только «Все этапы».
+    final stagesAsync = ref.watch(stagesControllerProvider(widget.projectId));
+    final stages = stagesAsync.value ?? const <Stage>[];
+    final materialsAsync = ref.watch(
+      materialsControllerProvider(widget.projectId),
+    );
+    final selfpurchasesAsync = ref.watch(
+      selfpurchasesControllerProvider(widget.projectId),
+    );
+    final materialsList = materialsAsync.value ?? const [];
+    final selfpurchasesList = selfpurchasesAsync.value ?? const [];
+    final reqStageById = <String, String?>{
+      for (final r in materialsList) r.id: r.stageId,
+    };
+    final spStageById = <String, String?>{
+      for (final sp in selfpurchasesList) sp.id: sp.stageId,
+    };
+
     return flowAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.x40),
@@ -466,7 +528,11 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
         onRetry: () => ref.invalidate(moneyFlowFilteredProvider(query)),
       ),
       data: (flow) {
-        final allRows = flow.materialPurchases
+        final allRows = filterMaterialPurchasesByStage(
+              rows: flow.materialPurchases,
+              stageByRequestId: reqStageById,
+              activeStageId: _stageId,
+            )
             .map(
               (m) => BudgetMaterialsRow(
                 title: m.title,
@@ -476,7 +542,11 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
               ),
             )
             .toList();
-        final spRows = flow.approvedSelfpurchases
+        final spRows = filterSelfpurchasesByStage(
+              rows: flow.approvedSelfpurchases,
+              stageBySelfpurchaseId: spStageById,
+              activeStageId: _stageId,
+            )
             .map(
               (sp) => BudgetMaterialsRow(
                 title: 'Самозакуп: ${sp.byUserName}',
@@ -495,7 +565,12 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                   r.subtitle.toLowerCase().contains(_search.toLowerCase()),
             )
             .toList();
-        final pending = flow.pendingMaterials
+        final pendingFiltered = _stageId == 'all'
+            ? flow.pendingMaterials
+            : flow.pendingMaterials
+                .where((m) => reqStageById[m.requestId] == _stageId)
+                .toList();
+        final pending = pendingFiltered
             .where(
               (m) =>
                   _search.isEmpty ||
@@ -543,6 +618,26 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
               ),
             ),
             const SizedBox(height: AppSpacing.x10),
+            // NEWFIX Task 1.5: горизонтальный фильтр-чипсы по этапам.
+            // 'all' + по чипсу на этап. Если этапов нет — бар отрисуется
+            // только с «Все этапы» (никаких пустых состояний).
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+              child: AppFilterPillBar(
+                key: const ValueKey('budget_materials_stage_filter'),
+                padding: EdgeInsets.zero,
+                activeId: _stageId,
+                onSelect: (id) => setState(() => _stageId = id),
+                chips: [
+                  const AppFilterPillSpec(id: 'all', label: 'Все этапы'),
+                  for (final s in stages)
+                    AppFilterPillSpec(
+                      id: s.id,
+                      label: 'Этап ${s.orderIndex + 1}',
+                    ),
+                ],
+              ),
+            ),
             // Date-range chip
             Row(
               children: [

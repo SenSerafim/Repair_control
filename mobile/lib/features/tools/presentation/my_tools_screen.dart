@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/routing/app_routes.dart';
@@ -206,6 +207,12 @@ class _MyToolsScreenState extends ConsumerState<MyToolsScreen> {
               label: 'Сменить статус',
               onTap: () => Navigator.of(ctx).pop(_ToolMenuAction.changeStatus),
             ),
+            // Task 6.2 — открывает full-screen timeline передач инструмента.
+            _MenuItem(
+              icon: PhosphorIconsRegular.clockCounterClockwise,
+              label: 'История',
+              onTap: () => Navigator.of(ctx).pop(_ToolMenuAction.history),
+            ),
             _MenuItem(
               icon: PhosphorIconsRegular.trash,
               label: 'Удалить',
@@ -223,6 +230,10 @@ class _MyToolsScreenState extends ConsumerState<MyToolsScreen> {
         await context.push<void>(AppRoutes.profileToolDetailWith(tool.id));
       case _ToolMenuAction.changeStatus:
         await _changeStatusSheet(context, ref, tool);
+      case _ToolMenuAction.history:
+        await context.push<void>(
+          AppRoutes.toolCustodyHistoryWith(tool.id, name: tool.name),
+        );
       case _ToolMenuAction.delete:
         await _confirmDelete(context, ref, tool);
     }
@@ -323,7 +334,7 @@ class _MyToolsScreenState extends ConsumerState<MyToolsScreen> {
   }
 }
 
-enum _ToolMenuAction { edit, changeStatus, delete }
+enum _ToolMenuAction { edit, changeStatus, history, delete }
 
 class _Counts {
   const _Counts({
@@ -497,6 +508,27 @@ class _ToolCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (tool.purchaseDate != null || tool.condition != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (tool.condition != null)
+                            _ConditionPill(condition: tool.condition!),
+                          if (tool.condition != null &&
+                              tool.purchaseDate != null)
+                            const SizedBox(width: 6),
+                          if (tool.purchaseDate != null)
+                            Text(
+                              'куплен ${DateFormat('MM.y').format(tool.purchaseDate!)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.n500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     _StatusLine(tool: tool),
                   ],
@@ -576,6 +608,37 @@ class _StatusLine extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConditionPill extends StatelessWidget {
+  const _ConditionPill({required this.condition});
+
+  final ToolCondition condition;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (condition) {
+      ToolCondition.newTool => AppColors.greenDark,
+      ToolCondition.good => AppColors.brand,
+      ToolCondition.worn => AppColors.yellowText,
+      ToolCondition.broken => AppColors.redText,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        condition.displayName,
+        style: TextStyle(
+          fontSize: 10,
           fontWeight: FontWeight.w800,
           color: color,
         ),

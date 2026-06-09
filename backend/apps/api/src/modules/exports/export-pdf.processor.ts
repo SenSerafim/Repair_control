@@ -56,6 +56,17 @@ export class ExportProcessor extends WorkerHost {
         const fileKey = `exports/${exportJob.projectId}/${exportJob.id}/project-report.pdf`;
         await this.files.putObject(fileKey, buffer, 'application/pdf');
         await this.exports.markDone(exportJob.id, fileKey, buffer.length);
+      } else if (exportJob.kind === ExportKind.stage_report_pdf) {
+        const filters = (exportJob.filtersPayload as { stageId?: string } | null) ?? {};
+        const stageId = filters.stageId;
+        if (!stageId) {
+          throw new Error('stage_report_pdf requires filtersPayload.stageId');
+        }
+        const viewer = await this.buildReportViewer(exportJob.requestedById, exportJob.projectId);
+        const buffer = await this.reportPdf.build(exportJob.projectId, viewer, stageId);
+        const fileKey = `exports/${exportJob.projectId}/${exportJob.id}/stage-report.pdf`;
+        await this.files.putObject(fileKey, buffer, 'application/pdf');
+        await this.exports.markDone(exportJob.id, fileKey, buffer.length);
       } else if (exportJob.kind === ExportKind.project_summary_txt) {
         // Deprecated TXT-сводка — реализация удалена, но историческими записями
         // (created до 2026-05-12) обрабатываем через тот же ProjectReportPdfService,

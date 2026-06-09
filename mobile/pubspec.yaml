@@ -1,7 +1,7 @@
 name: repair_control
 description: "Repair Control — мобильное приложение для контроля ремонтных работ."
 publish_to: 'none'
-version: 1.8.1+9
+version: 1.9.0+10
 
 environment:
   sdk: ^3.11.4
@@ -117,6 +117,7 @@ dev_dependencies:
 
   # Testing
   mocktail: ^1.0.4
+  url_launcher_platform_interface: ^2.3.2
   golden_toolkit: ^0.15.0
 
 flutter:

@@ -547,6 +547,28 @@ export class ApprovalsService {
         }
         break;
       }
+      case 'defect': {
+        if (!input.stepId) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'stepId required for scope=defect',
+          );
+        }
+        const description = (input.payload as any)?.description;
+        if (typeof description !== 'string' || description.trim().length === 0) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'payload.description required for defect',
+          );
+        }
+        if (!input.attachmentKeys?.length) {
+          throw new InvalidInputError(
+            ErrorCodes.APPROVAL_INVALID_SCOPE,
+            'at least one attachment (photo) required for defect',
+          );
+        }
+        break;
+      }
     }
   }
 

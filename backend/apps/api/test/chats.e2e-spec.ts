@@ -159,4 +159,62 @@ describe('S5 — Chats REST', () => {
     // Этот сценарий требует явного создания stage-чата через API — но мы в S5 скелете
     // автосоздание ещё не заплетено в stages.service. Пропускаем — покроем после интеграции.
   });
+
+  // NEWFIX Task 2.3 — POST /api/stages/:stageId/chat (ensureStageChat)
+  describe('POST /stages/:stageId/chat (ensureStageChat)', () => {
+    async function applyDemontazh(token: string, projectId: string) {
+      const tpls = await request(server())
+        .get('/api/templates/platform')
+        .set({
+          Authorization: `Bearer ${token}`,
+        });
+      const demontazh = (tpls.body as any[]).find((t) => t.title === 'Демонтаж');
+      await request(server())
+        .post(`/api/templates/${demontazh.id}/apply`)
+        .set({ Authorization: `Bearer ${token}` })
+        .send({ projectId, plannedEnd: '2026-09-01' })
+        .expect(201);
+      const stages = await request(server())
+        .get(`/api/projects/${projectId}/stages`)
+        .set({ Authorization: `Bearer ${token}` })
+        .expect(200);
+      return stages.body[0].id as string;
+    }
+
+    it('owner создаёт чат этапа (идемпотентно — повтор возвращает тот же id)', async () => {
+      const customer = await reg('+79990005301', 'customer');
+      const cAuth = { Authorization: `Bearer ${customer.token}` };
+      const projectId = await newProject(customer.token);
+      const stageId = await applyDemontazh(customer.token, projectId);
+
+      const first = await request(server())
+        .post(`/api/stages/${stageId}/chat`)
+        .set(cAuth)
+        .expect(201);
+      expect(first.body.id).toBeTruthy();
+      expect(first.body.type).toBe('stage');
+      expect(first.body.stageId).toBe(stageId);
+      expect(first.body.projectId).toBe(projectId);
+
+      const second = await request(server())
+        .post(`/api/stages/${stageId}/chat`)
+        .set(cAuth)
+        .expect(201);
+      expect(second.body.id).toBe(first.body.id);
+    });
+
+    it('не участник проекта получает 403', async () => {
+      const customer = await reg('+79990005401', 'customer');
+      const stranger = await reg('+79990005402', 'contractor');
+      const cAuth = { Authorization: `Bearer ${customer.token}` };
+      const sAuth = { Authorization: `Bearer ${stranger.token}` };
+      const projectId = await newProject(customer.token);
+      const stageId = await applyDemontazh(customer.token, projectId);
+
+      // owner — OK
+      await request(server()).post(`/api/stages/${stageId}/chat`).set(cAuth).expect(201);
+      // stranger — 403
+      await request(server()).post(`/api/stages/${stageId}/chat`).set(sAuth).expect(403);
+    });
+  });
 });

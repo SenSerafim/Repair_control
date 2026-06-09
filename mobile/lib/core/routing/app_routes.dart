@@ -82,6 +82,15 @@ class AppRoutes {
   static String profileToolDetailWith(String toolId) =>
       '/profile/tools/$toolId';
 
+  // Task 6.2 — full-screen «История инструмента» (custody handover timeline).
+  // Path вынесен на корень, т.к. экран открывается и из my_tools, и из
+  // project_tools_screen, и из tool_detail.
+  static const toolCustodyHistory = '/tools/:toolId/history';
+  static String toolCustodyHistoryWith(String toolId, {String? name}) {
+    if (name == null || name.isEmpty) return '/tools/$toolId/history';
+    return '/tools/$toolId/history?name=${Uri.encodeQueryComponent(name)}';
+  }
+
   // Approvals (root + per-project).
   static const approvals = '/approvals';
   static const approvalDetail = '/approvals/:approvalId';

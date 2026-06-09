@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -104,6 +106,56 @@ class ApprovalsRepository {
     return Approval.parse(r.data!);
   });
 
+  /// NEWFIX §4.1 — presign фото-доказательства для scope=defect.
+  /// Использует общий /api/files/presign-upload, scope='approvals/defects'
+  /// (политика по умолчанию пропускает image/jpeg + image/png).
+  Future<ApprovalAttachmentPresign> presignDefectPhoto({
+    required String mimeType,
+    required int sizeBytes,
+    required String originalName,
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/files/presign-upload',
+      data: {
+        'originalName': originalName,
+        'mimeType': mimeType,
+        'sizeBytes': sizeBytes,
+        'scope': 'approvals/defects',
+      },
+    );
+    return ApprovalAttachmentPresign.fromJson(r.data!);
+  });
+
+  /// Raw PUT в S3 (MinIO) — без auth-interceptor'а.
+  Future<void> uploadToStorage({
+    required ApprovalAttachmentPresign presigned,
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    final rawDio = Dio();
+    try {
+      await rawDio.request<void>(
+        presigned.url,
+        data: bytes,
+        options: Options(
+          method: presigned.method,
+          headers: {
+            ...presigned.headers,
+            'Content-Type': mimeType,
+            'Content-Length': bytes.length.toString(),
+          },
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+    } on DioException catch (e) {
+      final api = ApiError.fromDio(e);
+      throw ApprovalsException(AuthFailure.fromApiError(api), api);
+    } finally {
+      rawDio.close();
+    }
+  }
+
   Future<T> _call<T>(Future<T> Function() action) async {
     try {
       return await action();
@@ -112,6 +164,33 @@ class ApprovalsRepository {
       throw ApprovalsException(AuthFailure.fromApiError(api), api);
     }
   }
+}
+
+class ApprovalAttachmentPresign {
+  ApprovalAttachmentPresign({
+    required this.fileKey,
+    required this.url,
+    required this.method,
+    required this.headers,
+    required this.expiresIn,
+  });
+
+  factory ApprovalAttachmentPresign.fromJson(Map<String, dynamic> json) =>
+      ApprovalAttachmentPresign(
+        fileKey: (json['key'] ?? json['fileKey']) as String,
+        url: (json['url'] ?? json['uploadUrl']) as String,
+        method: json['method'] as String? ?? 'PUT',
+        headers: (json['headers'] as Map<String, dynamic>? ?? const {}).map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
+        expiresIn: (json['expiresIn'] as num?)?.toInt() ?? 300,
+      );
+
+  final String fileKey;
+  final String url;
+  final String method;
+  final Map<String, String> headers;
+  final int expiresIn;
 }
 
 final approvalsRepositoryProvider = Provider<ApprovalsRepository>((ref) {

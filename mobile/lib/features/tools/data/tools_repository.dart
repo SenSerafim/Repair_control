@@ -53,6 +53,8 @@ class ToolsRepository {
     ToolStatus? status,
     String? storageLocation,
     String? assignedEmployeeId,
+    DateTime? purchaseDate,
+    ToolCondition? condition,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/me/tools',
@@ -65,6 +67,9 @@ class ToolsRepository {
         if (storageLocation != null && storageLocation.isNotEmpty)
           'storageLocation': storageLocation,
         if (assignedEmployeeId != null) 'assignedEmployeeId': assignedEmployeeId,
+        if (purchaseDate != null)
+          'purchaseDate': purchaseDate.toUtc().toIso8601String(),
+        if (condition != null) 'condition': condition.apiValue,
       },
     );
     return ToolItem.parse(r.data!);
@@ -79,6 +84,8 @@ class ToolsRepository {
     ToolStatus? status,
     String? storageLocation,
     String? assignedEmployeeId,
+    DateTime? purchaseDate,
+    ToolCondition? condition,
   }) => _call(() async {
     final r = await _dio.patch<Map<String, dynamic>>(
       '/api/tools/$id',
@@ -90,6 +97,9 @@ class ToolsRepository {
         if (status != null) 'status': status.apiValue,
         if (storageLocation != null) 'storageLocation': storageLocation,
         if (assignedEmployeeId != null) 'assignedEmployeeId': assignedEmployeeId,
+        if (purchaseDate != null)
+          'purchaseDate': purchaseDate.toUtc().toIso8601String(),
+        if (condition != null) 'condition': condition.apiValue,
       },
     );
     return ToolItem.parse(r.data!);
@@ -132,6 +142,8 @@ class ToolsRepository {
     String? article,
     String? photoKey,
     String? serial,
+    DateTime? purchaseDate,
+    ToolCondition? condition,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/projects/$projectId/tools',
@@ -141,6 +153,9 @@ class ToolsRepository {
         if (article != null && article.isNotEmpty) 'article': article,
         if (photoKey != null) 'photoKey': photoKey,
         if (serial != null && serial.isNotEmpty) 'serial': serial,
+        if (purchaseDate != null)
+          'purchaseDate': purchaseDate.toUtc().toIso8601String(),
+        if (condition != null) 'condition': condition.apiValue,
       },
     );
     return ToolItem.parse(r.data!);

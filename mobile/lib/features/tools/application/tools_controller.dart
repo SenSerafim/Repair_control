@@ -44,6 +44,8 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     ToolStatus? status,
     String? storageLocation,
     String? assignedEmployeeId,
+    DateTime? purchaseDate,
+    ToolCondition? condition,
   }) async {
     try {
       final t = await _repo.createMyTool(
@@ -54,6 +56,8 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
         status: status,
         storageLocation: storageLocation,
         assignedEmployeeId: assignedEmployeeId,
+        purchaseDate: purchaseDate,
+        condition: condition,
       );
       _upsert(t);
       return null;
@@ -71,6 +75,8 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
     ToolStatus? status,
     String? storageLocation,
     String? assignedEmployeeId,
+    DateTime? purchaseDate,
+    ToolCondition? condition,
   }) async {
     try {
       final t = await _repo.updateTool(
@@ -82,6 +88,8 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
         status: status,
         storageLocation: storageLocation,
         assignedEmployeeId: assignedEmployeeId,
+        purchaseDate: purchaseDate,
+        condition: condition,
       );
       _upsert(t);
       return null;

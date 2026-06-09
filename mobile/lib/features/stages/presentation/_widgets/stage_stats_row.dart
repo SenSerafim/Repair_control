@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/theme/tokens.dart';
 
-/// 4 ячейки статистики в шапке детали этапа: % / X из Y / фото / файлы.
+/// 4 ячейки статистики в шапке детали этапа: % / X из Y / фото / доработки.
 ///
 /// Дизайн c-stage-active: surface n50, border n200, разделители n200.
+///
+/// Task 1.4 (TZ-фронт §6.2): ячейка «Файлов» заменена на счётчик
+/// доработок `reworkOpen/reworkTotal` — приходит из approvals scope=extraWork
+/// для этого этапа (pending → open, pending+history → total).
 class StageStatsRow extends StatelessWidget {
   const StageStatsRow({
     required this.progressPct,
@@ -13,7 +17,8 @@ class StageStatsRow extends StatelessWidget {
     required this.stepsDone,
     required this.stepsTotal,
     required this.photosCount,
-    required this.filesCount,
+    required this.reworkOpen,
+    required this.reworkTotal,
     super.key,
   });
 
@@ -22,7 +27,8 @@ class StageStatsRow extends StatelessWidget {
   final int stepsDone;
   final int stepsTotal;
   final int photosCount;
-  final int filesCount;
+  final int reworkOpen;
+  final int reworkTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +52,7 @@ class StageStatsRow extends StatelessWidget {
             const _Divider(),
             _Cell(value: '$photosCount', label: 'Фото'),
             const _Divider(),
-            _Cell(value: '$filesCount', label: 'Файлов'),
+            _Cell(value: '$reworkOpen/$reworkTotal', label: 'Доработок'),
           ],
         ),
       ),

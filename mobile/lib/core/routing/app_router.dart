@@ -14,6 +14,7 @@ import '../../features/auth/presentation/recovery_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/welcome_screen.dart';
 import '../../features/chat/presentation/chat_conversation_screen.dart';
+import '../../features/chat/presentation/stage_chat_screen.dart';
 import '../../features/chat/presentation/chats_screen.dart';
 import '../../features/chat/presentation/team_aggregate_screen.dart';
 import '../../features/documents/presentation/document_detail_screen.dart';
@@ -87,6 +88,7 @@ import '../../features/user_profile/presentation/user_profile_screen.dart';
 import '../../features/tools/presentation/add_tool_screen.dart';
 import '../../features/tools/presentation/my_tools_screen.dart';
 import '../../features/tools/presentation/project_tools_screen.dart';
+import '../../features/tools/presentation/tool_custody_history_screen.dart';
 import '../../features/tools/presentation/tool_detail_screen.dart';
 import '../../shared/widgets/widgets.dart';
 import 'app_routes.dart';
@@ -712,11 +714,32 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ),
       ),
+      // Task 6.2 — глобальный route для full-screen «История инструмента».
+      // `?name=<имя>` опционален: используется для подзаголовка, чтобы не
+      // делать второй GET ради одной строки.
+      GoRoute(
+        path: '/tools/:toolId/history',
+        pageBuilder: slideLeftPage(
+          (_, state) => ToolCustodyHistoryScreen(
+            toolId: state.pathParameters['toolId']!,
+            toolName: state.uri.queryParameters['name'] ?? '',
+          ),
+        ),
+      ),
       GoRoute(
         path: '/chats/:chatId',
         pageBuilder: slideLeftPage(
           (_, state) =>
               ChatConversationScreen(chatId: state.pathParameters['chatId']!),
+        ),
+      ),
+      // NEWFIX Task 2.3 — stage chat shim: resolves stageId → chatId, then
+      // pushReplace into /chats/:chatId.
+      GoRoute(
+        path: '/stages/:stageId/chat',
+        pageBuilder: slideLeftPage(
+          (_, state) =>
+              StageChatScreen(stageId: state.pathParameters['stageId']!),
         ),
       ),
       GoRoute(

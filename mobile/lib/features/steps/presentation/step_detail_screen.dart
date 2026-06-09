@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
@@ -13,20 +14,21 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../stages/application/stages_controller.dart';
 import '../application/step_detail_controller.dart';
 import '../application/steps_controller.dart';
 import '../domain/question.dart';
 import '../domain/step.dart';
 import '../domain/step_photo.dart';
 import '../domain/substep.dart';
-import '../../stages/application/stages_controller.dart';
+import '_widgets/step_breadcrumb.dart';
+import '_widgets/step_mini_menu.dart';
 import 'add_photo_sheet.dart';
 import 'add_substep_sheet.dart';
 import 'ask_question_sheet.dart';
 import 'extra_work_sheet.dart';
+import 'reclamation_sheet.dart';
 import 'step_widgets.dart';
-import '_widgets/step_breadcrumb.dart';
-import '_widgets/step_mini_menu.dart';
 
 /// c-step-detail / s-step-active / s-step-done:
 /// хедер + чек-лист substeps + секция photos + секция questions.
@@ -71,6 +73,13 @@ class StepDetailScreen extends ConsumerWidget {
       title: 'Шаг',
       padding: EdgeInsets.zero,
       actions: [
+        IconButton(
+          key: const ValueKey('step_header_chat_button'),
+          tooltip: 'Чат этапа',
+          icon: const Icon(PhosphorIconsRegular.chatCircle),
+          // route registered by Phase 2.3
+          onPressed: () => context.push('/stages/$stageId/chat'),
+        ),
         IconButton(
           tooltip: 'Действия',
           icon: const Icon(Icons.more_vert_rounded),
@@ -708,10 +717,25 @@ class _ActionCtas extends ConsumerWidget {
     final role = ref.watch(activeRoleProvider);
 
     // Иерархия отчётности master → foreman → customer.
-    // Заказчик/представитель — только наблюдатель шага. Кнопок нет
-    // (approval по доп.работе и приёмке этапа идёт через ApprovalDetailScreen).
+    // Заказчик/представитель — наблюдатели шага, но могут отправить
+    // выполненный шаг на доработку (NEWFIX §4.1).
     if (role == SystemRole.customer || role == SystemRole.representative) {
-      return const SizedBox.shrink();
+      if (!step.isDone) return const SizedBox.shrink();
+      final stages = ref.watch(stagesControllerProvider(projectId)).value;
+      final stage = stages?.where((s) => s.id == stageId).firstOrNull;
+      final foremanId = stage?.foremanIds.firstOrNull;
+      if (foremanId == null) return const SizedBox.shrink();
+      return AppButton(
+        label: 'Отправить на доработку',
+        variant: AppButtonVariant.secondary,
+        onPressed: () => showReclamationSheet(
+          context,
+          ref,
+          projectId: projectId,
+          stepId: step.id,
+          addresseeId: foremanId,
+        ),
+      );
     }
 
     // Текст CTA меняется по роли — мастер «отправляет на проверку»,

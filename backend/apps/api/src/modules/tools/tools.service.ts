@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ToolCustodyEvent, ToolItem, ToolStatus } from '@prisma/client';
+import { Prisma, ToolCondition, ToolCustodyEvent, ToolItem, ToolStatus } from '@prisma/client';
 import {
   ConflictError,
   ErrorCodes,
@@ -12,6 +12,8 @@ import { FeedService } from '../feed/feed.service';
 
 export type ToolStatusInput = 'in_storage' | 'on_project' | 'with_employee';
 
+export type ToolConditionInput = 'new_tool' | 'good' | 'worn' | 'broken';
+
 export interface CreateMyToolInput {
   ownerId: string;
   name: string;
@@ -21,6 +23,8 @@ export interface CreateMyToolInput {
   status?: ToolStatusInput;
   storageLocation?: string;
   assignedEmployeeId?: string;
+  purchaseDate?: Date;
+  condition?: ToolConditionInput;
 }
 
 export interface CreateProjectToolInput {
@@ -32,6 +36,8 @@ export interface CreateProjectToolInput {
   article?: string;
   photoKey?: string;
   serial?: string;
+  purchaseDate?: Date;
+  condition?: ToolConditionInput;
 }
 
 export interface UpdateToolInput {
@@ -42,6 +48,8 @@ export interface UpdateToolInput {
   status?: ToolStatusInput;
   storageLocation?: string;
   assignedEmployeeId?: string;
+  purchaseDate?: Date | null;
+  condition?: ToolConditionInput | null;
 }
 
 export interface ListMyToolsParams {
@@ -103,6 +111,8 @@ export class ToolsService {
         article: input.article?.trim() || null,
         photoKey: input.photoKey ?? null,
         serial: input.serial ?? null,
+        purchaseDate: input.purchaseDate ?? null,
+        condition: (input.condition as ToolCondition | undefined) ?? null,
         status,
         storageLocation: status === 'in_storage' ? input.storageLocation?.trim() || null : null,
         assignedEmployeeId: status === 'with_employee' ? input.assignedEmployeeId! : null,
@@ -166,6 +176,9 @@ export class ToolsService {
       article: input.article === undefined ? undefined : input.article.trim() || null,
       photoKey: input.photoKey,
       serial: input.serial,
+      purchaseDate: input.purchaseDate,
+      condition:
+        input.condition === undefined ? undefined : (input.condition as ToolCondition | null),
     };
     if (input.status !== undefined) {
       data.status = newStatus;
@@ -235,6 +248,8 @@ export class ToolsService {
           article: input.article?.trim() || null,
           photoKey: input.photoKey ?? null,
           serial: input.serial ?? null,
+          purchaseDate: input.purchaseDate ?? null,
+          condition: (input.condition as ToolCondition | undefined) ?? null,
           status: 'on_project',
           projectId: input.projectId,
         },

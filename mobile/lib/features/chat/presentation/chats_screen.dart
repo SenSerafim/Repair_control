@@ -39,12 +39,15 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
       title: 'Чаты',
       padding: EdgeInsets.zero,
       // NEWFIX-2 §3.1 — точка входа в агрегированный экран «Команда».
+      // NEWFIX Task 8.1 — единый звоночек с бейджем непрочитанных
+      // уведомлений (ТЗ-2 §19) рядом с кнопкой «Команда».
       actions: [
         IconButton(
           icon: const Icon(Icons.groups_outlined),
           tooltip: 'Команда',
           onPressed: () => context.push('/chats/team'),
         ),
+        const AppNotificationsBell(),
       ],
       body: async.when(
         loading: () => const AppLoadingState(skeleton: AppChatListSkeleton()),

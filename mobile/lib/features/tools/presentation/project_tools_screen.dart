@@ -10,6 +10,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
+import '../domain/responsible_resolver.dart';
 import '../domain/tool.dart';
 
 /// Доска инструментов проекта (self-custody модель, 2026-05-12).
@@ -378,6 +379,16 @@ class _AddToolToProjectSheetState
   final _name = TextEditingController();
   final _serial = TextEditingController();
   String? _selectedOwnerId;
+
+  /// NEWFIX TЗ-2 §8.3 (Task 6.4): ответственный сотрудник для attach-flow
+  /// «из моих». По умолчанию — бригадир проекта; pre-fill через `didChangeDependencies`
+  /// + watcher на teamControllerProvider в build. null → бекенд сам подставит
+  /// бригадира.
+  String? _selectedResponsibleId;
+
+  /// Был ли pre-fill бригадира уже выполнен — чтобы не затирать выбор пользователя
+  /// при ребилдах (например, после фокуса в TextField).
+  bool _foremanPrefillApplied = false;
   bool _busy = false;
   final Set<String> _selected = {};
 
@@ -403,7 +414,13 @@ class _AddToolToProjectSheetState
         );
         return;
       }
-      final failure = await controller.attachFromMy(_selected.toList());
+      // NEWFIX TЗ-2 §8.3 (Task 6.4): передаём responsibleUserId если есть
+      // pre-fill бригадира или ручной выбор. null → бекенд сам подставит
+      // бригадира (контракт §8.3).
+      final failure = await controller.attachFromMy(
+        _selected.toList(),
+        responsibleUserId: _selectedResponsibleId,
+      );
       if (!mounted) return;
       setState(() => _busy = false);
       if (failure != null) {
@@ -457,6 +474,22 @@ class _AddToolToProjectSheetState
 
   @override
   Widget build(BuildContext context) {
+    // NEWFIX TЗ-2 §8.3 (Task 6.4): pre-fill бригадира как ответственного
+    // и как владельца (в brand-new mode). Применяется один раз — после
+    // загрузки teamControllerProvider — и далее перезаписывается выбором юзера.
+    final teamAsync = ref.watch(teamControllerProvider(widget.projectId));
+    if (!_foremanPrefillApplied) {
+      final foremanId = teamAsync.maybeWhen(
+        data: (s) => resolveProjectForemanId(s.members),
+        orElse: () => null,
+      );
+      if (foremanId != null) {
+        _selectedResponsibleId ??= foremanId;
+        _selectedOwnerId ??= foremanId;
+        _foremanPrefillApplied = true;
+      }
+    }
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -484,6 +517,11 @@ class _AddToolToProjectSheetState
                     _selected.remove(id);
                   }
                 }),
+                projectId: widget.projectId,
+                selectedResponsibleId: _selectedResponsibleId,
+                onResponsibleChanged: (v) =>
+                    setState(() => _selectedResponsibleId = v),
+                foremanPrefilled: _foremanPrefillApplied,
               )
             else
               _BrandNewContent(
@@ -492,6 +530,7 @@ class _AddToolToProjectSheetState
                 projectId: widget.projectId,
                 selectedOwnerId: _selectedOwnerId,
                 onOwnerChanged: (v) => setState(() => _selectedOwnerId = v),
+                foremanPrefilled: _foremanPrefillApplied,
               ),
             const SizedBox(height: AppSpacing.x14),
             AppButton(
@@ -582,9 +621,24 @@ class _Tab extends StatelessWidget {
 }
 
 class _FromMyContent extends ConsumerWidget {
-  const _FromMyContent({required this.selected, required this.onToggle});
+  const _FromMyContent({
+    required this.selected,
+    required this.onToggle,
+    required this.projectId,
+    required this.selectedResponsibleId,
+    required this.onResponsibleChanged,
+    required this.foremanPrefilled,
+  });
+
   final Set<String> selected;
   final void Function(String id, bool on) onToggle;
+  final String projectId;
+  final String? selectedResponsibleId;
+  final ValueChanged<String?> onResponsibleChanged;
+
+  /// NEWFIX TЗ-2 §8.3 (Task 6.4): true → бригадир уже подставлен по умолчанию;
+  /// показываем небольшой хинт «По умолчанию — бригадир» над пикером.
+  final bool foremanPrefilled;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -627,22 +681,136 @@ class _FromMyContent extends ConsumerWidget {
             ),
           );
         }
-        return ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 360),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              for (final t in available)
-                _SelectableRow(
-                  tool: t,
-                  selected: selected.contains(t.id),
-                  onChanged: (on) => onToggle(t.id, on),
-                ),
-            ],
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final t in available)
+                    _SelectableRow(
+                      tool: t,
+                      selected: selected.contains(t.id),
+                      onChanged: (on) => onToggle(t.id, on),
+                    ),
+                ],
+              ),
+            ),
+            // NEWFIX TЗ-2 §8.3 (Task 6.4): pickером ответственного для batch-attach.
+            const SizedBox(height: AppSpacing.x12),
+            _ResponsibleSection(
+              projectId: projectId,
+              selectedId: selectedResponsibleId,
+              onChanged: onResponsibleChanged,
+              foremanPrefilled: foremanPrefilled,
+            ),
+          ],
         );
       },
     );
+  }
+}
+
+/// NEWFIX TЗ-2 §8.3 (Task 6.4): компактный пикер «ответственный сотрудник»
+/// для batch attach-from-my flow. Показывает хинт «По умолчанию — бригадир»
+/// когда pre-fill применён.
+class _ResponsibleSection extends ConsumerWidget {
+  const _ResponsibleSection({
+    required this.projectId,
+    required this.selectedId,
+    required this.onChanged,
+    required this.foremanPrefilled,
+  });
+
+  final String projectId;
+  final String? selectedId;
+  final ValueChanged<String?> onChanged;
+  final bool foremanPrefilled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final teamAsync = ref.watch(teamControllerProvider(projectId));
+    final me = ref.watch(authControllerProvider).userId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Ответственный',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n700,
+                letterSpacing: 0.2,
+              ),
+            ),
+            if (foremanPrefilled) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.brandLight,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: const Text(
+                  'По умолчанию — бригадир',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brand,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        teamAsync.when(
+          loading: () => const SizedBox(
+            height: 40,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (_, __) => const Text(
+            'Не удалось загрузить команду',
+            style: TextStyle(fontSize: 11, color: AppColors.redDot),
+          ),
+          data: (teamState) {
+            final members = teamState.members;
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 140),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final m in members)
+                    _OwnerRow(
+                      title: _displayName(m),
+                      role: m.role.displayName,
+                      isMe: m.userId == me,
+                      selected: selectedId == m.userId,
+                      onTap: () => onChanged(m.userId),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _displayName(Membership m) {
+    final u = m.user;
+    if (u == null) return m.userId;
+    final s = '${u.firstName} ${u.lastName}'.trim();
+    return s.isEmpty ? m.userId : s;
   }
 }
 
@@ -721,6 +889,7 @@ class _BrandNewContent extends ConsumerWidget {
     required this.projectId,
     required this.selectedOwnerId,
     required this.onOwnerChanged,
+    required this.foremanPrefilled,
   });
 
   final TextEditingController name;
@@ -728,6 +897,10 @@ class _BrandNewContent extends ConsumerWidget {
   final String projectId;
   final String? selectedOwnerId;
   final ValueChanged<String?> onOwnerChanged;
+
+  /// NEWFIX TЗ-2 §8.3 (Task 6.4): true → бригадир уже подставлен в качестве
+  /// владельца по умолчанию. Показываем хинт рядом с заголовком.
+  final bool foremanPrefilled;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -749,17 +922,39 @@ class _BrandNewContent extends ConsumerWidget {
           placeholder: 'Опционально',
         ),
         const SizedBox(height: AppSpacing.x12),
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Кому будет принадлежать инструмент',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: AppColors.n700,
-              letterSpacing: 0.2,
+        Row(
+          children: [
+            const Text(
+              'Кому будет принадлежать инструмент',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n700,
+                letterSpacing: 0.2,
+              ),
             ),
-          ),
+            if (foremanPrefilled) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.brandLight,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: const Text(
+                  'По умолчанию — бригадир',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brand,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 6),
         async.when(

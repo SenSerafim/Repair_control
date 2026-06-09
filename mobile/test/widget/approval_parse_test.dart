@@ -103,6 +103,26 @@ void main() {
       expect(a.attemptNumber, 2);
     });
 
+    test('defect — payload.description парсится', () {
+      final a = Approval.parse({
+        'id': 'a1',
+        'scope': 'defect',
+        'projectId': 'p1',
+        'stageId': 'st1',
+        'stepId': 'step1',
+        'status': 'pending',
+        'requestedById': 'customer',
+        'addresseeId': 'foreman',
+        'attemptNumber': 1,
+        'payload': {'description': 'плитка положена криво'},
+        'createdAt': '2026-04-22T10:00:00Z',
+        'updatedAt': '2026-04-22T10:00:00Z',
+      });
+      expect(a.scope, ApprovalScope.defect);
+      expect(a.scope.displayName, 'Доработка');
+      expect(a.payload['description'], 'плитка положена криво');
+    });
+
     test('с attempts history', () {
       final a = Approval.parse({
         'id': 'a1',

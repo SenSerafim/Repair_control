@@ -10,9 +10,11 @@ import {
 } from 'class-validator';
 
 export class CreateApprovalDto {
-  @ApiProperty({ enum: ['plan', 'step', 'extra_work', 'deadline_change', 'stage_accept'] })
-  @IsEnum(['plan', 'step', 'extra_work', 'deadline_change', 'stage_accept'])
-  scope!: 'plan' | 'step' | 'extra_work' | 'deadline_change' | 'stage_accept';
+  @ApiProperty({
+    enum: ['plan', 'step', 'extra_work', 'deadline_change', 'stage_accept', 'defect'],
+  })
+  @IsEnum(['plan', 'step', 'extra_work', 'deadline_change', 'stage_accept', 'defect'])
+  scope!: 'plan' | 'step' | 'extra_work' | 'deadline_change' | 'stage_accept' | 'defect';
 
   @ApiPropertyOptional()
   @IsOptional()

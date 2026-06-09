@@ -14,11 +14,11 @@ import '../../approvals/application/approvals_controller.dart';
 import '../../chat/application/chats_controller.dart';
 import '../../finance/application/budget_controller.dart';
 import '../../finance/domain/budget.dart';
-import '../../notes/presentation/quick_note_sheet.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
+import '../../stages/domain/stage_status_filter.dart';
 import '../../stages/domain/traffic_light.dart';
 import '../../team/application/team_controller.dart';
 import '../domain/membership.dart';
@@ -71,6 +71,15 @@ class _BodyState extends ConsumerState<_Body> {
   /// в `AppHouseProgress.bouncePulse`, который при изменении запускает
   /// 700ms bounce-анимацию.
   int _bouncePulse = 0;
+
+  /// Task 5.4 — фильтр-чипы над каруселью этапов (ТЗ-фронт §4).
+  /// Дефолт «Все» — карусель показывает все этапы как и раньше.
+  StageStatusFilter _stageFilter = StageStatusFilter.all;
+
+  /// Task 5.5 — collapse-toggle для иллюстрации `AppHouseProgress`.
+  /// Дефолт = развёрнуто. Без персиста между сессиями (scope creep —
+  /// см. план §5.5: persistence помечен как nice-to-have).
+  bool _houseCollapsed = false;
 
   @override
   void dispose() {
@@ -153,11 +162,6 @@ class _BodyState extends ConsumerState<_Body> {
           canInviteMember: canInviteMember,
           onAddMember: () => context.push('/projects/$projectId/team'),
           onMenu: () => showCardMenuSheet(context, ref, project: p),
-          onAddNote: () => showQuickNoteSheet(
-            context: context,
-            projectId: projectId,
-          ),
-          onOpenNotes: () => context.push('/projects/$projectId/notes'),
         ),
         Expanded(
           child: RefreshIndicator(
@@ -176,6 +180,9 @@ class _BodyState extends ConsumerState<_Body> {
                   activeStage: activeStage,
                   doneCount: doneStages.length,
                   bouncePulse: _bouncePulse,
+                  collapsed: _houseCollapsed,
+                  onToggleCollapsed: () =>
+                      setState(() => _houseCollapsed = !_houseCollapsed),
                 ),
                 if (_bannerFor(p, stages) != null) ...[
                   const SizedBox(height: AppSpacing.x14),
@@ -199,8 +206,21 @@ class _BodyState extends ConsumerState<_Body> {
                     onAllTap: () => context.push('/projects/$projectId/stages'),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.x10),
-                _StagesCarousel(projectId: projectId, stages: stages),
+                // Task 5.4 — фильтр-чипы над каруселью (ТЗ-фронт §4).
+                // Ровно 5 значений: Все · В работе · На согласовании ·
+                // На паузе · Без бригадира. Маппинг:
+                // «На согласовании» → `pending` (включает computed
+                // lateStart). Использует общий `AppFilterPillBar` +
+                // публичный `StageStatusFilter` (см.
+                // `domain/stage_status_filter.dart`).
+                _StagesFilterBar(
+                  active: _stageFilter,
+                  onSelect: (f) => setState(() => _stageFilter = f),
+                ),
+                _StagesCarousel(
+                  projectId: projectId,
+                  stages: stages.where(_stageFilter.match).toList(),
+                ),
                 const SizedBox(height: AppSpacing.x20),
                 // ТЗ NEWFIX §1.1: блок быстрых кнопок под списком этапов —
                 // Команда / Согласования (badge) / Чаты (badge) / Заявки.
@@ -277,8 +297,6 @@ class _ConHeader extends StatelessWidget {
     required this.canInviteMember,
     required this.onAddMember,
     required this.onMenu,
-    required this.onAddNote,
-    required this.onOpenNotes,
   });
 
   final Project project;
@@ -286,12 +304,6 @@ class _ConHeader extends StatelessWidget {
   final bool canInviteMember;
   final VoidCallback onAddMember;
   final VoidCallback onMenu;
-
-  /// NEWFIX-2 §11.2 — иконка «Заметка» в шапке карточки проекта.
-  /// Короткий тап — модалка «Новая заметка». Долгий тап — открыть экран
-  /// «Заметки проекта» (§11.5).
-  final VoidCallback onAddNote;
-  final VoidCallback onOpenNotes;
 
   @override
   Widget build(BuildContext context) {
@@ -333,17 +345,10 @@ class _ConHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                 ],
-                // NEWFIX-2 §11.2 — точка входа в Заметки прямо из шапки.
-                // Долгий тап ведёт на экран «Заметки проекта», короткий —
-                // открывает быструю модалку создания.
-                GestureDetector(
-                  onLongPress: onOpenNotes,
-                  child: _IconShellBtn(
-                    icon: PhosphorIconsRegular.notepad,
-                    onTap: onAddNote,
-                  ),
-                ),
-                const SizedBox(width: 4),
+                // NEWFIX-2 §19 — иконка «Заметки проекта» переехала на
+                // карточку проекта в списке (ProjectCard). В шапке консоли
+                // её больше нет — экран «Заметки» доступен с карточки и
+                // через кнопку «Все заметки проекта» из quick-note sheet.
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -572,6 +577,8 @@ class _HouseSection extends StatelessWidget {
     required this.activeStage,
     required this.doneCount,
     required this.bouncePulse,
+    required this.collapsed,
+    required this.onToggleCollapsed,
   });
 
   final Project project;
@@ -579,6 +586,11 @@ class _HouseSection extends StatelessWidget {
   final Stage? activeStage;
   final int doneCount;
   final int bouncePulse;
+
+  /// Task 5.5 — свернуть/развернуть иллюстрацию дома. Кнопка-«шеврон»
+  /// рядом со статус-меткой; персиста между сессиями нет (см. план).
+  final bool collapsed;
+  final VoidCallback onToggleCollapsed;
 
   @override
   Widget build(BuildContext context) {
@@ -598,22 +610,108 @@ class _HouseSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppHouseProgress(
+          // Шапка-«пилюля» с подписью прогресса и кнопкой-шевроном.
+          // В collapsed-режиме это единственное, что остаётся от секции
+          // — пользователь видит статус и при желании разворачивает дом.
+          _HouseToggleRow(
             percent: percent,
-            semaphore: project.semaphore,
-            size: 220,
-            bouncePulse: bouncePulse,
-            subtitle: total > 0
-                ? 'Этап $stageNo из $total · $statusLabel'
-                : 'План пока не построен',
+            stageNo: stageNo,
+            total: total,
+            statusLabel: statusLabel,
+            collapsed: collapsed,
+            onTap: onToggleCollapsed,
           ),
-          if (percent == 0) ...[
-            const SizedBox(height: AppSpacing.x12),
-            const _HouseGrowsHint(),
-          ],
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: collapsed
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.x8),
+              child: Column(
+                children: [
+                  AppHouseProgress(
+                    percent: percent,
+                    semaphore: project.semaphore,
+                    size: 220,
+                    bouncePulse: bouncePulse,
+                    subtitle: total > 0
+                        ? 'Этап $stageNo из $total · $statusLabel'
+                        : 'План пока не построен',
+                  ),
+                  if (percent == 0) ...[
+                    const SizedBox(height: AppSpacing.x12),
+                    const _HouseGrowsHint(),
+                  ],
+                ],
+              ),
+            ),
+            secondChild: const SizedBox(width: double.infinity, height: 0),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Маленький «pill»-ряд над иллюстрацией: статус слева + chevron-кнопка
+/// справа, нажатие переключает collapsed-режим. Сам дом скрывается
+/// `AnimatedCrossFade` — этот ряд остаётся всегда, чтобы пользователь
+/// не терял точку взаимодействия.
+class _HouseToggleRow extends StatelessWidget {
+  const _HouseToggleRow({
+    required this.percent,
+    required this.stageNo,
+    required this.total,
+    required this.statusLabel,
+    required this.collapsed,
+    required this.onTap,
+  });
+
+  final int percent;
+  final int stageNo;
+  final int total;
+  final String statusLabel;
+  final bool collapsed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final caption = total > 0
+        ? 'Прогресс $percent% · этап $stageNo из $total · $statusLabel'
+        : 'Прогресс $percent% · план пока не построен';
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            caption,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.n500,
+              letterSpacing: -0.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        IconButton(
+          tooltip: collapsed ? 'Развернуть' : 'Свернуть',
+          icon: Icon(
+            collapsed
+                ? PhosphorIconsRegular.caretDown
+                : PhosphorIconsRegular.caretUp,
+            size: 18,
+            color: AppColors.n600,
+          ),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: onTap,
+        ),
+      ],
     );
   }
 }
@@ -772,21 +870,14 @@ class _StatsRow extends StatelessWidget {
       project.plannedEnd,
     );
 
+    // Task 5.3 — карточка «ПРОГРЕСС» убрана: процент проекта уже виден
+    // на иллюстрации `AppHouseProgress` выше и в прогресс-баре каждого
+    // этапа в карусели. На stats-row остаются только «ДО ДЕДЛАЙНА» и
+    // «ЭТАПЫ» — две независимые от прогресса метрики.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
       child: Row(
         children: [
-          Expanded(
-            child: AppStatCard(
-              label: 'ПРОГРЕСС',
-              value: '${project.progressCache}',
-              total: '100',
-              subtext: '${100 - project.progressCache}% осталось',
-              progress: project.progressCache / 100,
-              semaphore: project.semaphore,
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: AppStatCard(
               label: 'ДО ДЕДЛАЙНА',
@@ -869,6 +960,57 @@ class _StagesCarouselHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Task 5.4 — фильтр-чипы над каруселью этапов на главной консоли.
+///
+/// 5 чипов из ТЗ-фронт §4: Все · В работе · На согласовании · На паузе
+/// · Без бригадира. Использует общий `AppFilterPillBar` (Cluster F) +
+/// доменный [StageStatusFilter] для маппинга предикатов. Маппинг чипа
+/// «На согласовании» → `StageStatusFilter.pending` (включая computed
+/// `lateStart`): на консоли «pending»-этапы — это именно те, что ждут
+/// согласования / старта.
+class _StagesFilterBar extends StatelessWidget {
+  const _StagesFilterBar({required this.active, required this.onSelect});
+
+  final StageStatusFilter active;
+  final ValueChanged<StageStatusFilter> onSelect;
+
+  /// Видимые на консоли чипы (5 шт). `pending` мапится на «На согласовании»
+  /// — это решение consola-уровня, оно отличается от полного экрана
+  /// `stages_screen.dart`, где это «Ожидает».
+  static const _chips = <(StageStatusFilter, String)>[
+    (StageStatusFilter.all, 'Все'),
+    (StageStatusFilter.active, 'В работе'),
+    (StageStatusFilter.pending, 'На согласовании'),
+    (StageStatusFilter.paused, 'На паузе'),
+    (StageStatusFilter.noContractor, 'Без бригадира'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AppFilterPillBar(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x16,
+        AppSpacing.x10,
+        AppSpacing.x16,
+        AppSpacing.x10,
+      ),
+      activeId: active.name,
+      chips: [
+        for (final (f, label) in _chips)
+          AppFilterPillSpec(id: f.name, label: label),
+      ],
+      onSelect: (id) {
+        for (final (f, _) in _chips) {
+          if (f.name == id) {
+            onSelect(f);
+            return;
+          }
+        }
+      },
     );
   }
 }

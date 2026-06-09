@@ -22,6 +22,7 @@ class SecureStorage {
   static const _kLocale = 'app.locale';
   static const _kThemeMode = 'app.themeMode';
   static const _kTutorialCompleted = 'tutorial.completed';
+  static const _kMaterialsSeenPrefix = 'materials.seen.';
 
   Future<String?> readAccessToken() => _storage.read(key: _kAccess);
   Future<void> writeAccessToken(String value) =>
@@ -67,4 +68,21 @@ class SecureStorage {
 
   Future<void> writeTutorialCompleted({required bool value}) =>
       _storage.write(key: _kTutorialCompleted, value: value.toString());
+
+  /// Task 8.2 (TZ-2 §5.4): timestamp последнего просмотра списка заявок
+  /// проекта пользователем — для бейджа «N новых заявок» сверху списка.
+  /// Сравниваем с `MaterialRequest.createdAt`: если у нас нет сохранённой
+  /// метки, считаем «всё просмотрено» (бейдж не показываем при первом
+  /// заходе). Чисто клиентская реализация без бекенда.
+  Future<DateTime?> readMaterialsLastSeen(String projectId) async {
+    final raw = await _storage.read(key: '$_kMaterialsSeenPrefix$projectId');
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> writeMaterialsLastSeen(String projectId, DateTime ts) =>
+      _storage.write(
+        key: '$_kMaterialsSeenPrefix$projectId',
+        value: ts.toIso8601String(),
+      );
 }

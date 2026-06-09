@@ -257,6 +257,7 @@ function guessExportMime(kind: ExportKind, key: string): string {
   switch (kind) {
     case 'feed_pdf':
     case 'project_report_pdf':
+    case 'stage_report_pdf':
       return 'application/pdf';
     case 'project_zip':
       return 'application/zip';
