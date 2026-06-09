@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -65,6 +67,87 @@ class ExpensesRepository {
       throw ExpensesException(AuthFailure.fromApiError(api), api);
     }
   }
+
+  /// NEWFIX TZ-фронт §5.1 — presign на фото чека.
+  /// Общий /api/files/presign-upload со scope='expenses/receipts'.
+  Future<ExpenseReceiptPresign> presignReceipt({
+    required String mimeType,
+    required int sizeBytes,
+    required String originalName,
+  }) async {
+    try {
+      final r = await _dio.post<Map<String, dynamic>>(
+        '/api/files/presign-upload',
+        data: {
+          'originalName': originalName,
+          'mimeType': mimeType,
+          'sizeBytes': sizeBytes,
+          'scope': 'expenses/receipts',
+        },
+      );
+      return ExpenseReceiptPresign.fromJson(r.data!);
+    } on DioException catch (e) {
+      final api = ApiError.fromDio(e);
+      throw ExpensesException(AuthFailure.fromApiError(api), api);
+    }
+  }
+
+  /// Raw PUT в S3 (MinIO) через presigned URL — без auth-interceptor.
+  Future<void> uploadToStorage({
+    required ExpenseReceiptPresign presigned,
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    final raw = Dio();
+    try {
+      await raw.request<void>(
+        presigned.url,
+        data: bytes,
+        options: Options(
+          method: presigned.method,
+          headers: {
+            ...presigned.headers,
+            'Content-Type': mimeType,
+            'Content-Length': bytes.length.toString(),
+          },
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+    } on DioException catch (e) {
+      final api = ApiError.fromDio(e);
+      throw ExpensesException(AuthFailure.fromApiError(api), api);
+    } finally {
+      raw.close();
+    }
+  }
+}
+
+class ExpenseReceiptPresign {
+  ExpenseReceiptPresign({
+    required this.fileKey,
+    required this.url,
+    required this.method,
+    required this.headers,
+    required this.expiresIn,
+  });
+
+  factory ExpenseReceiptPresign.fromJson(Map<String, dynamic> json) =>
+      ExpenseReceiptPresign(
+        fileKey: (json['key'] ?? json['fileKey']) as String,
+        url: (json['url'] ?? json['uploadUrl']) as String,
+        method: json['method'] as String? ?? 'PUT',
+        headers: (json['headers'] as Map<String, dynamic>? ?? const {}).map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
+        expiresIn: (json['expiresIn'] as num?)?.toInt() ?? 300,
+      );
+
+  final String fileKey;
+  final String url;
+  final String method;
+  final Map<String, String> headers;
+  final int expiresIn;
 }
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>((ref) {

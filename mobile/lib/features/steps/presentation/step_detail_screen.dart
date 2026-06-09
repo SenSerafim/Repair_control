@@ -516,16 +516,24 @@ class _PhotoThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = photo.thumbUrl ?? photo.url;
+    // NEWFIX TZ-фронт §8 — для видео thumbnail-генерация ещё не сделана на
+    // бэке, поэтому показываем placeholder с play-overlay вместо превью.
+    final isVideo = photo.isVideo;
+    final url = isVideo ? null : (photo.thumbUrl ?? photo.url);
     return Stack(
       fit: StackFit.expand,
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.r12),
           child: url == null
-              ? const ColoredBox(
+              ? ColoredBox(
                   color: AppColors.n100,
-                  child: Icon(Icons.image_outlined, color: AppColors.n400),
+                  child: Icon(
+                    isVideo
+                        ? Icons.videocam_rounded
+                        : Icons.image_outlined,
+                    color: AppColors.n400,
+                  ),
                 )
               : Image.network(
                   url,
@@ -539,6 +547,23 @@ class _PhotoThumb extends StatelessWidget {
                   ),
                 ),
         ),
+        if (isVideo)
+          const Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.overlayBackdrop,
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  color: AppColors.n0,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
         Positioned(
           top: 4,
           right: 4,

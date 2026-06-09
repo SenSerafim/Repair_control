@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/utils/image_compress.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../stages/application/stages_controller.dart';
@@ -10,9 +14,8 @@ import '../data/expenses_repository.dart';
 import '../domain/expense.dart';
 
 /// ТЗ NEWFIX §5.1: bottom-sheet «Добавить расход» (CoinKeeper-flow).
-/// Поля сверху вниз: Этап (опц.) · Категория · Название · Сумма · Комментарий.
-/// Фото чека отложено в v2 (presign+upload), сразу после первой итерации
-/// с заказчиком — добавим image_picker по той же схеме что E1b/4b.
+/// Поля сверху вниз: Фото чека (опц.) · Этап (опц.) · Категория · Название ·
+/// Сумма · Комментарий.
 Future<bool> showAddExpenseSheet(
   BuildContext context, {
   required String projectId,
@@ -52,6 +55,12 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
   bool _busy = false;
   String? _error;
 
+  /// NEWFIX TZ-фронт §5.1 — фото чека: опционально, до отправки сохраняем
+  /// fileKey + локальные байты для превью.
+  String? _receiptFileKey;
+  Uint8List? _receiptThumb;
+  bool _uploadingReceipt = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +73,61 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
     _amount.dispose();
     _comment.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickReceipt(ImageSource source) async {
+    if (_uploadingReceipt || _busy) return;
+    setState(() {
+      _uploadingReceipt = true;
+      _error = null;
+    });
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 100);
+      if (picked == null) {
+        if (mounted) setState(() => _uploadingReceipt = false);
+        return;
+      }
+      final raw = await picked.readAsBytes();
+      final compressed = compressImage(raw);
+      if (compressed == null) {
+        if (!mounted) return;
+        setState(() {
+          _uploadingReceipt = false;
+          _error = 'Не удалось обработать фото';
+        });
+        return;
+      }
+      final repo = ref.read(expensesRepositoryProvider);
+      final presigned = await repo.presignReceipt(
+        mimeType: compressed.mimeType,
+        sizeBytes: compressed.sizeBytes,
+        originalName: picked.name,
+      );
+      await repo.uploadToStorage(
+        presigned: presigned,
+        bytes: compressed.bytes,
+        mimeType: compressed.mimeType,
+      );
+      if (!mounted) return;
+      setState(() {
+        _receiptFileKey = presigned.fileKey;
+        _receiptThumb = compressed.bytes;
+        _uploadingReceipt = false;
+      });
+    } on ExpensesException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploadingReceipt = false;
+        _error = e.failure.userMessage;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _uploadingReceipt = false;
+        _error = 'Не удалось загрузить фото';
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -89,6 +153,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
             amountKopecks: kopecks,
             stageId: _stageId,
             comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+            photoKey: _receiptFileKey,
           );
       ref.invalidate(projectExpensesProvider(widget.projectId));
       if (!mounted) return;
@@ -140,6 +205,16 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
               AppInlineError(message: _error!),
               const SizedBox(height: AppSpacing.x10),
             ],
+            _ReceiptPicker(
+              thumb: _receiptThumb,
+              uploading: _uploadingReceipt,
+              onPick: _pickReceipt,
+              onClear: () => setState(() {
+                _receiptFileKey = null;
+                _receiptThumb = null;
+              }),
+            ),
+            const SizedBox(height: AppSpacing.x14),
             const Text('Этап (опционально)', style: AppTextStyles.caption),
             const SizedBox(height: AppSpacing.x6),
             _StagePicker(
@@ -242,6 +317,87 @@ class _StagePicker extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// NEWFIX TZ-фронт §5.1 — большая кнопка-плейсхолдер «📷 Сфотографировать
+/// чек» вверху модалки расхода. Опционально, можно пропустить.
+class _ReceiptPicker extends StatelessWidget {
+  const _ReceiptPicker({
+    required this.thumb,
+    required this.uploading,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final Uint8List? thumb;
+  final bool uploading;
+  final Future<void> Function(ImageSource source) onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    if (thumb != null) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.x8),
+        decoration: BoxDecoration(
+          color: AppColors.n50,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.r8),
+              child: Image.memory(
+                thumb!,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            const Expanded(
+              child: Text(
+                'Чек прикреплён',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.n800,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: onClear,
+              tooltip: 'Удалить фото',
+            ),
+          ],
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: const Text('Сфотографировать чек'),
+            onPressed: uploading ? null : () => onPick(ImageSource.camera),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        IconButton.outlined(
+          icon: uploading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.photo_library_outlined),
+          onPressed: uploading ? null : () => onPick(ImageSource.gallery),
+          tooltip: 'Из галереи',
+        ),
+      ],
     );
   }
 }

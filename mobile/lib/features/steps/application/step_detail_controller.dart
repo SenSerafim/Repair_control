@@ -305,6 +305,41 @@ class StepDetailController
     }
   }
 
+  /// NEWFIX TZ-фронт §8 — загрузка видео в шаг (без сжатия на клиенте;
+  /// бэк допускает до 200 MB и пропускает EXIF-санитизацию для video/*).
+  Future<AuthFailure?> uploadVideo({
+    required Uint8List rawBytes,
+    required String filename,
+    required String mimeType,
+  }) async {
+    try {
+      final presigned = await _repo.presignPhoto(
+        stepId: arg.stepId,
+        mime: mimeType,
+        sizeBytes: rawBytes.length,
+        originalName: filename,
+      );
+      await _repo.uploadToStorage(
+        presigned: presigned,
+        bytes: rawBytes,
+        mimeType: mimeType,
+      );
+      final photo = await _repo.confirmPhoto(
+        stepId: arg.stepId,
+        fileKey: presigned.fileKey,
+        mimeType: mimeType,
+        sizeBytes: rawBytes.length,
+      );
+      final cur = state.value;
+      if (cur != null) {
+        state = AsyncData(cur.copyWith(photos: [...cur.photos, photo]));
+      }
+      return null;
+    } on StepsException catch (e) {
+      return e.failure;
+    }
+  }
+
   Future<AuthFailure?> deletePhoto(String photoId) async {
     try {
       await _repo.deletePhoto(photoId);

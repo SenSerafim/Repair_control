@@ -11,8 +11,15 @@ import {
 import { FilesService, MINIO_CLIENT, MINIO_CONFIG, MinioConfig } from '@app/files';
 import { FeedService } from '../feed/feed.service';
 
-const ALLOWED_PHOTO_MIMES = new Set(['image/jpeg', 'image/png']);
+// NEWFIX TZ-фронт §8 — поддержка видео в шагах наряду с фото.
+// Соответствует общему whitelist FilesApiController.PresignDto.
+const ALLOWED_PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime']);
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+
+function isVideoMime(mime: string): boolean {
+  return mime.startsWith('video/');
+}
 
 /**
  * Контекст наблюдателя для проверки видимости фото шага (TODO §2A.2 ⁴).
@@ -43,7 +50,8 @@ export class StepPhotosService {
     if (!ALLOWED_PHOTO_MIMES.has(mime)) {
       throw new InvalidInputError(ErrorCodes.PHOTO_INVALID_MIME, `mime not allowed: ${mime}`);
     }
-    if (size <= 0 || size > MAX_PHOTO_BYTES) {
+    const maxBytes = isVideoMime(mime) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
+    if (size <= 0 || size > maxBytes) {
       throw new InvalidInputError(ErrorCodes.PHOTO_TOO_LARGE, `size out of range: ${size}`);
     }
     const step = await this.prisma.step.findUnique({ where: { id: stepId }, select: { id: true } });
@@ -71,14 +79,21 @@ export class StepPhotosService {
     });
     if (!step) throw new NotFoundError(ErrorCodes.STEP_NOT_FOUND, 'step not found');
 
-    // скачиваем объект, убиваем EXIF, перезагружаем + создаём thumbnail
-    const originalBuffer = await this.downloadObject(input.fileKey);
-    const sanitized = await sharp(originalBuffer).rotate().withMetadata({}).toBuffer();
-    await this.putObject(input.fileKey, sanitized, input.mimeType);
-
-    const thumbBuffer = await this.files.generateThumbnail(sanitized);
-    const thumbKey = this.deriveThumbKey(input.fileKey);
-    await this.putObject(thumbKey, thumbBuffer, 'image/jpeg');
+    // Видео: thumbnail-генерация (ffmpeg poster frame) — будущая итерация,
+    // пока сохраняем как есть без EXIF-санитизации и без thumb. Mobile
+    // отрисует placeholder + play-overlay поверх первого кадра в плеере.
+    const isVideo = isVideoMime(input.mimeType);
+    let storedSizeBytes = input.sizeBytes;
+    let thumbKey: string | null = null;
+    if (!isVideo) {
+      const originalBuffer = await this.downloadObject(input.fileKey);
+      const sanitized = await sharp(originalBuffer).rotate().withMetadata({}).toBuffer();
+      await this.putObject(input.fileKey, sanitized, input.mimeType);
+      const thumbBuffer = await this.files.generateThumbnail(sanitized);
+      thumbKey = this.deriveThumbKey(input.fileKey);
+      await this.putObject(thumbKey, thumbBuffer, 'image/jpeg');
+      storedSizeBytes = sanitized.byteLength;
+    }
 
     const photo = await this.prisma.$transaction(async (tx) => {
       const p = await tx.stepPhoto.create({
@@ -87,9 +102,9 @@ export class StepPhotosService {
           fileKey: input.fileKey,
           thumbKey,
           mimeType: input.mimeType,
-          sizeBytes: sanitized.byteLength,
+          sizeBytes: storedSizeBytes,
           uploadedBy: actorUserId,
-          exifCleared: true,
+          exifCleared: !isVideo,
         },
       });
       await this.feed.emit({

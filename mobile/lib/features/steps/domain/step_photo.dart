@@ -34,3 +34,8 @@ class StepPhoto with _$StepPhoto {
     thumbUrl: json['thumbUrl'] as String?,
   );
 }
+
+/// NEWFIX TZ-фронт §8 — extension для отличения видео от фото на UI.
+extension StepPhotoMedia on StepPhoto {
+  bool get isVideo => mimeType.startsWith('video/');
+}
