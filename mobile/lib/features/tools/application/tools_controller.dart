@@ -233,7 +233,10 @@ class ProjectToolsBoardController
 
   /// Bulk attach «из моих инструментов в проект».
   /// NEWFIX-2 §8.3 — `responsibleUserId` опционален; default = бригадир.
-  Future<AuthFailure?> attachFromMy(
+  /// NEWFIX-2 §8.4 — возвращаем `ToolsException` целиком (а не `AuthFailure`),
+  /// чтобы экран мог отличить `tools.already_on_other_project` (показать
+  /// конкретный месседж бэка) от прочих ошибок.
+  Future<ToolsException?> attachFromMy(
     List<String> toolItemIds, {
     String? responsibleUserId,
   }) async {
@@ -249,7 +252,7 @@ class ProjectToolsBoardController
       ref.invalidate(myToolsProvider);
       return null;
     } on ToolsException catch (e) {
-      return e.failure;
+      return e;
     }
   }
 

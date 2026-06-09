@@ -160,6 +160,14 @@ class StepDetailScreen extends ConsumerWidget {
         projectId: projectId,
       )),
     );
+    // NEWFIX TZ-фронт §11.5 — заявку на материалы создаёт любой member
+    // с правом materials.manage (бригадир / мастер).
+    final canMaterial = ref.read(
+      canInProjectProvider((
+        action: DomainAction.materialsManage,
+        projectId: projectId,
+      )),
+    );
     await showAppBottomSheet<void>(
       context: context,
       child: StepMiniMenu(
@@ -168,6 +176,11 @@ class StepDetailScreen extends ConsumerWidget {
             : null,
         onAddPhoto: canAddPhoto
             ? () => showAddPhotoSheet(context, ref, key: _key)
+            : null,
+        onAddMaterial: canMaterial
+            ? () => context.push(
+                '/projects/$projectId/materials/new?stageId=$stageId',
+              )
             : null,
         onAskQuestion: canQuestion
             ? () => showAskQuestionSheet(context, ref, detailKey: _key)

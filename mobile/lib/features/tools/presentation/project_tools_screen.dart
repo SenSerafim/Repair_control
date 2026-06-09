@@ -417,16 +417,22 @@ class _AddToolToProjectSheetState
       // NEWFIX TЗ-2 §8.3 (Task 6.4): передаём responsibleUserId если есть
       // pre-fill бригадира или ручной выбор. null → бекенд сам подставит
       // бригадира (контракт §8.3).
-      final failure = await controller.attachFromMy(
+      final error = await controller.attachFromMy(
         _selected.toList(),
         responsibleUserId: _selectedResponsibleId,
       );
       if (!mounted) return;
       setState(() => _busy = false);
-      if (failure != null) {
+      if (error != null) {
+        // NEWFIX TЗ-2 §8.4 — если инструмент уже на другом проекте, показываем
+        // прицельный месседж от бэка вместо общего «конфликта».
+        final message =
+            error.apiError.code == 'tools.already_on_other_project'
+            ? (error.apiError.message ?? 'Инструмент уже добавлен на другой проект')
+            : error.failure.userMessage;
         AppToast.show(
           context,
-          message: failure.userMessage,
+          message: message,
           kind: AppToastKind.error,
         );
       } else {

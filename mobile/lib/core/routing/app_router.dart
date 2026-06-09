@@ -478,6 +478,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         pageBuilder: slideUpPage(
                           (_, state) => CreateMaterialScreen(
                             projectId: state.pathParameters['projectId']!,
+                            initialStageId:
+                                state.uri.queryParameters['stageId'],
                           ),
                         ),
                       ),

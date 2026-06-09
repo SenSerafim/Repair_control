@@ -5,13 +5,14 @@ import '../../../../core/theme/tokens.dart';
 
 /// Мини-меню действий над шагом — c-step-menu.
 ///
-/// 5 строк: добавить подшаг / фото / задать вопрос / отправить на согласование /
-/// доп.работа. Каждая — 42×42 цветная icon-tile + 15px label. Закрывается
-/// сразу после выбора (Navigator.pop).
+/// 6 строк: добавить подшаг / фото / материал в заявку / задать вопрос /
+/// отправить на согласование / доп.работа. Каждая — 42×42 цветная icon-tile +
+/// 15px label. Закрывается сразу после выбора (Navigator.pop).
 class StepMiniMenu extends StatelessWidget {
   const StepMiniMenu({
     required this.onAddSubstep,
     required this.onAddPhoto,
+    required this.onAddMaterial,
     required this.onAskQuestion,
     required this.onSendForApproval,
     required this.onExtraWork,
@@ -23,6 +24,9 @@ class StepMiniMenu extends StatelessWidget {
   /// (StepDetailScreen) через canInProjectProvider — здесь только рендер.
   final VoidCallback? onAddSubstep;
   final VoidCallback? onAddPhoto;
+  /// NEWFIX TZ-фронт §11.5 — открыть форму создания заявки на материалы,
+  /// прокинув контекст этапа этого шага.
+  final VoidCallback? onAddMaterial;
   final VoidCallback? onAskQuestion;
   final VoidCallback? onSendForApproval;
   final VoidCallback? onExtraWork;
@@ -65,6 +69,13 @@ class StepMiniMenu extends StatelessWidget {
       bg: AppColors.brandLight,
       fg: AppColors.brand,
       cb: onAddPhoto,
+    );
+    add(
+      icon: Icons.shopping_cart_outlined,
+      label: 'Добавить материал в заявку',
+      bg: AppColors.brandLight,
+      fg: AppColors.brand,
+      cb: onAddMaterial,
     );
     add(
       icon: Icons.help_outline_rounded,

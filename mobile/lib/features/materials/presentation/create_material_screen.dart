@@ -17,9 +17,17 @@ import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
 
 class CreateMaterialScreen extends ConsumerStatefulWidget {
-  const CreateMaterialScreen({required this.projectId, super.key});
+  const CreateMaterialScreen({
+    required this.projectId,
+    this.initialStageId,
+    super.key,
+  });
 
   final String projectId;
+
+  /// NEWFIX TZ-фронт §11.5 — если открыто из step mini-menu, передаём stageId
+  /// шага чтобы заявка сразу была привязана к нужному этапу.
+  final String? initialStageId;
 
   @override
   ConsumerState<CreateMaterialScreen> createState() =>
@@ -33,7 +41,7 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
   MaterialRecipient _recipient = MaterialRecipient.foreman;
 
   /// `null` = общая заявка проекта (бэк допускает stageId=null, ТЗ §5.1).
-  String? _stageId;
+  late String? _stageId = widget.initialStageId;
   final _items = <_ItemDraft>[_ItemDraft()];
   bool _submitting = false;
   String? _error;
