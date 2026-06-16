@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'update_membership_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,26 @@ part 'update_membership_dto.g.dart';
 )
 class UpdateMembershipDto {
   /// Returns a new [UpdateMembershipDto] instance.
-  UpdateMembershipDto({
+  UpdateMembershipDto({this.permissions, this.stageIds});
 
-     this.permissions,
-
-     this.stageIds,
-  });
-
-  @JsonKey(
-    
-    name: r'permissions',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'permissions', required: false, includeIfNull: false)
   final Object? permissions;
 
-
-
-  @JsonKey(
-    
-    name: r'stageIds',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'stageIds', required: false, includeIfNull: false)
   final List<String>? stageIds;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UpdateMembershipDto &&
+          other.permissions == permissions &&
+          other.stageIds == stageIds;
 
+  @override
+  int get hashCode => permissions.hashCode + stageIds.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is UpdateMembershipDto &&
-      other.permissions == permissions &&
-      other.stageIds == stageIds;
-
-    @override
-    int get hashCode =>
-        permissions.hashCode +
-        stageIds.hashCode;
-
-  factory UpdateMembershipDto.fromJson(Map<String, dynamic> json) => _$UpdateMembershipDtoFromJson(json);
+  factory UpdateMembershipDto.fromJson(Map<String, dynamic> json) =>
+      _$UpdateMembershipDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$UpdateMembershipDtoToJson(this);
 
@@ -67,6 +42,4 @@ class UpdateMembershipDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

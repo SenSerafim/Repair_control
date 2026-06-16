@@ -71,7 +71,9 @@ class ApprovalCard extends StatelessWidget {
               children: [
                 _Thumb(approval: approval),
                 const SizedBox(width: AppSpacing.x12),
-                Expanded(child: _Body(approval: approval, stageLabel: stageLabel)),
+                Expanded(
+                  child: _Body(approval: approval, stageLabel: stageLabel),
+                ),
                 const SizedBox(width: AppSpacing.x6),
                 const Icon(Icons.chevron_right_rounded, color: AppColors.n300),
               ],

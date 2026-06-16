@@ -211,10 +211,7 @@ class DocumentsRepository {
       } on DioException catch (e) {
         // Cancel — пользователь нажал «Отменить», ретрай тут вреден.
         if (CancelToken.isCancel(e)) {
-          throw DocumentsException(
-            AuthFailure.unknown,
-            ApiError.fromDio(e),
-          );
+          throw DocumentsException(AuthFailure.unknown, ApiError.fromDio(e));
         }
         // На сетевых сбоях ретраим: connection/timeout без response.
         final retryable =

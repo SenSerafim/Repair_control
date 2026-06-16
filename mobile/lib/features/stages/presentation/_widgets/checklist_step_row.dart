@@ -233,11 +233,7 @@ class _PendingApprovalPill extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.schedule_rounded,
-            size: 12,
-            color: AppColors.yellowText,
-          ),
+          Icon(Icons.schedule_rounded, size: 12, color: AppColors.yellowText),
           SizedBox(width: 4),
           Text(
             'На согласование',

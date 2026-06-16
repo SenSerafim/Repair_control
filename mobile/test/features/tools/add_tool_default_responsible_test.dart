@@ -99,92 +99,79 @@ void main() {
       expect(resolveProjectForemanId(const <Membership>[]), isNull);
     });
 
-    test(
-      'при двух бригадирах берёт первого (порядок задаётся бекендом '
-      'по createdAt)',
-      () {
-        final members = [
-          _member(
-            id: 'm-for1',
-            userId: 'u-foreman-1',
-            firstName: 'First',
-            role: MembershipRole.foreman,
-          ),
-          _member(
-            id: 'm-for2',
-            userId: 'u-foreman-2',
-            firstName: 'Second',
-            role: MembershipRole.foreman,
-          ),
-        ];
-        expect(resolveProjectForemanId(members), 'u-foreman-1');
-      },
-    );
+    test('при двух бригадирах берёт первого (порядок задаётся бекендом '
+        'по createdAt)', () {
+      final members = [
+        _member(
+          id: 'm-for1',
+          userId: 'u-foreman-1',
+          firstName: 'First',
+          role: MembershipRole.foreman,
+        ),
+        _member(
+          id: 'm-for2',
+          userId: 'u-foreman-2',
+          firstName: 'Second',
+          role: MembershipRole.foreman,
+        ),
+      ];
+      expect(resolveProjectForemanId(members), 'u-foreman-1');
+    });
   });
 
   group('Task 6.4 · AddToolScreen (widget smoke)', () {
-    testWidgets(
-      'projectId=null → нет хинта «По умолчанию — бригадир» '
-      '(старый flow «Мои инструменты»)',
-      (tester) async {
-        await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(
-              home: AddToolScreen(),
+    testWidgets('projectId=null → нет хинта «По умолчанию — бригадир» '
+        '(старый flow «Мои инструменты»)', (tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: AddToolScreen())),
+      );
+      await tester.pumpAndSettle();
+
+      // По умолчанию выбран статус «На складе», поле «assigned employee» не
+      // рендерится — хинта тоже не должно быть.
+      expect(find.text('По умолчанию — бригадир'), findsNothing);
+    });
+
+    testWidgets('projectId задан + бригадир в команде → переключение на статус '
+        '«у сотрудника» показывает хинт «По умолчанию — бригадир»', (
+      tester,
+    ) async {
+      final members = [
+        _member(
+          id: 'm-for',
+          userId: 'u-foreman',
+          firstName: 'Brigadir',
+          role: MembershipRole.foreman,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            // overrideWith(() => …) — стандартный контракт
+            // AsyncNotifierProvider.family в Riverpod 2 (перекрывает все
+            // инстансы семейства; в тесте нам и нужен только один).
+            teamControllerProvider.overrideWith(
+              () => _StubTeamController(members),
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
+          ],
+          child: const MaterialApp(home: AddToolScreen(projectId: 'p1')),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // По умолчанию выбран статус «На складе», поле «assigned employee» не
-        // рендерится — хинта тоже не должно быть.
-        expect(find.text('По умолчанию — бригадир'), findsNothing);
-      },
-    );
+      // Переключаем статус с «На складе» на «У сотрудника».
+      await tester.tap(find.text('У сотрудника'));
+      await tester.pumpAndSettle();
 
-    testWidgets(
-      'projectId задан + бригадир в команде → переключение на статус '
-      '«у сотрудника» показывает хинт «По умолчанию — бригадир»',
-      (tester) async {
-        final members = [
-          _member(
-            id: 'm-for',
-            userId: 'u-foreman',
-            firstName: 'Brigadir',
-            role: MembershipRole.foreman,
-          ),
-        ];
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              // overrideWith(() => …) — стандартный контракт
-              // AsyncNotifierProvider.family в Riverpod 2 (перекрывает все
-              // инстансы семейства; в тесте нам и нужен только один).
-              teamControllerProvider.overrideWith(
-                () => _StubTeamController(members),
-              ),
-            ],
-            child: const MaterialApp(
-              home: AddToolScreen(projectId: 'p1'),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // Переключаем статус с «На складе» на «У сотрудника».
-        await tester.tap(find.text('У сотрудника'));
-        await tester.pumpAndSettle();
-
-        // Хинт виден (pre-fill бригадиром применён). skipOffstage:false
-        // нужен потому что ListView с большим количеством полей форм
-        // отрендерил его в lazy-зону, недоступную обычному find.text.
-        expect(
-          find.text('По умолчанию — бригадир', skipOffstage: false),
-          findsOneWidget,
-        );
-      },
-    );
+      // Хинт виден (pre-fill бригадиром применён). skipOffstage:false
+      // нужен потому что ListView с большим количеством полей форм
+      // отрендерил его в lazy-зону, недоступную обычному find.text.
+      expect(
+        find.text('По умолчанию — бригадир', skipOffstage: false),
+        findsOneWidget,
+      );
+    });
 
     testWidgets(
       'projectId задан, но бригадира нет → хинт не показан, экран не падает',
@@ -212,9 +199,7 @@ void main() {
                 () => _StubTeamController(members),
               ),
             ],
-            child: const MaterialApp(
-              home: AddToolScreen(projectId: 'p1'),
-            ),
+            child: const MaterialApp(home: AddToolScreen(projectId: 'p1')),
           ),
         );
         await tester.pumpAndSettle();

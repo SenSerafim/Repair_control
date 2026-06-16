@@ -92,10 +92,7 @@ class BudgetBucketCard extends StatelessWidget {
                   color: progressColor,
                   borderRadius: BorderRadius.circular(4),
                   border: const Border(
-                    top: BorderSide(
-                      color: AppShadows.innerHighlight,
-                      width: 1,
-                    ),
+                    top: BorderSide(color: AppShadows.innerHighlight, width: 1),
                   ),
                 ),
               ),

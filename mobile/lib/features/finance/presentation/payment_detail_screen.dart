@@ -204,9 +204,7 @@ class _ParentLink extends StatelessWidget {
             colors: [Color(0xFFF1F4FE), AppColors.brandLight],
           ),
           borderRadius: BorderRadius.circular(AppRadius.r12),
-          border: Border.all(
-            color: AppColors.brand.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: AppColors.brand.withValues(alpha: 0.18)),
         ),
         child: const Row(
           children: [

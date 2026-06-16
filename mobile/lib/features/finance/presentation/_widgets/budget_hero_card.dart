@@ -111,10 +111,7 @@ class BudgetHeroCard extends StatelessWidget {
                         ),
                   borderRadius: BorderRadius.circular(3),
                   border: const Border(
-                    top: BorderSide(
-                      color: AppShadows.innerHighlight,
-                      width: 1,
-                    ),
+                    top: BorderSide(color: AppShadows.innerHighlight, width: 1),
                   ),
                 ),
               ),
@@ -218,10 +215,7 @@ class _MiniCard extends StatelessWidget {
                   color: color,
                   borderRadius: BorderRadius.circular(3),
                   border: const Border(
-                    top: BorderSide(
-                      color: AppShadows.innerHighlight,
-                      width: 1,
-                    ),
+                    top: BorderSide(color: AppShadows.innerHighlight, width: 1),
                   ),
                 ),
               ),

@@ -15,16 +15,15 @@ import 'package:repair_control_api/src/model/put_setting_dto.dart';
 import 'package:repair_control_api/src/model/update_faq_item_dto.dart';
 
 class AdminApi {
-
   final Dio _dio;
 
   const AdminApi(this._dio);
 
   /// adminControllerCreateItem
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createFaqItemDto] 
+  /// * [createFaqItemDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +33,7 @@ class AdminApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerCreateItem({ 
+  Future<Response<void>> adminControllerCreateItem({
     required CreateFaqItemDto createFaqItemDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -46,16 +45,10 @@ class AdminApi {
     final _path = r'/api/admin/faq-items';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -66,13 +59,10 @@ class AdminApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createFaqItemDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createFaqItemDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -92,10 +82,10 @@ _bodyData=jsonEncode(createFaqItemDto);
   }
 
   /// adminControllerCreateSection
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createFaqSectionDto] 
+  /// * [createFaqSectionDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -105,7 +95,7 @@ _bodyData=jsonEncode(createFaqItemDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerCreateSection({ 
+  Future<Response<void>> adminControllerCreateSection({
     required CreateFaqSectionDto createFaqSectionDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -117,16 +107,10 @@ _bodyData=jsonEncode(createFaqItemDto);
     final _path = r'/api/admin/faq-sections';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -137,13 +121,10 @@ _bodyData=jsonEncode(createFaqItemDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createFaqSectionDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createFaqSectionDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -163,10 +144,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
   }
 
   /// adminControllerDeleteItem
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -176,7 +157,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerDeleteItem({ 
+  Future<Response<void>> adminControllerDeleteItem({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -185,19 +166,18 @@ _bodyData=jsonEncode(createFaqSectionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/faq-items/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/faq-items/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -216,7 +196,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   }
 
   /// adminControllerListFaq
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -228,7 +208,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerListFaq({ 
+  Future<Response<void>> adminControllerListFaq({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -239,16 +219,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
     final _path = r'/api/admin/faq-sections';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -267,7 +241,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   }
 
   /// adminControllerListSettings
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -279,7 +253,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerListSettings({ 
+  Future<Response<void>> adminControllerListSettings({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -290,16 +264,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
     final _path = r'/api/admin/settings';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -318,7 +286,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   }
 
   /// adminControllerMe
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -330,7 +298,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerMe({ 
+  Future<Response<void>> adminControllerMe({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -341,16 +309,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
     final _path = r'/api/me/app-settings';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -369,7 +331,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   }
 
   /// adminControllerPublicFaq
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -381,7 +343,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerPublicFaq({ 
+  Future<Response<void>> adminControllerPublicFaq({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -392,16 +354,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
     final _path = r'/api/faq';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -420,10 +376,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
   }
 
   /// adminControllerPutSetting
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [putSettingDto] 
+  /// * [putSettingDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -433,7 +389,7 @@ _bodyData=jsonEncode(createFaqSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerPutSetting({ 
+  Future<Response<void>> adminControllerPutSetting({
     required PutSettingDto putSettingDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -445,16 +401,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
     final _path = r'/api/admin/settings';
     final _options = Options(
       method: r'PUT',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -465,13 +415,10 @@ _bodyData=jsonEncode(createFaqSectionDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(putSettingDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(putSettingDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -491,11 +438,11 @@ _bodyData=jsonEncode(putSettingDto);
   }
 
   /// adminControllerUpdateItem
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [updateFaqItemDto] 
+  /// * [id]
+  /// * [updateFaqItemDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -505,7 +452,7 @@ _bodyData=jsonEncode(putSettingDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminControllerUpdateItem({ 
+  Future<Response<void>> adminControllerUpdateItem({
     required String id,
     required UpdateFaqItemDto updateFaqItemDto,
     CancelToken? cancelToken,
@@ -515,19 +462,18 @@ _bodyData=jsonEncode(putSettingDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/faq-items/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/faq-items/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -538,13 +484,10 @@ _bodyData=jsonEncode(putSettingDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateFaqItemDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateFaqItemDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -562,5 +505,4 @@ _bodyData=jsonEncode(updateFaqItemDto);
 
     return _response;
   }
-
 }

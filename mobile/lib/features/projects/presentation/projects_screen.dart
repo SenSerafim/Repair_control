@@ -69,9 +69,9 @@ class ProjectsScreen extends ConsumerWidget {
                 if (items.isEmpty) {
                   if (totalActive > 0) {
                     return _FilteredEmpty(
-                      onReset: () => ref
-                          .read(projectsFilterProvider.notifier)
-                          .state = ProjectsFilter.all,
+                      onReset: () =>
+                          ref.read(projectsFilterProvider.notifier).state =
+                              ProjectsFilter.all,
                     );
                   }
                   return _EmptyState(

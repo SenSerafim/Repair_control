@@ -173,8 +173,9 @@ class _ExecutorCell extends StatelessWidget {
                     style: AppTextStyles.caption.copyWith(
                       fontWeight: FontWeight.w800,
                       color: hasMember ? AppColors.n800 : AppColors.n500,
-                      fontStyle:
-                          hasMember ? FontStyle.normal : FontStyle.italic,
+                      fontStyle: hasMember
+                          ? FontStyle.normal
+                          : FontStyle.italic,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

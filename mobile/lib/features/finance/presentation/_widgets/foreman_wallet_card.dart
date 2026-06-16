@@ -21,12 +21,8 @@ class ForemanWalletCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isNegative = wallet.available < 0;
     final accent = isNegative ? AppColors.redText : AppColors.brand;
-    final accentBg = isNegative
-        ? AppColors.redBg
-        : AppColors.brandLight;
-    final accentBorder = isNegative
-        ? AppColors.redDot
-        : AppColors.brand;
+    final accentBg = isNegative ? AppColors.redBg : AppColors.brandLight;
+    final accentBorder = isNegative ? AppColors.redDot : AppColors.brand;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -99,11 +95,7 @@ class ForemanWalletCard extends StatelessWidget {
                   color: AppColors.greenDark,
                 ),
               ),
-              Container(
-                width: 1,
-                height: 32,
-                color: AppColors.n200,
-              ),
+              Container(width: 1, height: 32, color: AppColors.n200),
               Expanded(
                 child: _LedgerRow(
                   label: 'Распределено',
@@ -144,8 +136,9 @@ class _LedgerRow extends StatelessWidget {
         right: rightAligned ? 0 : AppSpacing.x10,
       ),
       child: Column(
-        crossAxisAlignment:
-            rightAligned ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: rightAligned
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: rightAligned

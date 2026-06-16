@@ -633,8 +633,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'add',
-                    pageBuilder:
-                        slideUpPage((_, __) => const AddToolScreen()),
+                    pageBuilder: slideUpPage((_, __) => const AddToolScreen()),
                   ),
                   GoRoute(
                     path: ':toolId',

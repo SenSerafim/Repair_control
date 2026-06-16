@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:repair_control_api/repair_control_api.dart';
 
-
 /// tests for AdminAuditApi
 void main() {
   final instance = RepairControlApi().getAdminAuditApi();
@@ -16,6 +15,5 @@ void main() {
     test('test adminAuditControllerStats', () async {
       // TODO
     });
-
   });
 }

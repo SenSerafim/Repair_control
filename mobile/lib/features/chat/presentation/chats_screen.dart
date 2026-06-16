@@ -126,14 +126,16 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
                         for (final entry in grouped.entries) ...[
                           _ProjectGroupHeader(
                             title: projectTitles[entry.key] ?? 'Проект',
-                            onTap: () => context
-                                .push(AppRoutes.projectDetailWith(entry.key)),
+                            onTap: () => context.push(
+                              AppRoutes.projectDetailWith(entry.key),
+                            ),
                           ),
                           for (final it in entry.value)
                             _ChatRow(
                               chat: it.chat,
-                              onTap: () => context
-                                  .push(AppRoutes.chatDetailWith(it.chat.id)),
+                              onTap: () => context.push(
+                                AppRoutes.chatDetailWith(it.chat.id),
+                              ),
                             ),
                         ],
                         const SizedBox(height: AppSpacing.x16),

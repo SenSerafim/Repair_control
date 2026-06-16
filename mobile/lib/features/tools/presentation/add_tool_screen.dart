@@ -101,17 +101,20 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
       return;
     }
     setState(() => _busy = true);
-    final failure = await ref.read(myToolsProvider.notifier).create(
+    final failure = await ref
+        .read(myToolsProvider.notifier)
+        .create(
           name: name,
           article: _article.text.trim().isEmpty ? null : _article.text.trim(),
           serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),
           status: _status,
-          storageLocation: _status == ToolStatus.inStorage &&
-                  _storage.text.trim().isNotEmpty
+          storageLocation:
+              _status == ToolStatus.inStorage && _storage.text.trim().isNotEmpty
               ? _storage.text.trim()
               : null,
-          assignedEmployeeId:
-              _status == ToolStatus.withEmployee ? _assignedEmployeeId : null,
+          assignedEmployeeId: _status == ToolStatus.withEmployee
+              ? _assignedEmployeeId
+              : null,
           purchaseDate: _purchaseDate,
           condition: _condition,
         );
@@ -237,7 +240,8 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
             // ответственного сохранять нельзя (§9 — выдача через профиль).
             // В контексте проекта (projectId != null) — разрешаем: бригадир
             // уже подставлен по умолчанию.
-            onPressed: _status == ToolStatus.withEmployee &&
+            onPressed:
+                _status == ToolStatus.withEmployee &&
                     (widget.projectId == null || _assignedEmployeeId == null)
                 ? null
                 : _save,
@@ -289,7 +293,9 @@ class _PurchaseDateField extends StatelessWidget {
                 children: [
                   Text(
                     'Дата покупки',
-                    style: AppTextStyles.caption.copyWith(color: AppColors.n400),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.n400,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(

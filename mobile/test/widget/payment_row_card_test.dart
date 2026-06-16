@@ -3,10 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:repair_control/features/finance/domain/payment.dart';
 import 'package:repair_control/features/finance/presentation/_widgets/payment_row_card.dart';
 
-Payment _payment({
-  PaymentKind kind = PaymentKind.advance,
-  String? comment,
-}) {
+Payment _payment({PaymentKind kind = PaymentKind.advance, String? comment}) {
   return Payment(
     id: 'p1',
     projectId: 'pr1',

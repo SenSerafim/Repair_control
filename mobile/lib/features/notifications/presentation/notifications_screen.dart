@@ -305,10 +305,7 @@ class _NotifTile extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
-                    colors: [
-                      Color(0x144F6EF7),
-                      Color(0x0A4F6EF7),
-                    ],
+                    colors: [Color(0x144F6EF7), Color(0x0A4F6EF7)],
                   ),
                   border: Border(
                     left: BorderSide(color: AppColors.brand, width: 3),

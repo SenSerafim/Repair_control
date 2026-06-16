@@ -24,6 +24,7 @@ class StepMiniMenu extends StatelessWidget {
   /// (StepDetailScreen) через canInProjectProvider — здесь только рендер.
   final VoidCallback? onAddSubstep;
   final VoidCallback? onAddPhoto;
+
   /// NEWFIX TZ-фронт §11.5 — открыть форму создания заявки на материалы,
   /// прокинув контекст этапа этого шага.
   final VoidCallback? onAddMaterial;

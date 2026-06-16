@@ -587,8 +587,7 @@ class _PayFromWalletBodyState extends ConsumerState<_PayFromWalletBody> {
         children: [
           AppBottomSheetHeader(
             title: 'Выплатить мастеру',
-            subtitle:
-                'Доступно в кассе: ${Money.format(widget.available)}',
+            subtitle: 'Доступно в кассе: ${Money.format(widget.available)}',
           ),
           if (_error != null) ...[
             Container(
@@ -648,10 +647,7 @@ class _PayFromWalletBodyState extends ConsumerState<_PayFromWalletBody> {
             hint: 'Сколько перевести',
           ),
           const SizedBox(height: 6),
-          _WalletAfterHint(
-            afterPayout: _afterPayout,
-            exceeds: _exceedsWallet,
-          ),
+          _WalletAfterHint(afterPayout: _afterPayout, exceeds: _exceedsWallet),
           const SizedBox(height: AppSpacing.x12),
           const Text('Комментарий', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.x6),
@@ -740,9 +736,7 @@ class _ChildRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(_name(member), style: AppTextStyles.subtitle),
-          ),
+          Expanded(child: Text(_name(member), style: AppTextStyles.subtitle)),
           Text(
             Money.format(child.amount),
             style: AppTextStyles.subtitle.copyWith(

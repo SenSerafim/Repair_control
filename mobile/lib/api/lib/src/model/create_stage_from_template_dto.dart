@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'create_stage_from_template_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -17,65 +16,36 @@ part 'create_stage_from_template_dto.g.dart';
 class CreateStageFromTemplateDto {
   /// Returns a new [CreateStageFromTemplateDto] instance.
   CreateStageFromTemplateDto({
+    required this.projectId,
 
-    required  this.projectId,
+    this.plannedStart,
 
-     this.plannedStart,
-
-     this.plannedEnd,
+    this.plannedEnd,
   });
 
-  @JsonKey(
-    
-    name: r'projectId',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'projectId', required: true, includeIfNull: false)
   final String projectId;
 
-
-
-  @JsonKey(
-    
-    name: r'plannedStart',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'plannedStart', required: false, includeIfNull: false)
   final String? plannedStart;
 
-
-
-  @JsonKey(
-    
-    name: r'plannedEnd',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'plannedEnd', required: false, includeIfNull: false)
   final String? plannedEnd;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateStageFromTemplateDto &&
+          other.projectId == projectId &&
+          other.plannedStart == plannedStart &&
+          other.plannedEnd == plannedEnd;
 
+  @override
+  int get hashCode =>
+      projectId.hashCode + plannedStart.hashCode + plannedEnd.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CreateStageFromTemplateDto &&
-      other.projectId == projectId &&
-      other.plannedStart == plannedStart &&
-      other.plannedEnd == plannedEnd;
-
-    @override
-    int get hashCode =>
-        projectId.hashCode +
-        plannedStart.hashCode +
-        plannedEnd.hashCode;
-
-  factory CreateStageFromTemplateDto.fromJson(Map<String, dynamic> json) => _$CreateStageFromTemplateDtoFromJson(json);
+  factory CreateStageFromTemplateDto.fromJson(Map<String, dynamic> json) =>
+      _$CreateStageFromTemplateDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateStageFromTemplateDtoToJson(this);
 
@@ -83,6 +53,4 @@ class CreateStageFromTemplateDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

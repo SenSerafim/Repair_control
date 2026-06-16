@@ -18,7 +18,8 @@ class TeamAggregateScreen extends ConsumerStatefulWidget {
   const TeamAggregateScreen({super.key});
 
   @override
-  ConsumerState<TeamAggregateScreen> createState() => _TeamAggregateScreenState();
+  ConsumerState<TeamAggregateScreen> createState() =>
+      _TeamAggregateScreenState();
 }
 
 class _TeamAggregateScreenState extends ConsumerState<TeamAggregateScreen> {
@@ -74,7 +75,10 @@ class _TeamAggregateScreenState extends ConsumerState<TeamAggregateScreen> {
               final id = m.userId;
               final existing = byUserId[id];
               if (existing == null) {
-                byUserId[id] = _Row(membership: m, projectTitles: [g.projectTitle]);
+                byUserId[id] = _Row(
+                  membership: m,
+                  projectTitles: [g.projectTitle],
+                );
               } else {
                 existing.projectTitles.add(g.projectTitle);
               }
@@ -106,7 +110,9 @@ class _TeamAggregateScreenState extends ConsumerState<TeamAggregateScreen> {
                             const SizedBox(height: AppSpacing.x10),
                         itemBuilder: (_, i) => _MemberRow(
                           row: flat[i],
-                          onTap: () => context.push('/team/${flat[i].membership.userId}'),
+                          onTap: () => context.push(
+                            '/team/${flat[i].membership.userId}',
+                          ),
                         ),
                       ),
               ),
@@ -235,9 +241,8 @@ class _MemberRow extends StatelessWidget {
   }
 
   String _initials(String? f, String? l) {
-    String pick(String? s) => (s == null || s.isEmpty)
-        ? ''
-        : s.trim().substring(0, 1).toUpperCase();
+    String pick(String? s) =>
+        (s == null || s.isEmpty) ? '' : s.trim().substring(0, 1).toUpperCase();
     final out = '${pick(f)}${pick(l)}';
     return out.isEmpty ? '?' : out;
   }

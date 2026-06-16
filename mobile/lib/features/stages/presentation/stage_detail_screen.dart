@@ -158,8 +158,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
           // прямой stageId-матч + plan-scope, упоминающий этот этап в payload.
           // Иначе число рядом с табом расходилось с реально видимыми карточками.
           final pendingForStage = approvalsAsync.maybeWhen(
-            data: (b) =>
-                b.pending.where((a) => approvalBelongsToStage(a, stage.id)).length,
+            data: (b) => b.pending
+                .where((a) => approvalBelongsToStage(a, stage.id))
+                .length,
             orElse: () => 0,
           );
           final stepsAsync = ref.watch(
@@ -221,8 +222,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             data: (b) => b.pending.any(
               (a) =>
                   a.scope == ApprovalScope.plan &&
-                  (a.stageId == stage.id ||
-                      a.payload['stageId'] == stage.id),
+                  (a.stageId == stage.id || a.payload['stageId'] == stage.id),
             ),
             orElse: () => false,
           );
@@ -295,8 +295,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               // резолвит chatId; бюджет — фильтрованный срез из общего
               // бюджета проекта (`stages/:stageId/budget`).
               StageQuickActionsRow(
-                onOpenChat: () =>
-                    context.push('/stages/${stage.id}/chat'),
+                onOpenChat: () => context.push('/stages/${stage.id}/chat'),
                 onOpenBudget: () => context.push(
                   '/projects/${widget.projectId}/stages/${stage.id}/budget',
                 ),
@@ -438,9 +437,14 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
   /// NEWFIX §7.1 — запрос асинхронной генерации PDF-отчёта по этапу.
   /// Бэкенд кладёт задачу в BullMQ-очередь и возвращает jobId; пользователь
   /// найдёт результат в общем списке экспортов (Профиль → Экспорты).
-  Future<void> _requestStagePdfExport(BuildContext context, WidgetRef ref) async {
+  Future<void> _requestStagePdfExport(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     try {
-      await ref.read(exportsRepositoryProvider).create(
+      await ref
+          .read(exportsRepositoryProvider)
+          .create(
             projectId: widget.projectId,
             kind: ExportKind.stageReportPdf,
             stageId: widget.stageId,
@@ -461,7 +465,6 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
     }
   }
 }
-
 
 enum _AssignKind { foreman, master }
 
@@ -503,8 +506,9 @@ class _AssignMemberSheetState extends ConsumerState<_AssignMemberSheet> {
       }
       ref.invalidate(stagesControllerProvider(widget.projectId));
       if (!mounted) return;
-      final label =
-          widget.kind == _AssignKind.foreman ? 'бригадиром' : 'мастером';
+      final label = widget.kind == _AssignKind.foreman
+          ? 'бригадиром'
+          : 'мастером';
       final messengerCtx = context;
       Navigator.of(messengerCtx).pop();
       AppToast.show(
@@ -630,8 +634,9 @@ class _AssignEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roleLabel = kind == _AssignKind.foreman ? 'бригадиров' : 'мастеров';
-    final ctaLabel =
-        kind == _AssignKind.foreman ? 'Добавить бригадира' : 'Добавить мастера';
+    final ctaLabel = kind == _AssignKind.foreman
+        ? 'Добавить бригадира'
+        : 'Добавить мастера';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
@@ -670,10 +675,13 @@ class _ActionBar extends ConsumerStatefulWidget {
   final Stage stage;
   final StageDisplayStatus display;
   final bool planAllowsStart;
+
   /// Проект требует согласования плана (Project.requiresPlanApproval).
   final bool planRequired;
+
   /// Этот этап (или проект целиком) имеет одобренный план.
   final bool planApproved;
+
   /// Уже есть pending approval scope=plan по этому этапу — не плодим повторно.
   final bool pendingPlanApproval;
 

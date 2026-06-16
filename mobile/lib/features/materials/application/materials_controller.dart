@@ -65,9 +65,11 @@ class MaterialsController
 /// ОК, ключи привязаны к projectId, а не к userId, и при смене юзера
 /// заявки сами по себе тоже сменятся.
 final materialsLastSeenProvider =
-    AsyncNotifierProvider.family<MaterialsLastSeenController, DateTime?, String>(
-      MaterialsLastSeenController.new,
-    );
+    AsyncNotifierProvider.family<
+      MaterialsLastSeenController,
+      DateTime?,
+      String
+    >(MaterialsLastSeenController.new);
 
 class MaterialsLastSeenController
     extends FamilyAsyncNotifier<DateTime?, String> {

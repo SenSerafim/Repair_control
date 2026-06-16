@@ -344,8 +344,7 @@ class _MemberRow extends ConsumerWidget {
       // ТЗ NEWFIX §1.2: тап по строке = переход в полноценный профиль
       // сотрудника. Меню с действиями уехало в long-press, чтобы
       // основной жест работал по §3.3.
-      onTap: () =>
-          context.push('/projects/$projectId/team/${member.userId}'),
+      onTap: () => context.push('/projects/$projectId/team/${member.userId}'),
       onLongPress: () => _showCard(
         context,
         ref,
@@ -514,14 +513,14 @@ class _MemberRow extends ConsumerWidget {
     final commonProjects = await _loadCommonProjects(ref, userIdForCommon);
     if (!context.mounted) return;
     final parts = name.trim().split(RegExp(r'\s+'));
-    final fallbackFirstName = user?.firstName ??
+    final fallbackFirstName =
+        user?.firstName ??
         (parts.isNotEmpty && parts.first.isNotEmpty
             ? parts.first
             : _phoneLabel(user?.phone ?? ''));
     final fallbackLastName =
         user?.lastName ?? (parts.length > 1 ? parts.sublist(1).join(' ') : '');
-    final isRepresentativeMember =
-        member.role == MembershipRole.representative;
+    final isRepresentativeMember = member.role == MembershipRole.representative;
     await showMemberCardSheet(
       context,
       data: MemberCardData(

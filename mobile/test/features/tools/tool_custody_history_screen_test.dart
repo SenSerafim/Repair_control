@@ -46,8 +46,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Task 6.2 · ToolCustodyHistoryScreen', () {
-    testWidgets('рендерит карточку на каждое событие из репозитория',
-        (tester) async {
+    testWidgets('рендерит карточку на каждое событие из репозитория', (
+      tester,
+    ) async {
       final foreman = _user('u-foreman', 'Иван', 'Бригадиров');
       final master = _user('u-master', 'Пётр', 'Мастеров');
       final customer = _user('u-customer', 'Сергей', 'Заказчиков');
@@ -69,13 +70,15 @@ void main() {
         ),
       ];
 
-      await tester.pumpWidget(_harness(
-        overrides: [
-          toolCustodyHistoryProvider('t1').overrideWith(
-            (ref) async => events,
-          ),
-        ],
-      ));
+      await tester.pumpWidget(
+        _harness(
+          overrides: [
+            toolCustodyHistoryProvider(
+              't1',
+            ).overrideWith((ref) async => events),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Подзаголовок — имя инструмента из конструктора.
@@ -86,25 +89,18 @@ void main() {
       expect(find.text('ПЕРЕДАЧА'), findsNWidgets(2));
 
       // Имена участников отрендерены: «previous → holder».
-      expect(
-        find.textContaining('Иван Бригадиров'),
-        findsAtLeastNWidgets(1),
-      );
-      expect(
-        find.textContaining('Пётр Мастеров'),
-        findsAtLeastNWidgets(1),
-      );
-      expect(
-        find.textContaining('Сергей Заказчиков'),
-        findsAtLeastNWidgets(1),
-      );
+      expect(find.textContaining('Иван Бригадиров'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Пётр Мастеров'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Сергей Заказчиков'), findsAtLeastNWidgets(1));
 
       // Note выведена в кавычках, italic-плашке.
       expect(find.text('«Передал для приёмки»'), findsOneWidget);
 
       // Список присутствует и содержит ровно (events × 2 - 1) дочерних
       // элементов через separator: 3 события → 5 элементов в делегате.
-      final listFinder = find.byKey(const ValueKey('tool_custody_history_list'));
+      final listFinder = find.byKey(
+        const ValueKey('tool_custody_history_list'),
+      );
       expect(listFinder, findsOneWidget);
       final listView = tester.widget<ListView>(listFinder);
       final delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
@@ -120,15 +116,18 @@ void main() {
       );
     });
 
-    testWidgets('пустой список → AppEmptyState с «Нет истории»',
-        (tester) async {
-      await tester.pumpWidget(_harness(
-        overrides: [
-          toolCustodyHistoryProvider('t1').overrideWith(
-            (ref) async => const <ToolCustodyEvent>[],
-          ),
-        ],
-      ));
+    testWidgets('пустой список → AppEmptyState с «Нет истории»', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          overrides: [
+            toolCustodyHistoryProvider(
+              't1',
+            ).overrideWith((ref) async => const <ToolCustodyEvent>[]),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Нет истории'), findsOneWidget);
@@ -137,59 +136,55 @@ void main() {
       expect(find.text('ПЕРЕДАЧА'), findsNothing);
     });
 
-    testWidgets(
-      'ошибка репозитория → AppErrorState с безопасным subtitle '
-      '(никакого e.toString())',
-      (tester) async {
-        await tester.pumpWidget(_harness(
+    testWidgets('ошибка репозитория → AppErrorState с безопасным subtitle '
+        '(никакого e.toString())', (tester) async {
+      await tester.pumpWidget(
+        _harness(
           overrides: [
             toolCustodyHistoryProvider('t1').overrideWith(
-              (ref) async => throw Exception('boom-leaked-internal-stack-trace'),
+              (ref) async =>
+                  throw Exception('boom-leaked-internal-stack-trace'),
             ),
           ],
-        ));
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('Не удалось загрузить историю'), findsOneWidget);
-        // Внутренний текст исключения не должен утечь в UI.
-        expect(
-          find.textContaining('boom-leaked-internal-stack-trace'),
-          findsNothing,
-        );
-        // Safe subtitle — статичная подсказка.
-        expect(
-          find.textContaining('Проверьте подключение'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(find.text('Не удалось загрузить историю'), findsOneWidget);
+      // Внутренний текст исключения не должен утечь в UI.
+      expect(
+        find.textContaining('boom-leaked-internal-stack-trace'),
+        findsNothing,
+      );
+      // Safe subtitle — статичная подсказка.
+      expect(find.textContaining('Проверьте подключение'), findsOneWidget);
+    });
 
-    testWidgets(
-      'fallback: если PublicUser отсутствует, рендерим обрезанный id '
-      '(#abcdef)',
-      (tester) async {
-        final events = [
-          ToolCustodyEvent(
-            id: 'e1',
-            toolItemId: 't1',
-            projectId: 'p1',
-            holderId: 'abcdef1234567890',
-            createdAt: DateTime.utc(2026, 6, 1, 9, 0),
-          ),
-        ];
+    testWidgets('fallback: если PublicUser отсутствует, рендерим обрезанный id '
+        '(#abcdef)', (tester) async {
+      final events = [
+        ToolCustodyEvent(
+          id: 'e1',
+          toolItemId: 't1',
+          projectId: 'p1',
+          holderId: 'abcdef1234567890',
+          createdAt: DateTime.utc(2026, 6, 1, 9, 0),
+        ),
+      ];
 
-        await tester.pumpWidget(_harness(
+      await tester.pumpWidget(
+        _harness(
           overrides: [
-            toolCustodyHistoryProvider('t1').overrideWith(
-              (ref) async => events,
-            ),
+            toolCustodyHistoryProvider(
+              't1',
+            ).overrideWith((ref) async => events),
           ],
-        ));
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // 6 первых символов id с префиксом #.
-        expect(find.textContaining('#abcdef'), findsAtLeastNWidgets(1));
-      },
-    );
+      // 6 первых символов id с префиксом #.
+      expect(find.textContaining('#abcdef'), findsAtLeastNWidgets(1));
+    });
   });
 }

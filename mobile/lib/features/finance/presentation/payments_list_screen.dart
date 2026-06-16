@@ -11,7 +11,9 @@ import '../application/payments_controller.dart';
 import '../domain/payment.dart';
 import 'payment_card.dart';
 
-final _kindFilterProvider = StateProvider.autoDispose<PaymentKind?>((_) => null);
+final _kindFilterProvider = StateProvider.autoDispose<PaymentKind?>(
+  (_) => null,
+);
 
 /// s-budget-payments — список выплат проекта.
 class PaymentsListScreen extends ConsumerWidget {

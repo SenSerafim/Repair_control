@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'update_project_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -17,113 +16,59 @@ part 'update_project_dto.g.dart';
 class UpdateProjectDto {
   /// Returns a new [UpdateProjectDto] instance.
   UpdateProjectDto({
+    this.title,
 
-     this.title,
+    this.address,
 
-     this.address,
+    this.plannedStart,
 
-     this.plannedStart,
+    this.plannedEnd,
 
-     this.plannedEnd,
+    this.workBudget,
 
-     this.workBudget,
-
-     this.materialsBudget,
+    this.materialsBudget,
   });
 
-  @JsonKey(
-    
-    name: r'title',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'title', required: false, includeIfNull: false)
   final String? title;
 
-
-
-  @JsonKey(
-    
-    name: r'address',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'address', required: false, includeIfNull: false)
   final String? address;
 
-
-
-  @JsonKey(
-    
-    name: r'plannedStart',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'plannedStart', required: false, includeIfNull: false)
   final String? plannedStart;
 
-
-
-  @JsonKey(
-    
-    name: r'plannedEnd',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'plannedEnd', required: false, includeIfNull: false)
   final String? plannedEnd;
 
-
-
-  @JsonKey(
-    
-    name: r'workBudget',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'workBudget', required: false, includeIfNull: false)
   final int? workBudget;
 
-
-
-  @JsonKey(
-    
-    name: r'materialsBudget',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'materialsBudget', required: false, includeIfNull: false)
   final int? materialsBudget;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UpdateProjectDto &&
+          other.title == title &&
+          other.address == address &&
+          other.plannedStart == plannedStart &&
+          other.plannedEnd == plannedEnd &&
+          other.workBudget == workBudget &&
+          other.materialsBudget == materialsBudget;
 
+  @override
+  int get hashCode =>
+      title.hashCode +
+      address.hashCode +
+      plannedStart.hashCode +
+      plannedEnd.hashCode +
+      workBudget.hashCode +
+      materialsBudget.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is UpdateProjectDto &&
-      other.title == title &&
-      other.address == address &&
-      other.plannedStart == plannedStart &&
-      other.plannedEnd == plannedEnd &&
-      other.workBudget == workBudget &&
-      other.materialsBudget == materialsBudget;
-
-    @override
-    int get hashCode =>
-        title.hashCode +
-        address.hashCode +
-        plannedStart.hashCode +
-        plannedEnd.hashCode +
-        workBudget.hashCode +
-        materialsBudget.hashCode;
-
-  factory UpdateProjectDto.fromJson(Map<String, dynamic> json) => _$UpdateProjectDtoFromJson(json);
+  factory UpdateProjectDto.fromJson(Map<String, dynamic> json) =>
+      _$UpdateProjectDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$UpdateProjectDtoToJson(this);
 
@@ -131,6 +76,4 @@ class UpdateProjectDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

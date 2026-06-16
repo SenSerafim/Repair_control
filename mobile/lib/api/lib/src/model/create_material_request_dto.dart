@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'create_material_request_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -18,97 +17,52 @@ part 'create_material_request_dto.g.dart';
 class CreateMaterialRequestDto {
   /// Returns a new [CreateMaterialRequestDto] instance.
   CreateMaterialRequestDto({
+    required this.recipient,
 
-    required  this.recipient,
+    required this.title,
 
-    required  this.title,
+    this.stageId,
 
-     this.stageId,
+    this.comment,
 
-     this.comment,
-
-    required  this.items,
+    required this.items,
   });
 
-  @JsonKey(
-    
-    name: r'recipient',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'recipient', required: true, includeIfNull: false)
   final CreateMaterialRequestDtoRecipientEnum recipient;
 
-
-
-  @JsonKey(
-    
-    name: r'title',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'title', required: true, includeIfNull: false)
   final String title;
 
-
-
-  @JsonKey(
-    
-    name: r'stageId',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'stageId', required: false, includeIfNull: false)
   final String? stageId;
 
-
-
-  @JsonKey(
-    
-    name: r'comment',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'comment', required: false, includeIfNull: false)
   final String? comment;
 
-
-
-  @JsonKey(
-    
-    name: r'items',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<MaterialItemInputDto> items;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateMaterialRequestDto &&
+          other.recipient == recipient &&
+          other.title == title &&
+          other.stageId == stageId &&
+          other.comment == comment &&
+          other.items == items;
 
+  @override
+  int get hashCode =>
+      recipient.hashCode +
+      title.hashCode +
+      stageId.hashCode +
+      comment.hashCode +
+      items.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CreateMaterialRequestDto &&
-      other.recipient == recipient &&
-      other.title == title &&
-      other.stageId == stageId &&
-      other.comment == comment &&
-      other.items == items;
-
-    @override
-    int get hashCode =>
-        recipient.hashCode +
-        title.hashCode +
-        stageId.hashCode +
-        comment.hashCode +
-        items.hashCode;
-
-  factory CreateMaterialRequestDto.fromJson(Map<String, dynamic> json) => _$CreateMaterialRequestDtoFromJson(json);
+  factory CreateMaterialRequestDto.fromJson(Map<String, dynamic> json) =>
+      _$CreateMaterialRequestDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateMaterialRequestDtoToJson(this);
 
@@ -116,22 +70,18 @@ class CreateMaterialRequestDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum CreateMaterialRequestDtoRecipientEnum {
-@JsonValue(r'foreman')
-foreman(r'foreman'),
-@JsonValue(r'customer')
-customer(r'customer');
+  @JsonValue(r'foreman')
+  foreman(r'foreman'),
+  @JsonValue(r'customer')
+  customer(r'customer');
 
-const CreateMaterialRequestDtoRecipientEnum(this.value);
+  const CreateMaterialRequestDtoRecipientEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

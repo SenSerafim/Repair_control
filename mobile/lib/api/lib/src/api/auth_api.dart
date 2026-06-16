@@ -18,16 +18,15 @@ import 'package:repair_control_api/src/model/refresh_dto.dart';
 import 'package:repair_control_api/src/model/register_dto.dart';
 
 class AuthApi {
-
   final Dio _dio;
 
   const AuthApi(this._dio);
 
   /// authControllerLogin
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [loginDto] 
+  /// * [loginDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +36,7 @@ class AuthApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerLogin({ 
+  Future<Response<void>> authControllerLogin({
     required LoginDto loginDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -49,13 +48,8 @@ class AuthApi {
     final _path = r'/api/auth/login';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -63,13 +57,10 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(loginDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(loginDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -89,10 +80,10 @@ _bodyData=jsonEncode(loginDto);
   }
 
   /// authControllerLogout
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [logoutDto] 
+  /// * [logoutDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -102,7 +93,7 @@ _bodyData=jsonEncode(loginDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerLogout({ 
+  Future<Response<void>> authControllerLogout({
     required LogoutDto logoutDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -114,13 +105,8 @@ _bodyData=jsonEncode(loginDto);
     final _path = r'/api/auth/logout';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -128,13 +114,10 @@ _bodyData=jsonEncode(loginDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(logoutDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(logoutDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -154,10 +137,10 @@ _bodyData=jsonEncode(logoutDto);
   }
 
   /// authControllerRecoveryReset
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [recoveryResetDto] 
+  /// * [recoveryResetDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -167,7 +150,7 @@ _bodyData=jsonEncode(logoutDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerRecoveryReset({ 
+  Future<Response<void>> authControllerRecoveryReset({
     required RecoveryResetDto recoveryResetDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -179,13 +162,8 @@ _bodyData=jsonEncode(logoutDto);
     final _path = r'/api/auth/recovery/reset';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -193,13 +171,10 @@ _bodyData=jsonEncode(logoutDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(recoveryResetDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(recoveryResetDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -219,10 +194,10 @@ _bodyData=jsonEncode(recoveryResetDto);
   }
 
   /// authControllerRecoverySend
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [recoverySendDto] 
+  /// * [recoverySendDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -232,7 +207,7 @@ _bodyData=jsonEncode(recoveryResetDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerRecoverySend({ 
+  Future<Response<void>> authControllerRecoverySend({
     required RecoverySendDto recoverySendDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -244,13 +219,8 @@ _bodyData=jsonEncode(recoveryResetDto);
     final _path = r'/api/auth/recovery/send';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -258,13 +228,10 @@ _bodyData=jsonEncode(recoveryResetDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(recoverySendDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(recoverySendDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -284,10 +251,10 @@ _bodyData=jsonEncode(recoverySendDto);
   }
 
   /// authControllerRecoveryVerify
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [recoveryVerifyDto] 
+  /// * [recoveryVerifyDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -297,7 +264,7 @@ _bodyData=jsonEncode(recoverySendDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerRecoveryVerify({ 
+  Future<Response<void>> authControllerRecoveryVerify({
     required RecoveryVerifyDto recoveryVerifyDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -309,13 +276,8 @@ _bodyData=jsonEncode(recoverySendDto);
     final _path = r'/api/auth/recovery/verify';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -323,13 +285,10 @@ _bodyData=jsonEncode(recoverySendDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(recoveryVerifyDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(recoveryVerifyDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -349,10 +308,10 @@ _bodyData=jsonEncode(recoveryVerifyDto);
   }
 
   /// authControllerRefresh
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [refreshDto] 
+  /// * [refreshDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -362,7 +321,7 @@ _bodyData=jsonEncode(recoveryVerifyDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerRefresh({ 
+  Future<Response<void>> authControllerRefresh({
     required RefreshDto refreshDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -374,13 +333,8 @@ _bodyData=jsonEncode(recoveryVerifyDto);
     final _path = r'/api/auth/refresh';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -388,13 +342,10 @@ _bodyData=jsonEncode(recoveryVerifyDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(refreshDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(refreshDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -414,10 +365,10 @@ _bodyData=jsonEncode(refreshDto);
   }
 
   /// authControllerRegister
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [registerDto] 
+  /// * [registerDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -427,7 +378,7 @@ _bodyData=jsonEncode(refreshDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> authControllerRegister({ 
+  Future<Response<void>> authControllerRegister({
     required RegisterDto registerDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -439,13 +390,8 @@ _bodyData=jsonEncode(refreshDto);
     final _path = r'/api/auth/register';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -453,13 +399,10 @@ _bodyData=jsonEncode(refreshDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(registerDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(registerDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -477,5 +420,4 @@ _bodyData=jsonEncode(registerDto);
 
     return _response;
   }
-
 }

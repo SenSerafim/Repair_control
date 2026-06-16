@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'resolve_material_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'resolve_material_dto.g.dart';
 )
 class ResolveMaterialDto {
   /// Returns a new [ResolveMaterialDto] instance.
-  ResolveMaterialDto({
+  ResolveMaterialDto({required this.resolution});
 
-    required  this.resolution,
-  });
-
-  @JsonKey(
-    
-    name: r'resolution',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'resolution', required: true, includeIfNull: false)
   final String resolution;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ResolveMaterialDto && other.resolution == resolution;
 
+  @override
+  int get hashCode => resolution.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ResolveMaterialDto &&
-      other.resolution == resolution;
-
-    @override
-    int get hashCode =>
-        resolution.hashCode;
-
-  factory ResolveMaterialDto.fromJson(Map<String, dynamic> json) => _$ResolveMaterialDtoFromJson(json);
+  factory ResolveMaterialDto.fromJson(Map<String, dynamic> json) =>
+      _$ResolveMaterialDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ResolveMaterialDtoToJson(this);
 
@@ -51,6 +37,4 @@ class ResolveMaterialDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -98,7 +98,10 @@ class _ThousandsFormatter extends TextInputFormatter {
       return TextEditingValue.empty;
     }
     // Считаем сколько цифр (без пробелов) было слева от курсора до форматирования.
-    final selOffset = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    final selOffset = newValue.selection.baseOffset.clamp(
+      0,
+      newValue.text.length,
+    );
     final digitsBeforeCursor = newValue.text
         .substring(0, selOffset)
         .replaceAll(RegExp(r'\s'), '')

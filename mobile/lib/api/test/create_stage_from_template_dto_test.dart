@@ -3,7 +3,8 @@ import 'package:repair_control_api/repair_control_api.dart';
 
 // tests for CreateStageFromTemplateDto
 void main() {
-  final CreateStageFromTemplateDto? instance = /* CreateStageFromTemplateDto(...) */ null;
+  final CreateStageFromTemplateDto?
+  instance = /* CreateStageFromTemplateDto(...) */ null;
   // TODO add properties to the entity
 
   group(CreateStageFromTemplateDto, () {
@@ -21,6 +22,5 @@ void main() {
     test('to test the property `plannedEnd`', () async {
       // TODO
     });
-
   });
 }

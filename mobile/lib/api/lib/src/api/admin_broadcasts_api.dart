@@ -13,16 +13,15 @@ import 'package:repair_control_api/src/model/preview_dto.dart';
 import 'package:repair_control_api/src/model/send_broadcast_dto.dart';
 
 class AdminBroadcastsApi {
-
   final Dio _dio;
 
   const AdminBroadcastsApi(this._dio);
 
   /// broadcastsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +31,7 @@ class AdminBroadcastsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> broadcastsControllerGet({ 
+  Future<Response<void>> broadcastsControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -41,19 +40,18 @@ class AdminBroadcastsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/broadcasts/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/broadcasts/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -72,10 +70,10 @@ class AdminBroadcastsApi {
   }
 
   /// broadcastsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [status] 
+  /// * [status]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -85,7 +83,7 @@ class AdminBroadcastsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> broadcastsControllerList({ 
+  Future<Response<void>> broadcastsControllerList({
     required String status,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -97,25 +95,17 @@ class AdminBroadcastsApi {
     final _path = r'/api/admin/broadcasts';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{
-      r'status': status,
-    };
+    final _queryParameters = <String, dynamic>{r'status': status};
 
     final _response = await _dio.request<Object>(
       _path,
@@ -130,10 +120,10 @@ class AdminBroadcastsApi {
   }
 
   /// broadcastsControllerPreview
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [previewDto] 
+  /// * [previewDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -143,7 +133,7 @@ class AdminBroadcastsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> broadcastsControllerPreview({ 
+  Future<Response<void>> broadcastsControllerPreview({
     required PreviewDto previewDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -155,16 +145,10 @@ class AdminBroadcastsApi {
     final _path = r'/api/admin/broadcasts/preview';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -175,13 +159,10 @@ class AdminBroadcastsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(previewDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(previewDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -201,10 +182,10 @@ _bodyData=jsonEncode(previewDto);
   }
 
   /// broadcastsControllerSend
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [sendBroadcastDto] 
+  /// * [sendBroadcastDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -214,7 +195,7 @@ _bodyData=jsonEncode(previewDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> broadcastsControllerSend({ 
+  Future<Response<void>> broadcastsControllerSend({
     required SendBroadcastDto sendBroadcastDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -226,16 +207,10 @@ _bodyData=jsonEncode(previewDto);
     final _path = r'/api/admin/broadcasts';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -246,13 +221,10 @@ _bodyData=jsonEncode(previewDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(sendBroadcastDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(sendBroadcastDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -270,5 +242,4 @@ _bodyData=jsonEncode(sendBroadcastDto);
 
     return _response;
   }
-
 }

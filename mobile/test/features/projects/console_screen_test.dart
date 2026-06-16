@@ -84,10 +84,8 @@ void main() {
       stageOf(id: '5', status: StageStatus.active, orderIndex: 4),
     ];
 
-    List<String> idsFor(StageStatusFilter f) => stages
-        .where((s) => f.match(s, now: now))
-        .map((s) => s.id)
-        .toList();
+    List<String> idsFor(StageStatusFilter f) =>
+        stages.where((s) => f.match(s, now: now)).map((s) => s.id).toList();
 
     test('«Все» возвращает все 5 этапов', () {
       expect(idsFor(StageStatusFilter.all), ['1', '2', '3', '4', '5']);
@@ -181,10 +179,14 @@ void main() {
   // Если позже окажется полезно — можно вынести `_HouseToggleRow` в
   // shared widget, тогда покрытие станет тривиальным.
 
-  test('Task 5.3/5.5 — gap: оба требуют widget-pump приватных под-виджетов', () {
-    // Этот «no-op» test существует, чтобы зафиксировать сознательное
-    // решение покрыть Task 5.4 на уровне доменного предиката, а Task
-    // 5.3 / 5.5 — manual-смоуком. См. комментарии выше.
-    expect(true, isTrue);
-  }, tags: ['documentation']);
+  test(
+    'Task 5.3/5.5 — gap: оба требуют widget-pump приватных под-виджетов',
+    () {
+      // Этот «no-op» test существует, чтобы зафиксировать сознательное
+      // решение покрыть Task 5.4 на уровне доменного предиката, а Task
+      // 5.3 / 5.5 — manual-смоуком. См. комментарии выше.
+      expect(true, isTrue);
+    },
+    tags: ['documentation'],
+  );
 }

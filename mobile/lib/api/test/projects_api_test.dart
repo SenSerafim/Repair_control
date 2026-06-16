@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:repair_control_api/repair_control_api.dart';
 
-
 /// tests for ProjectsApi
 void main() {
   final instance = RepairControlApi().getProjectsApi();
@@ -81,6 +80,5 @@ void main() {
     test('test projectsControllerUpdateMember', () async {
       // TODO
     });
-
   });
 }

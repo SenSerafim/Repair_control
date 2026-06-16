@@ -508,7 +508,8 @@ class _ToolCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (tool.purchaseDate != null || tool.condition != null) ...[
+                    if (tool.purchaseDate != null ||
+                        tool.condition != null) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [

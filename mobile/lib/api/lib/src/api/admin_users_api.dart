@@ -13,16 +13,15 @@ import 'package:repair_control_api/src/model/ban_user_dto.dart';
 import 'package:repair_control_api/src/model/set_roles_dto.dart';
 
 class AdminUsersApi {
-
   final Dio _dio;
 
   const AdminUsersApi(this._dio);
 
   /// adminUsersControllerAudit
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +31,7 @@ class AdminUsersApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerAudit({ 
+  Future<Response<void>> adminUsersControllerAudit({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -41,19 +40,18 @@ class AdminUsersApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}/audit'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}/audit'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -72,11 +70,11 @@ class AdminUsersApi {
   }
 
   /// adminUsersControllerBan
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [banUserDto] 
+  /// * [id]
+  /// * [banUserDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -86,7 +84,7 @@ class AdminUsersApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerBan({ 
+  Future<Response<void>> adminUsersControllerBan({
     required String id,
     required BanUserDto banUserDto,
     CancelToken? cancelToken,
@@ -96,19 +94,18 @@ class AdminUsersApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}/ban'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}/ban'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -119,13 +116,10 @@ class AdminUsersApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(banUserDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(banUserDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -145,10 +139,10 @@ _bodyData=jsonEncode(banUserDto);
   }
 
   /// adminUsersControllerDetail
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -158,7 +152,7 @@ _bodyData=jsonEncode(banUserDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerDetail({ 
+  Future<Response<void>> adminUsersControllerDetail({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -167,19 +161,18 @@ _bodyData=jsonEncode(banUserDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -198,10 +191,10 @@ _bodyData=jsonEncode(banUserDto);
   }
 
   /// adminUsersControllerForceLogout
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -211,7 +204,7 @@ _bodyData=jsonEncode(banUserDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerForceLogout({ 
+  Future<Response<void>> adminUsersControllerForceLogout({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -220,19 +213,18 @@ _bodyData=jsonEncode(banUserDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}/sessions'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}/sessions'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -251,14 +243,14 @@ _bodyData=jsonEncode(banUserDto);
   }
 
   /// adminUsersControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [q] 
-  /// * [role] 
-  /// * [banned] 
-  /// * [limit] 
-  /// * [offset] 
+  /// * [q]
+  /// * [role]
+  /// * [banned]
+  /// * [limit]
+  /// * [offset]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -268,7 +260,7 @@ _bodyData=jsonEncode(banUserDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerList({ 
+  Future<Response<void>> adminUsersControllerList({
     String? q,
     String? role,
     bool? banned,
@@ -284,16 +276,10 @@ _bodyData=jsonEncode(banUserDto);
     final _path = r'/api/admin/users';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -321,10 +307,10 @@ _bodyData=jsonEncode(banUserDto);
   }
 
   /// adminUsersControllerResetPassword
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -334,7 +320,7 @@ _bodyData=jsonEncode(banUserDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerResetPassword({ 
+  Future<Response<void>> adminUsersControllerResetPassword({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -343,19 +329,18 @@ _bodyData=jsonEncode(banUserDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}/reset-password'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}/reset-password'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -374,11 +359,11 @@ _bodyData=jsonEncode(banUserDto);
   }
 
   /// adminUsersControllerSetRoles
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [setRolesDto] 
+  /// * [id]
+  /// * [setRolesDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -388,7 +373,7 @@ _bodyData=jsonEncode(banUserDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerSetRoles({ 
+  Future<Response<void>> adminUsersControllerSetRoles({
     required String id,
     required SetRolesDto setRolesDto,
     CancelToken? cancelToken,
@@ -398,19 +383,18 @@ _bodyData=jsonEncode(banUserDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}/roles'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}/roles'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -421,13 +405,10 @@ _bodyData=jsonEncode(banUserDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(setRolesDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(setRolesDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -447,10 +428,10 @@ _bodyData=jsonEncode(setRolesDto);
   }
 
   /// adminUsersControllerUnban
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -460,7 +441,7 @@ _bodyData=jsonEncode(setRolesDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminUsersControllerUnban({ 
+  Future<Response<void>> adminUsersControllerUnban({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -469,19 +450,18 @@ _bodyData=jsonEncode(setRolesDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/users/{id}/unban'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/users/{id}/unban'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -498,5 +478,4 @@ _bodyData=jsonEncode(setRolesDto);
 
     return _response;
   }
-
 }

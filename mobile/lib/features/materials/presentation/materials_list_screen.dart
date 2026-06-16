@@ -24,7 +24,8 @@ class MaterialsListScreen extends ConsumerStatefulWidget {
   final String projectId;
 
   @override
-  ConsumerState<MaterialsListScreen> createState() => _MaterialsListScreenState();
+  ConsumerState<MaterialsListScreen> createState() =>
+      _MaterialsListScreenState();
 }
 
 class _MaterialsListScreenState extends ConsumerState<MaterialsListScreen> {
@@ -123,9 +124,7 @@ class _MaterialsListScreenState extends ConsumerState<MaterialsListScreen> {
                   _UnreadPill(
                     count: unreadCount,
                     onTap: () => ref
-                        .read(
-                          materialsLastSeenProvider(projectId).notifier,
-                        )
+                        .read(materialsLastSeenProvider(projectId).notifier)
                         .markAllSeen(),
                   ),
                   const SizedBox(height: AppSpacing.x10),

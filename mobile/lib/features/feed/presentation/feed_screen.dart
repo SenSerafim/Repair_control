@@ -178,22 +178,30 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       ),
     );
     try {
-      final bytes = await ref.read(feedRepositoryProvider).downloadPdf(
+      final bytes = await ref
+          .read(feedRepositoryProvider)
+          .downloadPdf(
             projectId: widget.projectId,
             dateFrom: DateTime(
-              picked.start.year, picked.start.month, picked.start.day,
+              picked.start.year,
+              picked.start.month,
+              picked.start.day,
             ),
             dateTo: DateTime(
-              picked.end.year, picked.end.month, picked.end.day, 23, 59, 59,
+              picked.end.year,
+              picked.end.month,
+              picked.end.day,
+              23,
+              59,
+              59,
             ),
           );
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/feed-${widget.projectId}.pdf');
       await file.writeAsBytes(bytes, flush: true);
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'application/pdf')],
-        subject: 'Лента событий за период',
-      );
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'application/pdf'),
+      ], subject: 'Лента событий за период');
     } on FeedException catch (e) {
       messenger?.showSnackBar(
         SnackBar(content: Text('Не удалось: ${e.failure.name}')),

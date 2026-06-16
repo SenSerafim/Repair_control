@@ -46,8 +46,7 @@ class ProjectToolsScreen extends ConsumerWidget {
               onRefresh: () async =>
                   ref.invalidate(projectToolsBoardProvider(projectId)),
               child: ListView(
-                padding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
                 children: [
                   if (tools.isEmpty)
                     AppEmptyState(
@@ -66,9 +65,8 @@ class ProjectToolsScreen extends ConsumerWidget {
                       _ToolBoardCard(
                         tool: t,
                         isHeldByMe: me != null && t.isHeldBy(me),
-                        onTap: () => context.push(
-                          AppRoutes.profileToolDetailWith(t.id),
-                        ),
+                        onTap: () =>
+                            context.push(AppRoutes.profileToolDetailWith(t.id)),
                         onClaim: me != null && !t.isHeldBy(me)
                             ? () => _claim(context, ref, t.id, projectId)
                             : null,
@@ -295,8 +293,9 @@ class _ToolBoardCard extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: AppColors.greenLight,
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.pill),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
+                                  ),
                                 ),
                                 child: const Text(
                                   '👤 Я',
@@ -400,8 +399,9 @@ class _AddToolToProjectSheetState
   }
 
   Future<void> _submit() async {
-    final controller =
-        ref.read(projectToolsBoardProvider(widget.projectId).notifier);
+    final controller = ref.read(
+      projectToolsBoardProvider(widget.projectId).notifier,
+    );
     setState(() => _busy = true);
 
     if (_mode == _AddMode.fromMy) {
@@ -426,15 +426,11 @@ class _AddToolToProjectSheetState
       if (error != null) {
         // NEWFIX TЗ-2 §8.4 — если инструмент уже на другом проекте, показываем
         // прицельный месседж от бэка вместо общего «конфликта».
-        final message =
-            error.apiError.code == 'tools.already_on_other_project'
-            ? (error.apiError.message ?? 'Инструмент уже добавлен на другой проект')
+        final message = error.apiError.code == 'tools.already_on_other_project'
+            ? (error.apiError.message ??
+                  'Инструмент уже добавлен на другой проект')
             : error.failure.userMessage;
-        AppToast.show(
-          context,
-          message: message,
-          kind: AppToastKind.error,
-        );
+        AppToast.show(context, message: message, kind: AppToastKind.error);
       } else {
         Navigator.of(context).pop();
         AppToast.show(
@@ -542,8 +538,8 @@ class _AddToolToProjectSheetState
             AppButton(
               label: _mode == _AddMode.fromMy
                   ? (_selected.isEmpty
-                      ? 'Выберите инструменты'
-                      : 'Добавить (${_selected.length})')
+                        ? 'Выберите инструменты'
+                        : 'Добавить (${_selected.length})')
                   : 'Добавить в проект',
               icon: PhosphorIconsBold.check,
               isLoading: _busy,
@@ -592,11 +588,7 @@ class _ModeSwitch extends StatelessWidget {
 }
 
 class _Tab extends StatelessWidget {
-  const _Tab({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
+  const _Tab({required this.label, required this.active, required this.onTap});
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -758,10 +750,7 @@ class _ResponsibleSection extends ConsumerWidget {
             if (foremanPrefilled) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.brandLight,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -942,10 +931,7 @@ class _BrandNewContent extends ConsumerWidget {
             if (foremanPrefilled) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.brandLight,
                   borderRadius: BorderRadius.circular(AppRadius.pill),

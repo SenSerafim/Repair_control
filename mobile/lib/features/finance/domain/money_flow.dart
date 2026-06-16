@@ -57,6 +57,7 @@ class MoneyFlow {
   final List<PendingMaterialFlow> pendingMaterials;
   final List<RejectedMaterialFlow> rejectedMaterials;
   final List<RejectedSelfpurchaseFlow> rejectedSelfpurchases;
+
   /// Касса бригадира — заполняется только когда бэк отвечает foreman-срезом
   /// (см. `getForemanMoneyFlow`). Для owner/representative — `null`.
   final ForemanWallet? wallet;

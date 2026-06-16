@@ -367,10 +367,7 @@ class _Rejected extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppColors.redBg.withValues(alpha: 0.86),
-            AppColors.redBg,
-          ],
+          colors: [AppColors.redBg.withValues(alpha: 0.86), AppColors.redBg],
         ),
         borderRadius: AppRadius.card,
         border: Border.all(color: AppColors.redDot.withValues(alpha: 0.40)),
@@ -536,9 +533,7 @@ class _BaseBanner extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.n0.withValues(alpha: 0.50),
               borderRadius: BorderRadius.circular(AppRadius.r8),
-              border: Border.all(
-                color: iconColor.withValues(alpha: 0.18),
-              ),
+              border: Border.all(color: iconColor.withValues(alpha: 0.18)),
             ),
             alignment: Alignment.center,
             child: Icon(icon, size: 18, color: iconColor),

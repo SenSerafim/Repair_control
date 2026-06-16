@@ -9,18 +9,16 @@ import 'dart:convert';
 import 'package:repair_control_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-
 class FilesApi {
-
   final Dio _dio;
 
   const FilesApi(this._dio);
 
   /// filesApiControllerPresign
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -30,7 +28,7 @@ class FilesApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> filesApiControllerPresign({ 
+  Future<Response<void>> filesApiControllerPresign({
     required Object body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -42,16 +40,10 @@ class FilesApi {
     final _path = r'/api/files/presign-upload';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -62,13 +54,10 @@ class FilesApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(body);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(body);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -86,5 +75,4 @@ _bodyData=jsonEncode(body);
 
     return _response;
   }
-
 }

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'reorder_steps_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -17,34 +16,21 @@ part 'reorder_steps_dto.g.dart';
 )
 class ReorderStepsDto {
   /// Returns a new [ReorderStepsDto] instance.
-  ReorderStepsDto({
+  ReorderStepsDto({required this.items});
 
-    required  this.items,
-  });
-
-  @JsonKey(
-    
-    name: r'items',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<ReorderStepItemDto> items;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReorderStepsDto && other.items == items;
 
+  @override
+  int get hashCode => items.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ReorderStepsDto &&
-      other.items == items;
-
-    @override
-    int get hashCode =>
-        items.hashCode;
-
-  factory ReorderStepsDto.fromJson(Map<String, dynamic> json) => _$ReorderStepsDtoFromJson(json);
+  factory ReorderStepsDto.fromJson(Map<String, dynamic> json) =>
+      _$ReorderStepsDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ReorderStepsDtoToJson(this);
 
@@ -52,6 +38,4 @@ class ReorderStepsDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

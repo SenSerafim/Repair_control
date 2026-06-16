@@ -19,17 +19,16 @@ import 'package:repair_control_api/src/model/mark_read_dto.dart';
 import 'package:repair_control_api/src/model/patch_chat_dto.dart';
 
 class ChatsApi {
-
   final Dio _dio;
 
   const ChatsApi(this._dio);
 
   /// chatsControllerAddParticipant
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [addParticipantDto] 
+  /// * [chatId]
+  /// * [addParticipantDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,7 +38,7 @@ class ChatsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerAddParticipant({ 
+  Future<Response<void>> chatsControllerAddParticipant({
     required String chatId,
     required AddParticipantDto addParticipantDto,
     CancelToken? cancelToken,
@@ -49,19 +48,18 @@ class ChatsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/participants'.replaceAll('{' r'chatId' '}', chatId.toString());
+    final _path = r'/api/chats/{chatId}/participants'.replaceAll(
+      '{'
+      r'chatId'
+      '}',
+      chatId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -72,13 +70,10 @@ class ChatsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(addParticipantDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(addParticipantDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -98,11 +93,11 @@ _bodyData=jsonEncode(addParticipantDto);
   }
 
   /// chatsControllerCreateGroup
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [createGroupChatDto] 
+  /// * [projectId]
+  /// * [createGroupChatDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -112,7 +107,7 @@ _bodyData=jsonEncode(addParticipantDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerCreateGroup({ 
+  Future<Response<void>> chatsControllerCreateGroup({
     required String projectId,
     required CreateGroupChatDto createGroupChatDto,
     CancelToken? cancelToken,
@@ -122,19 +117,18 @@ _bodyData=jsonEncode(addParticipantDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/chats/group'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/chats/group'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -145,13 +139,10 @@ _bodyData=jsonEncode(addParticipantDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createGroupChatDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createGroupChatDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -171,11 +162,11 @@ _bodyData=jsonEncode(createGroupChatDto);
   }
 
   /// chatsControllerCreatePersonal
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [createPersonalChatDto] 
+  /// * [projectId]
+  /// * [createPersonalChatDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -185,7 +176,7 @@ _bodyData=jsonEncode(createGroupChatDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerCreatePersonal({ 
+  Future<Response<void>> chatsControllerCreatePersonal({
     required String projectId,
     required CreatePersonalChatDto createPersonalChatDto,
     CancelToken? cancelToken,
@@ -195,19 +186,18 @@ _bodyData=jsonEncode(createGroupChatDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/chats/personal'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/chats/personal'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -218,13 +208,10 @@ _bodyData=jsonEncode(createGroupChatDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createPersonalChatDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createPersonalChatDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -244,11 +231,11 @@ _bodyData=jsonEncode(createPersonalChatDto);
   }
 
   /// chatsControllerDeleteMessage
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [id] 
+  /// * [chatId]
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -258,7 +245,7 @@ _bodyData=jsonEncode(createPersonalChatDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerDeleteMessage({ 
+  Future<Response<void>> chatsControllerDeleteMessage({
     required String chatId,
     required String id,
     CancelToken? cancelToken,
@@ -268,19 +255,25 @@ _bodyData=jsonEncode(createPersonalChatDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/messages/{id}'.replaceAll('{' r'chatId' '}', chatId.toString()).replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/chats/{chatId}/messages/{id}'
+        .replaceAll(
+          '{'
+          r'chatId'
+          '}',
+          chatId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'id'
+          '}',
+          id.toString(),
+        );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -299,12 +292,12 @@ _bodyData=jsonEncode(createPersonalChatDto);
   }
 
   /// chatsControllerEditMessage
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [id] 
-  /// * [editMessageDto] 
+  /// * [chatId]
+  /// * [id]
+  /// * [editMessageDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -314,7 +307,7 @@ _bodyData=jsonEncode(createPersonalChatDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerEditMessage({ 
+  Future<Response<void>> chatsControllerEditMessage({
     required String chatId,
     required String id,
     required EditMessageDto editMessageDto,
@@ -325,19 +318,25 @@ _bodyData=jsonEncode(createPersonalChatDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/messages/{id}'.replaceAll('{' r'chatId' '}', chatId.toString()).replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/chats/{chatId}/messages/{id}'
+        .replaceAll(
+          '{'
+          r'chatId'
+          '}',
+          chatId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'id'
+          '}',
+          id.toString(),
+        );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -348,13 +347,10 @@ _bodyData=jsonEncode(createPersonalChatDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(editMessageDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(editMessageDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -374,12 +370,12 @@ _bodyData=jsonEncode(editMessageDto);
   }
 
   /// chatsControllerForward
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [id] 
-  /// * [forwardMessageDto] 
+  /// * [chatId]
+  /// * [id]
+  /// * [forwardMessageDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -389,7 +385,7 @@ _bodyData=jsonEncode(editMessageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerForward({ 
+  Future<Response<void>> chatsControllerForward({
     required String chatId,
     required String id,
     required ForwardMessageDto forwardMessageDto,
@@ -400,19 +396,25 @@ _bodyData=jsonEncode(editMessageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/messages/{id}/forward'.replaceAll('{' r'chatId' '}', chatId.toString()).replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/chats/{chatId}/messages/{id}/forward'
+        .replaceAll(
+          '{'
+          r'chatId'
+          '}',
+          chatId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'id'
+          '}',
+          id.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -423,13 +425,10 @@ _bodyData=jsonEncode(editMessageDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(forwardMessageDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(forwardMessageDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -449,10 +448,10 @@ _bodyData=jsonEncode(forwardMessageDto);
   }
 
   /// chatsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
+  /// * [chatId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -462,7 +461,7 @@ _bodyData=jsonEncode(forwardMessageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerGet({ 
+  Future<Response<void>> chatsControllerGet({
     required String chatId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -471,19 +470,18 @@ _bodyData=jsonEncode(forwardMessageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}'.replaceAll('{' r'chatId' '}', chatId.toString());
+    final _path = r'/api/chats/{chatId}'.replaceAll(
+      '{'
+      r'chatId'
+      '}',
+      chatId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -502,10 +500,10 @@ _bodyData=jsonEncode(forwardMessageDto);
   }
 
   /// chatsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -515,7 +513,7 @@ _bodyData=jsonEncode(forwardMessageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerList({ 
+  Future<Response<void>> chatsControllerList({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -524,19 +522,18 @@ _bodyData=jsonEncode(forwardMessageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/chats'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/chats'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -555,12 +552,12 @@ _bodyData=jsonEncode(forwardMessageDto);
   }
 
   /// chatsControllerListMessages
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [cursor] 
-  /// * [limit] 
+  /// * [chatId]
+  /// * [cursor]
+  /// * [limit]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -570,7 +567,7 @@ _bodyData=jsonEncode(forwardMessageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerListMessages({ 
+  Future<Response<void>> chatsControllerListMessages({
     required String chatId,
     String? cursor,
     num? limit = 50,
@@ -581,19 +578,18 @@ _bodyData=jsonEncode(forwardMessageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/messages'.replaceAll('{' r'chatId' '}', chatId.toString());
+    final _path = r'/api/chats/{chatId}/messages'.replaceAll(
+      '{'
+      r'chatId'
+      '}',
+      chatId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -618,11 +614,11 @@ _bodyData=jsonEncode(forwardMessageDto);
   }
 
   /// chatsControllerMarkRead
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [markReadDto] 
+  /// * [chatId]
+  /// * [markReadDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -632,7 +628,7 @@ _bodyData=jsonEncode(forwardMessageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerMarkRead({ 
+  Future<Response<void>> chatsControllerMarkRead({
     required String chatId,
     required MarkReadDto markReadDto,
     CancelToken? cancelToken,
@@ -642,19 +638,18 @@ _bodyData=jsonEncode(forwardMessageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/read'.replaceAll('{' r'chatId' '}', chatId.toString());
+    final _path = r'/api/chats/{chatId}/read'.replaceAll(
+      '{'
+      r'chatId'
+      '}',
+      chatId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -665,13 +660,10 @@ _bodyData=jsonEncode(forwardMessageDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(markReadDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(markReadDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -691,11 +683,11 @@ _bodyData=jsonEncode(markReadDto);
   }
 
   /// chatsControllerPatch
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [patchChatDto] 
+  /// * [chatId]
+  /// * [patchChatDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -705,7 +697,7 @@ _bodyData=jsonEncode(markReadDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerPatch({ 
+  Future<Response<void>> chatsControllerPatch({
     required String chatId,
     required PatchChatDto patchChatDto,
     CancelToken? cancelToken,
@@ -715,19 +707,18 @@ _bodyData=jsonEncode(markReadDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}'.replaceAll('{' r'chatId' '}', chatId.toString());
+    final _path = r'/api/chats/{chatId}'.replaceAll(
+      '{'
+      r'chatId'
+      '}',
+      chatId.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -738,13 +729,10 @@ _bodyData=jsonEncode(markReadDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(patchChatDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(patchChatDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -764,11 +752,11 @@ _bodyData=jsonEncode(patchChatDto);
   }
 
   /// chatsControllerPostMessage
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [createMessageDto] 
+  /// * [chatId]
+  /// * [createMessageDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -778,7 +766,7 @@ _bodyData=jsonEncode(patchChatDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerPostMessage({ 
+  Future<Response<void>> chatsControllerPostMessage({
     required String chatId,
     required CreateMessageDto createMessageDto,
     CancelToken? cancelToken,
@@ -788,19 +776,18 @@ _bodyData=jsonEncode(patchChatDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/messages'.replaceAll('{' r'chatId' '}', chatId.toString());
+    final _path = r'/api/chats/{chatId}/messages'.replaceAll(
+      '{'
+      r'chatId'
+      '}',
+      chatId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -811,13 +798,10 @@ _bodyData=jsonEncode(patchChatDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createMessageDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createMessageDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -837,11 +821,11 @@ _bodyData=jsonEncode(createMessageDto);
   }
 
   /// chatsControllerRemoveParticipant
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [chatId] 
-  /// * [userId] 
+  /// * [chatId]
+  /// * [userId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -851,7 +835,7 @@ _bodyData=jsonEncode(createMessageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> chatsControllerRemoveParticipant({ 
+  Future<Response<void>> chatsControllerRemoveParticipant({
     required String chatId,
     required String userId,
     CancelToken? cancelToken,
@@ -861,19 +845,25 @@ _bodyData=jsonEncode(createMessageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/chats/{chatId}/participants/{userId}'.replaceAll('{' r'chatId' '}', chatId.toString()).replaceAll('{' r'userId' '}', userId.toString());
+    final _path = r'/api/chats/{chatId}/participants/{userId}'
+        .replaceAll(
+          '{'
+          r'chatId'
+          '}',
+          chatId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'userId'
+          '}',
+          userId.toString(),
+        );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -890,5 +880,4 @@ _bodyData=jsonEncode(createMessageDto);
 
     return _response;
   }
-
 }

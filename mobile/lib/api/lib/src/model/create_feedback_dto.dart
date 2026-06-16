@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'create_feedback_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,26 @@ part 'create_feedback_dto.g.dart';
 )
 class CreateFeedbackDto {
   /// Returns a new [CreateFeedbackDto] instance.
-  CreateFeedbackDto({
+  CreateFeedbackDto({required this.text, this.attachmentKeys});
 
-    required  this.text,
-
-     this.attachmentKeys,
-  });
-
-  @JsonKey(
-    
-    name: r'text',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'text', required: true, includeIfNull: false)
   final String text;
 
-
-
-  @JsonKey(
-    
-    name: r'attachmentKeys',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'attachmentKeys', required: false, includeIfNull: false)
   final List<String>? attachmentKeys;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateFeedbackDto &&
+          other.text == text &&
+          other.attachmentKeys == attachmentKeys;
 
+  @override
+  int get hashCode => text.hashCode + attachmentKeys.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CreateFeedbackDto &&
-      other.text == text &&
-      other.attachmentKeys == attachmentKeys;
-
-    @override
-    int get hashCode =>
-        text.hashCode +
-        attachmentKeys.hashCode;
-
-  factory CreateFeedbackDto.fromJson(Map<String, dynamic> json) => _$CreateFeedbackDtoFromJson(json);
+  factory CreateFeedbackDto.fromJson(Map<String, dynamic> json) =>
+      _$CreateFeedbackDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateFeedbackDtoToJson(this);
 
@@ -67,6 +42,4 @@ class CreateFeedbackDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -70,47 +70,42 @@ GoRouter _buildRouter({required String stageId}) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets(
-    'AppBar содержит кнопку чата с правильным ключом и tooltip',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: _buildRouter(stageId: 'stage-42')),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('AppBar содержит кнопку чата с правильным ключом и tooltip', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp.router(routerConfig: _buildRouter(stageId: 'stage-42')),
+    );
+    await tester.pumpAndSettle();
 
-      final button = find.byKey(const ValueKey('step_header_chat_button'));
-      expect(button, findsOneWidget);
+    final button = find.byKey(const ValueKey('step_header_chat_button'));
+    expect(button, findsOneWidget);
 
-      // Tooltip должен быть «Чат этапа».
-      expect(
-        find.byTooltip('Чат этапа'),
-        findsOneWidget,
-      );
+    // Tooltip должен быть «Чат этапа».
+    expect(find.byTooltip('Чат этапа'), findsOneWidget);
 
-      // Иконка — phosphor chatCircle.
-      expect(
-        find.descendant(
-          of: button,
-          matching: find.byIcon(PhosphorIconsRegular.chatCircle),
-        ),
-        findsOneWidget,
-      );
-    },
-  );
+    // Иконка — phosphor chatCircle.
+    expect(
+      find.descendant(
+        of: button,
+        matching: find.byIcon(PhosphorIconsRegular.chatCircle),
+      ),
+      findsOneWidget,
+    );
+  });
 
-  testWidgets(
-    'тап по кнопке чата открывает /stages/:stageId/chat',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: _buildRouter(stageId: 'stage-42')),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('тап по кнопке чата открывает /stages/:stageId/chat', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp.router(routerConfig: _buildRouter(stageId: 'stage-42')),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const ValueKey('step_header_chat_button')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('step_header_chat_button')));
+    await tester.pumpAndSettle();
 
-      // Перешли на маршрут чата этапа с тем же stageId.
-      expect(find.text('stage-chat:stage-42'), findsOneWidget);
-    },
-  );
+    // Перешли на маршрут чата этапа с тем же stageId.
+    expect(find.text('stage-chat:stage-42'), findsOneWidget);
+  });
 }

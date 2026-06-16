@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'create_export_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -17,97 +16,52 @@ part 'create_export_dto.g.dart';
 class CreateExportDto {
   /// Returns a new [CreateExportDto] instance.
   CreateExportDto({
+    required this.kind,
 
-    required  this.kind,
+    this.kinds,
 
-     this.kinds,
+    this.stageId,
 
-     this.stageId,
+    this.dateFrom,
 
-     this.dateFrom,
-
-     this.dateTo,
+    this.dateTo,
   });
 
-  @JsonKey(
-    
-    name: r'kind',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'kind', required: true, includeIfNull: false)
   final CreateExportDtoKindEnum kind;
 
-
-
-  @JsonKey(
-    
-    name: r'kinds',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'kinds', required: false, includeIfNull: false)
   final List<String>? kinds;
 
-
-
-  @JsonKey(
-    
-    name: r'stageId',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'stageId', required: false, includeIfNull: false)
   final String? stageId;
 
-
-
-  @JsonKey(
-    
-    name: r'dateFrom',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'dateFrom', required: false, includeIfNull: false)
   final String? dateFrom;
 
-
-
-  @JsonKey(
-    
-    name: r'dateTo',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'dateTo', required: false, includeIfNull: false)
   final String? dateTo;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateExportDto &&
+          other.kind == kind &&
+          other.kinds == kinds &&
+          other.stageId == stageId &&
+          other.dateFrom == dateFrom &&
+          other.dateTo == dateTo;
 
+  @override
+  int get hashCode =>
+      kind.hashCode +
+      kinds.hashCode +
+      stageId.hashCode +
+      dateFrom.hashCode +
+      dateTo.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CreateExportDto &&
-      other.kind == kind &&
-      other.kinds == kinds &&
-      other.stageId == stageId &&
-      other.dateFrom == dateFrom &&
-      other.dateTo == dateTo;
-
-    @override
-    int get hashCode =>
-        kind.hashCode +
-        kinds.hashCode +
-        stageId.hashCode +
-        dateFrom.hashCode +
-        dateTo.hashCode;
-
-  factory CreateExportDto.fromJson(Map<String, dynamic> json) => _$CreateExportDtoFromJson(json);
+  factory CreateExportDto.fromJson(Map<String, dynamic> json) =>
+      _$CreateExportDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateExportDtoToJson(this);
 
@@ -115,26 +69,22 @@ class CreateExportDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum CreateExportDtoKindEnum {
-@JsonValue(r'feed_pdf')
-feedPdf(r'feed_pdf'),
-@JsonValue(r'project_zip')
-projectZip(r'project_zip'),
-@JsonValue(r'project_report_pdf')
-projectReportPdf(r'project_report_pdf'),
-@JsonValue(r'project_summary_txt')
-projectSummaryTxt(r'project_summary_txt');
+  @JsonValue(r'feed_pdf')
+  feedPdf(r'feed_pdf'),
+  @JsonValue(r'project_zip')
+  projectZip(r'project_zip'),
+  @JsonValue(r'project_report_pdf')
+  projectReportPdf(r'project_report_pdf'),
+  @JsonValue(r'project_summary_txt')
+  projectSummaryTxt(r'project_summary_txt');
 
-const CreateExportDtoKindEnum(this.value);
+  const CreateExportDtoKindEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

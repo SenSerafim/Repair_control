@@ -555,9 +555,7 @@ class _PhotoThumb extends ConsumerWidget {
                   ? ColoredBox(
                       color: AppColors.n100,
                       child: Icon(
-                        isVideo
-                            ? Icons.videocam_rounded
-                            : Icons.image_outlined,
+                        isVideo ? Icons.videocam_rounded : Icons.image_outlined,
                         color: AppColors.n400,
                       ),
                     )
@@ -607,50 +605,49 @@ class _PhotoThumb extends ConsumerWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0x00000000),
-                    Color(0xCC000000),
-                  ],
+                  colors: [Color(0x00000000), Color(0xCC000000)],
                 ),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(AppRadius.r12),
                   bottomRight: Radius.circular(AppRadius.r12),
                 ),
               ),
-              child: Builder(builder: (_) {
-                final team = ref
-                    .watch(teamControllerProvider(projectId))
-                    .valueOrNull;
-                String name = '—';
-                if (team != null) {
-                  for (final m in team.members) {
-                    if (m.userId == photo.uploadedBy) {
-                      final u = m.user;
-                      if (u != null && u.firstName.isNotEmpty) {
-                        name = u.lastName.isEmpty
-                            ? u.firstName
-                            : '${u.firstName} ${u.lastName[0]}.';
+              child: Builder(
+                builder: (_) {
+                  final team = ref
+                      .watch(teamControllerProvider(projectId))
+                      .valueOrNull;
+                  String name = '—';
+                  if (team != null) {
+                    for (final m in team.members) {
+                      if (m.userId == photo.uploadedBy) {
+                        final u = m.user;
+                        if (u != null && u.firstName.isNotEmpty) {
+                          name = u.lastName.isEmpty
+                              ? u.firstName
+                              : '${u.firstName} ${u.lastName[0]}.';
+                        }
+                        break;
                       }
-                      break;
                     }
                   }
-                }
-                final dt = photo.createdAt.toLocal();
-                final hh = dt.hour.toString().padLeft(2, '0');
-                final mm = dt.minute.toString().padLeft(2, '0');
-                final dd = dt.day.toString().padLeft(2, '0');
-                final mo = dt.month.toString().padLeft(2, '0');
-                return Text(
-                  '$name · $dd.$mo $hh:$mm',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.n0,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                );
-              }),
+                  final dt = photo.createdAt.toLocal();
+                  final hh = dt.hour.toString().padLeft(2, '0');
+                  final mm = dt.minute.toString().padLeft(2, '0');
+                  final dd = dt.day.toString().padLeft(2, '0');
+                  final mo = dt.month.toString().padLeft(2, '0');
+                  return Text(
+                    '$name · $dd.$mo $hh:$mm',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.n0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -1261,8 +1258,8 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
     );
   }
 
-  bool _hasContent() => _whatDid.text.trim().isNotEmpty ||
-      _howDid.text.trim().isNotEmpty;
+  bool _hasContent() =>
+      _whatDid.text.trim().isNotEmpty || _howDid.text.trim().isNotEmpty;
 }
 
 class _LabeledField extends StatelessWidget {

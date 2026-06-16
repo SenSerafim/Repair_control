@@ -49,61 +49,66 @@ class MaterialDetailScreen extends ConsumerWidget {
       title: 'Заявка',
       padding: EdgeInsets.zero,
       actions: [
-        Builder(builder: (ctx) {
-          final r = async.valueOrNull;
-          // ТЗ NEWFIX §5.3: кнопка «Сформировать PDF». Активна, когда
-          // заявка загружена и в ней есть хотя бы одна позиция.
-          final canExport = r != null && r.items.isNotEmpty;
-          return IconButton(
-            tooltip: 'Сформировать PDF',
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            onPressed: canExport ? () => _sharePdf(ctx, ref, r) : null,
-          );
-        }),
+        Builder(
+          builder: (ctx) {
+            final r = async.valueOrNull;
+            // ТЗ NEWFIX §5.3: кнопка «Сформировать PDF». Активна, когда
+            // заявка загружена и в ней есть хотя бы одна позиция.
+            final canExport = r != null && r.items.isNotEmpty;
+            return IconButton(
+              tooltip: 'Сформировать PDF',
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              onPressed: canExport ? () => _sharePdf(ctx, ref, r) : null,
+            );
+          },
+        ),
         // Серафим 08.06.2026: ⋮-меню в шапке заявки.
         // Удалить — только автор + статус created/cancelled (backend
         // FSM). Редактирование позиций не в скоупе (большой рефактор).
-        Builder(builder: (ctx) {
-          final r = async.valueOrNull;
-          final me = ref.watch(authControllerProvider).userId;
-          // Удалить можно только до согласования (pendingApproval) или
-          // после отказа/отмены (rejected). После approved/delivered/
-          // accepted — бэк отдаст 403.
-          final canDelete = r != null &&
-              me != null &&
-              r.createdById == me &&
-              (r.status == MaterialRequestStatus.pendingApproval ||
-                  r.status == MaterialRequestStatus.rejected);
-          return PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            tooltip: 'Действия',
-            onSelected: (v) {
-              if (v == 'delete') _confirmDelete(ctx, ref);
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'delete',
-                enabled: canDelete,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete_outline_rounded,
-                      size: 20,
-                      color: canDelete ? AppColors.redText : AppColors.n400,
-                    ),
-                    const SizedBox(width: AppSpacing.x8),
-                    Text(
-                      'Удалить',
-                      style: TextStyle(
+        Builder(
+          builder: (ctx) {
+            final r = async.valueOrNull;
+            final me = ref.watch(authControllerProvider).userId;
+            // Удалить можно только до согласования (pendingApproval) или
+            // после отказа/отмены (rejected). После approved/delivered/
+            // accepted — бэк отдаст 403.
+            final canDelete =
+                r != null &&
+                me != null &&
+                r.createdById == me &&
+                (r.status == MaterialRequestStatus.pendingApproval ||
+                    r.status == MaterialRequestStatus.rejected);
+            return PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: 'Действия',
+              onSelected: (v) {
+                if (v == 'delete') _confirmDelete(ctx, ref);
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  enabled: canDelete,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete_outline_rounded,
+                        size: 20,
                         color: canDelete ? AppColors.redText : AppColors.n400,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.x8),
+                      Text(
+                        'Удалить',
+                        style: TextStyle(
+                          color: canDelete ? AppColors.redText : AppColors.n400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          );
-        }),
+              ],
+            );
+          },
+        ),
       ],
       body: async.when(
         loading: () => const AppLoadingState(),
@@ -173,25 +178,35 @@ class MaterialDetailScreen extends ConsumerWidget {
   String _shorten(String id) =>
       id.length <= 12 ? id : '${id.substring(0, 12)}…';
 
-  Future<void> _sharePdf(BuildContext ctx, WidgetRef ref, MaterialRequest r) async {
+  Future<void> _sharePdf(
+    BuildContext ctx,
+    WidgetRef ref,
+    MaterialRequest r,
+  ) async {
     final messenger = ScaffoldMessenger.maybeOf(ctx);
     messenger?.showSnackBar(
-      const SnackBar(content: Text('Готовим PDF…'), duration: Duration(seconds: 2)),
+      const SnackBar(
+        content: Text('Готовим PDF…'),
+        duration: Duration(seconds: 2),
+      ),
     );
     try {
       final repo = ref.read(materialsRepositoryProvider);
       final bytes = await repo.downloadRequestPdf(r.id);
       final dir = await getTemporaryDirectory();
-      final safeTitle = r.title.replaceAll(RegExp(r'[^\wа-яА-Я\- ]+'), '').trim();
+      final safeTitle = r.title
+          .replaceAll(RegExp(r'[^\wа-яА-Я\- ]+'), '')
+          .trim();
       final file = File('${dir.path}/zayavka-${r.id}.pdf');
       await file.writeAsBytes(bytes, flush: true);
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'application/pdf')],
-        subject: safeTitle.isEmpty ? 'Заявка' : safeTitle,
-      );
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'application/pdf'),
+      ], subject: safeTitle.isEmpty ? 'Заявка' : safeTitle);
     } on MaterialsException catch (e) {
       messenger?.showSnackBar(
-        SnackBar(content: Text('Не удалось сформировать PDF: ${e.failure.name}')),
+        SnackBar(
+          content: Text('Не удалось сформировать PDF: ${e.failure.name}'),
+        ),
       );
     }
   }
@@ -567,9 +582,9 @@ class _AcceptanceActions extends ConsumerWidget {
     if (failure != null) {
       _showError(context, failure.toString());
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Доставка отмечена')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Доставка отмечена')));
     }
   }
 
@@ -601,9 +616,9 @@ class _AcceptanceActions extends ConsumerWidget {
     if (failure != null) {
       _showError(context, failure.toString());
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заявка принята полностью')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Заявка принята полностью')));
     }
   }
 
@@ -622,9 +637,9 @@ class _AcceptanceActions extends ConsumerWidget {
     if (failure != null) {
       _showError(context, failure.toString());
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Принято частично')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Принято частично')));
     }
   }
 
@@ -692,17 +707,11 @@ class _AcceptPartialSheetState extends State<_AcceptPartialSheet> {
             ),
             const SizedBox(height: AppSpacing.x16),
             for (final item in widget.items) ...[
-              _PartialItemRow(
-                item: item,
-                controller: _controllers[item.id]!,
-              ),
+              _PartialItemRow(item: item, controller: _controllers[item.id]!),
               const SizedBox(height: AppSpacing.x12),
             ],
             const SizedBox(height: AppSpacing.x8),
-            FilledButton(
-              onPressed: _onSubmit,
-              child: const Text('Принять'),
-            ),
+            FilledButton(onPressed: _onSubmit, child: const Text('Принять')),
             const SizedBox(height: AppSpacing.x8),
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -722,9 +731,7 @@ class _AcceptPartialSheetState extends State<_AcceptPartialSheet> {
       if (v == null || v < 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Некорректное число для позиции «${item.name}»',
-            ),
+            content: Text('Некорректное число для позиции «${item.name}»'),
           ),
         );
         return;

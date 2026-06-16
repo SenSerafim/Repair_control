@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recovery_verify_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,24 @@ part 'recovery_verify_dto.g.dart';
 )
 class RecoveryVerifyDto {
   /// Returns a new [RecoveryVerifyDto] instance.
-  RecoveryVerifyDto({
+  RecoveryVerifyDto({required this.phone, required this.code});
 
-    required  this.phone,
-
-    required  this.code,
-  });
-
-  @JsonKey(
-    
-    name: r'phone',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'phone', required: true, includeIfNull: false)
   final String phone;
 
-
-
-  @JsonKey(
-    
-    name: r'code',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'code', required: true, includeIfNull: false)
   final String code;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecoveryVerifyDto && other.phone == phone && other.code == code;
 
+  @override
+  int get hashCode => phone.hashCode + code.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecoveryVerifyDto &&
-      other.phone == phone &&
-      other.code == code;
-
-    @override
-    int get hashCode =>
-        phone.hashCode +
-        code.hashCode;
-
-  factory RecoveryVerifyDto.fromJson(Map<String, dynamic> json) => _$RecoveryVerifyDtoFromJson(json);
+  factory RecoveryVerifyDto.fromJson(Map<String, dynamic> json) =>
+      _$RecoveryVerifyDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecoveryVerifyDtoToJson(this);
 
@@ -67,6 +40,4 @@ class RecoveryVerifyDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

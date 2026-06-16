@@ -28,10 +28,8 @@ Future<bool> showAddExpenseSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.r16)),
     ),
-    builder: (_) => _AddExpenseSheet(
-      projectId: projectId,
-      initialStageId: initialStageId,
-    ),
+    builder: (_) =>
+        _AddExpenseSheet(projectId: projectId, initialStageId: initialStageId),
   );
   return ok ?? false;
 }
@@ -146,7 +144,9 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
       _error = null;
     });
     try {
-      await ref.read(expensesRepositoryProvider).create(
+      await ref
+          .read(expensesRepositoryProvider)
+          .create(
             projectId: widget.projectId,
             category: _category,
             name: name,

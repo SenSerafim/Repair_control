@@ -7,24 +7,18 @@ import 'package:repair_control/shared/widgets/app_notifications_bell.dart';
 
 /// NEWFIX Task 8.1 — тесты переиспользуемого «звоночка с бейджем».
 void main() {
-  Future<void> pumpBell(
-    WidgetTester tester, {
-    required int unreadCount,
-  }) async {
+  Future<void> pumpBell(WidgetTester tester, {required int unreadCount}) async {
     final router = GoRouter(
       initialLocation: '/',
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, __) => const Scaffold(
-            appBar: _BellAppBar(),
-            body: SizedBox.shrink(),
-          ),
+          builder: (_, __) =>
+              const Scaffold(appBar: _BellAppBar(), body: SizedBox.shrink()),
         ),
         GoRoute(
           path: '/notifications',
-          builder: (_, __) =>
-              const Scaffold(body: Text('NOTIFICATIONS_PAGE')),
+          builder: (_, __) => const Scaffold(body: Text('NOTIFICATIONS_PAGE')),
         ),
       ],
     );
@@ -72,24 +66,19 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, __) => const Scaffold(
-            appBar: _BellAppBar(),
-            body: SizedBox.shrink(),
-          ),
+          builder: (_, __) =>
+              const Scaffold(appBar: _BellAppBar(), body: SizedBox.shrink()),
         ),
         GoRoute(
           path: '/notifications',
-          builder: (_, __) =>
-              const Scaffold(body: Text('NOTIFICATIONS_PAGE')),
+          builder: (_, __) => const Scaffold(body: Text('NOTIFICATIONS_PAGE')),
         ),
       ],
     );
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          unreadNotificationsCountProvider.overrideWith((ref) => 3),
-        ],
+        overrides: [unreadNotificationsCountProvider.overrideWith((ref) => 3)],
         child: MaterialApp.router(routerConfig: router),
       ),
     );

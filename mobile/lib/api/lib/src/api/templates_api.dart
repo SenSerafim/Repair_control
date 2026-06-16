@@ -13,17 +13,16 @@ import 'package:repair_control_api/src/model/create_stage_from_template_dto.dart
 import 'package:repair_control_api/src/model/save_as_template_dto.dart';
 
 class TemplatesApi {
-
   final Dio _dio;
 
   const TemplatesApi(this._dio);
 
   /// templatesControllerApply
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [templateId] 
-  /// * [createStageFromTemplateDto] 
+  /// * [templateId]
+  /// * [createStageFromTemplateDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class TemplatesApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> templatesControllerApply({ 
+  Future<Response<void>> templatesControllerApply({
     required String templateId,
     required CreateStageFromTemplateDto createStageFromTemplateDto,
     CancelToken? cancelToken,
@@ -43,19 +42,18 @@ class TemplatesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/templates/{templateId}/apply'.replaceAll('{' r'templateId' '}', templateId.toString());
+    final _path = r'/api/templates/{templateId}/apply'.replaceAll(
+      '{'
+      r'templateId'
+      '}',
+      templateId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -66,13 +64,10 @@ class TemplatesApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createStageFromTemplateDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createStageFromTemplateDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -92,10 +87,10 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
   }
 
   /// templatesControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -105,7 +100,7 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> templatesControllerGet({ 
+  Future<Response<void>> templatesControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -114,19 +109,18 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/templates/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/templates/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -145,7 +139,7 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
   }
 
   /// templatesControllerPlatform
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -157,7 +151,7 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> templatesControllerPlatform({ 
+  Future<Response<void>> templatesControllerPlatform({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -168,16 +162,10 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
     final _path = r'/api/templates/platform';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -196,11 +184,11 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
   }
 
   /// templatesControllerSaveFromStage
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
-  /// * [saveAsTemplateDto] 
+  /// * [stageId]
+  /// * [saveAsTemplateDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -210,7 +198,7 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> templatesControllerSaveFromStage({ 
+  Future<Response<void>> templatesControllerSaveFromStage({
     required String stageId,
     required SaveAsTemplateDto saveAsTemplateDto,
     CancelToken? cancelToken,
@@ -220,19 +208,18 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/templates/from-stage/{stageId}'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/templates/from-stage/{stageId}'.replaceAll(
+      '{'
+      r'stageId'
+      '}',
+      stageId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -243,13 +230,10 @@ _bodyData=jsonEncode(createStageFromTemplateDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(saveAsTemplateDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(saveAsTemplateDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -269,7 +253,7 @@ _bodyData=jsonEncode(saveAsTemplateDto);
   }
 
   /// templatesControllerUser
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -281,7 +265,7 @@ _bodyData=jsonEncode(saveAsTemplateDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> templatesControllerUser({ 
+  Future<Response<void>> templatesControllerUser({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -292,16 +276,10 @@ _bodyData=jsonEncode(saveAsTemplateDto);
     final _path = r'/api/templates/user';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -318,5 +296,4 @@ _bodyData=jsonEncode(saveAsTemplateDto);
 
     return _response;
   }
-
 }

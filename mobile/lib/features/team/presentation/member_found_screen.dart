@@ -64,7 +64,8 @@ class _MemberFoundScreenState extends ConsumerState<MemberFoundScreen> {
           : '';
       AppToast.show(
         context,
-        message: '✓ ${widget.args.firstName} добавлен(а) ${_addedLabel(role)}'
+        message:
+            '✓ ${widget.args.firstName} добавлен(а) ${_addedLabel(role)}'
             '$suffix',
         kind: AppToastKind.success,
       );
@@ -399,8 +400,7 @@ class _AlreadyInTeamCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(PhosphorIconsFill.checkCircle,
-              color: AppColors.brand, size: 24),
+          Icon(PhosphorIconsFill.checkCircle, color: AppColors.brand, size: 24),
           const SizedBox(width: AppSpacing.x10),
           Expanded(
             child: Text(

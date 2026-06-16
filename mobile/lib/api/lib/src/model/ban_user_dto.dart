@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'ban_user_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,20 @@ part 'ban_user_dto.g.dart';
 )
 class BanUserDto {
   /// Returns a new [BanUserDto] instance.
-  BanUserDto({
+  BanUserDto({required this.reason});
 
-    required  this.reason,
-  });
-
-  @JsonKey(
-    
-    name: r'reason',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reason', required: true, includeIfNull: false)
   final String reason;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is BanUserDto && other.reason == reason;
 
+  @override
+  int get hashCode => reason.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is BanUserDto &&
-      other.reason == reason;
-
-    @override
-    int get hashCode =>
-        reason.hashCode;
-
-  factory BanUserDto.fromJson(Map<String, dynamic> json) => _$BanUserDtoFromJson(json);
+  factory BanUserDto.fromJson(Map<String, dynamic> json) =>
+      _$BanUserDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$BanUserDtoToJson(this);
 
@@ -51,6 +36,4 @@ class BanUserDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

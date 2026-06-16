@@ -56,6 +56,7 @@ class Stage with _$Stage {
     required int workBudget,
     required int materialsBudget,
     @Default(<String>[]) List<String> foremanIds,
+
     /// П2.5 — один мастер на этап. null = «мастер не назначен, ведёт сам
     /// бригадир». Используется UI для индикации в StageStatsRow и в
     /// двухступенчатом stage_accept (бэк смотрит masterId для решения,

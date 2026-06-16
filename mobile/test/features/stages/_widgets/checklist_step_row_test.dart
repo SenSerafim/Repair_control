@@ -33,36 +33,29 @@ void main() {
     await initializeDateFormatting('ru');
   });
 
-  testWidgets(
-    'ChecklistStepRow показывает pill «На согласование» при '
-    'hasPendingApproval=true',
-    (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          ChecklistStepRow(
-            step: _step(),
-            hasPendingApproval: true,
-            onTap: () {},
-            onToggleDone: () {},
-          ),
+  testWidgets('ChecklistStepRow показывает pill «На согласование» при '
+      'hasPendingApproval=true', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        ChecklistStepRow(
+          step: _step(),
+          hasPendingApproval: true,
+          onTap: () {},
+          onToggleDone: () {},
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      expect(find.text('На согласование'), findsOneWidget);
-    },
-  );
+    expect(find.text('На согласование'), findsOneWidget);
+  });
 
   testWidgets(
     'ChecklistStepRow не показывает pill при hasPendingApproval=false',
     (tester) async {
       await tester.pumpWidget(
         _wrap(
-          ChecklistStepRow(
-            step: _step(),
-            onTap: () {},
-            onToggleDone: () {},
-          ),
+          ChecklistStepRow(step: _step(), onTap: () {}, onToggleDone: () {}),
         ),
       );
       await tester.pump();

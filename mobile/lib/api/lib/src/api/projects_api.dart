@@ -17,17 +17,16 @@ import 'package:repair_control_api/src/model/update_membership_dto.dart';
 import 'package:repair_control_api/src/model/update_project_dto.dart';
 
 class ProjectsApi {
-
   final Dio _dio;
 
   const ProjectsApi(this._dio);
 
   /// projectsControllerAddMember
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [addMemberDto] 
+  /// * [projectId]
+  /// * [addMemberDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +36,7 @@ class ProjectsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerAddMember({ 
+  Future<Response<void>> projectsControllerAddMember({
     required String projectId,
     required AddMemberDto addMemberDto,
     CancelToken? cancelToken,
@@ -47,19 +46,18 @@ class ProjectsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/members'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/members'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -70,13 +68,10 @@ class ProjectsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(addMemberDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(addMemberDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -96,10 +91,10 @@ _bodyData=jsonEncode(addMemberDto);
   }
 
   /// projectsControllerArchive
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -109,7 +104,7 @@ _bodyData=jsonEncode(addMemberDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerArchive({ 
+  Future<Response<void>> projectsControllerArchive({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -118,19 +113,18 @@ _bodyData=jsonEncode(addMemberDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/archive'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/archive'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -149,11 +143,11 @@ _bodyData=jsonEncode(addMemberDto);
   }
 
   /// projectsControllerCancelInvitation
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [invitationId] 
+  /// * [projectId]
+  /// * [invitationId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -163,7 +157,7 @@ _bodyData=jsonEncode(addMemberDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerCancelInvitation({ 
+  Future<Response<void>> projectsControllerCancelInvitation({
     required String projectId,
     required String invitationId,
     CancelToken? cancelToken,
@@ -173,19 +167,25 @@ _bodyData=jsonEncode(addMemberDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/invitations/{invitationId}'.replaceAll('{' r'projectId' '}', projectId.toString()).replaceAll('{' r'invitationId' '}', invitationId.toString());
+    final _path = r'/api/projects/{projectId}/invitations/{invitationId}'
+        .replaceAll(
+          '{'
+          r'projectId'
+          '}',
+          projectId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'invitationId'
+          '}',
+          invitationId.toString(),
+        );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -204,11 +204,11 @@ _bodyData=jsonEncode(addMemberDto);
   }
 
   /// projectsControllerCopy
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [copyProjectDto] 
+  /// * [projectId]
+  /// * [copyProjectDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -218,7 +218,7 @@ _bodyData=jsonEncode(addMemberDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerCopy({ 
+  Future<Response<void>> projectsControllerCopy({
     required String projectId,
     required CopyProjectDto copyProjectDto,
     CancelToken? cancelToken,
@@ -228,19 +228,18 @@ _bodyData=jsonEncode(addMemberDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/copy'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/copy'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -251,13 +250,10 @@ _bodyData=jsonEncode(addMemberDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(copyProjectDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(copyProjectDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -277,10 +273,10 @@ _bodyData=jsonEncode(copyProjectDto);
   }
 
   /// projectsControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createProjectDto] 
+  /// * [createProjectDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -290,7 +286,7 @@ _bodyData=jsonEncode(copyProjectDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerCreate({ 
+  Future<Response<void>> projectsControllerCreate({
     required CreateProjectDto createProjectDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -302,16 +298,10 @@ _bodyData=jsonEncode(copyProjectDto);
     final _path = r'/api/projects';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -322,13 +312,10 @@ _bodyData=jsonEncode(copyProjectDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createProjectDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createProjectDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -348,10 +335,10 @@ _bodyData=jsonEncode(createProjectDto);
   }
 
   /// projectsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -361,7 +348,7 @@ _bodyData=jsonEncode(createProjectDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerGet({ 
+  Future<Response<void>> projectsControllerGet({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -370,19 +357,18 @@ _bodyData=jsonEncode(createProjectDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -401,11 +387,11 @@ _bodyData=jsonEncode(createProjectDto);
   }
 
   /// projectsControllerInvite
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [inviteByPhoneDto] 
+  /// * [projectId]
+  /// * [inviteByPhoneDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -415,7 +401,7 @@ _bodyData=jsonEncode(createProjectDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerInvite({ 
+  Future<Response<void>> projectsControllerInvite({
     required String projectId,
     required InviteByPhoneDto inviteByPhoneDto,
     CancelToken? cancelToken,
@@ -425,19 +411,18 @@ _bodyData=jsonEncode(createProjectDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/invitations'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/invitations'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -448,13 +433,10 @@ _bodyData=jsonEncode(createProjectDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(inviteByPhoneDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(inviteByPhoneDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -474,10 +456,10 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [status] 
+  /// * [status]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -487,7 +469,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerList({ 
+  Future<Response<void>> projectsControllerList({
     required String status,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -499,25 +481,17 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     final _path = r'/api/projects';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{
-      r'status': status,
-    };
+    final _queryParameters = <String, dynamic>{r'status': status};
 
     final _response = await _dio.request<Object>(
       _path,
@@ -532,10 +506,10 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerListInvitations
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -545,7 +519,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerListInvitations({ 
+  Future<Response<void>> projectsControllerListInvitations({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -554,19 +528,18 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/invitations'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/invitations'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -585,10 +558,10 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerListMembers
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -598,7 +571,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerListMembers({ 
+  Future<Response<void>> projectsControllerListMembers({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -607,19 +580,18 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/members'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/members'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -638,11 +610,11 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerRemoveMember
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [membershipId] 
+  /// * [projectId]
+  /// * [membershipId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -652,7 +624,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerRemoveMember({ 
+  Future<Response<void>> projectsControllerRemoveMember({
     required String projectId,
     required String membershipId,
     CancelToken? cancelToken,
@@ -662,19 +634,25 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/members/{membershipId}'.replaceAll('{' r'projectId' '}', projectId.toString()).replaceAll('{' r'membershipId' '}', membershipId.toString());
+    final _path = r'/api/projects/{projectId}/members/{membershipId}'
+        .replaceAll(
+          '{'
+          r'projectId'
+          '}',
+          projectId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'membershipId'
+          '}',
+          membershipId.toString(),
+        );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -693,10 +671,10 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerRestore
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -706,7 +684,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerRestore({ 
+  Future<Response<void>> projectsControllerRestore({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -715,19 +693,18 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/restore'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/restore'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -746,11 +723,11 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerSearchUser
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [phone] 
-  /// * [email] 
+  /// * [phone]
+  /// * [email]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -760,7 +737,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerSearchUser({ 
+  Future<Response<void>> projectsControllerSearchUser({
     String? phone,
     String? email,
     CancelToken? cancelToken,
@@ -773,16 +750,10 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     final _path = r'/api/projects/{projectId}/search-user';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -807,11 +778,11 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   }
 
   /// projectsControllerUpdate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [updateProjectDto] 
+  /// * [projectId]
+  /// * [updateProjectDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -821,7 +792,7 @@ _bodyData=jsonEncode(inviteByPhoneDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerUpdate({ 
+  Future<Response<void>> projectsControllerUpdate({
     required String projectId,
     required UpdateProjectDto updateProjectDto,
     CancelToken? cancelToken,
@@ -831,19 +802,18 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -854,13 +824,10 @@ _bodyData=jsonEncode(inviteByPhoneDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateProjectDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateProjectDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -880,12 +847,12 @@ _bodyData=jsonEncode(updateProjectDto);
   }
 
   /// projectsControllerUpdateMember
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [membershipId] 
-  /// * [updateMembershipDto] 
+  /// * [projectId]
+  /// * [membershipId]
+  /// * [updateMembershipDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -895,7 +862,7 @@ _bodyData=jsonEncode(updateProjectDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> projectsControllerUpdateMember({ 
+  Future<Response<void>> projectsControllerUpdateMember({
     required String projectId,
     required String membershipId,
     required UpdateMembershipDto updateMembershipDto,
@@ -906,19 +873,25 @@ _bodyData=jsonEncode(updateProjectDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/members/{membershipId}'.replaceAll('{' r'projectId' '}', projectId.toString()).replaceAll('{' r'membershipId' '}', membershipId.toString());
+    final _path = r'/api/projects/{projectId}/members/{membershipId}'
+        .replaceAll(
+          '{'
+          r'projectId'
+          '}',
+          projectId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'membershipId'
+          '}',
+          membershipId.toString(),
+        );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -929,13 +902,10 @@ _bodyData=jsonEncode(updateProjectDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateMembershipDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateMembershipDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -953,5 +923,4 @@ _bodyData=jsonEncode(updateMembershipDto);
 
     return _response;
   }
-
 }

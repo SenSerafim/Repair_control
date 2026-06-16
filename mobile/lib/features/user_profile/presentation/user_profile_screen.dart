@@ -18,12 +18,14 @@ import '../domain/user_profile_aggregate.dart';
 /// Локальный provider — список «Моих» инструментов, доступных для выдачи
 /// (т.е. не закреплённых ни за проектом, ни за сотрудником). Использует
 /// существующий [tc.myToolsProvider], добавляя фильтр по статусу in_storage.
-final _myToolsForAssignProvider = Provider.autoDispose<AsyncValue<List<ToolItem>>>((ref) {
-  final all = ref.watch(tc.myToolsProvider);
-  return all.whenData(
-    (tools) => tools.where((t) => t.status == ToolStatus.inStorage).toList(),
-  );
-});
+final _myToolsForAssignProvider =
+    Provider.autoDispose<AsyncValue<List<ToolItem>>>((ref) {
+      final all = ref.watch(tc.myToolsProvider);
+      return all.whenData(
+        (tools) =>
+            tools.where((t) => t.status == ToolStatus.inStorage).toList(),
+      );
+    });
 
 /// Удобный шорткат на основной контроллер «Моих инструментов».
 final _myToolsCtrlProvider = tc.myToolsProvider;
@@ -93,9 +95,8 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final initials = (header.firstName.isNotEmpty
-            ? header.firstName.substring(0, 1)
-            : '?') +
+    final initials =
+        (header.firstName.isNotEmpty ? header.firstName.substring(0, 1) : '?') +
         (header.lastName.isNotEmpty ? header.lastName.substring(0, 1) : '');
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -185,9 +186,7 @@ class _Header extends ConsumerWidget {
               } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Не удалось открыть чат'),
-                    ),
+                    const SnackBar(content: Text('Не удалось открыть чат')),
                   );
                 }
               }
@@ -335,8 +334,19 @@ class _MonthStatsSection extends StatelessWidget {
 
   static String _monthRu(int m) {
     const names = [
-      '', 'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
-      'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',
+      '',
+      'январь',
+      'февраль',
+      'март',
+      'апрель',
+      'май',
+      'июнь',
+      'июль',
+      'август',
+      'сентябрь',
+      'октябрь',
+      'ноябрь',
+      'декабрь',
     ];
     return names[m];
   }
@@ -661,8 +671,19 @@ class _PayoutsSection extends StatelessWidget {
 
   static String _monthRu(int m) {
     const names = [
-      '', 'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
-      'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',
+      '',
+      'январь',
+      'февраль',
+      'март',
+      'апрель',
+      'май',
+      'июнь',
+      'июль',
+      'август',
+      'сентябрь',
+      'октябрь',
+      'ноябрь',
+      'декабрь',
     ];
     return names[m];
   }

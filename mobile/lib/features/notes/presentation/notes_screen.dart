@@ -32,7 +32,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredAsync = ref.watch(
-      projectNotesByFilterProvider((projectId: widget.projectId, filter: _filter)),
+      projectNotesByFilterProvider((
+        projectId: widget.projectId,
+        filter: _filter,
+      )),
     );
     final allAsync = ref.watch(notesControllerProvider(widget.projectId));
 
@@ -64,9 +67,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 title: 'Не удалось загрузить заметки',
                 subtitle: e.toString(),
                 onRetry: () => ref.invalidate(
-                  projectNotesByFilterProvider(
-                    (projectId: widget.projectId, filter: _filter),
-                  ),
+                  projectNotesByFilterProvider((
+                    projectId: widget.projectId,
+                    filter: _filter,
+                  )),
                 ),
               ),
               data: (notes) {
@@ -86,9 +90,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     ref
                       ..invalidate(notesControllerProvider(widget.projectId))
                       ..invalidate(
-                        projectNotesByFilterProvider(
-                          (projectId: widget.projectId, filter: _filter),
-                        ),
+                        projectNotesByFilterProvider((
+                          projectId: widget.projectId,
+                          filter: _filter,
+                        )),
                       );
                   },
                   child: ListView.separated(
@@ -279,10 +284,7 @@ class _KindIcon extends StatelessWidget {
     return Container(
       width: 28,
       height: 28,
-      decoration: BoxDecoration(
-        color: bg,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
       child: Icon(
         isAudio ? PhosphorIconsFill.microphone : PhosphorIconsFill.notepad,
         color: fg,
@@ -301,7 +303,8 @@ class _ScopePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTeam = scope == NoteScope.teamBroadcast;
     final label = switch (scope) {
-      NoteScope.personal => kind == NoteKind.audio ? 'Личная · голос' : 'Личная',
+      NoteScope.personal =>
+        kind == NoteKind.audio ? 'Личная · голос' : 'Личная',
       NoteScope.forMe => 'Адресная',
       NoteScope.stage => 'Этап',
       NoteScope.teamBroadcast =>
@@ -356,8 +359,7 @@ class _AudioPlayerBarState extends State<_AudioPlayerBar> {
     _stateSub = _player.playerStateStream.listen((s) {
       if (!mounted) return;
       setState(() {
-        _playing =
-            s.playing && s.processingState != ProcessingState.completed;
+        _playing = s.playing && s.processingState != ProcessingState.completed;
       });
     });
     _posSub = _player.positionStream.listen((d) {

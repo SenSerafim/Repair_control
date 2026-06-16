@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:repair_control_api/repair_control_api.dart';
 
-
 /// tests for ApprovalsApi
 void main() {
   final instance = RepairControlApi().getApprovalsApi();
@@ -41,6 +40,5 @@ void main() {
     test('test approvalsControllerResubmit', () async {
       // TODO
     });
-
   });
 }

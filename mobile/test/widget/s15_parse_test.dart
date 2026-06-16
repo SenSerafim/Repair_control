@@ -11,16 +11,19 @@ void main() {
       }
     });
 
-    test('isTerminal: только acceptedFull/rejected — терминальные (E1a FSM)', () {
-      // ТЗ NEWFIX §5.7: заявка считается закрытой только после полной приёмки
-      // или отказа. approved/delivered/acceptedPartial — промежуточные.
-      expect(MaterialRequestStatus.acceptedFull.isTerminal, isTrue);
-      expect(MaterialRequestStatus.rejected.isTerminal, isTrue);
-      expect(MaterialRequestStatus.approved.isTerminal, isFalse);
-      expect(MaterialRequestStatus.delivered.isTerminal, isFalse);
-      expect(MaterialRequestStatus.acceptedPartial.isTerminal, isFalse);
-      expect(MaterialRequestStatus.pendingApproval.isTerminal, isFalse);
-    });
+    test(
+      'isTerminal: только acceptedFull/rejected — терминальные (E1a FSM)',
+      () {
+        // ТЗ NEWFIX §5.7: заявка считается закрытой только после полной приёмки
+        // или отказа. approved/delivered/acceptedPartial — промежуточные.
+        expect(MaterialRequestStatus.acceptedFull.isTerminal, isTrue);
+        expect(MaterialRequestStatus.rejected.isTerminal, isTrue);
+        expect(MaterialRequestStatus.approved.isTerminal, isFalse);
+        expect(MaterialRequestStatus.delivered.isTerminal, isFalse);
+        expect(MaterialRequestStatus.acceptedPartial.isTerminal, isFalse);
+        expect(MaterialRequestStatus.pendingApproval.isTerminal, isFalse);
+      },
+    );
 
     test('legacy / E1a: парсинг всех статусов из API', () {
       // Активные статусы FSM E1a (ТЗ NEWFIX §5.7).
@@ -209,42 +212,45 @@ void main() {
       expect(r.isOverdue(now), isTrue);
     });
 
-    test('isOverdue: delivered/acceptedPartial — НЕ просрочена даже с прошедшим dueDate', () {
-      // ТЗ §5.5: «Просрочена» = ждёт доставки И срок прошёл.
-      // Если уже доставили — статус уже delivered/accepted_*, флаг неактуален.
-      final now = DateTime.utc(2026, 7, 1);
-      final past = DateTime.utc(2026, 6, 15);
-      for (final s in [
-        MaterialRequestStatus.delivered,
-        MaterialRequestStatus.acceptedPartial,
-        MaterialRequestStatus.acceptedFull,
-        MaterialRequestStatus.pendingApproval,
-      ]) {
-        final r = MaterialRequest(
-          id: 'r',
-          projectId: 'p',
-          createdById: 'u',
-          recipient: MaterialRecipient.foreman,
-          title: 'X',
-          status: s,
-          createdAt: now,
-          updatedAt: now,
-          items: [
-            MaterialItem(
-              id: 'i',
-              requestId: 'r',
-              name: 'X',
-              qty: 1,
-              dueDate: past,
-              isBought: false,
-              createdAt: now,
-              updatedAt: now,
-            ),
-          ],
-        );
-        expect(r.isOverdue(now), isFalse, reason: 'status=$s');
-      }
-    });
+    test(
+      'isOverdue: delivered/acceptedPartial — НЕ просрочена даже с прошедшим dueDate',
+      () {
+        // ТЗ §5.5: «Просрочена» = ждёт доставки И срок прошёл.
+        // Если уже доставили — статус уже delivered/accepted_*, флаг неактуален.
+        final now = DateTime.utc(2026, 7, 1);
+        final past = DateTime.utc(2026, 6, 15);
+        for (final s in [
+          MaterialRequestStatus.delivered,
+          MaterialRequestStatus.acceptedPartial,
+          MaterialRequestStatus.acceptedFull,
+          MaterialRequestStatus.pendingApproval,
+        ]) {
+          final r = MaterialRequest(
+            id: 'r',
+            projectId: 'p',
+            createdById: 'u',
+            recipient: MaterialRecipient.foreman,
+            title: 'X',
+            status: s,
+            createdAt: now,
+            updatedAt: now,
+            items: [
+              MaterialItem(
+                id: 'i',
+                requestId: 'r',
+                name: 'X',
+                qty: 1,
+                dueDate: past,
+                isBought: false,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ],
+          );
+          expect(r.isOverdue(now), isFalse, reason: 'status=$s');
+        }
+      },
+    );
 
     test('canMarkDelivered / canAccept: матрица переходов FSM', () {
       MaterialRequest mk(MaterialRequestStatus s) => MaterialRequest(
@@ -259,8 +265,14 @@ void main() {
       );
       // canMarkDelivered: approved / acceptedPartial
       expect(mk(MaterialRequestStatus.approved).canMarkDelivered, isTrue);
-      expect(mk(MaterialRequestStatus.acceptedPartial).canMarkDelivered, isTrue);
-      expect(mk(MaterialRequestStatus.pendingApproval).canMarkDelivered, isFalse);
+      expect(
+        mk(MaterialRequestStatus.acceptedPartial).canMarkDelivered,
+        isTrue,
+      );
+      expect(
+        mk(MaterialRequestStatus.pendingApproval).canMarkDelivered,
+        isFalse,
+      );
       expect(mk(MaterialRequestStatus.delivered).canMarkDelivered, isFalse);
       expect(mk(MaterialRequestStatus.acceptedFull).canMarkDelivered, isFalse);
       // canAccept: только delivered

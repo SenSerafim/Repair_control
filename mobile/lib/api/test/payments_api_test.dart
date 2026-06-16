@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:repair_control_api/repair_control_api.dart';
 
-
 /// tests for PaymentsApi
 void main() {
   final instance = RepairControlApi().getPaymentsApi();
@@ -36,6 +35,5 @@ void main() {
     test('test paymentsControllerStageBudget', () async {
       // TODO
     });
-
   });
 }

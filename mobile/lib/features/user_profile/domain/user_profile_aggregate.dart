@@ -61,7 +61,8 @@ class UserProfileHeader {
 
   String get fullName => '$firstName $lastName'.trim();
 
-  static UserProfileHeader parse(Map<String, dynamic> json) => UserProfileHeader(
+  static UserProfileHeader parse(Map<String, dynamic> json) =>
+      UserProfileHeader(
         id: json['id'] as String,
         firstName: (json['firstName'] as String?) ?? '',
         lastName: (json['lastName'] as String?) ?? '',
@@ -85,7 +86,8 @@ class UserProfileObject {
   final String role;
   final List<UserProfileObjectStage> stages;
 
-  static UserProfileObject parse(Map<String, dynamic> json) => UserProfileObject(
+  static UserProfileObject parse(Map<String, dynamic> json) =>
+      UserProfileObject(
         projectId: json['projectId'] as String,
         title: (json['title'] as String?) ?? '',
         role: (json['role'] as String?) ?? '',
@@ -137,11 +139,11 @@ class UserProfileTool {
   final String? photoKey;
 
   static UserProfileTool parse(Map<String, dynamic> json) => UserProfileTool(
-        toolId: json['toolId'] as String,
-        name: (json['name'] as String?) ?? '',
-        serial: json['serial'] as String?,
-        photoKey: json['photoKey'] as String?,
-      );
+    toolId: json['toolId'] as String,
+    name: (json['name'] as String?) ?? '',
+    serial: json['serial'] as String?,
+    photoKey: json['photoKey'] as String?,
+  );
 }
 
 class UserProfileReclamations {
@@ -168,12 +170,14 @@ class UserProfilePayouts {
   final int monthTotal;
   final List<UserProfilePayoutsProject> byProject;
 
-  static UserProfilePayouts parse(Map<String, dynamic> json) => UserProfilePayouts(
+  static UserProfilePayouts parse(Map<String, dynamic> json) =>
+      UserProfilePayouts(
         visible: json['visible'] as bool? ?? false,
         monthTotal: (json['monthTotal'] as num?)?.toInt() ?? 0,
         byProject: ((json['byProject'] as List?) ?? const [])
-            .map((e) =>
-                UserProfilePayoutsProject.parse(e as Map<String, dynamic>))
+            .map(
+              (e) => UserProfilePayoutsProject.parse(e as Map<String, dynamic>),
+            )
             .toList(growable: false),
       );
 }

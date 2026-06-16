@@ -89,10 +89,7 @@ class _Body extends ConsumerWidget {
         // инструмент сейчас у меня (либо я владелец, либо я claim'нул),
         // и он привязан к проекту (есть из чего выбрать team).
         if (tool.isInProject && isHeldByMe) ...[
-          _TransferToEmployeeCta(
-            toolId: tool.id,
-            projectId: tool.projectId!,
-          ),
+          _TransferToEmployeeCta(toolId: tool.id, projectId: tool.projectId!),
           const SizedBox(height: AppSpacing.x16),
         ],
         _InfoCard(tool: tool, df: df),
@@ -116,7 +113,9 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x32),
         if (me != null && tool.isOwnedBy(me))
           AppButton(
-            label: tool.isInProject ? 'Забрать из проекта' : 'Удалить инструмент',
+            label: tool.isInProject
+                ? 'Забрать из проекта'
+                : 'Удалить инструмент',
             variant: AppButtonVariant.ghostDanger,
             icon: PhosphorIconsRegular.trash,
             onPressed: () => _onDangerAction(context, ref, tool),
@@ -138,7 +137,11 @@ class _Body extends ConsumerWidget {
           .detach(t.id);
       if (!context.mounted) return;
       if (failure != null) {
-        AppToast.show(context, message: failure.userMessage, kind: AppToastKind.error);
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
       } else {
         AppToast.show(context, message: 'Инструмент забран из проекта');
         context.pop();
@@ -147,7 +150,11 @@ class _Body extends ConsumerWidget {
       final failure = await ref.read(myToolsProvider.notifier).remove(t.id);
       if (!context.mounted) return;
       if (failure != null) {
-        AppToast.show(context, message: failure.userMessage, kind: AppToastKind.error);
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
       } else {
         AppToast.show(context, message: 'Удалено');
         context.pop();
@@ -180,7 +187,11 @@ class _HeroCard extends StatelessWidget {
               color: AppColors.brandLight,
               borderRadius: BorderRadius.circular(AppRadius.r16),
             ),
-            child: Icon(PhosphorIconsFill.wrench, size: 32, color: AppColors.brand),
+            child: Icon(
+              PhosphorIconsFill.wrench,
+              size: 32,
+              color: AppColors.brand,
+            ),
           ),
           const SizedBox(width: AppSpacing.x14),
           Expanded(
@@ -211,7 +222,10 @@ class _HeroCard extends StatelessWidget {
                 if (isHeldByMe) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.greenLight,
                       borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -256,10 +270,18 @@ class _ClaimCtaState extends ConsumerState<_ClaimCta> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure != null) {
-      AppToast.show(context, message: failure.userMessage, kind: AppToastKind.error);
+      AppToast.show(
+        context,
+        message: failure.userMessage,
+        kind: AppToastKind.error,
+      );
     } else {
       ref.invalidate(toolDetailProvider(widget.toolId));
-      AppToast.show(context, message: 'Инструмент теперь у вас', kind: AppToastKind.success);
+      AppToast.show(
+        context,
+        message: 'Инструмент теперь у вас',
+        kind: AppToastKind.success,
+      );
     }
   }
 
@@ -290,10 +312,7 @@ class _InfoCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _DetailRow(
-            label: 'Владелец',
-            value: tool.owner?.displayName ?? '—',
-          ),
+          _DetailRow(label: 'Владелец', value: tool.owner?.displayName ?? '—'),
           if (tool.article != null && tool.article!.isNotEmpty) ...[
             const _Divider(),
             _DetailRow(label: 'Артикул', value: tool.article!),
@@ -557,7 +576,13 @@ class _CustodyTimeline extends ConsumerWidget {
     return async.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+        child: Center(
+          child: SizedBox(
+            height: 18,
+            width: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
       ),
       error: (e, _) => AppErrorState(
         title: 'Не удалось загрузить историю',
@@ -606,7 +631,11 @@ class _CustodyTimeline extends ConsumerWidget {
 }
 
 class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({required this.event, required this.df, required this.last});
+  const _TimelineRow({
+    required this.event,
+    required this.df,
+    required this.last,
+  });
   final ToolCustodyEvent event;
   final DateFormat df;
   final bool last;
@@ -618,8 +647,8 @@ class _TimelineRow extends StatelessWidget {
     final title = event.isInitial
         ? 'Добавлен в проект — у $holderName'
         : (prevName != null
-            ? '$holderName забрал у $prevName'
-            : '$holderName забрал');
+              ? '$holderName забрал у $prevName'
+              : '$holderName забрал');
     final dot = event.isInitial ? AppColors.brand : AppColors.greenDark;
 
     return Row(
@@ -691,10 +720,7 @@ class _TimelineRow extends StatelessWidget {
 /// Открывает bottom-sheet с командой проекта (foreman/master, не я сам),
 /// на тапе вызывает `assignToEmployee` и инвалидирует борд проекта.
 class _TransferToEmployeeCta extends ConsumerStatefulWidget {
-  const _TransferToEmployeeCta({
-    required this.toolId,
-    required this.projectId,
-  });
+  const _TransferToEmployeeCta({required this.toolId, required this.projectId});
   final String toolId;
   final String projectId;
 
@@ -717,10 +743,7 @@ class _TransferToEmployeeCtaState
     setState(() => _busy = true);
     final failure = await ref
         .read(myToolsProvider.notifier)
-        .assignToEmployee(
-          toolId: widget.toolId,
-          employeeUserId: picked,
-        );
+        .assignToEmployee(toolId: widget.toolId, employeeUserId: picked);
     if (!mounted) return;
     setState(() => _busy = false);
     if (failure != null) {
@@ -800,12 +823,13 @@ class _TeamPickerSheet extends ConsumerWidget {
                 separatorBuilder: (_, __) => const SizedBox(height: 4),
                 itemBuilder: (_, i) {
                   final m = list[i];
-                  final name = [m.user?.firstName, m.user?.lastName]
-                      .whereType<String>()
-                      .where((s) => s.isNotEmpty)
-                      .join(' ');
-                  final roleLabel =
-                      m.role == MembershipRole.foreman ? 'Бригадир' : 'Мастер';
+                  final name = [
+                    m.user?.firstName,
+                    m.user?.lastName,
+                  ].whereType<String>().where((s) => s.isNotEmpty).join(' ');
+                  final roleLabel = m.role == MembershipRole.foreman
+                      ? 'Бригадир'
+                      : 'Мастер';
                   return Material(
                     color: AppColors.n50,
                     borderRadius: BorderRadius.circular(AppRadius.r12),

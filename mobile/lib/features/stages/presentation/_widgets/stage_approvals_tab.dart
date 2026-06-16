@@ -210,7 +210,9 @@ class _BodyState extends State<_Body> {
                 // после chip-клика.
                 if (pending.isEmpty && history.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x24),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x24,
+                    ),
                     child: Text(
                       'По выбранному фильтру согласований нет.',
                       textAlign: TextAlign.center,

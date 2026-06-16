@@ -6,28 +6,22 @@ void main() {
   test('OfflineActionKind содержит актуальные типы', () {
     // 2026-05: paymentDispute и materialMarkBought удалены вместе с
     // соответствующими упрощениями домена.
-    expect(
-      OfflineActionKind.values.map((k) => k.name).toSet(),
-      {
-        'stepToggle',
-        'substepToggle',
-        'noteCreate',
-        'questionAnswer',
-        'stagePause',
-        'stageResume',
-        'selfpurchaseCreate',
-      },
-    );
+    expect(OfflineActionKind.values.map((k) => k.name).toSet(), {
+      'stepToggle',
+      'substepToggle',
+      'noteCreate',
+      'questionAnswer',
+      'stagePause',
+      'stageResume',
+      'selfpurchaseCreate',
+    });
   });
 
   test('OfflineAction roundtrip JSON', () {
     final action = OfflineAction(
       id: 'a-1',
       kind: OfflineActionKind.selfpurchaseCreate,
-      payload: const {
-        'projectId': 'p-1',
-        'amount': 5000_00,
-      },
+      payload: const {'projectId': 'p-1', 'amount': 5000_00},
       createdAt: DateTime.utc(2026, 4, 25, 10),
     );
     final json = action.toJson();

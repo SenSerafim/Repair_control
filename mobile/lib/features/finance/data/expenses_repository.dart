@@ -154,7 +154,9 @@ final expensesRepositoryProvider = Provider<ExpensesRepository>((ref) {
   return ExpensesRepository(ref.read(dioProvider));
 });
 
-final projectExpensesProvider =
-    FutureProvider.family<List<Expense>, String>((ref, projectId) async {
+final projectExpensesProvider = FutureProvider.family<List<Expense>, String>((
+  ref,
+  projectId,
+) async {
   return ref.read(expensesRepositoryProvider).list(projectId: projectId);
 });

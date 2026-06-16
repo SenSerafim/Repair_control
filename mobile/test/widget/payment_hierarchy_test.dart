@@ -40,11 +40,7 @@ void main() {
 
   group('PaymentX.remainingToDistribute', () {
     test('без детей — равно amount', () {
-      final p = payment(
-        id: 'p',
-        kind: PaymentKind.advance,
-        amount: 100000,
-      );
+      final p = payment(id: 'p', kind: PaymentKind.advance, amount: 100000);
       expect(p.amount, 100000);
       expect(p.distributedAmount, 0);
       expect(p.remainingToDistribute, 100000);
@@ -99,11 +95,7 @@ void main() {
     });
 
     test('isAdvance / isDistribution маркеры', () {
-      final adv = payment(
-        id: 'a',
-        kind: PaymentKind.advance,
-        amount: 1000,
-      );
+      final adv = payment(id: 'a', kind: PaymentKind.advance, amount: 1000);
       final dist = payment(
         id: 'd',
         parentId: 'a',

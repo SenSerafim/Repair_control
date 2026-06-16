@@ -165,11 +165,7 @@ class _IconBadge extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x80FFFFFF),
-            blurRadius: 0,
-            spreadRadius: -1,
-          ),
+          BoxShadow(color: Color(0x80FFFFFF), blurRadius: 0, spreadRadius: -1),
         ],
       ),
       child: Icon(icon, color: color, size: 20),

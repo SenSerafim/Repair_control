@@ -1389,8 +1389,7 @@ class _ProjectQuickActions extends ConsumerWidget {
     // Бейдж чатов — сумма unread по всем чатам проекта.
     final chatsAsync = ref.watch(projectChatsProvider(projectId));
     final unreadChats = chatsAsync.maybeWhen(
-      data: (chats) =>
-          chats.fold<int>(0, (sum, c) => sum + c.unreadCount),
+      data: (chats) => chats.fold<int>(0, (sum, c) => sum + c.unreadCount),
       orElse: () => 0,
     );
 

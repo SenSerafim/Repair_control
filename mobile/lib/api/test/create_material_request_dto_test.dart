@@ -3,7 +3,8 @@ import 'package:repair_control_api/repair_control_api.dart';
 
 // tests for CreateMaterialRequestDto
 void main() {
-  final CreateMaterialRequestDto? instance = /* CreateMaterialRequestDto(...) */ null;
+  final CreateMaterialRequestDto? instance = /* CreateMaterialRequestDto(...) */
+      null;
   // TODO add properties to the entity
 
   group(CreateMaterialRequestDto, () {
@@ -31,6 +32,5 @@ void main() {
     test('to test the property `items`', () async {
       // TODO
     });
-
   });
 }

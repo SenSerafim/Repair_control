@@ -23,13 +23,10 @@ void main() {
     );
   }
 
-  testWidgets('renders both labels "Чат этапа" and "Бюджет этапа"',
-      (tester) async {
-    await pump(
-      tester,
-      onOpenChat: () {},
-      onOpenBudget: () {},
-    );
+  testWidgets('renders both labels "Чат этапа" and "Бюджет этапа"', (
+    tester,
+  ) async {
+    await pump(tester, onOpenChat: () {}, onOpenBudget: () {});
 
     expect(find.text('Чат этапа'), findsOneWidget);
     expect(find.text('Бюджет этапа'), findsOneWidget);
@@ -51,8 +48,9 @@ void main() {
     expect(budgetCalls, 0);
   });
 
-  testWidgets('budget button invokes onOpenBudget exactly once',
-      (tester) async {
+  testWidgets('budget button invokes onOpenBudget exactly once', (
+    tester,
+  ) async {
     var chatCalls = 0;
     var budgetCalls = 0;
     await pump(

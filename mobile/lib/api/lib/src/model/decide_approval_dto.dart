@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'decide_approval_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'decide_approval_dto.g.dart';
 )
 class DecideApprovalDto {
   /// Returns a new [DecideApprovalDto] instance.
-  DecideApprovalDto({
+  DecideApprovalDto({this.comment});
 
-     this.comment,
-  });
-
-  @JsonKey(
-    
-    name: r'comment',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'comment', required: false, includeIfNull: false)
   final String? comment;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DecideApprovalDto && other.comment == comment;
 
+  @override
+  int get hashCode => comment.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is DecideApprovalDto &&
-      other.comment == comment;
-
-    @override
-    int get hashCode =>
-        comment.hashCode;
-
-  factory DecideApprovalDto.fromJson(Map<String, dynamic> json) => _$DecideApprovalDtoFromJson(json);
+  factory DecideApprovalDto.fromJson(Map<String, dynamic> json) =>
+      _$DecideApprovalDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$DecideApprovalDtoToJson(this);
 
@@ -51,6 +37,4 @@ class DecideApprovalDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

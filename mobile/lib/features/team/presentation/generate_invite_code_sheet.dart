@@ -702,7 +702,8 @@ class _ResultState extends ConsumerState<_Result> {
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png')],
         subject: 'QR-код приглашения · $projectTitle',
-        text: 'Отсканируйте QR, чтобы присоединиться к проекту. '
+        text:
+            'Отсканируйте QR, чтобы присоединиться к проекту. '
             'Код: $code',
       );
     } catch (e) {
@@ -875,9 +876,7 @@ class _InviteQrCard extends StatelessWidget {
                 projectTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.n500,
-                ),
+                style: AppTextStyles.caption.copyWith(color: AppColors.n500),
               ),
               const SizedBox(height: AppSpacing.x10),
               QrImageView(

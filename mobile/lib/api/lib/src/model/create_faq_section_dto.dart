@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'create_faq_section_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,26 @@ part 'create_faq_section_dto.g.dart';
 )
 class CreateFaqSectionDto {
   /// Returns a new [CreateFaqSectionDto] instance.
-  CreateFaqSectionDto({
+  CreateFaqSectionDto({required this.title, required this.orderIndex});
 
-    required  this.title,
-
-    required  this.orderIndex,
-  });
-
-  @JsonKey(
-    
-    name: r'title',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'title', required: true, includeIfNull: false)
   final String title;
 
-
-
-  @JsonKey(
-    
-    name: r'orderIndex',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'orderIndex', required: true, includeIfNull: false)
   final num orderIndex;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateFaqSectionDto &&
+          other.title == title &&
+          other.orderIndex == orderIndex;
 
+  @override
+  int get hashCode => title.hashCode + orderIndex.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CreateFaqSectionDto &&
-      other.title == title &&
-      other.orderIndex == orderIndex;
-
-    @override
-    int get hashCode =>
-        title.hashCode +
-        orderIndex.hashCode;
-
-  factory CreateFaqSectionDto.fromJson(Map<String, dynamic> json) => _$CreateFaqSectionDtoFromJson(json);
+  factory CreateFaqSectionDto.fromJson(Map<String, dynamic> json) =>
+      _$CreateFaqSectionDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateFaqSectionDtoToJson(this);
 
@@ -67,6 +42,4 @@ class CreateFaqSectionDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

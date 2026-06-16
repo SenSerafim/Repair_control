@@ -99,10 +99,14 @@ void main() {
     });
 
     test('пустой список → пустой результат для любой роли', () {
-      expect(filterMembershipsForRole(<Membership>[], SystemRole.customer),
-          isEmpty);
-      expect(filterMembershipsForRole(<Membership>[], SystemRole.contractor),
-          isEmpty);
+      expect(
+        filterMembershipsForRole(<Membership>[], SystemRole.customer),
+        isEmpty,
+      );
+      expect(
+        filterMembershipsForRole(<Membership>[], SystemRole.contractor),
+        isEmpty,
+      );
     });
 
     test('заказчик: список только из мастеров → пустой выход', () {

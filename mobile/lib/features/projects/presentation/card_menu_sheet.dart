@@ -180,10 +180,7 @@ Future<void> _requestZipExport(
   Project project,
 ) async {
   try {
-    await exports.create(
-      projectId: project.id,
-      kind: ExportKind.projectZip,
-    );
+    await exports.create(projectId: project.id, kind: ExportKind.projectZip);
     if (!context.mounted) return;
     AppToast.show(
       context,

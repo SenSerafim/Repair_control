@@ -36,8 +36,7 @@ enum ExportKind {
   };
 
   String get subtitle => switch (this) {
-    ExportKind.feedPdf =>
-      'Хронология событий проекта за выбранный период.',
+    ExportKind.feedPdf => 'Хронология событий проекта за выбранный период.',
     ExportKind.projectReportPdf =>
       'Юридически оформленный отчёт: команда, бюджет, движения средств, этапы и шаги с фото, материалы, инструменты, документы и лента событий.',
     ExportKind.projectZip =>

@@ -12,18 +12,17 @@ import 'package:dio/dio.dart';
 import 'package:repair_control_api/src/model/create_export_dto.dart';
 
 class FeedExportsApi {
-
   final Dio _dio;
 
   const FeedExportsApi(this._dio);
 
   /// exportsControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [idempotencyKey] 
-  /// * [createExportDto] 
+  /// * [projectId]
+  /// * [idempotencyKey]
+  /// * [createExportDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class FeedExportsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> exportsControllerCreate({ 
+  Future<Response<void>> exportsControllerCreate({
     required String projectId,
     required String idempotencyKey,
     required CreateExportDto createExportDto,
@@ -44,7 +43,12 @@ class FeedExportsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/exports'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/exports'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -53,11 +57,7 @@ class FeedExportsApi {
       },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -68,13 +68,10 @@ class FeedExportsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createExportDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createExportDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -94,10 +91,10 @@ _bodyData=jsonEncode(createExportDto);
   }
 
   /// exportsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -107,7 +104,7 @@ _bodyData=jsonEncode(createExportDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> exportsControllerGet({ 
+  Future<Response<void>> exportsControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -116,19 +113,18 @@ _bodyData=jsonEncode(createExportDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/exports/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/exports/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -147,10 +143,10 @@ _bodyData=jsonEncode(createExportDto);
   }
 
   /// exportsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -160,7 +156,7 @@ _bodyData=jsonEncode(createExportDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> exportsControllerList({ 
+  Future<Response<void>> exportsControllerList({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -169,19 +165,18 @@ _bodyData=jsonEncode(createExportDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/exports'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/exports'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -200,17 +195,17 @@ _bodyData=jsonEncode(createExportDto);
   }
 
   /// exportsControllerListFeed
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [cursor] 
-  /// * [limit] 
-  /// * [kind] 
-  /// * [stageId] 
-  /// * [dateFrom] 
-  /// * [dateTo] 
-  /// * [actorId] 
+  /// * [projectId]
+  /// * [cursor]
+  /// * [limit]
+  /// * [kind]
+  /// * [stageId]
+  /// * [dateFrom]
+  /// * [dateTo]
+  /// * [actorId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -220,7 +215,7 @@ _bodyData=jsonEncode(createExportDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> exportsControllerListFeed({ 
+  Future<Response<void>> exportsControllerListFeed({
     required String projectId,
     String? cursor,
     num? limit,
@@ -236,19 +231,18 @@ _bodyData=jsonEncode(createExportDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/feed'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/feed'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -276,5 +270,4 @@ _bodyData=jsonEncode(createExportDto);
 
     return _response;
   }
-
 }

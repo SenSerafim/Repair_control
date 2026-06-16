@@ -15,17 +15,16 @@ import 'package:repair_control_api/src/model/reorder_stages_dto.dart';
 import 'package:repair_control_api/src/model/update_stage_dto.dart';
 
 class StagesApi {
-
   final Dio _dio;
 
   const StagesApi(this._dio);
 
   /// stagesControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [createStageDto] 
+  /// * [projectId]
+  /// * [createStageDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,7 +34,7 @@ class StagesApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerCreate({ 
+  Future<Response<void>> stagesControllerCreate({
     required String projectId,
     required CreateStageDto createStageDto,
     CancelToken? cancelToken,
@@ -45,19 +44,18 @@ class StagesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/stages'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -68,13 +66,10 @@ class StagesApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createStageDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createStageDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -94,10 +89,10 @@ _bodyData=jsonEncode(createStageDto);
   }
 
   /// stagesControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
+  /// * [stageId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -107,7 +102,7 @@ _bodyData=jsonEncode(createStageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerGet({ 
+  Future<Response<void>> stagesControllerGet({
     required String stageId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -116,19 +111,18 @@ _bodyData=jsonEncode(createStageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/{stageId}'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/projects/{projectId}/stages/{stageId}'.replaceAll(
+      '{'
+      r'stageId'
+      '}',
+      stageId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -147,10 +141,10 @@ _bodyData=jsonEncode(createStageDto);
   }
 
   /// stagesControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -160,7 +154,7 @@ _bodyData=jsonEncode(createStageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerList({ 
+  Future<Response<void>> stagesControllerList({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -169,19 +163,18 @@ _bodyData=jsonEncode(createStageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/stages'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -200,11 +193,11 @@ _bodyData=jsonEncode(createStageDto);
   }
 
   /// stagesControllerPause
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
-  /// * [pauseStageDto] 
+  /// * [stageId]
+  /// * [pauseStageDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -214,7 +207,7 @@ _bodyData=jsonEncode(createStageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerPause({ 
+  Future<Response<void>> stagesControllerPause({
     required String stageId,
     required PauseStageDto pauseStageDto,
     CancelToken? cancelToken,
@@ -224,19 +217,19 @@ _bodyData=jsonEncode(createStageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/{stageId}/pause'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/projects/{projectId}/stages/{stageId}/pause'
+        .replaceAll(
+          '{'
+          r'stageId'
+          '}',
+          stageId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -247,13 +240,10 @@ _bodyData=jsonEncode(createStageDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(pauseStageDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(pauseStageDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -273,11 +263,11 @@ _bodyData=jsonEncode(pauseStageDto);
   }
 
   /// stagesControllerReorder
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [reorderStagesDto] 
+  /// * [projectId]
+  /// * [reorderStagesDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -287,7 +277,7 @@ _bodyData=jsonEncode(pauseStageDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerReorder({ 
+  Future<Response<void>> stagesControllerReorder({
     required String projectId,
     required ReorderStagesDto reorderStagesDto,
     CancelToken? cancelToken,
@@ -297,19 +287,18 @@ _bodyData=jsonEncode(pauseStageDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/reorder'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/stages/reorder'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -320,13 +309,10 @@ _bodyData=jsonEncode(pauseStageDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(reorderStagesDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(reorderStagesDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -346,10 +332,10 @@ _bodyData=jsonEncode(reorderStagesDto);
   }
 
   /// stagesControllerResume
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
+  /// * [stageId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -359,7 +345,7 @@ _bodyData=jsonEncode(reorderStagesDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerResume({ 
+  Future<Response<void>> stagesControllerResume({
     required String stageId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -368,19 +354,19 @@ _bodyData=jsonEncode(reorderStagesDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/{stageId}/resume'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/projects/{projectId}/stages/{stageId}/resume'
+        .replaceAll(
+          '{'
+          r'stageId'
+          '}',
+          stageId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -399,10 +385,10 @@ _bodyData=jsonEncode(reorderStagesDto);
   }
 
   /// stagesControllerSendToReview
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
+  /// * [stageId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -412,7 +398,7 @@ _bodyData=jsonEncode(reorderStagesDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerSendToReview({ 
+  Future<Response<void>> stagesControllerSendToReview({
     required String stageId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -421,19 +407,19 @@ _bodyData=jsonEncode(reorderStagesDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/{stageId}/send-to-review'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/projects/{projectId}/stages/{stageId}/send-to-review'
+        .replaceAll(
+          '{'
+          r'stageId'
+          '}',
+          stageId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -452,10 +438,10 @@ _bodyData=jsonEncode(reorderStagesDto);
   }
 
   /// stagesControllerStart
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
+  /// * [stageId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -465,7 +451,7 @@ _bodyData=jsonEncode(reorderStagesDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerStart({ 
+  Future<Response<void>> stagesControllerStart({
     required String stageId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -474,19 +460,19 @@ _bodyData=jsonEncode(reorderStagesDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/{stageId}/start'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/projects/{projectId}/stages/{stageId}/start'
+        .replaceAll(
+          '{'
+          r'stageId'
+          '}',
+          stageId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -505,11 +491,11 @@ _bodyData=jsonEncode(reorderStagesDto);
   }
 
   /// stagesControllerUpdate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stageId] 
-  /// * [updateStageDto] 
+  /// * [stageId]
+  /// * [updateStageDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -519,7 +505,7 @@ _bodyData=jsonEncode(reorderStagesDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> stagesControllerUpdate({ 
+  Future<Response<void>> stagesControllerUpdate({
     required String stageId,
     required UpdateStageDto updateStageDto,
     CancelToken? cancelToken,
@@ -529,19 +515,18 @@ _bodyData=jsonEncode(reorderStagesDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/stages/{stageId}'.replaceAll('{' r'stageId' '}', stageId.toString());
+    final _path = r'/api/projects/{projectId}/stages/{stageId}'.replaceAll(
+      '{'
+      r'stageId'
+      '}',
+      stageId.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -552,13 +537,10 @@ _bodyData=jsonEncode(reorderStagesDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateStageDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateStageDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -576,5 +558,4 @@ _bodyData=jsonEncode(updateStageDto);
 
     return _response;
   }
-
 }

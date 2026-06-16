@@ -75,7 +75,8 @@ class SelfpurchasesController
     _refreshDebounce = Timer(const Duration(milliseconds: 400), () async {
       try {
         final raw = await _repo.list(projectId: arg);
-        final sorted = [...raw]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        final sorted = [...raw]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         state = AsyncData(sorted);
         // Если в свежем списке появился approved foreman→customer самозакуп,
         // которого раньше не было approved-ом — это списание в бюджет, обновим.

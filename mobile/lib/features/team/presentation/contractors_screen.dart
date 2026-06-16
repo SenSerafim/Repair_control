@@ -113,8 +113,7 @@ class _ProjectGroup extends StatelessWidget {
         // выведен через group.owner выше.
         for (final m in group.members)
           if (m.user != null &&
-              !(m.userId == group.ownerId &&
-                  m.role == MembershipRole.customer))
+              !(m.userId == group.ownerId && m.role == MembershipRole.customer))
             _MemberRow(
               user: m.user!,
               roleLabel: m.role.displayName,

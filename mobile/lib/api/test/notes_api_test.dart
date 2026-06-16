@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:repair_control_api/repair_control_api.dart';
 
-
 /// tests for NotesApi
 void main() {
   final instance = RepairControlApi().getNotesApi();
@@ -26,6 +25,5 @@ void main() {
     test('test notesControllerUpdate', () async {
       // TODO
     });
-
   });
 }

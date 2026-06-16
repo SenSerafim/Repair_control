@@ -106,7 +106,9 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen>
         ),
         data: (buckets) {
           final tabs = _tabs!;
-          final stagesAsync = ref.watch(stagesControllerProvider(widget.projectId));
+          final stagesAsync = ref.watch(
+            stagesControllerProvider(widget.projectId),
+          );
           final stages = stagesAsync.value ?? const <Stage>[];
           final stageMap = {for (final s in stages) s.id: s};
           final pendingCount = _filter(buckets.pending).length;

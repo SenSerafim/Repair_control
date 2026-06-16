@@ -379,8 +379,7 @@ class _AddRecipientBar extends StatelessWidget {
       label: 'Добавить получателя',
       icon: Icons.person_add_alt_1_rounded,
       variant: AppButtonVariant.ghost,
-      onPressed: () =>
-          context.push(AppRoutes.projectAddMemberWith(projectId)),
+      onPressed: () => context.push(AppRoutes.projectAddMemberWith(projectId)),
     );
   }
 }

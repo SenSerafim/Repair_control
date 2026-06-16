@@ -105,7 +105,8 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
         );
       });
     } on MaterialsException catch (e) {
-      if (mounted) setState(() => _error = 'Не удалось загрузить фото: ${e.failure.name}');
+      if (mounted)
+        setState(() => _error = 'Не удалось загрузить фото: ${e.failure.name}');
     } finally {
       if (mounted) setState(() => draft.uploadingPhoto = false);
     }
@@ -504,8 +505,8 @@ class _ItemCard extends StatelessWidget {
                       draft.uploadingPhoto
                           ? 'Загрузка фото…'
                           : draft.photo == null
-                              ? 'Фото (опционально)'
-                              : 'Фото прикреплено',
+                          ? 'Фото (опционально)'
+                          : 'Фото прикреплено',
                       style: AppTextStyles.body.copyWith(
                         color: draft.photo == null
                             ? AppColors.n400

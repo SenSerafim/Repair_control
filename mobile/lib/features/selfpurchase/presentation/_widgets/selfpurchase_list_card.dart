@@ -40,10 +40,7 @@ class SelfpurchaseListCard extends StatelessWidget {
                 color: sp.status.semaphore.bg,
                 borderRadius: BorderRadius.circular(AppRadius.r12),
                 border: const Border(
-                  top: BorderSide(
-                    color: AppShadows.innerHighlight,
-                    width: 1,
-                  ),
+                  top: BorderSide(color: AppShadows.innerHighlight, width: 1),
                 ),
               ),
               child: Icon(

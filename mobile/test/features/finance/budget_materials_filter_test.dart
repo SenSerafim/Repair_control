@@ -64,19 +64,22 @@ void main() {
       expect(result.single.title, 'Цемент');
     });
 
-    test('activeStageId="stage-B" не показывает материалы этапа A и orphan', () {
-      final result = filterMaterialPurchasesByStage(
-        rows: [m1, m2, m3],
-        stageByRequestId: const {
-          'req-A1': 'stage-A',
-          'req-B1': 'stage-B',
-          'req-orphan': null,
-        },
-        activeStageId: 'stage-B',
-      );
-      expect(result, hasLength(1));
-      expect(result.single.title, 'Гипсокартон');
-    });
+    test(
+      'activeStageId="stage-B" не показывает материалы этапа A и orphan',
+      () {
+        final result = filterMaterialPurchasesByStage(
+          rows: [m1, m2, m3],
+          stageByRequestId: const {
+            'req-A1': 'stage-A',
+            'req-B1': 'stage-B',
+            'req-orphan': null,
+          },
+          activeStageId: 'stage-B',
+        );
+        expect(result, hasLength(1));
+        expect(result.single.title, 'Гипсокартон');
+      },
+    );
 
     test('пустой маппинг — конкретный фильтр возвращает пустой список', () {
       final result = filterMaterialPurchasesByStage(
@@ -109,10 +112,7 @@ void main() {
     test('activeStageId="stage-A" оставляет только самозакуп этапа A', () {
       final result = filterSelfpurchasesByStage(
         rows: [sp1, sp2],
-        stageBySelfpurchaseId: const {
-          'sp-A': 'stage-A',
-          'sp-B': 'stage-B',
-        },
+        stageBySelfpurchaseId: const {'sp-A': 'stage-A', 'sp-B': 'stage-B'},
         activeStageId: 'stage-A',
       );
       expect(result, hasLength(1));
@@ -122,10 +122,7 @@ void main() {
     test('activeStageId="all" возвращает все самозакупы', () {
       final result = filterSelfpurchasesByStage(
         rows: [sp1, sp2],
-        stageBySelfpurchaseId: const {
-          'sp-A': 'stage-A',
-          'sp-B': 'stage-B',
-        },
+        stageBySelfpurchaseId: const {'sp-A': 'stage-A', 'sp-B': 'stage-B'},
         activeStageId: 'all',
       );
       expect(result, hasLength(2));

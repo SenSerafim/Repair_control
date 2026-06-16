@@ -69,9 +69,8 @@ GoRouter _buildRouter() {
       ),
       GoRoute(
         path: '/chats/:chatId',
-        builder: (_, state) => Scaffold(
-          body: Text('chat:${state.pathParameters['chatId']}'),
-        ),
+        builder: (_, state) =>
+            Scaffold(body: Text('chat:${state.pathParameters['chatId']}')),
       ),
     ],
   );
@@ -87,9 +86,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            userProfileAggregateProvider('u1').overrideWith(
-              (ref) async => _buildAggregate(objects: const []),
-            ),
+            userProfileAggregateProvider(
+              'u1',
+            ).overrideWith((ref) async => _buildAggregate(objects: const [])),
             chatsRepositoryProvider.overrideWithValue(fakeRepo),
           ],
           child: MaterialApp.router(routerConfig: _buildRouter()),

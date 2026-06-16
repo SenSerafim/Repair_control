@@ -9,22 +9,20 @@ import 'dart:convert';
 import 'package:repair_control_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-
 class AdminAuditApi {
-
   final Dio _dio;
 
   const AdminAuditApi(this._dio);
 
   /// adminAuditControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [actorId] 
-  /// * [action] 
-  /// * [from] 
-  /// * [to] 
-  /// * [limit] 
+  /// * [actorId]
+  /// * [action]
+  /// * [from]
+  /// * [to]
+  /// * [limit]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +32,7 @@ class AdminAuditApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminAuditControllerList({ 
+  Future<Response<void>> adminAuditControllerList({
     required String actorId,
     required String action,
     required String from,
@@ -50,16 +48,10 @@ class AdminAuditApi {
     final _path = r'/api/admin/audit';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -87,7 +79,7 @@ class AdminAuditApi {
   }
 
   /// adminAuditControllerStats
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -99,7 +91,7 @@ class AdminAuditApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminAuditControllerStats({ 
+  Future<Response<void>> adminAuditControllerStats({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -110,16 +102,10 @@ class AdminAuditApi {
     final _path = r'/api/admin/stats';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -136,5 +122,4 @@ class AdminAuditApi {
 
     return _response;
   }
-
 }

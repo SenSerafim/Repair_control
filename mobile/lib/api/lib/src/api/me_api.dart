@@ -15,16 +15,15 @@ import 'package:repair_control_api/src/model/set_active_role_dto.dart';
 import 'package:repair_control_api/src/model/update_profile_dto.dart';
 
 class MeApi {
-
   final Dio _dio;
 
   const MeApi(this._dio);
 
   /// usersControllerAddDevice
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [registerDeviceDto] 
+  /// * [registerDeviceDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +33,7 @@ class MeApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerAddDevice({ 
+  Future<Response<void>> usersControllerAddDevice({
     required RegisterDeviceDto registerDeviceDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -46,16 +45,10 @@ class MeApi {
     final _path = r'/api/me/devices';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -66,13 +59,10 @@ class MeApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(registerDeviceDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(registerDeviceDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -92,10 +82,10 @@ _bodyData=jsonEncode(registerDeviceDto);
   }
 
   /// usersControllerAddRole
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [addRoleDto] 
+  /// * [addRoleDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -105,7 +95,7 @@ _bodyData=jsonEncode(registerDeviceDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerAddRole({ 
+  Future<Response<void>> usersControllerAddRole({
     required AddRoleDto addRoleDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -117,16 +107,10 @@ _bodyData=jsonEncode(registerDeviceDto);
     final _path = r'/api/me/roles';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -137,13 +121,10 @@ _bodyData=jsonEncode(registerDeviceDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(addRoleDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(addRoleDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -163,7 +144,7 @@ _bodyData=jsonEncode(addRoleDto);
   }
 
   /// usersControllerMe
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -175,7 +156,7 @@ _bodyData=jsonEncode(addRoleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerMe({ 
+  Future<Response<void>> usersControllerMe({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -186,16 +167,10 @@ _bodyData=jsonEncode(addRoleDto);
     final _path = r'/api/me';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -214,10 +189,10 @@ _bodyData=jsonEncode(addRoleDto);
   }
 
   /// usersControllerRemoveRole
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [role] 
+  /// * [role]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -227,7 +202,7 @@ _bodyData=jsonEncode(addRoleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerRemoveRole({ 
+  Future<Response<void>> usersControllerRemoveRole({
     required String role,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -236,19 +211,18 @@ _bodyData=jsonEncode(addRoleDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/me/roles/{role}'.replaceAll('{' r'role' '}', role.toString());
+    final _path = r'/api/me/roles/{role}'.replaceAll(
+      '{'
+      r'role'
+      '}',
+      role.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -267,7 +241,7 @@ _bodyData=jsonEncode(addRoleDto);
   }
 
   /// usersControllerRoles
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -279,7 +253,7 @@ _bodyData=jsonEncode(addRoleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerRoles({ 
+  Future<Response<void>> usersControllerRoles({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -290,16 +264,10 @@ _bodyData=jsonEncode(addRoleDto);
     final _path = r'/api/me/roles';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -318,10 +286,10 @@ _bodyData=jsonEncode(addRoleDto);
   }
 
   /// usersControllerSetActive
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [setActiveRoleDto] 
+  /// * [setActiveRoleDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -331,7 +299,7 @@ _bodyData=jsonEncode(addRoleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerSetActive({ 
+  Future<Response<void>> usersControllerSetActive({
     required SetActiveRoleDto setActiveRoleDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -343,16 +311,10 @@ _bodyData=jsonEncode(addRoleDto);
     final _path = r'/api/me/active-role';
     final _options = Options(
       method: r'PUT',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -363,13 +325,10 @@ _bodyData=jsonEncode(addRoleDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(setActiveRoleDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(setActiveRoleDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -389,10 +348,10 @@ _bodyData=jsonEncode(setActiveRoleDto);
   }
 
   /// usersControllerUpdateMe
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [updateProfileDto] 
+  /// * [updateProfileDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -402,7 +361,7 @@ _bodyData=jsonEncode(setActiveRoleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> usersControllerUpdateMe({ 
+  Future<Response<void>> usersControllerUpdateMe({
     required UpdateProfileDto updateProfileDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -414,16 +373,10 @@ _bodyData=jsonEncode(setActiveRoleDto);
     final _path = r'/api/me';
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -434,13 +387,10 @@ _bodyData=jsonEncode(setActiveRoleDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateProfileDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateProfileDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -458,5 +408,4 @@ _bodyData=jsonEncode(updateProfileDto);
 
     return _response;
   }
-
 }

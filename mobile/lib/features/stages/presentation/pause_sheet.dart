@@ -99,10 +99,7 @@ class _ReasonRow extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    spec.bg.withValues(alpha: 0.85),
-                    spec.bg,
-                  ],
+                  colors: [spec.bg.withValues(alpha: 0.85), spec.bg],
                 ),
                 border: Border.all(color: spec.fg.withValues(alpha: 0.10)),
               ),

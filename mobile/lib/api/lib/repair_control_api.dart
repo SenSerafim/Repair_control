@@ -8,7 +8,6 @@ export 'package:repair_control_api/src/auth/basic_auth.dart';
 export 'package:repair_control_api/src/auth/bearer_auth.dart';
 export 'package:repair_control_api/src/auth/oauth.dart';
 
-
 export 'package:repair_control_api/src/api/admin_api.dart';
 export 'package:repair_control_api/src/api/admin_audit_api.dart';
 export 'package:repair_control_api/src/api/admin_broadcasts_api.dart';
@@ -123,4 +122,3 @@ export 'package:repair_control_api/src/model/update_stage_dto.dart';
 export 'package:repair_control_api/src/model/update_step_dto.dart';
 export 'package:repair_control_api/src/model/update_substep_dto.dart';
 export 'package:repair_control_api/src/model/update_tool_dto.dart';
-

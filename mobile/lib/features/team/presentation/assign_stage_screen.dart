@@ -52,8 +52,9 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final teamState =
-          ref.read(teamControllerProvider(widget.projectId)).valueOrNull;
+      final teamState = ref
+          .read(teamControllerProvider(widget.projectId))
+          .valueOrNull;
       final existing = teamState?.members
           .where((m) => m.userId == widget.args.userId)
           .toList();
@@ -66,7 +67,8 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
           setState(() => _busy = false);
           AppToast.show(
             context,
-            message: 'Пользователь уже в команде как '
+            message:
+                'Пользователь уже в команде как '
                 '«${m.role.displayName}». Снимите эту роль перед '
                 'назначением мастером.',
             kind: AppToastKind.error,
@@ -76,11 +78,13 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
         // Уже master — расширим membership.stageIds через PATCH endpoint
         // (backend members.service:updateMembership поддерживает stageIds).
         try {
-          await ref.read(teamRepositoryProvider).updateMember(
-            projectId: widget.projectId,
-            membershipId: m.id,
-            stageIds: [stage.id],
-          );
+          await ref
+              .read(teamRepositoryProvider)
+              .updateMember(
+                projectId: widget.projectId,
+                membershipId: m.id,
+                stageIds: [stage.id],
+              );
           ref.invalidate(teamControllerProvider(widget.projectId));
         } on TeamException catch (e) {
           throw _AssignFailureMessage(e.failure.userMessage);
@@ -99,17 +103,20 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
       }
 
       // Stage.masterId — single-master FSM. Обязательно после membership.
-      await ref.read(stagesRepositoryProvider).assignMaster(
-        projectId: widget.projectId,
-        stageId: stage.id,
-        masterUserId: widget.args.userId,
-      );
+      await ref
+          .read(stagesRepositoryProvider)
+          .assignMaster(
+            projectId: widget.projectId,
+            stageId: stage.id,
+            masterUserId: widget.args.userId,
+          );
       ref.invalidate(stagesControllerProvider(widget.projectId));
       if (!mounted) return;
       setState(() => _busy = false);
       AppToast.show(
         context,
-        message: '✓ ${widget.args.firstName} назначен(а) мастером '
+        message:
+            '✓ ${widget.args.firstName} назначен(а) мастером '
             'на «${stage.title}»',
         kind: AppToastKind.success,
       );
@@ -142,16 +149,14 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
     setState(() => _busy = true);
     final fail = await ref
         .read(teamControllerProvider(widget.projectId).notifier)
-        .addMember(
-          userId: widget.args.userId,
-          role: MembershipRole.master,
-        );
+        .addMember(userId: widget.args.userId, role: MembershipRole.master);
     if (!mounted) return;
     setState(() => _busy = false);
     if (fail == null) {
       AppToast.show(
         context,
-        message: '✓ ${widget.args.firstName} добавлен(а) мастером. '
+        message:
+            '✓ ${widget.args.firstName} добавлен(а) мастером. '
             'Назначьте на этапы позже из карточки этапа.',
         kind: AppToastKind.success,
       );
@@ -177,7 +182,9 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
       padding: EdgeInsets.zero,
       body: Column(
         children: [
-          _Banner(text: '$fullName будет назначен(а) мастером на выбранный этап'),
+          _Banner(
+            text: '$fullName будет назначен(а) мастером на выбранный этап',
+          ),
           Expanded(
             child: stagesAsync.when(
               loading: () => const AppLoadingState(),

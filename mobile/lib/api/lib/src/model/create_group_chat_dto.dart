@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'create_group_chat_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,26 @@ part 'create_group_chat_dto.g.dart';
 )
 class CreateGroupChatDto {
   /// Returns a new [CreateGroupChatDto] instance.
-  CreateGroupChatDto({
+  CreateGroupChatDto({required this.title, required this.participantUserIds});
 
-    required  this.title,
-
-    required  this.participantUserIds,
-  });
-
-  @JsonKey(
-    
-    name: r'title',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'title', required: true, includeIfNull: false)
   final String title;
 
-
-
-  @JsonKey(
-    
-    name: r'participantUserIds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'participantUserIds', required: true, includeIfNull: false)
   final List<String> participantUserIds;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateGroupChatDto &&
+          other.title == title &&
+          other.participantUserIds == participantUserIds;
 
+  @override
+  int get hashCode => title.hashCode + participantUserIds.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CreateGroupChatDto &&
-      other.title == title &&
-      other.participantUserIds == participantUserIds;
-
-    @override
-    int get hashCode =>
-        title.hashCode +
-        participantUserIds.hashCode;
-
-  factory CreateGroupChatDto.fromJson(Map<String, dynamic> json) => _$CreateGroupChatDtoFromJson(json);
+  factory CreateGroupChatDto.fromJson(Map<String, dynamic> json) =>
+      _$CreateGroupChatDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CreateGroupChatDtoToJson(this);
 
@@ -67,6 +42,4 @@ class CreateGroupChatDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

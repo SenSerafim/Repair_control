@@ -13,16 +13,15 @@ import 'package:repair_control_api/src/model/patch_document_dto.dart';
 import 'package:repair_control_api/src/model/presign_upload_dto.dart';
 
 class DocumentsApi {
-
   final Dio _dio;
 
   const DocumentsApi(this._dio);
 
   /// documentsControllerConfirm
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +31,7 @@ class DocumentsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerConfirm({ 
+  Future<Response<void>> documentsControllerConfirm({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -41,19 +40,18 @@ class DocumentsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/documents/{id}/confirm'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/documents/{id}/confirm'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -72,10 +70,10 @@ class DocumentsApi {
   }
 
   /// documentsControllerDelete
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -85,7 +83,7 @@ class DocumentsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerDelete({ 
+  Future<Response<void>> documentsControllerDelete({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -94,19 +92,18 @@ class DocumentsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/documents/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/documents/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -125,10 +122,10 @@ class DocumentsApi {
   }
 
   /// documentsControllerDownload
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -138,7 +135,7 @@ class DocumentsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerDownload({ 
+  Future<Response<void>> documentsControllerDownload({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -147,19 +144,18 @@ class DocumentsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/documents/{id}/download'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/documents/{id}/download'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -178,10 +174,10 @@ class DocumentsApi {
   }
 
   /// documentsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -191,7 +187,7 @@ class DocumentsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerGet({ 
+  Future<Response<void>> documentsControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -200,19 +196,18 @@ class DocumentsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/documents/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/documents/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -231,14 +226,14 @@ class DocumentsApi {
   }
 
   /// documentsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [stageId] 
-  /// * [stepId] 
-  /// * [category] 
-  /// * [q] 
+  /// * [projectId]
+  /// * [stageId]
+  /// * [stepId]
+  /// * [category]
+  /// * [q]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -248,7 +243,7 @@ class DocumentsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerList({ 
+  Future<Response<void>> documentsControllerList({
     required String projectId,
     String? stageId,
     String? stepId,
@@ -261,19 +256,18 @@ class DocumentsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/documents'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/documents'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -300,11 +294,11 @@ class DocumentsApi {
   }
 
   /// documentsControllerPatch
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [patchDocumentDto] 
+  /// * [id]
+  /// * [patchDocumentDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -314,7 +308,7 @@ class DocumentsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerPatch({ 
+  Future<Response<void>> documentsControllerPatch({
     required String id,
     required PatchDocumentDto patchDocumentDto,
     CancelToken? cancelToken,
@@ -324,19 +318,18 @@ class DocumentsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/documents/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/documents/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -347,13 +340,10 @@ class DocumentsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(patchDocumentDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(patchDocumentDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -373,11 +363,11 @@ _bodyData=jsonEncode(patchDocumentDto);
   }
 
   /// documentsControllerPresign
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [presignUploadDto] 
+  /// * [projectId]
+  /// * [presignUploadDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -387,7 +377,7 @@ _bodyData=jsonEncode(patchDocumentDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerPresign({ 
+  Future<Response<void>> documentsControllerPresign({
     required String projectId,
     required PresignUploadDto presignUploadDto,
     CancelToken? cancelToken,
@@ -397,19 +387,19 @@ _bodyData=jsonEncode(patchDocumentDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/documents/presign-upload'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/documents/presign-upload'
+        .replaceAll(
+          '{'
+          r'projectId'
+          '}',
+          projectId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -420,13 +410,10 @@ _bodyData=jsonEncode(patchDocumentDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(presignUploadDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(presignUploadDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -446,10 +433,10 @@ _bodyData=jsonEncode(presignUploadDto);
   }
 
   /// documentsControllerThumbnail
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -459,7 +446,7 @@ _bodyData=jsonEncode(presignUploadDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> documentsControllerThumbnail({ 
+  Future<Response<void>> documentsControllerThumbnail({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -468,19 +455,18 @@ _bodyData=jsonEncode(presignUploadDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/documents/{id}/thumbnail'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/documents/{id}/thumbnail'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -497,5 +483,4 @@ _bodyData=jsonEncode(presignUploadDto);
 
     return _response;
   }
-
 }

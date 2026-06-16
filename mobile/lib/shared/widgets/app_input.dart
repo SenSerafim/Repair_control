@@ -85,21 +85,13 @@ class _AppInputState extends State<AppInput> {
       borderColor = AppColors.redDot;
       backgroundColor = AppColors.redBg;
       shadow = const [
-        BoxShadow(
-          color: Color(0x1ADC2626),
-          blurRadius: 0,
-          spreadRadius: 4,
-        ),
+        BoxShadow(color: Color(0x1ADC2626), blurRadius: 0, spreadRadius: 4),
       ];
     } else if (_focused) {
       borderColor = AppColors.brand;
       backgroundColor = AppColors.brandLight;
       shadow = const [
-        BoxShadow(
-          color: AppColors.brandGlow,
-          blurRadius: 0,
-          spreadRadius: 4,
-        ),
+        BoxShadow(color: AppColors.brandGlow, blurRadius: 0, spreadRadius: 4),
         BoxShadow(
           color: Color(0x144F6EF7),
           offset: Offset(0, 4),

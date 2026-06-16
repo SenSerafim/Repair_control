@@ -81,10 +81,7 @@ class ProfileRepository {
       _call(() async {
         final r = await _dio.put<Map<String, dynamic>>(
           '/api/me/active-role',
-          data: {
-            'role': role.name,
-            if (deviceId != null) 'deviceId': deviceId,
-          },
+          data: {'role': role.name, if (deviceId != null) 'deviceId': deviceId},
         );
         final body = r.data!;
         return AuthTokens(

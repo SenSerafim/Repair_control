@@ -35,10 +35,9 @@ class StageBudgetScreen extends ConsumerWidget {
     final stageTitle = stage == null
         ? 'этап'
         : 'Этап ${stage.orderIndex + 1}: ${stage.title}';
-    final filteredAsync = ref.watch(_stageExpensesProvider((
-      projectId: projectId,
-      stageId: stageId,
-    )));
+    final filteredAsync = ref.watch(
+      _stageExpensesProvider((projectId: projectId, stageId: stageId)),
+    );
     return AppScaffold(
       showBack: true,
       title: 'Бюджет этапа',
@@ -48,18 +47,16 @@ class StageBudgetScreen extends ConsumerWidget {
         error: (e, _) => AppErrorState(
           title: 'Не удалось загрузить',
           subtitle: e.toString(),
-          onRetry: () => ref.invalidate(_stageExpensesProvider((
-            projectId: projectId,
-            stageId: stageId,
-          ))),
+          onRetry: () => ref.invalidate(
+            _stageExpensesProvider((projectId: projectId, stageId: stageId)),
+          ),
         ),
         data: (items) {
           final total = items.fold<int>(0, (acc, e) => acc + e.amount);
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(_stageExpensesProvider((
-              projectId: projectId,
-              stageId: stageId,
-            ))),
+            onRefresh: () async => ref.invalidate(
+              _stageExpensesProvider((projectId: projectId, stageId: stageId)),
+            ),
             child: Column(
               children: [
                 Expanded(
@@ -142,10 +139,12 @@ class StageBudgetScreen extends ConsumerWidget {
                                 initialStageId: stageId,
                               );
                               if (ok) {
-                                ref.invalidate(_stageExpensesProvider((
-                                  projectId: projectId,
-                                  stageId: stageId,
-                                )));
+                                ref.invalidate(
+                                  _stageExpensesProvider((
+                                    projectId: projectId,
+                                    stageId: stageId,
+                                  )),
+                                );
                               }
                             },
                           ),
@@ -161,10 +160,12 @@ class StageBudgetScreen extends ConsumerWidget {
                                 initialStageId: stageId,
                               );
                               if (ok) {
-                                ref.invalidate(_stageExpensesProvider((
-                                  projectId: projectId,
-                                  stageId: stageId,
-                                )));
+                                ref.invalidate(
+                                  _stageExpensesProvider((
+                                    projectId: projectId,
+                                    stageId: stageId,
+                                  )),
+                                );
                               }
                             },
                           ),
@@ -208,8 +209,11 @@ class _ExpenseRow extends StatelessWidget {
               color: AppColors.n100,
               borderRadius: BorderRadius.circular(AppRadius.r12),
             ),
-            child: const Icon(Icons.receipt_outlined,
-                size: 18, color: AppColors.n500),
+            child: const Icon(
+              Icons.receipt_outlined,
+              size: 18,
+              color: AppColors.n500,
+            ),
           ),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
@@ -251,7 +255,7 @@ typedef _StageExpenseKey = ({String projectId, String stageId});
 
 final _stageExpensesProvider =
     FutureProvider.family<List<Expense>, _StageExpenseKey>((ref, key) async {
-  return ref
-      .read(expensesRepositoryProvider)
-      .list(projectId: key.projectId, stageId: key.stageId);
-});
+      return ref
+          .read(expensesRepositoryProvider)
+          .list(projectId: key.projectId, stageId: key.stageId);
+    });

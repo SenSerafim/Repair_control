@@ -54,8 +54,10 @@ class MaterialItemInput {
   final String? unit;
   final String? note;
   final int? pricePerUnit;
+
   /// Срок поставки позиции (ISO date 'YYYY-MM-DD'). ТЗ NEWFIX §5.5.
   final DateTime? dueDate;
+
   /// Фото позиции (presigned-загружено). ТЗ NEWFIX §5.2.
   final MaterialItemPhotoInput? photo;
 
@@ -76,10 +78,7 @@ class AcceptedItemInput {
   final String itemId;
   final double actualQty;
 
-  Map<String, dynamic> toJson() => {
-    'itemId': itemId,
-    'actualQty': actualQty,
-  };
+  Map<String, dynamic> toJson() => {'itemId': itemId, 'actualQty': actualQty};
 }
 
 class MaterialsRepository {

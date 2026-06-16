@@ -12,13 +12,12 @@ import 'package:dio/dio.dart';
 import 'package:repair_control_api/src/model/patch_setting_dto.dart';
 
 class NotificationsApi {
-
   final Dio _dio;
 
   const NotificationsApi(this._dio);
 
   /// notificationsControllerGetSettings
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -30,7 +29,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notificationsControllerGetSettings({ 
+  Future<Response<void>> notificationsControllerGetSettings({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -41,16 +40,10 @@ class NotificationsApi {
     final _path = r'/api/me/notification-settings';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -69,13 +62,13 @@ class NotificationsApi {
   }
 
   /// notificationsControllerLogs
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [userId] 
-  /// * [kind] 
-  /// * [from] 
-  /// * [to] 
+  /// * [userId]
+  /// * [kind]
+  /// * [from]
+  /// * [to]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -85,7 +78,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notificationsControllerLogs({ 
+  Future<Response<void>> notificationsControllerLogs({
     required String userId,
     required String kind,
     required String from,
@@ -100,16 +93,10 @@ class NotificationsApi {
     final _path = r'/api/admin/notification-logs';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -136,10 +123,10 @@ class NotificationsApi {
   }
 
   /// notificationsControllerPatchSetting
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [patchSettingDto] 
+  /// * [patchSettingDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -149,7 +136,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notificationsControllerPatchSetting({ 
+  Future<Response<void>> notificationsControllerPatchSetting({
     required PatchSettingDto patchSettingDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -161,16 +148,10 @@ class NotificationsApi {
     final _path = r'/api/me/notification-settings';
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -181,13 +162,10 @@ class NotificationsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(patchSettingDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(patchSettingDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -205,5 +183,4 @@ _bodyData=jsonEncode(patchSettingDto);
 
     return _response;
   }
-
 }

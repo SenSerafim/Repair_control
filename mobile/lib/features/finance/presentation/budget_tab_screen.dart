@@ -30,7 +30,8 @@ class BudgetTabScreen extends ConsumerWidget {
           if (projects.isEmpty) {
             return const AppEmptyState(
               title: 'Пока нет проектов',
-              subtitle: 'Создайте проект на вкладке «Проекты», '
+              subtitle:
+                  'Создайте проект на вкладке «Проекты», '
                   'затем сможете смотреть бюджет.',
               icon: Icons.account_balance_wallet_outlined,
             );
@@ -38,8 +39,7 @@ class BudgetTabScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.x16),
             itemCount: projects.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.x10),
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
             itemBuilder: (_, i) => _ProjectBudgetTile(project: projects[i]),
           );
         },
@@ -98,10 +98,7 @@ class _ProjectBudgetTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.n400,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.n400),
             ],
           ),
         ),

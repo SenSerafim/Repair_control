@@ -68,9 +68,7 @@ class ToolCustodyHistoryScreen extends ConsumerWidget {
                     ref.invalidate(toolCustodyHistoryProvider(toolId));
                     // Дожидаемся завершения нового запроса, чтобы spinner
                     // не пропадал раньше времени.
-                    await ref.read(
-                      toolCustodyHistoryProvider(toolId).future,
-                    );
+                    await ref.read(toolCustodyHistoryProvider(toolId).future);
                   },
                   child: ListView.separated(
                     key: const ValueKey('tool_custody_history_list'),
@@ -111,9 +109,7 @@ class _SubtitleBar extends StatelessWidget {
       ),
       decoration: const BoxDecoration(
         color: AppColors.n0,
-        border: Border(
-          bottom: BorderSide(color: AppColors.n100),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.n100)),
       ),
       child: Row(
         children: [
@@ -196,10 +192,7 @@ class _EventCard extends StatelessWidget {
             width: 10,
             height: 10,
             margin: const EdgeInsets.only(top: 6),
-            decoration: BoxDecoration(
-              color: dotColor,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
           ),
           const SizedBox(width: AppSpacing.x12),
           Expanded(

@@ -109,16 +109,17 @@ class MaterialItemPhoto with _$MaterialItemPhoto {
     required DateTime createdAt,
   }) = _MaterialItemPhoto;
 
-  static MaterialItemPhoto parse(Map<String, dynamic> json) => MaterialItemPhoto(
-    id: json['id'] as String,
-    fileKey: json['fileKey'] as String,
-    thumbKey: json['thumbKey'] as String?,
-    mimeType: json['mimeType'] as String,
-    sizeBytes: (json['sizeBytes'] as num).toInt(),
-    uploadedBy: json['uploadedBy'] as String,
-    exifCleared: json['exifCleared'] as bool? ?? false,
-    createdAt: DateTime.parse(json['createdAt'] as String),
-  );
+  static MaterialItemPhoto parse(Map<String, dynamic> json) =>
+      MaterialItemPhoto(
+        id: json['id'] as String,
+        fileKey: json['fileKey'] as String,
+        thumbKey: json['thumbKey'] as String?,
+        mimeType: json['mimeType'] as String,
+        sizeBytes: (json['sizeBytes'] as num).toInt(),
+        uploadedBy: json['uploadedBy'] as String,
+        exifCleared: json['exifCleared'] as bool? ?? false,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
 }
 
 @freezed
@@ -128,6 +129,7 @@ class MaterialItem with _$MaterialItem {
     required String requestId,
     required String name,
     required double qty,
+
     /// Фактически принятое количество (заполняется при accept-partial/full).
     /// null до приёмки. ТЗ NEWFIX §5.7.
     double? actualQty,
@@ -135,6 +137,7 @@ class MaterialItem with _$MaterialItem {
     String? note,
     int? pricePerUnit,
     int? totalPrice,
+
     /// Срок поставки позиции. ТЗ NEWFIX §5.5. Если прошёл а status=open,
     /// клиент показывает стикер «Просрочена», бэк эмитит push раз в сутки.
     DateTime? dueDate,

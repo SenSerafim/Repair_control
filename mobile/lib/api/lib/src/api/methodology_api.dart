@@ -15,17 +15,16 @@ import 'package:repair_control_api/src/model/update_article_dto.dart';
 import 'package:repair_control_api/src/model/update_section_dto.dart';
 
 class MethodologyApi {
-
   final Dio _dio;
 
   const MethodologyApi(this._dio);
 
   /// methodologyControllerCreateArticle
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [sectionId] 
-  /// * [createArticleDto] 
+  /// * [sectionId]
+  /// * [createArticleDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,7 +34,7 @@ class MethodologyApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerCreateArticle({ 
+  Future<Response<void>> methodologyControllerCreateArticle({
     required String sectionId,
     required CreateArticleDto createArticleDto,
     CancelToken? cancelToken,
@@ -45,19 +44,19 @@ class MethodologyApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/methodology/sections/{sectionId}/articles'.replaceAll('{' r'sectionId' '}', sectionId.toString());
+    final _path = r'/api/admin/methodology/sections/{sectionId}/articles'
+        .replaceAll(
+          '{'
+          r'sectionId'
+          '}',
+          sectionId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -68,13 +67,10 @@ class MethodologyApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createArticleDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createArticleDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -94,10 +90,10 @@ _bodyData=jsonEncode(createArticleDto);
   }
 
   /// methodologyControllerCreateSection
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createSectionDto] 
+  /// * [createSectionDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -107,7 +103,7 @@ _bodyData=jsonEncode(createArticleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerCreateSection({ 
+  Future<Response<void>> methodologyControllerCreateSection({
     required CreateSectionDto createSectionDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -119,16 +115,10 @@ _bodyData=jsonEncode(createArticleDto);
     final _path = r'/api/admin/methodology/sections';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -139,13 +129,10 @@ _bodyData=jsonEncode(createArticleDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createSectionDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createSectionDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -165,10 +152,10 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerDeleteArticle
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -178,7 +165,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerDeleteArticle({ 
+  Future<Response<void>> methodologyControllerDeleteArticle({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -187,19 +174,18 @@ _bodyData=jsonEncode(createSectionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/methodology/articles/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/methodology/articles/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -218,10 +204,10 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerDeleteSection
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -231,7 +217,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerDeleteSection({ 
+  Future<Response<void>> methodologyControllerDeleteSection({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -240,19 +226,18 @@ _bodyData=jsonEncode(createSectionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/methodology/sections/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/methodology/sections/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -271,10 +256,10 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerGetArticle
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -284,7 +269,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerGetArticle({ 
+  Future<Response<void>> methodologyControllerGetArticle({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -293,19 +278,18 @@ _bodyData=jsonEncode(createSectionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/methodology/articles/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/methodology/articles/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -324,10 +308,10 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerGetSection
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -337,7 +321,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerGetSection({ 
+  Future<Response<void>> methodologyControllerGetSection({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -346,19 +330,18 @@ _bodyData=jsonEncode(createSectionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/methodology/sections/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/methodology/sections/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -377,7 +360,7 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerListSections
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -389,7 +372,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerListSections({ 
+  Future<Response<void>> methodologyControllerListSections({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -400,16 +383,10 @@ _bodyData=jsonEncode(createSectionDto);
     final _path = r'/api/methodology/sections';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -428,11 +405,11 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerSearch
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [q] 
-  /// * [limit] 
+  /// * [q]
+  /// * [limit]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -442,7 +419,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerSearch({ 
+  Future<Response<void>> methodologyControllerSearch({
     required String q,
     required String limit,
     CancelToken? cancelToken,
@@ -455,26 +432,17 @@ _bodyData=jsonEncode(createSectionDto);
     final _path = r'/api/methodology/search';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{
-      r'q': q,
-      r'limit': limit,
-    };
+    final _queryParameters = <String, dynamic>{r'q': q, r'limit': limit};
 
     final _response = await _dio.request<Object>(
       _path,
@@ -489,11 +457,11 @@ _bodyData=jsonEncode(createSectionDto);
   }
 
   /// methodologyControllerUpdateArticle
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [updateArticleDto] 
+  /// * [id]
+  /// * [updateArticleDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -503,7 +471,7 @@ _bodyData=jsonEncode(createSectionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerUpdateArticle({ 
+  Future<Response<void>> methodologyControllerUpdateArticle({
     required String id,
     required UpdateArticleDto updateArticleDto,
     CancelToken? cancelToken,
@@ -513,19 +481,18 @@ _bodyData=jsonEncode(createSectionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/methodology/articles/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/methodology/articles/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -536,13 +503,10 @@ _bodyData=jsonEncode(createSectionDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateArticleDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateArticleDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -562,11 +526,11 @@ _bodyData=jsonEncode(updateArticleDto);
   }
 
   /// methodologyControllerUpdateSection
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [updateSectionDto] 
+  /// * [id]
+  /// * [updateSectionDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -576,7 +540,7 @@ _bodyData=jsonEncode(updateArticleDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> methodologyControllerUpdateSection({ 
+  Future<Response<void>> methodologyControllerUpdateSection({
     required String id,
     required UpdateSectionDto updateSectionDto,
     CancelToken? cancelToken,
@@ -586,19 +550,18 @@ _bodyData=jsonEncode(updateArticleDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/methodology/sections/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/methodology/sections/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -609,13 +572,10 @@ _bodyData=jsonEncode(updateArticleDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateSectionDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateSectionDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -633,5 +593,4 @@ _bodyData=jsonEncode(updateSectionDto);
 
     return _response;
   }
-
 }

@@ -44,9 +44,7 @@ class TemplateCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [spec.bg.withValues(alpha: 0.82), spec.bg],
                   ),
-                  border: Border.all(
-                    color: spec.fg.withValues(alpha: 0.10),
-                  ),
+                  border: Border.all(color: spec.fg.withValues(alpha: 0.10)),
                 ),
                 child: Icon(spec.icon, size: 22, color: spec.fg),
               ),

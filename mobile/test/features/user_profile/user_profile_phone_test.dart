@@ -64,65 +64,57 @@ UserProfileAggregate _buildAggregate({required String phone}) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets(
-    'тап по кнопке «Позвонить» вызывает launchUrl с tel:<phone>',
-    (tester) async {
-      final mock = _CapturingUrlLauncher();
-      UrlLauncherPlatform.instance = mock;
+  testWidgets('тап по кнопке «Позвонить» вызывает launchUrl с tel:<phone>', (
+    tester,
+  ) async {
+    final mock = _CapturingUrlLauncher();
+    UrlLauncherPlatform.instance = mock;
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            userProfileAggregateProvider('u1').overrideWith(
-              (ref) async => _buildAggregate(phone: '+79991112233'),
-            ),
-          ],
-          child: const MaterialApp(
-            home: UserProfileScreen(userId: 'u1'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileAggregateProvider(
+            'u1',
+          ).overrideWith((ref) async => _buildAggregate(phone: '+79991112233')),
+        ],
+        child: const MaterialApp(home: UserProfileScreen(userId: 'u1')),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      final button = find.byKey(const ValueKey('user_profile_phone_button'));
-      expect(button, findsOneWidget);
+    final button = find.byKey(const ValueKey('user_profile_phone_button'));
+    expect(button, findsOneWidget);
 
-      final iconButton = tester.widget<IconButton>(button);
-      expect(iconButton.onPressed, isNotNull);
+    final iconButton = tester.widget<IconButton>(button);
+    expect(iconButton.onPressed, isNotNull);
 
-      await tester.tap(button);
-      await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
 
-      expect(mock.capturedUrl, 'tel:+79991112233');
-    },
-  );
+    expect(mock.capturedUrl, 'tel:+79991112233');
+  });
 
-  testWidgets(
-    'кнопка «Позвонить» disabled при пустом phone',
-    (tester) async {
-      final mock = _CapturingUrlLauncher();
-      UrlLauncherPlatform.instance = mock;
+  testWidgets('кнопка «Позвонить» disabled при пустом phone', (tester) async {
+    final mock = _CapturingUrlLauncher();
+    UrlLauncherPlatform.instance = mock;
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            userProfileAggregateProvider('u1').overrideWith(
-              (ref) async => _buildAggregate(phone: ''),
-            ),
-          ],
-          child: const MaterialApp(
-            home: UserProfileScreen(userId: 'u1'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileAggregateProvider(
+            'u1',
+          ).overrideWith((ref) async => _buildAggregate(phone: '')),
+        ],
+        child: const MaterialApp(home: UserProfileScreen(userId: 'u1')),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      final button = find.byKey(const ValueKey('user_profile_phone_button'));
-      expect(button, findsOneWidget);
+    final button = find.byKey(const ValueKey('user_profile_phone_button'));
+    expect(button, findsOneWidget);
 
-      final iconButton = tester.widget<IconButton>(button);
-      expect(iconButton.onPressed, isNull);
-      expect(mock.capturedUrl, isNull);
-    },
-  );
+    final iconButton = tester.widget<IconButton>(button);
+    expect(iconButton.onPressed, isNull);
+    expect(mock.capturedUrl, isNull);
+  });
 }

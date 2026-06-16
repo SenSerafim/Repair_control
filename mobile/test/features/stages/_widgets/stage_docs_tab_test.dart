@@ -56,10 +56,7 @@ Document _doc({
   updatedAt: DateTime(2026, 6, 1),
 );
 
-Widget _wrap({
-  required List<dm.Step> steps,
-  required List<Document> docs,
-}) {
+Widget _wrap({required List<dm.Step> steps, required List<Document> docs}) {
   return ProviderScope(
     overrides: [
       stepsControllerProvider.overrideWith(() => _StubStepsCtrl(steps)),
@@ -83,47 +80,42 @@ void main() {
     await initializeDateFormatting('ru');
   });
 
-  testWidgets(
-    'A. По умолчанию активен сегмент «Фото»: секция фото видна, '
-    'документов — нет',
-    (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', photosCount: 3),
-        _step(id: 'st2', title: 'Покраска стен', photosCount: 2),
-      ];
-      final docs = [_doc(id: 'd1', title: 'Смета.pdf')];
+  testWidgets('A. По умолчанию активен сегмент «Фото»: секция фото видна, '
+      'документов — нет', (tester) async {
+    final steps = [
+      _step(id: 'st1', title: 'Поклейка обоев', photosCount: 3),
+      _step(id: 'st2', title: 'Покраска стен', photosCount: 2),
+    ];
+    final docs = [_doc(id: 'd1', title: 'Смета.pdf')];
 
-      await tester.pumpWidget(_wrap(steps: steps, docs: docs));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(_wrap(steps: steps, docs: docs));
+    await tester.pumpAndSettle();
 
-      // Сегмент-переключатель присутствует.
-      expect(
-        find.byKey(const ValueKey('stage_docs_view_toggle')),
-        findsOneWidget,
-      );
+    // Сегмент-переключатель присутствует.
+    expect(
+      find.byKey(const ValueKey('stage_docs_view_toggle')),
+      findsOneWidget,
+    );
 
-      // Видна секция фото с подзаголовком и аггрегацией.
-      expect(
-        find.byKey(const ValueKey('stage_docs_photos_section')),
-        findsOneWidget,
-      );
-      expect(find.text('ФОТО ШАГОВ · 5'), findsOneWidget);
+    // Видна секция фото с подзаголовком и аггрегацией.
+    expect(
+      find.byKey(const ValueKey('stage_docs_photos_section')),
+      findsOneWidget,
+    );
+    expect(find.text('ФОТО ШАГОВ · 5'), findsOneWidget);
 
-      // Секция документов скрыта.
-      expect(
-        find.byKey(const ValueKey('stage_docs_files_section')),
-        findsNothing,
-      );
-      expect(find.text('Смета.pdf'), findsNothing);
-    },
-  );
+    // Секция документов скрыта.
+    expect(
+      find.byKey(const ValueKey('stage_docs_files_section')),
+      findsNothing,
+    );
+    expect(find.text('Смета.pdf'), findsNothing);
+  });
 
   testWidgets(
     'B. Тап по «Документы» показывает секцию документов и скрывает фото',
     (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', photosCount: 3),
-      ];
+      final steps = [_step(id: 'st1', title: 'Поклейка обоев', photosCount: 3)];
       final docs = [_doc(id: 'd1', title: 'Смета.pdf', stepId: 'st1')];
 
       await tester.pumpWidget(_wrap(steps: steps, docs: docs));
@@ -153,42 +145,35 @@ void main() {
     },
   );
 
-  testWidgets(
-    'C. Документы двух разных шагов рендерят два заголовка-группы',
-    (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
-        _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
-      ];
-      final docs = [
-        _doc(id: 'd1', title: 'Смета шаг 1.pdf', stepId: 'st1'),
-        _doc(id: 'd2', title: 'Фото шаг 1.pdf', stepId: 'st1'),
-        _doc(id: 'd3', title: 'Акт шаг 2.pdf', stepId: 'st2'),
-      ];
+  testWidgets('C. Документы двух разных шагов рендерят два заголовка-группы', (
+    tester,
+  ) async {
+    final steps = [
+      _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
+      _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
+    ];
+    final docs = [
+      _doc(id: 'd1', title: 'Смета шаг 1.pdf', stepId: 'st1'),
+      _doc(id: 'd2', title: 'Фото шаг 1.pdf', stepId: 'st1'),
+      _doc(id: 'd3', title: 'Акт шаг 2.pdf', stepId: 'st2'),
+    ];
 
-      await tester.pumpWidget(_wrap(steps: steps, docs: docs));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(_wrap(steps: steps, docs: docs));
+    await tester.pumpAndSettle();
 
-      // Переключаемся на документы.
-      await tester.tap(find.text('Документы'));
-      await tester.pumpAndSettle();
+    // Переключаемся на документы.
+    await tester.tap(find.text('Документы'));
+    await tester.pumpAndSettle();
 
-      // Видим два заголовка групп (uppercase).
-      expect(
-        find.text('ШАГ 1: ПОКЛЕЙКА ОБОЕВ'),
-        findsOneWidget,
-      );
-      expect(
-        find.text('ШАГ 2: ПОКРАСКА СТЕН'),
-        findsOneWidget,
-      );
+    // Видим два заголовка групп (uppercase).
+    expect(find.text('ШАГ 1: ПОКЛЕЙКА ОБОЕВ'), findsOneWidget);
+    expect(find.text('ШАГ 2: ПОКРАСКА СТЕН'), findsOneWidget);
 
-      // Файлы всех групп присутствуют.
-      expect(find.text('Смета шаг 1.pdf'), findsOneWidget);
-      expect(find.text('Фото шаг 1.pdf'), findsOneWidget);
-      expect(find.text('Акт шаг 2.pdf'), findsOneWidget);
-    },
-  );
+    // Файлы всех групп присутствуют.
+    expect(find.text('Смета шаг 1.pdf'), findsOneWidget);
+    expect(find.text('Фото шаг 1.pdf'), findsOneWidget);
+    expect(find.text('Акт шаг 2.pdf'), findsOneWidget);
+  });
 }
 
 /// Стаб для StepsController. Возвращает заранее заданный список без

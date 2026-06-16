@@ -77,15 +77,16 @@ class Expense {
   final DateTime createdAt;
 
   static Expense parse(Map<String, dynamic> json) => Expense(
-        id: json['id'] as String,
-        projectId: json['projectId'] as String,
-        stageId: json['stageId'] as String?,
-        category: ExpenseCategory.fromApi(json['category'] as String?),
-        name: (json['name'] as String?) ?? '',
-        amount: (json['amount'] as num?)?.toInt() ?? 0,
-        comment: json['comment'] as String?,
-        photoKey: json['photoKey'] as String?,
-        createdAt: DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
-            DateTime.now(),
-      );
+    id: json['id'] as String,
+    projectId: json['projectId'] as String,
+    stageId: json['stageId'] as String?,
+    category: ExpenseCategory.fromApi(json['category'] as String?),
+    name: (json['name'] as String?) ?? '',
+    amount: (json['amount'] as num?)?.toInt() ?? 0,
+    comment: json['comment'] as String?,
+    photoKey: json['photoKey'] as String?,
+    createdAt:
+        DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
+        DateTime.now(),
+  );
 }

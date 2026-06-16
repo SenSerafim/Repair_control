@@ -48,7 +48,8 @@ const Map<RepresentativeRight, RightLabel> kRepresentativeRightLabels = {
   ),
   RepresentativeRight.canManageMaterials: RightLabel(
     title: 'Управлять материалами',
-    description: 'Создавать заявки на материалы, отмечать получение, закрывать.',
+    description:
+        'Создавать заявки на материалы, отмечать получение, закрывать.',
   ),
   RepresentativeRight.canManageTools: RightLabel(
     title: 'Управлять инструментом',
@@ -182,11 +183,13 @@ const Map<DomainAction, RightLabel> kRightsRu = {
   ),
   DomainAction.financePaymentCreateAdvance: RightLabel(
     title: 'Отправлять авансы',
-    description: 'Создавать общий аванс из бюджета — бригадиру или напрямую мастеру.',
+    description:
+        'Создавать общий аванс из бюджета — бригадиру или напрямую мастеру.',
   ),
   DomainAction.financePaymentDistribute: RightLabel(
     title: 'Распределять авансы',
-    description: 'Бригадир распределяет свой полученный аванс между мастерами. Представителю не делегируется.',
+    description:
+        'Бригадир распределяет свой полученный аванс между мастерами. Представителю не делегируется.',
   ),
   DomainAction.materialsManage: RightLabel(
     title: 'Управлять материалами',
@@ -207,7 +210,8 @@ const Map<DomainAction, RightLabel> kRightsRu = {
   ),
   DomainAction.toolsAddToProject: RightLabel(
     title: 'Добавлять инструменты в проект',
-    description: 'Создавать новый инструмент в проекте или привязывать из «Моих».',
+    description:
+        'Создавать новый инструмент в проекте или привязывать из «Моих».',
   ),
   DomainAction.toolsClaim: RightLabel(
     title: 'Забирать инструмент',

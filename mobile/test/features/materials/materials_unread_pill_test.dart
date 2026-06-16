@@ -41,9 +41,7 @@ Widget _harness({required List<Override> overrides}) {
       stagesControllerProvider.overrideWith(_StubStages.new),
       ...overrides,
     ],
-    child: const MaterialApp(
-      home: MaterialsListScreen(projectId: 'p1'),
-    ),
+    child: const MaterialApp(home: MaterialsListScreen(projectId: 'p1')),
   );
 }
 
@@ -67,9 +65,7 @@ void main() {
             materialsControllerProvider.overrideWith(
               () => _StubMaterials(items),
             ),
-            materialsLastSeenProvider.overrideWith(
-              () => _StubLastSeen(t0),
-            ),
+            materialsLastSeenProvider.overrideWith(() => _StubLastSeen(t0)),
           ],
         ),
       );
@@ -77,10 +73,7 @@ void main() {
 
       // 5 — ветка mod10>=5 → «5 новых заявок».
       expect(find.text('5 новых заявок'), findsOneWidget);
-      expect(
-        find.byIcon(Icons.notifications_active_rounded),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.notifications_active_rounded), findsOneWidget);
     },
   );
 
@@ -97,9 +90,7 @@ void main() {
     await tester.pumpWidget(
       _harness(
         overrides: [
-          materialsControllerProvider.overrideWith(
-            () => _StubMaterials(items),
-          ),
+          materialsControllerProvider.overrideWith(() => _StubMaterials(items)),
           materialsLastSeenProvider.overrideWith(() => _StubLastSeen(t0)),
         ],
       ),
@@ -128,9 +119,7 @@ void main() {
             materialsControllerProvider.overrideWith(
               () => _StubMaterials(items),
             ),
-            materialsLastSeenProvider.overrideWith(
-              () => _StubLastSeen(t0),
-            ),
+            materialsLastSeenProvider.overrideWith(() => _StubLastSeen(t0)),
           ],
         ),
       );
@@ -138,10 +127,7 @@ void main() {
 
       expect(find.text('1 новых заявок'), findsNothing);
       expect(find.text('1 новая заявка'), findsNothing);
-      expect(
-        find.byIcon(Icons.notifications_active_rounded),
-        findsNothing,
-      );
+      expect(find.byIcon(Icons.notifications_active_rounded), findsNothing);
     },
   );
 
@@ -158,9 +144,7 @@ void main() {
             materialsControllerProvider.overrideWith(
               () => _StubMaterials(items),
             ),
-            materialsLastSeenProvider.overrideWith(
-              () => _StubLastSeen(null),
-            ),
+            materialsLastSeenProvider.overrideWith(() => _StubLastSeen(null)),
           ],
         ),
       );
@@ -168,52 +152,43 @@ void main() {
 
       expect(find.text('1 новых заявок'), findsNothing);
       expect(find.text('1 новая заявка'), findsNothing);
-      expect(
-        find.byIcon(Icons.notifications_active_rounded),
-        findsNothing,
-      );
+      expect(find.byIcon(Icons.notifications_active_rounded), findsNothing);
     },
   );
 
-  testWidgets(
-    'тап по пилюле вызывает markAllSeen → пилюля исчезает',
-    (tester) async {
-      final t0 = DateTime(2026, 6, 1);
-      final items = [
-        _req(id: 'r1', title: 'A', createdAt: t0.add(const Duration(days: 1))),
-        _req(id: 'r2', title: 'B', createdAt: t0.add(const Duration(days: 2))),
-      ];
-      final lastSeenStub = _StubLastSeen(t0);
+  testWidgets('тап по пилюле вызывает markAllSeen → пилюля исчезает', (
+    tester,
+  ) async {
+    final t0 = DateTime(2026, 6, 1);
+    final items = [
+      _req(id: 'r1', title: 'A', createdAt: t0.add(const Duration(days: 1))),
+      _req(id: 'r2', title: 'B', createdAt: t0.add(const Duration(days: 2))),
+    ];
+    final lastSeenStub = _StubLastSeen(t0);
 
-      await tester.pumpWidget(
-        _harness(
-          overrides: [
-            materialsControllerProvider.overrideWith(
-              () => _StubMaterials(items),
-            ),
-            materialsLastSeenProvider.overrideWith(() => lastSeenStub),
-          ],
-        ),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      _harness(
+        overrides: [
+          materialsControllerProvider.overrideWith(() => _StubMaterials(items)),
+          materialsLastSeenProvider.overrideWith(() => lastSeenStub),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      // Бейдж виден до клика.
-      expect(find.text('2 новые заявки'), findsOneWidget);
+    // Бейдж виден до клика.
+    expect(find.text('2 новые заявки'), findsOneWidget);
 
-      await tester.tap(find.text('2 новые заявки'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('2 новые заявки'));
+    await tester.pumpAndSettle();
 
-      // markAllSeen вызван и сохранил timestamp в стаб.
-      expect(lastSeenStub.markAllSeenCallCount, 1);
-      expect(lastSeenStub.writtenValue, isNotNull);
-      // Бейдж пропал.
-      expect(find.text('2 новые заявки'), findsNothing);
-      expect(
-        find.byIcon(Icons.notifications_active_rounded),
-        findsNothing,
-      );
-    },
-  );
+    // markAllSeen вызван и сохранил timestamp в стаб.
+    expect(lastSeenStub.markAllSeenCallCount, 1);
+    expect(lastSeenStub.writtenValue, isNotNull);
+    // Бейдж пропал.
+    expect(find.text('2 новые заявки'), findsNothing);
+    expect(find.byIcon(Icons.notifications_active_rounded), findsNothing);
+  });
 }
 
 class _StubMaterials extends MaterialsController {

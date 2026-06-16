@@ -140,10 +140,7 @@ class _ProjectRepRightsScreenState
           const _SectionLabel(text: 'Просмотр'),
           _RightsGroup(
             children: [
-              const _ReadOnlyRow(
-                title: 'Этапы и шаги',
-                sub: 'Всегда включено',
-              ),
+              const _ReadOnlyRow(title: 'Этапы и шаги', sub: 'Всегда включено'),
               for (final right in viewRights)
                 _RightToggleRow(
                   right: right,

@@ -14,17 +14,16 @@ import 'package:repair_control_api/src/model/decide_approval_dto.dart';
 import 'package:repair_control_api/src/model/resubmit_approval_dto.dart';
 
 class ApprovalsApi {
-
   final Dio _dio;
 
   const ApprovalsApi(this._dio);
 
   /// approvalsControllerApprove
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [decideApprovalDto] 
+  /// * [id]
+  /// * [decideApprovalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +33,7 @@ class ApprovalsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerApprove({ 
+  Future<Response<void>> approvalsControllerApprove({
     required String id,
     required DecideApprovalDto decideApprovalDto,
     CancelToken? cancelToken,
@@ -44,19 +43,18 @@ class ApprovalsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/approvals/{id}/approve'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/approvals/{id}/approve'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -67,13 +65,10 @@ class ApprovalsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(decideApprovalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(decideApprovalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -93,10 +88,10 @@ _bodyData=jsonEncode(decideApprovalDto);
   }
 
   /// approvalsControllerCancel
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -106,7 +101,7 @@ _bodyData=jsonEncode(decideApprovalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerCancel({ 
+  Future<Response<void>> approvalsControllerCancel({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -115,19 +110,18 @@ _bodyData=jsonEncode(decideApprovalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/approvals/{id}/cancel'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/approvals/{id}/cancel'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -146,11 +140,11 @@ _bodyData=jsonEncode(decideApprovalDto);
   }
 
   /// approvalsControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [createApprovalDto] 
+  /// * [projectId]
+  /// * [createApprovalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -160,7 +154,7 @@ _bodyData=jsonEncode(decideApprovalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerCreate({ 
+  Future<Response<void>> approvalsControllerCreate({
     required String projectId,
     required CreateApprovalDto createApprovalDto,
     CancelToken? cancelToken,
@@ -170,19 +164,18 @@ _bodyData=jsonEncode(decideApprovalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/approvals'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/approvals'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -193,13 +186,10 @@ _bodyData=jsonEncode(decideApprovalDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createApprovalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createApprovalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -219,10 +209,10 @@ _bodyData=jsonEncode(createApprovalDto);
   }
 
   /// approvalsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -232,7 +222,7 @@ _bodyData=jsonEncode(createApprovalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerGet({ 
+  Future<Response<void>> approvalsControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -241,19 +231,18 @@ _bodyData=jsonEncode(createApprovalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/approvals/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/approvals/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -272,13 +261,13 @@ _bodyData=jsonEncode(createApprovalDto);
   }
 
   /// approvalsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [scope] 
-  /// * [status] 
-  /// * [addresseeId] 
+  /// * [projectId]
+  /// * [scope]
+  /// * [status]
+  /// * [addresseeId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -288,7 +277,7 @@ _bodyData=jsonEncode(createApprovalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerList({ 
+  Future<Response<void>> approvalsControllerList({
     required String projectId,
     required String scope,
     required String status,
@@ -300,19 +289,18 @@ _bodyData=jsonEncode(createApprovalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/approvals'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/approvals'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -338,11 +326,11 @@ _bodyData=jsonEncode(createApprovalDto);
   }
 
   /// approvalsControllerReject
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [decideApprovalDto] 
+  /// * [id]
+  /// * [decideApprovalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -352,7 +340,7 @@ _bodyData=jsonEncode(createApprovalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerReject({ 
+  Future<Response<void>> approvalsControllerReject({
     required String id,
     required DecideApprovalDto decideApprovalDto,
     CancelToken? cancelToken,
@@ -362,19 +350,18 @@ _bodyData=jsonEncode(createApprovalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/approvals/{id}/reject'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/approvals/{id}/reject'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -385,13 +372,10 @@ _bodyData=jsonEncode(createApprovalDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(decideApprovalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(decideApprovalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -411,11 +395,11 @@ _bodyData=jsonEncode(decideApprovalDto);
   }
 
   /// approvalsControllerResubmit
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [resubmitApprovalDto] 
+  /// * [id]
+  /// * [resubmitApprovalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -425,7 +409,7 @@ _bodyData=jsonEncode(decideApprovalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> approvalsControllerResubmit({ 
+  Future<Response<void>> approvalsControllerResubmit({
     required String id,
     required ResubmitApprovalDto resubmitApprovalDto,
     CancelToken? cancelToken,
@@ -435,19 +419,18 @@ _bodyData=jsonEncode(decideApprovalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/approvals/{id}/resubmit'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/approvals/{id}/resubmit'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -458,13 +441,10 @@ _bodyData=jsonEncode(decideApprovalDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(resubmitApprovalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(resubmitApprovalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -482,5 +462,4 @@ _bodyData=jsonEncode(resubmitApprovalDto);
 
     return _response;
   }
-
 }

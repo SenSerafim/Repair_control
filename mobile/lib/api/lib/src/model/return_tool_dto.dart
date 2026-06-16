@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'return_tool_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'return_tool_dto.g.dart';
 )
 class ReturnToolDto {
   /// Returns a new [ReturnToolDto] instance.
-  ReturnToolDto({
+  ReturnToolDto({required this.returnedQty});
 
-    required  this.returnedQty,
-  });
-
-  @JsonKey(
-    
-    name: r'returnedQty',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'returnedQty', required: true, includeIfNull: false)
   final num returnedQty;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReturnToolDto && other.returnedQty == returnedQty;
 
+  @override
+  int get hashCode => returnedQty.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ReturnToolDto &&
-      other.returnedQty == returnedQty;
-
-    @override
-    int get hashCode =>
-        returnedQty.hashCode;
-
-  factory ReturnToolDto.fromJson(Map<String, dynamic> json) => _$ReturnToolDtoFromJson(json);
+  factory ReturnToolDto.fromJson(Map<String, dynamic> json) =>
+      _$ReturnToolDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ReturnToolDtoToJson(this);
 
@@ -51,6 +37,4 @@ class ReturnToolDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

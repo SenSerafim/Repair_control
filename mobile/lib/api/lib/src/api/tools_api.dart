@@ -15,16 +15,15 @@ import 'package:repair_control_api/src/model/return_tool_dto.dart';
 import 'package:repair_control_api/src/model/update_tool_dto.dart';
 
 class ToolsApi {
-
   final Dio _dio;
 
   const ToolsApi(this._dio);
 
   /// toolsControllerConfirmReceipt
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +33,7 @@ class ToolsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerConfirmReceipt({ 
+  Future<Response<void>> toolsControllerConfirmReceipt({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -43,19 +42,18 @@ class ToolsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/tool-issuances/{id}/confirm'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/tool-issuances/{id}/confirm'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -74,10 +72,10 @@ class ToolsApi {
   }
 
   /// toolsControllerConfirmReturn
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -87,7 +85,7 @@ class ToolsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerConfirmReturn({ 
+  Future<Response<void>> toolsControllerConfirmReturn({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -96,19 +94,18 @@ class ToolsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/tool-issuances/{id}/return-confirm'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/tool-issuances/{id}/return-confirm'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -127,10 +124,10 @@ class ToolsApi {
   }
 
   /// toolsControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createToolDto] 
+  /// * [createToolDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -140,7 +137,7 @@ class ToolsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerCreate({ 
+  Future<Response<void>> toolsControllerCreate({
     required CreateToolDto createToolDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -152,16 +149,10 @@ class ToolsApi {
     final _path = r'/api/me/tools';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -172,13 +163,10 @@ class ToolsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createToolDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createToolDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -198,10 +186,10 @@ _bodyData=jsonEncode(createToolDto);
   }
 
   /// toolsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -211,7 +199,7 @@ _bodyData=jsonEncode(createToolDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerGet({ 
+  Future<Response<void>> toolsControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -220,19 +208,18 @@ _bodyData=jsonEncode(createToolDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/tools/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/tools/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -251,11 +238,11 @@ _bodyData=jsonEncode(createToolDto);
   }
 
   /// toolsControllerIssue
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [issueToolDto] 
+  /// * [projectId]
+  /// * [issueToolDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -265,7 +252,7 @@ _bodyData=jsonEncode(createToolDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerIssue({ 
+  Future<Response<void>> toolsControllerIssue({
     required String projectId,
     required IssueToolDto issueToolDto,
     CancelToken? cancelToken,
@@ -275,19 +262,18 @@ _bodyData=jsonEncode(createToolDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/tool-issuances'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/tool-issuances'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -298,13 +284,10 @@ _bodyData=jsonEncode(createToolDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(issueToolDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(issueToolDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -324,10 +307,10 @@ _bodyData=jsonEncode(issueToolDto);
   }
 
   /// toolsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
+  /// * [projectId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -337,7 +320,7 @@ _bodyData=jsonEncode(issueToolDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerList({ 
+  Future<Response<void>> toolsControllerList({
     required String projectId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -346,19 +329,18 @@ _bodyData=jsonEncode(issueToolDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/tool-issuances'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/tool-issuances'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -377,7 +359,7 @@ _bodyData=jsonEncode(issueToolDto);
   }
 
   /// toolsControllerListMine
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -389,7 +371,7 @@ _bodyData=jsonEncode(issueToolDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerListMine({ 
+  Future<Response<void>> toolsControllerListMine({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -400,16 +382,10 @@ _bodyData=jsonEncode(issueToolDto);
     final _path = r'/api/me/tools';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -428,11 +404,11 @@ _bodyData=jsonEncode(issueToolDto);
   }
 
   /// toolsControllerRequestReturn
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [returnToolDto] 
+  /// * [id]
+  /// * [returnToolDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -442,7 +418,7 @@ _bodyData=jsonEncode(issueToolDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerRequestReturn({ 
+  Future<Response<void>> toolsControllerRequestReturn({
     required String id,
     required ReturnToolDto returnToolDto,
     CancelToken? cancelToken,
@@ -452,19 +428,18 @@ _bodyData=jsonEncode(issueToolDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/tool-issuances/{id}/return'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/tool-issuances/{id}/return'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -475,13 +450,10 @@ _bodyData=jsonEncode(issueToolDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(returnToolDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(returnToolDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -501,11 +473,11 @@ _bodyData=jsonEncode(returnToolDto);
   }
 
   /// toolsControllerUpdate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [updateToolDto] 
+  /// * [id]
+  /// * [updateToolDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -515,7 +487,7 @@ _bodyData=jsonEncode(returnToolDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> toolsControllerUpdate({ 
+  Future<Response<void>> toolsControllerUpdate({
     required String id,
     required UpdateToolDto updateToolDto,
     CancelToken? cancelToken,
@@ -525,19 +497,18 @@ _bodyData=jsonEncode(returnToolDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/tools/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/tools/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -548,13 +519,10 @@ _bodyData=jsonEncode(returnToolDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateToolDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateToolDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -572,5 +540,4 @@ _bodyData=jsonEncode(updateToolDto);
 
     return _response;
   }
-
 }

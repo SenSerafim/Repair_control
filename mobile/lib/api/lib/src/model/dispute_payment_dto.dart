@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'dispute_payment_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'dispute_payment_dto.g.dart';
 )
 class DisputePaymentDto {
   /// Returns a new [DisputePaymentDto] instance.
-  DisputePaymentDto({
+  DisputePaymentDto({required this.reason});
 
-    required  this.reason,
-  });
-
-  @JsonKey(
-    
-    name: r'reason',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reason', required: true, includeIfNull: false)
   final String reason;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DisputePaymentDto && other.reason == reason;
 
+  @override
+  int get hashCode => reason.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is DisputePaymentDto &&
-      other.reason == reason;
-
-    @override
-    int get hashCode =>
-        reason.hashCode;
-
-  factory DisputePaymentDto.fromJson(Map<String, dynamic> json) => _$DisputePaymentDtoFromJson(json);
+  factory DisputePaymentDto.fromJson(Map<String, dynamic> json) =>
+      _$DisputePaymentDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$DisputePaymentDtoToJson(this);
 
@@ -51,6 +37,4 @@ class DisputePaymentDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

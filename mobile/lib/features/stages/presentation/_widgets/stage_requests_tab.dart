@@ -42,8 +42,7 @@ class StageRequestsTab extends ConsumerWidget {
         return AppErrorState(
           title: 'Не удалось загрузить заявки',
           subtitle: subtitle,
-          onRetry: () =>
-              ref.invalidate(materialsControllerProvider(projectId)),
+          onRetry: () => ref.invalidate(materialsControllerProvider(projectId)),
         );
       },
       data: (items) {
@@ -51,8 +50,7 @@ class StageRequestsTab extends ConsumerWidget {
         if (filtered.isEmpty) {
           return const AppEmptyState(
             title: 'Нет заявок на этом этапе',
-            subtitle:
-                'Создайте заявку с экрана «Заявки проекта».',
+            subtitle: 'Создайте заявку с экрана «Заявки проекта».',
             icon: Icons.inventory_2_outlined,
           );
         }
@@ -63,8 +61,7 @@ class StageRequestsTab extends ConsumerWidget {
           child: ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.x16),
             itemCount: filtered.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.x10),
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x10),
             itemBuilder: (context, i) {
               final r = filtered[i];
               return MaterialCard(

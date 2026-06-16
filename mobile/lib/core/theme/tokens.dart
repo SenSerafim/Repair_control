@@ -139,115 +139,47 @@ class AppShadows {
   /// Лёгкая, для карточек списков. 3-слойная: подложка + бренд-тинт +
   /// далёкая дымка — тактильная глубина без явных линий.
   static const List<BoxShadow> sh1 = [
-    BoxShadow(
-      color: Color(0x0A0D1229),
-      offset: Offset(0, 1),
-      blurRadius: 2,
-    ),
-    BoxShadow(
-      color: Color(0x0D4F6EF7),
-      offset: Offset(0, 2),
-      blurRadius: 8,
-    ),
-    BoxShadow(
-      color: Color(0x0A0D1229),
-      offset: Offset(0, 8),
-      blurRadius: 20,
-    ),
+    BoxShadow(color: Color(0x0A0D1229), offset: Offset(0, 1), blurRadius: 2),
+    BoxShadow(color: Color(0x0D4F6EF7), offset: Offset(0, 2), blurRadius: 8),
+    BoxShadow(color: Color(0x0A0D1229), offset: Offset(0, 8), blurRadius: 20),
   ];
 
   /// Средняя, для инпутов / elevated.
   static const List<BoxShadow> sh2 = [
-    BoxShadow(
-      color: Color(0x0F0D1229),
-      offset: Offset(0, 2),
-      blurRadius: 6,
-    ),
-    BoxShadow(
-      color: Color(0x1A4F6EF7),
-      offset: Offset(0, 8),
-      blurRadius: 22,
-    ),
-    BoxShadow(
-      color: Color(0x0F0D1229),
-      offset: Offset(0, 18),
-      blurRadius: 40,
-    ),
+    BoxShadow(color: Color(0x0F0D1229), offset: Offset(0, 2), blurRadius: 6),
+    BoxShadow(color: Color(0x1A4F6EF7), offset: Offset(0, 8), blurRadius: 22),
+    BoxShadow(color: Color(0x0F0D1229), offset: Offset(0, 18), blurRadius: 40),
   ];
 
   /// Глубокая, для модалок и тостов.
   static const List<BoxShadow> sh3 = [
-    BoxShadow(
-      color: Color(0x1A0D1229),
-      offset: Offset(0, 4),
-      blurRadius: 12,
-    ),
-    BoxShadow(
-      color: Color(0x294F6EF7),
-      offset: Offset(0, 18),
-      blurRadius: 38,
-    ),
-    BoxShadow(
-      color: Color(0x1F0D1229),
-      offset: Offset(0, 36),
-      blurRadius: 72,
-    ),
+    BoxShadow(color: Color(0x1A0D1229), offset: Offset(0, 4), blurRadius: 12),
+    BoxShadow(color: Color(0x294F6EF7), offset: Offset(0, 18), blurRadius: 38),
+    BoxShadow(color: Color(0x1F0D1229), offset: Offset(0, 36), blurRadius: 72),
   ];
 
   /// Бренд-тень под активные кнопки. 2-слойная: насыщ. glow + ближняя тень.
   static const List<BoxShadow> shBlue = [
-    BoxShadow(
-      color: Color(0x6B4F6EF7),
-      offset: Offset(0, 8),
-      blurRadius: 24,
-    ),
-    BoxShadow(
-      color: Color(0x384F6EF7),
-      offset: Offset(0, 2),
-      blurRadius: 6,
-    ),
+    BoxShadow(color: Color(0x6B4F6EF7), offset: Offset(0, 8), blurRadius: 24),
+    BoxShadow(color: Color(0x384F6EF7), offset: Offset(0, 2), blurRadius: 6),
   ];
 
   /// Успех.
   static const List<BoxShadow> shGreen = [
-    BoxShadow(
-      color: Color(0x52059669),
-      offset: Offset(0, 6),
-      blurRadius: 20,
-    ),
-    BoxShadow(
-      color: Color(0x2E059669),
-      offset: Offset(0, 2),
-      blurRadius: 4,
-    ),
+    BoxShadow(color: Color(0x52059669), offset: Offset(0, 6), blurRadius: 20),
+    BoxShadow(color: Color(0x2E059669), offset: Offset(0, 2), blurRadius: 4),
   ];
 
   /// Опасность.
   static const List<BoxShadow> shRed = [
-    BoxShadow(
-      color: Color(0x47DC2626),
-      offset: Offset(0, 6),
-      blurRadius: 20,
-    ),
-    BoxShadow(
-      color: Color(0x29DC2626),
-      offset: Offset(0, 2),
-      blurRadius: 4,
-    ),
+    BoxShadow(color: Color(0x47DC2626), offset: Offset(0, 6), blurRadius: 20),
+    BoxShadow(color: Color(0x29DC2626), offset: Offset(0, 2), blurRadius: 4),
   ];
 
   /// Тень под аватаром hero (двухслойная — насыщ. бренд + тёмная подложка).
   static const List<BoxShadow> avatarHero = [
-    BoxShadow(
-      color: Color(0x754F6EF7),
-      offset: Offset(0, 12),
-      blurRadius: 32,
-    ),
-    BoxShadow(
-      color: Color(0x4D000000),
-      offset: Offset(0, 4),
-      blurRadius: 10,
-    ),
+    BoxShadow(color: Color(0x754F6EF7), offset: Offset(0, 12), blurRadius: 32),
+    BoxShadow(color: Color(0x4D000000), offset: Offset(0, 4), blurRadius: 10),
   ];
 
   // ──────────────────────────────────────────────────────────────────
@@ -301,22 +233,14 @@ class AppShadows {
   static const List<BoxShadow> haloGreen = [
     BoxShadow(color: Color(0x1A10B981), spreadRadius: 8),
     BoxShadow(color: Color(0x0D10B981), spreadRadius: 16),
-    BoxShadow(
-      color: Color(0x2E059669),
-      offset: Offset(0, 12),
-      blurRadius: 28,
-    ),
+    BoxShadow(color: Color(0x2E059669), offset: Offset(0, 12), blurRadius: 28),
   ];
 
   /// Двойное halo-кольцо вокруг error-circle (d-rejected).
   static const List<BoxShadow> haloRed = [
     BoxShadow(color: Color(0x1ADC2626), spreadRadius: 8),
     BoxShadow(color: Color(0x0DDC2626), spreadRadius: 16),
-    BoxShadow(
-      color: Color(0x2EDC2626),
-      offset: Offset(0, 12),
-      blurRadius: 28,
-    ),
+    BoxShadow(color: Color(0x2EDC2626), offset: Offset(0, 12), blurRadius: 28),
   ];
 
   // ──────────────────────────────────────────────────────────────────

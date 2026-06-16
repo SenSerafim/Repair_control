@@ -45,7 +45,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     try {
       final video = VideoPlayerController.networkUrl(Uri.parse(widget.url));
       await video.initialize();
-      final ratio = video.value.aspectRatio == 0 ? 16 / 9 : video.value.aspectRatio;
+      final ratio = video.value.aspectRatio == 0
+          ? 16 / 9
+          : video.value.aspectRatio;
       final chewie = ChewieController(
         videoPlayerController: video,
         autoPlay: true,

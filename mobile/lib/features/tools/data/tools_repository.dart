@@ -66,7 +66,8 @@ class ToolsRepository {
         if (status != null) 'status': status.apiValue,
         if (storageLocation != null && storageLocation.isNotEmpty)
           'storageLocation': storageLocation,
-        if (assignedEmployeeId != null) 'assignedEmployeeId': assignedEmployeeId,
+        if (assignedEmployeeId != null)
+          'assignedEmployeeId': assignedEmployeeId,
         if (purchaseDate != null)
           'purchaseDate': purchaseDate.toUtc().toIso8601String(),
         if (condition != null) 'condition': condition.apiValue,
@@ -96,7 +97,8 @@ class ToolsRepository {
         if (serial != null) 'serial': serial,
         if (status != null) 'status': status.apiValue,
         if (storageLocation != null) 'storageLocation': storageLocation,
-        if (assignedEmployeeId != null) 'assignedEmployeeId': assignedEmployeeId,
+        if (assignedEmployeeId != null)
+          'assignedEmployeeId': assignedEmployeeId,
         if (purchaseDate != null)
           'purchaseDate': purchaseDate.toUtc().toIso8601String(),
         if (condition != null) 'condition': condition.apiValue,
@@ -130,7 +132,9 @@ class ToolsRepository {
 
   Future<List<ToolItem>> listProjectTools(String projectId) => _call(() async {
     final r = await _dio.get<List<dynamic>>('/api/projects/$projectId/tools');
-    return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
+    return r.data!
+        .map((e) => ToolItem.parse(e as Map<String, dynamic>))
+        .toList();
   });
 
   /// Создать новый инструмент сразу в проекте. Любая роль member-а.
@@ -175,7 +179,9 @@ class ToolsRepository {
         if (responsibleUserId != null) 'responsibleUserId': responsibleUserId,
       },
     );
-    return r.data!.map((e) => ToolItem.parse(e as Map<String, dynamic>)).toList();
+    return r.data!
+        .map((e) => ToolItem.parse(e as Map<String, dynamic>))
+        .toList();
   });
 
   /// Открепить инструмент от проекта (только owner).
@@ -189,20 +195,24 @@ class ToolsRepository {
   // ─────────── Custody ───────────
 
   /// Self-claim: текущий пользователь становится holder-ом.
-  Future<ToolItem> claim({required String toolId, String? note}) => _call(() async {
-    final r = await _dio.post<Map<String, dynamic>>(
-      '/api/tools/$toolId/claim',
-      data: {if (note != null && note.isNotEmpty) 'note': note},
-    );
-    return ToolItem.parse(r.data!);
-  });
+  Future<ToolItem> claim({required String toolId, String? note}) =>
+      _call(() async {
+        final r = await _dio.post<Map<String, dynamic>>(
+          '/api/tools/$toolId/claim',
+          data: {if (note != null && note.isNotEmpty) 'note': note},
+        );
+        return ToolItem.parse(r.data!);
+      });
 
-  Future<List<ToolCustodyEvent>> custodyHistory(String toolId) => _call(() async {
-    final r = await _dio.get<List<dynamic>>('/api/tools/$toolId/custody-history');
-    return r.data!
-        .map((e) => ToolCustodyEvent.parse(e as Map<String, dynamic>))
-        .toList();
-  });
+  Future<List<ToolCustodyEvent>> custodyHistory(String toolId) =>
+      _call(() async {
+        final r = await _dio.get<List<dynamic>>(
+          '/api/tools/$toolId/custody-history',
+        );
+        return r.data!
+            .map((e) => ToolCustodyEvent.parse(e as Map<String, dynamic>))
+            .toList();
+      });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

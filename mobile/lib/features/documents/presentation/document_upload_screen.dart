@@ -464,10 +464,10 @@ class _Dropzone extends StatelessWidget {
     final icon = tooLarge
         ? Icons.error_outline_rounded
         : !selected
-            ? Icons.upload_file_rounded
-            : _isVideo
-                ? Icons.videocam_rounded
-                : _iconForMime(mimeType ?? '');
+        ? Icons.upload_file_rounded
+        : _isVideo
+        ? Icons.videocam_rounded
+        : _iconForMime(mimeType ?? '');
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -566,8 +566,8 @@ class _UploadProgressPanel extends StatelessWidget {
                   pct == null
                       ? 'Загружаем…'
                       : pct >= 100
-                          ? 'Завершаем загрузку…'
-                          : 'Загрузка $pct%',
+                      ? 'Завершаем загрузку…'
+                      : 'Загрузка $pct%',
                   style: AppTextStyles.subtitle.copyWith(
                     color: AppColors.brand,
                   ),
@@ -715,9 +715,7 @@ class _DateField extends StatelessWidget {
                 formatted,
                 style: AppTextStyles.subtitle.copyWith(
                   color: value == null ? AppColors.n400 : AppColors.n800,
-                  fontWeight: value == null
-                      ? FontWeight.w500
-                      : FontWeight.w700,
+                  fontWeight: value == null ? FontWeight.w500 : FontWeight.w700,
                 ),
               ),
             ),

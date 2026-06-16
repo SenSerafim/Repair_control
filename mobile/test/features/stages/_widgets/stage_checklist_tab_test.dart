@@ -86,54 +86,52 @@ void main() {
     await initializeDateFormatting('ru');
   });
 
-  testWidgets(
-    'A. Drag-режим: ReorderableListView рендерится, виден add-CTA',
-    (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
-        _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
-        _step(id: 'st3', title: 'Укладка плитки', orderIndex: 2),
-      ];
-      await tester.pumpWidget(
-        _wrap(const SizedBox.shrink(), steps: steps, onAddStep: () {}),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('A. Drag-режим: ReorderableListView рендерится, виден add-CTA', (
+    tester,
+  ) async {
+    final steps = [
+      _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
+      _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
+      _step(id: 'st3', title: 'Укладка плитки', orderIndex: 2),
+    ];
+    await tester.pumpWidget(
+      _wrap(const SizedBox.shrink(), steps: steps, onAddStep: () {}),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.byType(ReorderableListView), findsOneWidget);
-      // Не упало в plain-режим, ListView.builder отсутствует на верхнем уровне.
-      expect(find.byType(ChecklistStepRow), findsNWidgets(3));
-      expect(find.text('Поклейка обоев'), findsOneWidget);
-      expect(find.text('Покраска стен'), findsOneWidget);
-      expect(find.text('Укладка плитки'), findsOneWidget);
-      // Кнопка «Добавить шаг» отрендерилась (footer Column в drag-режиме).
-      expect(find.text('Добавить шаг'), findsOneWidget);
-    },
-  );
+    expect(find.byType(ReorderableListView), findsOneWidget);
+    // Не упало в plain-режим, ListView.builder отсутствует на верхнем уровне.
+    expect(find.byType(ChecklistStepRow), findsNWidgets(3));
+    expect(find.text('Поклейка обоев'), findsOneWidget);
+    expect(find.text('Покраска стен'), findsOneWidget);
+    expect(find.text('Укладка плитки'), findsOneWidget);
+    // Кнопка «Добавить шаг» отрендерилась (footer Column в drag-режиме).
+    expect(find.text('Добавить шаг'), findsOneWidget);
+  });
 
-  testWidgets(
-    'B. Поиск фильтрует шаги по title (case-insensitive)',
-    (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
-        _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
-        _step(id: 'st3', title: 'Укладка плитки', orderIndex: 2),
-      ];
-      await tester.pumpWidget(
-        _wrap(const SizedBox.shrink(), steps: steps, onAddStep: () {}),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('B. Поиск фильтрует шаги по title (case-insensitive)', (
+    tester,
+  ) async {
+    final steps = [
+      _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
+      _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
+      _step(id: 'st3', title: 'Укладка плитки', orderIndex: 2),
+    ];
+    await tester.pumpWidget(
+      _wrap(const SizedBox.shrink(), steps: steps, onAddStep: () {}),
+    );
+    await tester.pumpAndSettle();
 
-      // Ввод "ПОКЛЕЙ" в UPPER — case-insensitive contains должен сматчить
-      // "Поклейка обоев" и больше ничего.
-      await tester.enterText(find.byType(TextField), 'ПОКЛЕЙ');
-      await tester.pumpAndSettle();
+    // Ввод "ПОКЛЕЙ" в UPPER — case-insensitive contains должен сматчить
+    // "Поклейка обоев" и больше ничего.
+    await tester.enterText(find.byType(TextField), 'ПОКЛЕЙ');
+    await tester.pumpAndSettle();
 
-      expect(find.byType(ChecklistStepRow), findsOneWidget);
-      expect(find.text('Поклейка обоев'), findsOneWidget);
-      expect(find.text('Покраска стен'), findsNothing);
-      expect(find.text('Укладка плитки'), findsNothing);
-    },
-  );
+    expect(find.byType(ChecklistStepRow), findsOneWidget);
+    expect(find.text('Поклейка обоев'), findsOneWidget);
+    expect(find.text('Покраска стен'), findsNothing);
+    expect(find.text('Укладка плитки'), findsNothing);
+  });
 
   testWidgets(
     'C. При активном поиске ReorderableListView заменяется на обычный ListView',
@@ -160,31 +158,26 @@ void main() {
     },
   );
 
-  testWidgets(
-    'D. Без права step.manage (onAddStep==null) drag отключён',
-    (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
-        _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
-      ];
-      await tester.pumpWidget(
-        _wrap(const SizedBox.shrink(), steps: steps),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('D. Без права step.manage (onAddStep==null) drag отключён', (
+    tester,
+  ) async {
+    final steps = [
+      _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
+      _step(id: 'st2', title: 'Покраска стен', orderIndex: 1),
+    ];
+    await tester.pumpWidget(_wrap(const SizedBox.shrink(), steps: steps));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(ReorderableListView), findsNothing);
-      expect(find.byType(ChecklistStepRow), findsNWidgets(2));
-      // Add-CTA не показывается.
-      expect(find.text('Добавить шаг'), findsNothing);
-    },
-  );
+    expect(find.byType(ReorderableListView), findsNothing);
+    expect(find.byType(ChecklistStepRow), findsNWidgets(2));
+    // Add-CTA не показывается.
+    expect(find.text('Добавить шаг'), findsNothing);
+  });
 
   testWidgets(
     'Empty-state с шагами + поиск без совпадений → «Ничего не найдено»',
     (tester) async {
-      final steps = [
-        _step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0),
-      ];
+      final steps = [_step(id: 'st1', title: 'Поклейка обоев', orderIndex: 0)];
       await tester.pumpWidget(
         _wrap(const SizedBox.shrink(), steps: steps, onAddStep: () {}),
       );

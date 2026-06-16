@@ -84,8 +84,9 @@ class StepReportDraft {
   final String? howDid;
 }
 
-final stepReportDraftProvider =
-    StateProvider.family<StepReportDraft, String>((_, __) => const StepReportDraft());
+final stepReportDraftProvider = StateProvider.family<StepReportDraft, String>(
+  (_, __) => const StepReportDraft(),
+);
 
 class StepDetailController
     extends FamilyAsyncNotifier<StepDetailData, StepDetailKey> {
@@ -248,10 +249,7 @@ class StepDetailController
   /// Обновление полей отчёта «что/как делал». Результат применяется in-place,
   /// чтобы экран не мигал AppLoadingState; sibling-провайдер шагов этапа
   /// получает invalidate — у списка обновится `hasReport`-флажок.
-  Future<AuthFailure?> updateReport({
-    String? whatDid,
-    String? howDid,
-  }) async {
+  Future<AuthFailure?> updateReport({String? whatDid, String? howDid}) async {
     try {
       final updated = await _repo.updateStep(
         stepId: arg.stepId,

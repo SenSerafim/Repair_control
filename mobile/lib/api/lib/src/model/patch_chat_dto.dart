@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'patch_chat_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,26 @@ part 'patch_chat_dto.g.dart';
 )
 class PatchChatDto {
   /// Returns a new [PatchChatDto] instance.
-  PatchChatDto({
+  PatchChatDto({this.title, this.visibleToCustomer});
 
-     this.title,
-
-     this.visibleToCustomer,
-  });
-
-  @JsonKey(
-    
-    name: r'title',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'title', required: false, includeIfNull: false)
   final String? title;
 
-
-
-  @JsonKey(
-    
-    name: r'visibleToCustomer',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'visibleToCustomer', required: false, includeIfNull: false)
   final bool? visibleToCustomer;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PatchChatDto &&
+          other.title == title &&
+          other.visibleToCustomer == visibleToCustomer;
 
+  @override
+  int get hashCode => title.hashCode + visibleToCustomer.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is PatchChatDto &&
-      other.title == title &&
-      other.visibleToCustomer == visibleToCustomer;
-
-    @override
-    int get hashCode =>
-        title.hashCode +
-        visibleToCustomer.hashCode;
-
-  factory PatchChatDto.fromJson(Map<String, dynamic> json) => _$PatchChatDtoFromJson(json);
+  factory PatchChatDto.fromJson(Map<String, dynamic> json) =>
+      _$PatchChatDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$PatchChatDtoToJson(this);
 
@@ -67,6 +42,4 @@ class PatchChatDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

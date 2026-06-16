@@ -129,7 +129,8 @@ class BudgetScreen extends ConsumerWidget {
           // остаётся доступ к табам «Выплаты»/«Материалы»/«История» (туда
           // могут попасть распределения и самозакупы, даже если шапка пустая).
           // Иначе для всех не-заказчиков экран вырождался в одну заглушку.
-          final fullyEmpty = canEditBudget &&
+          final fullyEmpty =
+              canEditBudget &&
               b.total.planned == 0 &&
               b.total.spent == 0 &&
               b.stages.isEmpty;
@@ -171,8 +172,9 @@ class BudgetScreen extends ConsumerWidget {
                         isForeman: b.noStageBudget,
                         canEdit: canEditBudget,
                         onEdit: canEditBudget
-                            ? () => context
-                                  .push(AppRoutes.projectEditWith(projectId))
+                            ? () => context.push(
+                                AppRoutes.projectEditWith(projectId),
+                              )
                             : null,
                       ),
                     ),
@@ -250,9 +252,7 @@ class _Header extends ConsumerWidget {
     final wallet = budget.viewerKind == BudgetViewerKind.foreman
         ? ref
               .watch(
-                moneyFlowFilteredProvider(
-                  MoneyFlowQuery(projectId: projectId),
-                ),
+                moneyFlowFilteredProvider(MoneyFlowQuery(projectId: projectId)),
               )
               .value
               ?.wallet
@@ -296,10 +296,7 @@ class _Header extends ConsumerWidget {
 /// Таб «Выплаты»: sub-summary chip + список выплат + (опц.) кнопка-создания.
 /// Возвращает Column — встраивается в общий SingleChildScrollView страницы.
 class _PaymentsTab extends ConsumerStatefulWidget {
-  const _PaymentsTab({
-    required this.projectId,
-    required this.canCreatePayment,
-  });
+  const _PaymentsTab({required this.projectId, required this.canCreatePayment});
 
   final String projectId;
   final bool canCreatePayment;
@@ -339,6 +336,7 @@ class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
       final ln = u.lastName.isEmpty ? '' : ' ${u.lastName[0]}.';
       return '${u.firstName}$ln'.trim();
     }
+
     return paymentsAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.x40),
@@ -374,9 +372,7 @@ class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
             const SizedBox(height: AppSpacing.x10),
             if (stages.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.x16,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
                 child: AppFilterPillBar(
                   key: const ValueKey('budget_payments_stage_filter'),
                   padding: EdgeInsets.zero,
@@ -395,10 +391,7 @@ class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
             const SizedBox(height: AppSpacing.x10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-              child: MoneySummaryChip(
-                title: 'Итого выплат',
-                total: total,
-              ),
+              child: MoneySummaryChip(title: 'Итого выплат', total: total),
             ),
             if (pendingExtras.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x10),
@@ -447,7 +440,6 @@ class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
       },
     );
   }
-
 }
 
 class _PendingExtrasBanner extends StatelessWidget {
@@ -590,35 +582,37 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
         onRetry: () => ref.invalidate(moneyFlowFilteredProvider(query)),
       ),
       data: (flow) {
-        final allRows = filterMaterialPurchasesByStage(
-              rows: flow.materialPurchases,
-              stageByRequestId: reqStageById,
-              activeStageId: _stageId,
-            )
-            .map(
-              (m) => BudgetMaterialsRow(
-                title: m.title,
-                subtitle: _materialSubtitle(m),
-                qtyLabel: '${m.itemCount}',
-                amount: m.totalSpent,
-              ),
-            )
-            .toList();
-        final spRows = filterSelfpurchasesByStage(
-              rows: flow.approvedSelfpurchases,
-              stageBySelfpurchaseId: spStageById,
-              activeStageId: _stageId,
-            )
-            .map(
-              (sp) => BudgetMaterialsRow(
-                title: 'Самозакуп: ${sp.byUserName}',
-                subtitle: sp.comment ?? 'самозакуп',
-                qtyLabel: '—',
-                amount: sp.amount,
-                highlight: true,
-              ),
-            )
-            .toList();
+        final allRows =
+            filterMaterialPurchasesByStage(
+                  rows: flow.materialPurchases,
+                  stageByRequestId: reqStageById,
+                  activeStageId: _stageId,
+                )
+                .map(
+                  (m) => BudgetMaterialsRow(
+                    title: m.title,
+                    subtitle: _materialSubtitle(m),
+                    qtyLabel: '${m.itemCount}',
+                    amount: m.totalSpent,
+                  ),
+                )
+                .toList();
+        final spRows =
+            filterSelfpurchasesByStage(
+                  rows: flow.approvedSelfpurchases,
+                  stageBySelfpurchaseId: spStageById,
+                  activeStageId: _stageId,
+                )
+                .map(
+                  (sp) => BudgetMaterialsRow(
+                    title: 'Самозакуп: ${sp.byUserName}',
+                    subtitle: sp.comment ?? 'самозакуп',
+                    qtyLabel: '—',
+                    amount: sp.amount,
+                    highlight: true,
+                  ),
+                )
+                .toList();
         final rows = [...allRows, ...spRows]
             .where(
               (r) =>
@@ -630,16 +624,16 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
         final pendingFiltered = _stageId == 'all'
             ? flow.pendingMaterials
             : flow.pendingMaterials
-                .where((m) => reqStageById[m.requestId] == _stageId)
-                .toList();
+                  .where((m) => reqStageById[m.requestId] == _stageId)
+                  .toList();
         final pending = pendingFiltered
             .where(
               (m) =>
                   _search.isEmpty ||
                   m.title.toLowerCase().contains(_search.toLowerCase()) ||
-                  m.requestedByName
-                      .toLowerCase()
-                      .contains(_search.toLowerCase()),
+                  m.requestedByName.toLowerCase().contains(
+                    _search.toLowerCase(),
+                  ),
             )
             .toList();
         return Padding(
@@ -647,132 +641,133 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // Search
-            Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: AppColors.n0,
-                border: Border.all(color: AppColors.n200, width: 1.5),
-                borderRadius: BorderRadius.circular(AppRadius.r12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.search_rounded,
-                    size: 16,
-                    color: AppColors.n400,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      onChanged: (v) => setState(() => _search = v),
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Поиск по материалам',
-                        hintStyle: AppTextStyles.caption.copyWith(
-                          color: AppColors.n400,
+              // Search
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.n0,
+                  border: Border.all(color: AppColors.n200, width: 1.5),
+                  borderRadius: BorderRadius.circular(AppRadius.r12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.search_rounded,
+                      size: 16,
+                      color: AppColors.n400,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        onChanged: (v) => setState(() => _search = v),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Поиск по материалам',
+                          hintStyle: AppTextStyles.caption.copyWith(
+                            color: AppColors.n400,
+                          ),
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              // NEWFIX Task 1.5: горизонтальный фильтр-чипсы по этапам.
+              // 'all' + по чипсу на этап. Если этапов нет — бар отрисуется
+              // только с «Все этапы» (никаких пустых состояний).
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.x10),
+                child: AppFilterPillBar(
+                  key: const ValueKey('budget_materials_stage_filter'),
+                  padding: EdgeInsets.zero,
+                  activeId: _stageId,
+                  onSelect: (id) => setState(() => _stageId = id),
+                  chips: [
+                    const AppFilterPillSpec(id: 'all', label: 'Все этапы'),
+                    for (final s in stages)
+                      AppFilterPillSpec(
+                        id: s.id,
+                        label: 'Этап ${s.orderIndex + 1}',
+                      ),
+                  ],
+                ),
+              ),
+              // Date-range chip
+              Row(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    onTap: () async {
+                      final picked = await showDateRangeSheet(
+                        context,
+                        initial: range,
+                      );
+                      if (picked != null) {
+                        ref.read(_materialsRangeProvider.notifier).state =
+                            picked;
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.n0,
+                        border: Border.all(color: AppColors.n200, width: 1.5),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 12,
+                            color: AppColors.n600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            range.label(),
+                            style: AppTextStyles.tiny.copyWith(
+                              color: AppColors.n600,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.x10),
-            // NEWFIX Task 1.5: горизонтальный фильтр-чипсы по этапам.
-            // 'all' + по чипсу на этап. Если этапов нет — бар отрисуется
-            // только с «Все этапы» (никаких пустых состояний).
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.x10),
-              child: AppFilterPillBar(
-                key: const ValueKey('budget_materials_stage_filter'),
-                padding: EdgeInsets.zero,
-                activeId: _stageId,
-                onSelect: (id) => setState(() => _stageId = id),
-                chips: [
-                  const AppFilterPillSpec(id: 'all', label: 'Все этапы'),
-                  for (final s in stages)
-                    AppFilterPillSpec(
-                      id: s.id,
-                      label: 'Этап ${s.orderIndex + 1}',
-                    ),
-                ],
-              ),
-            ),
-            // Date-range chip
-            Row(
-              children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  onTap: () async {
-                    final picked = await showDateRangeSheet(
-                      context,
-                      initial: range,
-                    );
-                    if (picked != null) {
-                      ref.read(_materialsRangeProvider.notifier).state = picked;
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.n0,
-                      border: Border.all(color: AppColors.n200, width: 1.5),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_rounded,
-                          size: 12,
-                          color: AppColors.n600,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          range.label(),
-                          style: AppTextStyles.tiny.copyWith(
-                            color: AppColors.n600,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(height: AppSpacing.x10),
+              if (pending.isNotEmpty) ...[
+                _PendingMaterialsSection(items: pending),
+                const SizedBox(height: AppSpacing.x12),
               ],
-            ),
-            const SizedBox(height: AppSpacing.x10),
-            if (pending.isNotEmpty) ...[
-              _PendingMaterialsSection(items: pending),
-              const SizedBox(height: AppSpacing.x12),
+              if (rows.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.x40),
+                  child: Text(
+                    pending.isEmpty
+                        ? 'Нет покупок за выбранный период'
+                        : 'Купленных материалов пока нет',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.copyWith(color: AppColors.n400),
+                  ),
+                )
+              else
+                BudgetMaterialsTable(rows: rows),
+              const SizedBox(height: AppSpacing.x16),
+              AppButton(
+                label: 'Скачать отчёт по материалам',
+                icon: Icons.file_download_outlined,
+                variant: AppButtonVariant.secondary,
+                onPressed: () => _showExportSoon(context),
+              ),
+              const SizedBox(height: AppSpacing.x24),
             ],
-            if (rows.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.x40),
-                child: Text(
-                  pending.isEmpty
-                      ? 'Нет покупок за выбранный период'
-                      : 'Купленных материалов пока нет',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(color: AppColors.n400),
-                ),
-              )
-            else
-              BudgetMaterialsTable(rows: rows),
-            const SizedBox(height: AppSpacing.x16),
-            AppButton(
-              label: 'Скачать отчёт по материалам',
-              icon: Icons.file_download_outlined,
-              variant: AppButtonVariant.secondary,
-              onPressed: () => _showExportSoon(context),
-            ),
-            const SizedBox(height: AppSpacing.x24),
-          ],
           ),
         );
       },
@@ -1091,10 +1086,10 @@ class _EarningTile extends StatelessWidget {
     final payerLine = payer.isEmpty && role.isEmpty
         ? null
         : payer.isEmpty
-            ? 'Выплатил $role'
-            : role.isEmpty
-                ? 'Выплатил $payer'
-                : 'Выплатил $role · $payer';
+        ? 'Выплатил $role'
+        : role.isEmpty
+        ? 'Выплатил $payer'
+        : 'Выплатил $role · $payer';
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x14,
@@ -1147,9 +1142,7 @@ class _EarningTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   _fmtDate(e.createdAt),
-                  style: AppTextStyles.tiny.copyWith(
-                    color: AppColors.n500,
-                  ),
+                  style: AppTextStyles.tiny.copyWith(color: AppColors.n500),
                 ),
               ],
             ),
@@ -1182,10 +1175,7 @@ class _MasterProjectFlowSection extends StatelessWidget {
         children: [
           _SectionTitle(label: 'Движение денег в проекте'),
           SizedBox(height: AppSpacing.x10),
-          SizedBox(
-            height: 80,
-            child: AppLoadingState(),
-          ),
+          SizedBox(height: 80, child: AppLoadingState()),
         ],
       ),
       error: (_, __) => const SizedBox.shrink(),
@@ -1193,43 +1183,51 @@ class _MasterProjectFlowSection extends StatelessWidget {
         final flow = rawFlow as MoneyFlow;
         final rows = <_HistoryRow>[];
         for (final a in flow.advances) {
-          rows.add(_HistoryRow(
-            kind: _HistoryKind.advance,
-            title: 'Аванс → ${a.toUserName}',
-            subtitle: 'аванс от заказчика',
-            amount: a.amount,
-            when: a.createdAt,
-          ));
+          rows.add(
+            _HistoryRow(
+              kind: _HistoryKind.advance,
+              title: 'Аванс → ${a.toUserName}',
+              subtitle: 'аванс от заказчика',
+              amount: a.amount,
+              when: a.createdAt,
+            ),
+          );
         }
         for (final d in flow.distributions) {
-          rows.add(_HistoryRow(
-            kind: _HistoryKind.distribution,
-            title: 'Распределение → ${d.toUserName}',
-            subtitle: 'бригадир распределил аванс',
-            amount: d.amount,
-            when: d.createdAt,
-          ));
+          rows.add(
+            _HistoryRow(
+              kind: _HistoryKind.distribution,
+              title: 'Распределение → ${d.toUserName}',
+              subtitle: 'бригадир распределил аванс',
+              amount: d.amount,
+              when: d.createdAt,
+            ),
+          );
         }
         for (final sp in flow.approvedSelfpurchases) {
-          rows.add(_HistoryRow(
-            kind: _HistoryKind.selfpurchase,
-            title: 'Самозакуп: ${sp.byUserName}',
-            subtitle: sp.comment ?? 'одобрено заказчиком',
-            amount: sp.amount,
-            when: sp.decidedAt ?? DateTime.now(),
-          ));
+          rows.add(
+            _HistoryRow(
+              kind: _HistoryKind.selfpurchase,
+              title: 'Самозакуп: ${sp.byUserName}',
+              subtitle: sp.comment ?? 'одобрено заказчиком',
+              amount: sp.amount,
+              when: sp.decidedAt ?? DateTime.now(),
+            ),
+          );
         }
         for (final m in flow.materialPurchases) {
           final who = m.boughtBy == MaterialBoughtBy.customer
               ? 'купил заказчик'
               : 'купил ${m.requestedByName}';
-          rows.add(_HistoryRow(
-            kind: _HistoryKind.material,
-            title: m.title,
-            subtitle: '${m.itemCount} поз. · $who',
-            amount: m.totalSpent,
-            when: DateTime.now(),
-          ));
+          rows.add(
+            _HistoryRow(
+              kind: _HistoryKind.material,
+              title: m.title,
+              subtitle: '${m.itemCount} поз. · $who',
+              amount: m.totalSpent,
+              when: DateTime.now(),
+            ),
+          );
         }
         rows.sort((a, b) => b.when.compareTo(a.when));
         return Column(
@@ -1384,7 +1382,8 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
               _HistoryRow(
                 kind: _HistoryKind.rejected,
                 title: 'Самозакуп: ${sp.byUserName}',
-                subtitle: 'отклонено${sp.comment != null ? ' · ${sp.comment}' : ''}',
+                subtitle:
+                    'отклонено${sp.comment != null ? ' · ${sp.comment}' : ''}',
                 amount: sp.amount,
                 when: sp.decidedAt ?? DateTime.now(),
               ),
@@ -1398,81 +1397,81 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final f in _HistoryFilter.values) ...[
-                    _FilterChip(
-                      label: _filterLabel(f),
-                      active: _filter == f,
-                      onTap: () => setState(() => _filter = f),
-                    ),
-                    const SizedBox(width: AppSpacing.x6),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x10),
-            InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              onTap: () async {
-                final picked = await showDateRangeSheet(
-                  context,
-                  initial: range,
-                );
-                if (picked != null) {
-                  ref.read(_materialsRangeProvider.notifier).state = picked;
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.n0,
-                  border: Border.all(color: AppColors.n200, width: 1.5),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.calendar_today_rounded,
-                      size: 12,
-                      color: AppColors.n600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      range.label(),
-                      style: AppTextStyles.tiny.copyWith(
-                        color: AppColors.n600,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
+                    for (final f in _HistoryFilter.values) ...[
+                      _FilterChip(
+                        label: _filterLabel(f),
+                        active: _filter == f,
+                        onTap: () => setState(() => _filter = f),
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.x6),
+                    ],
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            if (rows.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.x40),
-                child: Text(
-                  'Движений по выбранным фильтрам нет',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(color: AppColors.n400),
+              const SizedBox(height: AppSpacing.x10),
+              InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                onTap: () async {
+                  final picked = await showDateRangeSheet(
+                    context,
+                    initial: range,
+                  );
+                  if (picked != null) {
+                    ref.read(_materialsRangeProvider.notifier).state = picked;
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.n0,
+                    border: Border.all(color: AppColors.n200, width: 1.5),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 12,
+                        color: AppColors.n600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        range.label(),
+                        style: AppTextStyles.tiny.copyWith(
+                          color: AppColors.n600,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              )
-            else
-              for (final r in rows) ...[
-                _HistoryRowCard(row: r),
-                const SizedBox(height: AppSpacing.x8),
-              ],
-            const SizedBox(height: AppSpacing.x16),
-          ],
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              if (rows.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.x40),
+                  child: Text(
+                    'Движений по выбранным фильтрам нет',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.copyWith(color: AppColors.n400),
+                  ),
+                )
+              else
+                for (final r in rows) ...[
+                  _HistoryRowCard(row: r),
+                  const SizedBox(height: AppSpacing.x8),
+                ],
+              const SizedBox(height: AppSpacing.x16),
+            ],
           ),
         );
       },
@@ -1670,7 +1669,11 @@ class _PendingMaterialsSection extends StatelessWidget {
             ),
           ),
           for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: AppColors.yellowDot.withValues(alpha: 0.2)),
+            if (i > 0)
+              Divider(
+                height: 1,
+                color: AppColors.yellowDot.withValues(alpha: 0.2),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.x14,

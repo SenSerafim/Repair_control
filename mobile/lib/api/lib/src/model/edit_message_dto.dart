@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'edit_message_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,20 @@ part 'edit_message_dto.g.dart';
 )
 class EditMessageDto {
   /// Returns a new [EditMessageDto] instance.
-  EditMessageDto({
+  EditMessageDto({required this.text});
 
-    required  this.text,
-  });
-
-  @JsonKey(
-    
-    name: r'text',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'text', required: true, includeIfNull: false)
   final String text;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is EditMessageDto && other.text == text;
 
+  @override
+  int get hashCode => text.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is EditMessageDto &&
-      other.text == text;
-
-    @override
-    int get hashCode =>
-        text.hashCode;
-
-  factory EditMessageDto.fromJson(Map<String, dynamic> json) => _$EditMessageDtoFromJson(json);
+  factory EditMessageDto.fromJson(Map<String, dynamic> json) =>
+      _$EditMessageDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$EditMessageDtoToJson(this);
 
@@ -51,6 +36,4 @@ class EditMessageDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -75,10 +75,7 @@ class _ReclamationBodyState extends ConsumerState<_ReclamationBody> {
     });
     try {
       final picker = ImagePicker();
-      final picked = await picker.pickImage(
-        source: source,
-        imageQuality: 100,
-      );
+      final picked = await picker.pickImage(source: source, imageQuality: 100);
       if (picked == null) {
         if (mounted) setState(() => _picking = false);
         return;

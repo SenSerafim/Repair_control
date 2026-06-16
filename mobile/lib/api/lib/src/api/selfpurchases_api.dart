@@ -13,17 +13,16 @@ import 'package:repair_control_api/src/model/create_self_purchase_dto.dart';
 import 'package:repair_control_api/src/model/decide_self_purchase_dto.dart';
 
 class SelfpurchasesApi {
-
   final Dio _dio;
 
   const SelfpurchasesApi(this._dio);
 
   /// selfPurchasesControllerApprove
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [decideSelfPurchaseDto] 
+  /// * [id]
+  /// * [decideSelfPurchaseDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class SelfpurchasesApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> selfPurchasesControllerApprove({ 
+  Future<Response<void>> selfPurchasesControllerApprove({
     required String id,
     required DecideSelfPurchaseDto decideSelfPurchaseDto,
     CancelToken? cancelToken,
@@ -43,19 +42,18 @@ class SelfpurchasesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/selfpurchases/{id}/approve'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/selfpurchases/{id}/approve'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -66,13 +64,10 @@ class SelfpurchasesApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(decideSelfPurchaseDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(decideSelfPurchaseDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -92,12 +87,12 @@ _bodyData=jsonEncode(decideSelfPurchaseDto);
   }
 
   /// selfPurchasesControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [idempotencyKey] 
-  /// * [createSelfPurchaseDto] 
+  /// * [projectId]
+  /// * [idempotencyKey]
+  /// * [createSelfPurchaseDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -107,7 +102,7 @@ _bodyData=jsonEncode(decideSelfPurchaseDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> selfPurchasesControllerCreate({ 
+  Future<Response<void>> selfPurchasesControllerCreate({
     required String projectId,
     required String idempotencyKey,
     required CreateSelfPurchaseDto createSelfPurchaseDto,
@@ -118,7 +113,12 @@ _bodyData=jsonEncode(decideSelfPurchaseDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/selfpurchases'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/selfpurchases'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -127,11 +127,7 @@ _bodyData=jsonEncode(decideSelfPurchaseDto);
       },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -142,13 +138,10 @@ _bodyData=jsonEncode(decideSelfPurchaseDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createSelfPurchaseDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createSelfPurchaseDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -168,10 +161,10 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
   }
 
   /// selfPurchasesControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -181,7 +174,7 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> selfPurchasesControllerGet({ 
+  Future<Response<void>> selfPurchasesControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -190,19 +183,18 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/selfpurchases/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/selfpurchases/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -221,12 +213,12 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
   }
 
   /// selfPurchasesControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [status] 
-  /// * [byUserId] 
+  /// * [projectId]
+  /// * [status]
+  /// * [byUserId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -236,7 +228,7 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> selfPurchasesControllerList({ 
+  Future<Response<void>> selfPurchasesControllerList({
     required String projectId,
     required String status,
     required String byUserId,
@@ -247,19 +239,18 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/selfpurchases'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/selfpurchases'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -284,11 +275,11 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
   }
 
   /// selfPurchasesControllerReject
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [decideSelfPurchaseDto] 
+  /// * [id]
+  /// * [decideSelfPurchaseDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -298,7 +289,7 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> selfPurchasesControllerReject({ 
+  Future<Response<void>> selfPurchasesControllerReject({
     required String id,
     required DecideSelfPurchaseDto decideSelfPurchaseDto,
     CancelToken? cancelToken,
@@ -308,19 +299,18 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/selfpurchases/{id}/reject'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/selfpurchases/{id}/reject'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -331,13 +321,10 @@ _bodyData=jsonEncode(createSelfPurchaseDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(decideSelfPurchaseDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(decideSelfPurchaseDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -355,5 +342,4 @@ _bodyData=jsonEncode(decideSelfPurchaseDto);
 
     return _response;
   }
-
 }

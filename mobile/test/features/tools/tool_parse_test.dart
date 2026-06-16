@@ -51,18 +51,21 @@ void main() {
       expect(t.condition, ToolCondition.good);
     });
 
-    test('parse condition=new_tool корректно мапится в ToolCondition.newTool', () {
-      final t = ToolItem.parse({
-        'id': 't1',
-        'ownerId': 'u1',
-        'currentHolderId': 'u1',
-        'name': 'Перфоратор',
-        'condition': 'new_tool',
-        'createdAt': '2026-04-22T10:00:00Z',
-        'updatedAt': '2026-04-22T10:00:00Z',
-      });
-      expect(t.condition, ToolCondition.newTool);
-    });
+    test(
+      'parse condition=new_tool корректно мапится в ToolCondition.newTool',
+      () {
+        final t = ToolItem.parse({
+          'id': 't1',
+          'ownerId': 'u1',
+          'currentHolderId': 'u1',
+          'name': 'Перфоратор',
+          'condition': 'new_tool',
+          'createdAt': '2026-04-22T10:00:00Z',
+          'updatedAt': '2026-04-22T10:00:00Z',
+        });
+        expect(t.condition, ToolCondition.newTool);
+      },
+    );
 
     test('copyWith сохраняет purchaseDate/condition', () {
       final orig = ToolItem.parse({

@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'patch_feedback_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'patch_feedback_dto.g.dart';
 )
 class PatchFeedbackDto {
   /// Returns a new [PatchFeedbackDto] instance.
-  PatchFeedbackDto({
+  PatchFeedbackDto({required this.status});
 
-    required  this.status,
-  });
-
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final PatchFeedbackDtoStatusEnum status;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PatchFeedbackDto && other.status == status;
 
+  @override
+  int get hashCode => status.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is PatchFeedbackDto &&
-      other.status == status;
-
-    @override
-    int get hashCode =>
-        status.hashCode;
-
-  factory PatchFeedbackDto.fromJson(Map<String, dynamic> json) => _$PatchFeedbackDtoFromJson(json);
+  factory PatchFeedbackDto.fromJson(Map<String, dynamic> json) =>
+      _$PatchFeedbackDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$PatchFeedbackDtoToJson(this);
 
@@ -51,24 +37,20 @@ class PatchFeedbackDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum PatchFeedbackDtoStatusEnum {
-@JsonValue(r'new')
-new_(r'new'),
-@JsonValue(r'read')
-read(r'read'),
-@JsonValue(r'archived')
-archived(r'archived');
+  @JsonValue(r'new')
+  new_(r'new'),
+  @JsonValue(r'read')
+  read(r'read'),
+  @JsonValue(r'archived')
+  archived(r'archived');
 
-const PatchFeedbackDtoStatusEnum(this.value);
+  const PatchFeedbackDtoStatusEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

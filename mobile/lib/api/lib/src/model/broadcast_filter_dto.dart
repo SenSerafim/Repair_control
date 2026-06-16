@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'broadcast_filter_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -17,81 +16,45 @@ part 'broadcast_filter_dto.g.dart';
 class BroadcastFilterDto {
   /// Returns a new [BroadcastFilterDto] instance.
   BroadcastFilterDto({
+    this.roles,
 
-     this.roles,
+    this.projectIds,
 
-     this.projectIds,
+    this.userIds,
 
-     this.userIds,
-
-     this.bannedOnly,
+    this.bannedOnly,
   });
 
-  @JsonKey(
-    
-    name: r'roles',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'roles', required: false, includeIfNull: false)
   final List<RolesEnum>? roles;
 
-
-
-  @JsonKey(
-    
-    name: r'projectIds',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'projectIds', required: false, includeIfNull: false)
   final List<String>? projectIds;
 
-
-
-  @JsonKey(
-    
-    name: r'userIds',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'userIds', required: false, includeIfNull: false)
   final List<String>? userIds;
 
-
-
-  @JsonKey(
-    
-    name: r'bannedOnly',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'bannedOnly', required: false, includeIfNull: false)
   final bool? bannedOnly;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BroadcastFilterDto &&
+          other.roles == roles &&
+          other.projectIds == projectIds &&
+          other.userIds == userIds &&
+          other.bannedOnly == bannedOnly;
 
+  @override
+  int get hashCode =>
+      roles.hashCode +
+      projectIds.hashCode +
+      userIds.hashCode +
+      bannedOnly.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is BroadcastFilterDto &&
-      other.roles == roles &&
-      other.projectIds == projectIds &&
-      other.userIds == userIds &&
-      other.bannedOnly == bannedOnly;
-
-    @override
-    int get hashCode =>
-        roles.hashCode +
-        projectIds.hashCode +
-        userIds.hashCode +
-        bannedOnly.hashCode;
-
-  factory BroadcastFilterDto.fromJson(Map<String, dynamic> json) => _$BroadcastFilterDtoFromJson(json);
+  factory BroadcastFilterDto.fromJson(Map<String, dynamic> json) =>
+      _$BroadcastFilterDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$BroadcastFilterDtoToJson(this);
 
@@ -99,28 +62,24 @@ class BroadcastFilterDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum BroadcastFilterDtoRolesEnum {
-@JsonValue(r'customer')
-customer(r'customer'),
-@JsonValue(r'representative')
-representative(r'representative'),
-@JsonValue(r'contractor')
-contractor(r'contractor'),
-@JsonValue(r'master')
-master(r'master'),
-@JsonValue(r'admin')
-admin(r'admin');
+  @JsonValue(r'customer')
+  customer(r'customer'),
+  @JsonValue(r'representative')
+  representative(r'representative'),
+  @JsonValue(r'contractor')
+  contractor(r'contractor'),
+  @JsonValue(r'master')
+  master(r'master'),
+  @JsonValue(r'admin')
+  admin(r'admin');
 
-const BroadcastFilterDtoRolesEnum(this.value);
+  const BroadcastFilterDtoRolesEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

@@ -65,10 +65,7 @@ class _StageDocsTabState extends ConsumerState<StageDocsTab> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),
       children: [
-        _ViewToggle(
-          view: _view,
-          onChanged: (v) => setState(() => _view = v),
-        ),
+        _ViewToggle(view: _view, onChanged: (v) => setState(() => _view = v)),
         const SizedBox(height: AppSpacing.x16),
         if (_view == _DocsView.photos)
           _PhotosSection(total: photosTotal)
@@ -215,9 +212,7 @@ class _FilesBody extends StatelessWidget {
     final stepOrder = <String, int>{
       for (var i = 0; i < steps.length; i++) steps[i].id: steps[i].orderIndex,
     };
-    final stepTitle = <String, String>{
-      for (final s in steps) s.id: s.title,
-    };
+    final stepTitle = <String, String>{for (final s in steps) s.id: s.title};
     final keys = byStep.keys.toList()
       ..sort((a, b) {
         if (a == null && b == null) return 0;

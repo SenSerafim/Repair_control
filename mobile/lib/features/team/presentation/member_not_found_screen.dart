@@ -221,11 +221,11 @@ class _MemberNotFoundScreenState extends ConsumerState<MemberNotFoundScreen> {
     final until = df.format(code.expiresAt.toLocal());
     final greeting = inviter.isEmpty
         ? 'Здравствуйте! Приглашаю вас в проект «$projectTitle» '
-            'в приложении «Контроль ремонта» как '
-            '${code.role.displayName.toLowerCase()}.'
+              'в приложении «Контроль ремонта» как '
+              '${code.role.displayName.toLowerCase()}.'
         : 'Здравствуйте! $inviter приглашает вас в проект «$projectTitle» '
-            'в приложении «Контроль ремонта» как '
-            '${code.role.displayName.toLowerCase()}.';
+              'в приложении «Контроль ремонта» как '
+              '${code.role.displayName.toLowerCase()}.';
     final message = <String>[
       greeting,
       '',

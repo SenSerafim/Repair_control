@@ -13,17 +13,16 @@ import 'package:repair_control_api/src/model/create_note_dto.dart';
 import 'package:repair_control_api/src/model/update_note_dto.dart';
 
 class NotesApi {
-
   final Dio _dio;
 
   const NotesApi(this._dio);
 
   /// notesControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [createNoteDto] 
+  /// * [projectId]
+  /// * [createNoteDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class NotesApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notesControllerCreate({ 
+  Future<Response<void>> notesControllerCreate({
     required String projectId,
     required CreateNoteDto createNoteDto,
     CancelToken? cancelToken,
@@ -43,19 +42,18 @@ class NotesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/notes'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/notes'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -66,13 +64,10 @@ class NotesApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createNoteDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createNoteDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -92,10 +87,10 @@ _bodyData=jsonEncode(createNoteDto);
   }
 
   /// notesControllerDelete
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [noteId] 
+  /// * [noteId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -105,7 +100,7 @@ _bodyData=jsonEncode(createNoteDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notesControllerDelete({ 
+  Future<Response<void>> notesControllerDelete({
     required String noteId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -114,19 +109,18 @@ _bodyData=jsonEncode(createNoteDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/notes/{noteId}'.replaceAll('{' r'noteId' '}', noteId.toString());
+    final _path = r'/api/notes/{noteId}'.replaceAll(
+      '{'
+      r'noteId'
+      '}',
+      noteId.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -145,13 +139,13 @@ _bodyData=jsonEncode(createNoteDto);
   }
 
   /// notesControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [scope] 
-  /// * [stageId] 
-  /// * [search] 
+  /// * [projectId]
+  /// * [scope]
+  /// * [stageId]
+  /// * [search]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -161,7 +155,7 @@ _bodyData=jsonEncode(createNoteDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notesControllerList({ 
+  Future<Response<void>> notesControllerList({
     required String projectId,
     required String scope,
     required String stageId,
@@ -173,19 +167,18 @@ _bodyData=jsonEncode(createNoteDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/notes'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/notes'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -211,11 +204,11 @@ _bodyData=jsonEncode(createNoteDto);
   }
 
   /// notesControllerUpdate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [noteId] 
-  /// * [updateNoteDto] 
+  /// * [noteId]
+  /// * [updateNoteDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -225,7 +218,7 @@ _bodyData=jsonEncode(createNoteDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> notesControllerUpdate({ 
+  Future<Response<void>> notesControllerUpdate({
     required String noteId,
     required UpdateNoteDto updateNoteDto,
     CancelToken? cancelToken,
@@ -235,19 +228,18 @@ _bodyData=jsonEncode(createNoteDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/notes/{noteId}'.replaceAll('{' r'noteId' '}', noteId.toString());
+    final _path = r'/api/notes/{noteId}'.replaceAll(
+      '{'
+      r'noteId'
+      '}',
+      noteId.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -258,13 +250,10 @@ _bodyData=jsonEncode(createNoteDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateNoteDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateNoteDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -282,5 +271,4 @@ _bodyData=jsonEncode(updateNoteDto);
 
     return _response;
   }
-
 }

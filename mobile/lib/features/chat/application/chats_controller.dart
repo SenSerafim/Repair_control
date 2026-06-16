@@ -38,12 +38,12 @@ final myChatsProvider = FutureProvider<List<MyChatItem>>((ref) async {
     debounce?.cancel();
     debounce = Timer(const Duration(milliseconds: 600), ref.invalidateSelf);
   });
-  final membershipSub = socket
-      .on(SocketEvents.projectMembershipChanged)
-      .listen((_) {
-        debounce?.cancel();
-        debounce = Timer(const Duration(milliseconds: 400), ref.invalidateSelf);
-      });
+  final membershipSub = socket.on(SocketEvents.projectMembershipChanged).listen(
+    (_) {
+      debounce?.cancel();
+      debounce = Timer(const Duration(milliseconds: 400), ref.invalidateSelf);
+    },
+  );
   // chat:added — личный сигнал «тебя добавили в чат». Минимальная задержка,
   // потому что пользователь только что попал в команду и ждёт увидеть чат.
   final chatAddedSub = socket.on(SocketEvents.chatAdded).listen((_) {
@@ -101,9 +101,9 @@ class ProjectChatsController extends FamilyAsyncNotifier<List<Chat>, String> {
     // project:membership_changed — состав изменился, кто-то мог войти/выйти.
     // На project-чат это влияет (список participants для UI «кто в чате»);
     // также сам факт появления нового project-чата для нового участника.
-    _membershipSub = socket
-        .on(SocketEvents.projectMembershipChanged)
-        .listen((payload) {
+    _membershipSub = socket.on(SocketEvents.projectMembershipChanged).listen((
+      payload,
+    ) {
       if (payload is! Map) return;
       final pid = payload['projectId']?.toString();
       if (pid != null && pid != arg) return;

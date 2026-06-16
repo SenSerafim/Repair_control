@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'forward_message_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'forward_message_dto.g.dart';
 )
 class ForwardMessageDto {
   /// Returns a new [ForwardMessageDto] instance.
-  ForwardMessageDto({
+  ForwardMessageDto({required this.toChatId});
 
-    required  this.toChatId,
-  });
-
-  @JsonKey(
-    
-    name: r'toChatId',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'toChatId', required: true, includeIfNull: false)
   final String toChatId;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ForwardMessageDto && other.toChatId == toChatId;
 
+  @override
+  int get hashCode => toChatId.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ForwardMessageDto &&
-      other.toChatId == toChatId;
-
-    @override
-    int get hashCode =>
-        toChatId.hashCode;
-
-  factory ForwardMessageDto.fromJson(Map<String, dynamic> json) => _$ForwardMessageDtoFromJson(json);
+  factory ForwardMessageDto.fromJson(Map<String, dynamic> json) =>
+      _$ForwardMessageDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ForwardMessageDtoToJson(this);
 
@@ -51,6 +37,4 @@ class ForwardMessageDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

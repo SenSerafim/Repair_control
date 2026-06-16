@@ -9,18 +9,16 @@ import 'dart:convert';
 import 'package:repair_control_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-
 class LegalPublicApi {
-
   final Dio _dio;
 
   const LegalPublicApi(this._dio);
 
   /// legalPublicControllerListVersions
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [kind] 
+  /// * [kind]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -30,7 +28,7 @@ class LegalPublicApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalPublicControllerListVersions({ 
+  Future<Response<void>> legalPublicControllerListVersions({
     required String kind,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -39,16 +37,16 @@ class LegalPublicApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/legal/{kind}/versions'.replaceAll('{' r'kind' '}', kind.toString());
+    final _path = r'/legal/{kind}/versions'.replaceAll(
+      '{'
+      r'kind'
+      '}',
+      kind.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       validateStatus: validateStatus,
     );
 
@@ -64,10 +62,10 @@ class LegalPublicApi {
   }
 
   /// legalPublicControllerRender
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [kind] 
+  /// * [kind]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -77,7 +75,7 @@ class LegalPublicApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalPublicControllerRender({ 
+  Future<Response<void>> legalPublicControllerRender({
     required String kind,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -86,16 +84,16 @@ class LegalPublicApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/legal/{kind}'.replaceAll('{' r'kind' '}', kind.toString());
+    final _path = r'/legal/{kind}'.replaceAll(
+      '{'
+      r'kind'
+      '}',
+      kind.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       validateStatus: validateStatus,
     );
 
@@ -109,5 +107,4 @@ class LegalPublicApi {
 
     return _response;
   }
-
 }

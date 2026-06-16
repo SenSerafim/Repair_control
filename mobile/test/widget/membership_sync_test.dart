@@ -70,10 +70,10 @@ class _CountingChatsRepository extends Fake implements ChatsRepository {
 class _TestAuthController extends AuthController {
   @override
   AuthState build() => const AuthState(
-        status: AuthStatus.authenticated,
-        userId: 'tester',
-        activeRole: SystemRole.customer,
-      );
+    status: AuthStatus.authenticated,
+    userId: 'tester',
+    activeRole: SystemRole.customer,
+  );
 }
 
 void main() {
@@ -176,34 +176,35 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       await container.read(activeProjectsProvider.future);
-      expect(projectsRepo.listCalls, 1, reason: 'approval-уведомления не трогают список проектов');
-    },
-  );
-
-  test(
-    'reconnect (disconnect→connect) → backfill активных проектов',
-    () async {
-      container.read(membershipSyncProvider);
-      await warmUpProviders();
-
-      // Реальный reconnect = false → true. Первый `true` сразу после
-      // подписки backfill НЕ триггерит (build() уже отработал), чтобы не
-      // дублировать запросы на старте.
-      socket
-        ..injectConnected(value: false)
-        ..injectConnected(value: true);
-      await Future<void>.delayed(Duration.zero);
-
-      await container.read(activeProjectsProvider.future);
       expect(
         projectsRepo.listCalls,
-        greaterThan(1),
-        reason:
-            'события за время disconnect потеряны → при reconnect обязательно '
-            'перезагружаем основные списки',
+        1,
+        reason: 'approval-уведомления не трогают список проектов',
       );
     },
   );
+
+  test('reconnect (disconnect→connect) → backfill активных проектов', () async {
+    container.read(membershipSyncProvider);
+    await warmUpProviders();
+
+    // Реальный reconnect = false → true. Первый `true` сразу после
+    // подписки backfill НЕ триггерит (build() уже отработал), чтобы не
+    // дублировать запросы на старте.
+    socket
+      ..injectConnected(value: false)
+      ..injectConnected(value: true);
+    await Future<void>.delayed(Duration.zero);
+
+    await container.read(activeProjectsProvider.future);
+    expect(
+      projectsRepo.listCalls,
+      greaterThan(1),
+      reason:
+          'события за время disconnect потеряны → при reconnect обязательно '
+          'перезагружаем основные списки',
+    );
+  });
 
   test(
     'первый connectedStream=true после подписки backfill не вызывает',
@@ -245,13 +246,23 @@ void main() {
         greaterThan(1),
         reason: 'добавление в чат → обновляем список чатов',
       );
-      expect(projectsRepo.listCalls, 1, reason: 'chat-уровень не трогает список проектов');
+      expect(
+        projectsRepo.listCalls,
+        1,
+        reason: 'chat-уровень не трогает список проектов',
+      );
     },
   );
 
-  test('SocketEvents.projectMembershipChanged соответствует backend-каналу', () {
-    // Защита от опечаток в имени канала: оно должно совпадать ровно с тем,
-    // что эмитит `ChatsGateway.onProjectMembershipChanged`.
-    expect(SocketEvents.projectMembershipChanged, 'project:membership_changed');
-  });
+  test(
+    'SocketEvents.projectMembershipChanged соответствует backend-каналу',
+    () {
+      // Защита от опечаток в имени канала: оно должно совпадать ровно с тем,
+      // что эмитит `ChatsGateway.onProjectMembershipChanged`.
+      expect(
+        SocketEvents.projectMembershipChanged,
+        'project:membership_changed',
+      );
+    },
+  );
 }

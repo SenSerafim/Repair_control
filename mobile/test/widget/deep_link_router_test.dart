@@ -107,14 +107,17 @@ void main() {
       expect(route, '/projects/p-1/exports');
     });
 
-    test('material_request_created с requestId → /projects/:id/materials/:requestId', () {
-      final route = DeepLinkRouter.routeFor({
-        'kind': 'material_request_created',
-        'projectId': 'p-1',
-        'requestId': 'mr-42',
-      });
-      expect(route, '/projects/p-1/materials/mr-42');
-    });
+    test(
+      'material_request_created с requestId → /projects/:id/materials/:requestId',
+      () {
+        final route = DeepLinkRouter.routeFor({
+          'kind': 'material_request_created',
+          'projectId': 'p-1',
+          'requestId': 'mr-42',
+        });
+        expect(route, '/projects/p-1/materials/mr-42');
+      },
+    );
 
     test('materialId как алиас для обратной совместимости', () {
       final route = DeepLinkRouter.routeFor({

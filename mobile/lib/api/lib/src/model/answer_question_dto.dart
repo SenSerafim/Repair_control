@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'answer_question_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'answer_question_dto.g.dart';
 )
 class AnswerQuestionDto {
   /// Returns a new [AnswerQuestionDto] instance.
-  AnswerQuestionDto({
+  AnswerQuestionDto({required this.answer});
 
-    required  this.answer,
-  });
-
-  @JsonKey(
-    
-    name: r'answer',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'answer', required: true, includeIfNull: false)
   final String answer;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AnswerQuestionDto && other.answer == answer;
 
+  @override
+  int get hashCode => answer.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is AnswerQuestionDto &&
-      other.answer == answer;
-
-    @override
-    int get hashCode =>
-        answer.hashCode;
-
-  factory AnswerQuestionDto.fromJson(Map<String, dynamic> json) => _$AnswerQuestionDtoFromJson(json);
+  factory AnswerQuestionDto.fromJson(Map<String, dynamic> json) =>
+      _$AnswerQuestionDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$AnswerQuestionDtoToJson(this);
 
@@ -51,6 +37,4 @@ class AnswerQuestionDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

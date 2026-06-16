@@ -13,16 +13,15 @@ import 'package:repair_control_api/src/model/create_feedback_dto.dart';
 import 'package:repair_control_api/src/model/patch_feedback_dto.dart';
 
 class FeedbackApi {
-
   final Dio _dio;
 
   const FeedbackApi(this._dio);
 
   /// feedbackControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createFeedbackDto] 
+  /// * [createFeedbackDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +31,7 @@ class FeedbackApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> feedbackControllerCreate({ 
+  Future<Response<void>> feedbackControllerCreate({
     required CreateFeedbackDto createFeedbackDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -44,16 +43,10 @@ class FeedbackApi {
     final _path = r'/api/feedback';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -64,13 +57,10 @@ class FeedbackApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createFeedbackDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createFeedbackDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -90,10 +80,10 @@ _bodyData=jsonEncode(createFeedbackDto);
   }
 
   /// feedbackControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -103,7 +93,7 @@ _bodyData=jsonEncode(createFeedbackDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> feedbackControllerGet({ 
+  Future<Response<void>> feedbackControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -112,19 +102,18 @@ _bodyData=jsonEncode(createFeedbackDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/feedback/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/feedback/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -143,11 +132,11 @@ _bodyData=jsonEncode(createFeedbackDto);
   }
 
   /// feedbackControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [status] 
-  /// * [cursor] 
+  /// * [status]
+  /// * [cursor]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -157,7 +146,7 @@ _bodyData=jsonEncode(createFeedbackDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> feedbackControllerList({ 
+  Future<Response<void>> feedbackControllerList({
     required String status,
     required String cursor,
     CancelToken? cancelToken,
@@ -170,16 +159,10 @@ _bodyData=jsonEncode(createFeedbackDto);
     final _path = r'/api/admin/feedback';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -204,11 +187,11 @@ _bodyData=jsonEncode(createFeedbackDto);
   }
 
   /// feedbackControllerPatch
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [patchFeedbackDto] 
+  /// * [id]
+  /// * [patchFeedbackDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -218,7 +201,7 @@ _bodyData=jsonEncode(createFeedbackDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> feedbackControllerPatch({ 
+  Future<Response<void>> feedbackControllerPatch({
     required String id,
     required PatchFeedbackDto patchFeedbackDto,
     CancelToken? cancelToken,
@@ -228,19 +211,18 @@ _bodyData=jsonEncode(createFeedbackDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/feedback/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/feedback/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -251,13 +233,10 @@ _bodyData=jsonEncode(createFeedbackDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(patchFeedbackDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(patchFeedbackDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -275,5 +254,4 @@ _bodyData=jsonEncode(patchFeedbackDto);
 
     return _response;
   }
-
 }

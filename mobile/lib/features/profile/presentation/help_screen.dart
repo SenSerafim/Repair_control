@@ -74,8 +74,7 @@ class HelpScreen extends ConsumerWidget {
                   onTap: () {
                     AppToast.show(
                       context,
-                      message:
-                          'Обучающее видео скоро появится в этом разделе.',
+                      message: 'Обучающее видео скоро появится в этом разделе.',
                       kind: AppToastKind.info,
                     );
                   },

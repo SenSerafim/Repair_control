@@ -1008,7 +1008,11 @@ class _Check extends StatelessWidget {
 /// создаются на бэке через POST /stages для каждого выбранного template'а.
 enum _StageTemplate {
   demolition('Демонтаж', PhosphorIconsRegular.hammer, '4 шага · 3–7 дней'),
-  electrical('Электрика', PhosphorIconsRegular.lightning, '6 шагов · 5–10 дней'),
+  electrical(
+    'Электрика',
+    PhosphorIconsRegular.lightning,
+    '6 шагов · 5–10 дней',
+  ),
   plumbing('Сантехника', PhosphorIconsRegular.drop, '5 шагов · 4–8 дней'),
   walls(
     'Штукатурка и стяжка',
@@ -1044,9 +1048,7 @@ class _StageItem {
   const _StageItem.preset(_StageTemplate preset)
     : _preset = preset,
       _customTitle = null;
-  const _StageItem.custom(String title)
-    : _preset = null,
-      _customTitle = title;
+  const _StageItem.custom(String title) : _preset = null, _customTitle = title;
 
   final _StageTemplate? _preset;
   final String? _customTitle;
@@ -1060,5 +1062,6 @@ class _StageItem {
   /// Стабильный ключ для `ValueKey` в `ReorderableListView` — пресеты
   /// идентифицируются по enum-имени, кастомные — по заголовку (он уникален
   /// в пределах wizard'а — `_promptCustomStage` дедуплицирует).
-  String get key => isCustom ? 'custom:${_customTitle!}' : 'preset:${_preset!.name}';
+  String get key =>
+      isCustom ? 'custom:${_customTitle!}' : 'preset:${_preset!.name}';
 }

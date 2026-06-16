@@ -107,8 +107,9 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
         .addMember(
           userId: result!.user!.id,
           role: role,
-          specialization:
-              role == MembershipRole.master ? _specialization : null,
+          specialization: role == MembershipRole.master
+              ? _specialization
+              : null,
         );
     if (!mounted) return;
     setState(() => _submitting = false);

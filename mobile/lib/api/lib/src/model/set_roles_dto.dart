@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'set_roles_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,20 @@ part 'set_roles_dto.g.dart';
 )
 class SetRolesDto {
   /// Returns a new [SetRolesDto] instance.
-  SetRolesDto({
+  SetRolesDto({required this.roles});
 
-    required  this.roles,
-  });
-
-  @JsonKey(
-    
-    name: r'roles',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'roles', required: true, includeIfNull: false)
   final List<SetRolesDtoRolesEnum> roles;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is SetRolesDto && other.roles == roles;
 
+  @override
+  int get hashCode => roles.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is SetRolesDto &&
-      other.roles == roles;
-
-    @override
-    int get hashCode =>
-        roles.hashCode;
-
-  factory SetRolesDto.fromJson(Map<String, dynamic> json) => _$SetRolesDtoFromJson(json);
+  factory SetRolesDto.fromJson(Map<String, dynamic> json) =>
+      _$SetRolesDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$SetRolesDtoToJson(this);
 
@@ -51,28 +36,24 @@ class SetRolesDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum BroadcastFilterDtoRolesEnum {
-@JsonValue(r'customer')
-customer(r'customer'),
-@JsonValue(r'representative')
-representative(r'representative'),
-@JsonValue(r'contractor')
-contractor(r'contractor'),
-@JsonValue(r'master')
-master(r'master'),
-@JsonValue(r'admin')
-admin(r'admin');
+  @JsonValue(r'customer')
+  customer(r'customer'),
+  @JsonValue(r'representative')
+  representative(r'representative'),
+  @JsonValue(r'contractor')
+  contractor(r'contractor'),
+  @JsonValue(r'master')
+  master(r'master'),
+  @JsonValue(r'admin')
+  admin(r'admin');
 
-const BroadcastFilterDtoRolesEnum(this.value);
+  const BroadcastFilterDtoRolesEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

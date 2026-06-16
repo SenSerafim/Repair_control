@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'update_legal_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,24 @@ part 'update_legal_dto.g.dart';
 )
 class UpdateLegalDto {
   /// Returns a new [UpdateLegalDto] instance.
-  UpdateLegalDto({
+  UpdateLegalDto({this.title, this.bodyMd});
 
-     this.title,
-
-     this.bodyMd,
-  });
-
-  @JsonKey(
-    
-    name: r'title',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'title', required: false, includeIfNull: false)
   final String? title;
 
-
-
-  @JsonKey(
-    
-    name: r'bodyMd',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'bodyMd', required: false, includeIfNull: false)
   final String? bodyMd;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UpdateLegalDto && other.title == title && other.bodyMd == bodyMd;
 
+  @override
+  int get hashCode => title.hashCode + bodyMd.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is UpdateLegalDto &&
-      other.title == title &&
-      other.bodyMd == bodyMd;
-
-    @override
-    int get hashCode =>
-        title.hashCode +
-        bodyMd.hashCode;
-
-  factory UpdateLegalDto.fromJson(Map<String, dynamic> json) => _$UpdateLegalDtoFromJson(json);
+  factory UpdateLegalDto.fromJson(Map<String, dynamic> json) =>
+      _$UpdateLegalDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$UpdateLegalDtoToJson(this);
 
@@ -67,6 +40,4 @@ class UpdateLegalDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

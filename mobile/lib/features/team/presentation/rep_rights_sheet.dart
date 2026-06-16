@@ -177,7 +177,10 @@ class _RightRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label?.title ?? right.jsonKey, style: AppTextStyles.body),
+                  Text(
+                    label?.title ?? right.jsonKey,
+                    style: AppTextStyles.body,
+                  ),
                   if (label != null)
                     Text(label.description, style: AppTextStyles.micro),
                 ],

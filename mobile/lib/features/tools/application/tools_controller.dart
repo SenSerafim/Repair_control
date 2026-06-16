@@ -128,15 +128,18 @@ class MyToolsController extends AsyncNotifier<List<ToolItem>> {
 }
 
 /// NEWFIX-2 §7.2 — отфильтрованный список «Моих инструментов».
-final filteredMyToolsProvider =
-    FutureProvider.autoDispose.family<List<ToolItem>, ({String? search, ToolStatus? status})>((ref, args) {
-  // Watch myToolsProvider, чтобы при create/update/delete фильтрованный
-  // список тоже инвалидировался автоматически.
-  ref.watch(myToolsProvider);
-  return ref
-      .read(toolsRepositoryProvider)
-      .myTools(search: args.search, status: args.status);
-});
+final filteredMyToolsProvider = FutureProvider.autoDispose
+    .family<List<ToolItem>, ({String? search, ToolStatus? status})>((
+      ref,
+      args,
+    ) {
+      // Watch myToolsProvider, чтобы при create/update/delete фильтрованный
+      // список тоже инвалидировался автоматически.
+      ref.watch(myToolsProvider);
+      return ref
+          .read(toolsRepositoryProvider)
+          .myTools(search: args.search, status: args.status);
+    });
 
 /// Один инструмент по id (для tool detail / редактирования).
 final toolDetailProvider = FutureProvider.family<ToolItem, String>((ref, id) {
@@ -148,11 +151,12 @@ final toolDetailProvider = FutureProvider.family<ToolItem, String>((ref, id) {
 /// Список инструментов проекта с обогащением owner/holder. Виден ВСЕМ
 /// участникам (self-custody модель). Все операции (create / attach / claim)
 /// инвалидируют этот provider; realtime `tool:changed` тоже инвалидирует.
-final projectToolsBoardProvider = AsyncNotifierProvider.family<
-  ProjectToolsBoardController,
-  List<ToolItem>,
-  String
->(ProjectToolsBoardController.new);
+final projectToolsBoardProvider =
+    AsyncNotifierProvider.family<
+      ProjectToolsBoardController,
+      List<ToolItem>,
+      String
+    >(ProjectToolsBoardController.new);
 
 class ProjectToolsBoardController
     extends FamilyAsyncNotifier<List<ToolItem>, String> {
@@ -189,7 +193,9 @@ class ProjectToolsBoardController
     _refreshDebounce?.cancel();
     _refreshDebounce = Timer(const Duration(milliseconds: 300), () async {
       try {
-        final list = await ref.read(toolsRepositoryProvider).listProjectTools(arg);
+        final list = await ref
+            .read(toolsRepositoryProvider)
+            .listProjectTools(arg);
         state = AsyncData(list);
       } catch (_) {
         // Игнорируем: основной flow сделает invalidate при next mutation.
@@ -286,9 +292,7 @@ class ProjectToolsBoardController
 }
 
 /// Timeline передач инструмента (для tool detail screen).
-final toolCustodyHistoryProvider = FutureProvider.family<
-  List<ToolCustodyEvent>,
-  String
->((ref, toolId) {
-  return ref.read(toolsRepositoryProvider).custodyHistory(toolId);
-});
+final toolCustodyHistoryProvider =
+    FutureProvider.family<List<ToolCustodyEvent>, String>((ref, toolId) {
+      return ref.read(toolsRepositoryProvider).custodyHistory(toolId);
+    });

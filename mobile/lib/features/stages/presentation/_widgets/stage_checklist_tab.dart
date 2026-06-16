@@ -83,9 +83,7 @@ class _StageChecklistTabState extends ConsumerState<StageChecklistTab> {
     );
     final stepsWithPendingApproval = approvalsAsync.maybeWhen(
       data: (b) => b.pending
-          .where(
-            (a) => a.scope == ApprovalScope.step && a.stepId != null,
-          )
+          .where((a) => a.scope == ApprovalScope.step && a.stepId != null)
           .map((a) => a.stepId!)
           .toSet(),
       orElse: () => <String>{},
@@ -330,7 +328,10 @@ class _ChecklistBody extends StatelessWidget {
                 return KeyedSubtree(
                   key: ValueKey('step_${s.id}'),
                   child: i == 0
-                      ? TourAnchor(id: 'stage_detail.first_step', child: wrapped)
+                      ? TourAnchor(
+                          id: 'stage_detail.first_step',
+                          child: wrapped,
+                        )
                       : wrapped,
                 );
               },
@@ -378,10 +379,7 @@ class _ChecklistBody extends StatelessWidget {
           onToggleDone: () => onToggleStep(s),
         );
         if (i == 0) {
-          return TourAnchor(
-            id: 'stage_detail.first_step',
-            child: row,
-          );
+          return TourAnchor(id: 'stage_detail.first_step', child: row);
         }
         return row;
       },

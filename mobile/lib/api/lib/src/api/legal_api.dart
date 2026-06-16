@@ -14,16 +14,15 @@ import 'package:repair_control_api/src/model/create_legal_dto.dart';
 import 'package:repair_control_api/src/model/update_legal_dto.dart';
 
 class LegalApi {
-
   final Dio _dio;
 
   const LegalApi(this._dio);
 
   /// legalControllerAccept
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [acceptLegalDto] 
+  /// * [acceptLegalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class LegalApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerAccept({ 
+  Future<Response<void>> legalControllerAccept({
     required AcceptLegalDto acceptLegalDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -45,16 +44,10 @@ class LegalApi {
     final _path = r'/api/me/legal-acceptance';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -65,13 +58,10 @@ class LegalApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(acceptLegalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(acceptLegalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -91,10 +81,10 @@ _bodyData=jsonEncode(acceptLegalDto);
   }
 
   /// legalControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [createLegalDto] 
+  /// * [createLegalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -104,7 +94,7 @@ _bodyData=jsonEncode(acceptLegalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerCreate({ 
+  Future<Response<void>> legalControllerCreate({
     required CreateLegalDto createLegalDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -116,16 +106,10 @@ _bodyData=jsonEncode(acceptLegalDto);
     final _path = r'/api/admin/legal/documents';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -136,13 +120,10 @@ _bodyData=jsonEncode(acceptLegalDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createLegalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createLegalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -162,10 +143,10 @@ _bodyData=jsonEncode(createLegalDto);
   }
 
   /// legalControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -175,7 +156,7 @@ _bodyData=jsonEncode(createLegalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerGet({ 
+  Future<Response<void>> legalControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -184,19 +165,18 @@ _bodyData=jsonEncode(createLegalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/legal/documents/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/legal/documents/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -215,10 +195,10 @@ _bodyData=jsonEncode(createLegalDto);
   }
 
   /// legalControllerListAll
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [kind] 
+  /// * [kind]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -228,7 +208,7 @@ _bodyData=jsonEncode(createLegalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerListAll({ 
+  Future<Response<void>> legalControllerListAll({
     required String kind,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -240,25 +220,17 @@ _bodyData=jsonEncode(createLegalDto);
     final _path = r'/api/admin/legal/documents';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{
-      r'kind': kind,
-    };
+    final _queryParameters = <String, dynamic>{r'kind': kind};
 
     final _response = await _dio.request<Object>(
       _path,
@@ -273,10 +245,10 @@ _bodyData=jsonEncode(createLegalDto);
   }
 
   /// legalControllerPublish
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -286,7 +258,7 @@ _bodyData=jsonEncode(createLegalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerPublish({ 
+  Future<Response<void>> legalControllerPublish({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -295,19 +267,18 @@ _bodyData=jsonEncode(createLegalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/legal/documents/{id}/publish'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/legal/documents/{id}/publish'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -326,7 +297,7 @@ _bodyData=jsonEncode(createLegalDto);
   }
 
   /// legalControllerStatus
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -338,7 +309,7 @@ _bodyData=jsonEncode(createLegalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerStatus({ 
+  Future<Response<void>> legalControllerStatus({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -349,16 +320,10 @@ _bodyData=jsonEncode(createLegalDto);
     final _path = r'/api/me/legal-acceptance';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -377,11 +342,11 @@ _bodyData=jsonEncode(createLegalDto);
   }
 
   /// legalControllerUpdate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [updateLegalDto] 
+  /// * [id]
+  /// * [updateLegalDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -391,7 +356,7 @@ _bodyData=jsonEncode(createLegalDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> legalControllerUpdate({ 
+  Future<Response<void>> legalControllerUpdate({
     required String id,
     required UpdateLegalDto updateLegalDto,
     CancelToken? cancelToken,
@@ -401,19 +366,18 @@ _bodyData=jsonEncode(createLegalDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/admin/legal/documents/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/admin/legal/documents/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -424,13 +388,10 @@ _bodyData=jsonEncode(createLegalDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(updateLegalDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(updateLegalDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -448,5 +409,4 @@ _bodyData=jsonEncode(updateLegalDto);
 
     return _response;
   }
-
 }

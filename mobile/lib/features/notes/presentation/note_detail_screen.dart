@@ -280,8 +280,7 @@ class _NoteDetailAudioPlayerState extends State<_NoteDetailAudioPlayer> {
     _player.playerStateStream.listen((s) {
       if (!mounted) return;
       setState(() {
-        _playing =
-            s.playing && s.processingState != ProcessingState.completed;
+        _playing = s.playing && s.processingState != ProcessingState.completed;
       });
     });
     _player.positionStream.listen((d) {

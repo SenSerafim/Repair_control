@@ -6,8 +6,9 @@ import 'package:repair_control/features/stages/presentation/_widgets/stage_stats
 /// Task 1.4 (TZ-фронт §6.2): четвёртая ячейка StageStatsRow — счётчик
 /// доработок «open/total», а не «Файлов».
 void main() {
-  testWidgets('StageStatsRow renders "Доработок" cell with X/Y counter',
-      (tester) async {
+  testWidgets('StageStatsRow renders "Доработок" cell with X/Y counter', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -37,8 +38,9 @@ void main() {
     expect(find.text('Файлов'), findsNothing);
   });
 
-  testWidgets('StageStatsRow shows 0/0 when there are no rework approvals',
-      (tester) async {
+  testWidgets('StageStatsRow shows 0/0 when there are no rework approvals', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

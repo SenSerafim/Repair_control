@@ -52,9 +52,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
         repo.members(arg),
         repo.listInvitations(arg),
       ).wait;
-      state = AsyncData(
-        TeamState(members: members, invitations: invitations),
-      );
+      state = AsyncData(TeamState(members: members, invitations: invitations));
     } catch (_) {
       // Мутация уже прошла на сервере; не валим тост-flow из-за refresh-сбоя.
     }

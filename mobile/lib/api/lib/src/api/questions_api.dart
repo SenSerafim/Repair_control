@@ -13,17 +13,16 @@ import 'package:repair_control_api/src/model/answer_question_dto.dart';
 import 'package:repair_control_api/src/model/ask_question_dto.dart';
 
 class QuestionsApi {
-
   final Dio _dio;
 
   const QuestionsApi(this._dio);
 
   /// questionsControllerAnswer
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [answerQuestionDto] 
+  /// * [id]
+  /// * [answerQuestionDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class QuestionsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> questionsControllerAnswer({ 
+  Future<Response<void>> questionsControllerAnswer({
     required String id,
     required AnswerQuestionDto answerQuestionDto,
     CancelToken? cancelToken,
@@ -43,19 +42,18 @@ class QuestionsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/questions/{id}/answer'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/questions/{id}/answer'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -66,13 +64,10 @@ class QuestionsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(answerQuestionDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(answerQuestionDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -92,11 +87,11 @@ _bodyData=jsonEncode(answerQuestionDto);
   }
 
   /// questionsControllerAsk
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stepId] 
-  /// * [askQuestionDto] 
+  /// * [stepId]
+  /// * [askQuestionDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -106,7 +101,7 @@ _bodyData=jsonEncode(answerQuestionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> questionsControllerAsk({ 
+  Future<Response<void>> questionsControllerAsk({
     required String stepId,
     required AskQuestionDto askQuestionDto,
     CancelToken? cancelToken,
@@ -116,19 +111,18 @@ _bodyData=jsonEncode(answerQuestionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/steps/{stepId}/questions'.replaceAll('{' r'stepId' '}', stepId.toString());
+    final _path = r'/api/steps/{stepId}/questions'.replaceAll(
+      '{'
+      r'stepId'
+      '}',
+      stepId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -139,13 +133,10 @@ _bodyData=jsonEncode(answerQuestionDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(askQuestionDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(askQuestionDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -165,10 +156,10 @@ _bodyData=jsonEncode(askQuestionDto);
   }
 
   /// questionsControllerClose
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -178,7 +169,7 @@ _bodyData=jsonEncode(askQuestionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> questionsControllerClose({ 
+  Future<Response<void>> questionsControllerClose({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -187,19 +178,18 @@ _bodyData=jsonEncode(askQuestionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/questions/{id}/close'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/questions/{id}/close'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -218,10 +208,10 @@ _bodyData=jsonEncode(askQuestionDto);
   }
 
   /// questionsControllerListForStep
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [stepId] 
+  /// * [stepId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -231,7 +221,7 @@ _bodyData=jsonEncode(askQuestionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> questionsControllerListForStep({ 
+  Future<Response<void>> questionsControllerListForStep({
     required String stepId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -240,19 +230,18 @@ _bodyData=jsonEncode(askQuestionDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/steps/{stepId}/questions'.replaceAll('{' r'stepId' '}', stepId.toString());
+    final _path = r'/api/steps/{stepId}/questions'.replaceAll(
+      '{'
+      r'stepId'
+      '}',
+      stepId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -271,10 +260,10 @@ _bodyData=jsonEncode(askQuestionDto);
   }
 
   /// questionsControllerListMine
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [filter] 
+  /// * [filter]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -284,7 +273,7 @@ _bodyData=jsonEncode(askQuestionDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> questionsControllerListMine({ 
+  Future<Response<void>> questionsControllerListMine({
     required String filter,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -296,25 +285,17 @@ _bodyData=jsonEncode(askQuestionDto);
     final _path = r'/api/me/questions';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{
-      r'filter': filter,
-    };
+    final _queryParameters = <String, dynamic>{r'filter': filter};
 
     final _response = await _dio.request<Object>(
       _path,
@@ -327,5 +308,4 @@ _bodyData=jsonEncode(askQuestionDto);
 
     return _response;
   }
-
 }

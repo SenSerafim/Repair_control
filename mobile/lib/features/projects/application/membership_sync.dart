@@ -88,20 +88,18 @@ final membershipSyncProvider = Provider<void>((ref) {
     // цикла; первый `connected=true` после подписки пропускаем, т.к. list-
     // провайдеры только что отработали build() — дубль был бы пустой запрос
     // (наблюдалось на старте: GET /projects?role=master летел 2–3 раза).
-    ..add(
-      () {
-        var sawDisconnect = false;
-        return socket.connectedStream.listen((connected) {
-          if (!connected) {
-            sawDisconnect = true;
-            return;
-          }
-          if (!sawDisconnect) return;
-          sawDisconnect = false;
-          invalidateGlobal();
-        });
-      }(),
-    );
+    ..add(() {
+      var sawDisconnect = false;
+      return socket.connectedStream.listen((connected) {
+        if (!connected) {
+          sawDisconnect = true;
+          return;
+        }
+        if (!sawDisconnect) return;
+        sawDisconnect = false;
+        invalidateGlobal();
+      });
+    }());
 
   ref.onDispose(() {
     for (final s in subs) {

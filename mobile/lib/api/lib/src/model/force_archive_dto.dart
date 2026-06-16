@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'force_archive_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,34 +15,21 @@ part 'force_archive_dto.g.dart';
 )
 class ForceArchiveDto {
   /// Returns a new [ForceArchiveDto] instance.
-  ForceArchiveDto({
+  ForceArchiveDto({required this.reason});
 
-    required  this.reason,
-  });
-
-  @JsonKey(
-    
-    name: r'reason',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reason', required: true, includeIfNull: false)
   final String reason;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ForceArchiveDto && other.reason == reason;
 
+  @override
+  int get hashCode => reason.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ForceArchiveDto &&
-      other.reason == reason;
-
-    @override
-    int get hashCode =>
-        reason.hashCode;
-
-  factory ForceArchiveDto.fromJson(Map<String, dynamic> json) => _$ForceArchiveDtoFromJson(json);
+  factory ForceArchiveDto.fromJson(Map<String, dynamic> json) =>
+      _$ForceArchiveDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ForceArchiveDtoToJson(this);
 
@@ -51,6 +37,4 @@ class ForceArchiveDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

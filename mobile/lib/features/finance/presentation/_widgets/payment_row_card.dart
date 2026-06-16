@@ -50,10 +50,7 @@ class PaymentRowCard extends StatelessWidget {
                 color: iconBg,
                 borderRadius: BorderRadius.circular(AppRadius.r12),
                 border: const Border(
-                  top: BorderSide(
-                    color: AppShadows.innerHighlight,
-                    width: 1,
-                  ),
+                  top: BorderSide(color: AppShadows.innerHighlight, width: 1),
                 ),
               ),
               child: Icon(payment.kind.icon, size: 18, color: iconColor),

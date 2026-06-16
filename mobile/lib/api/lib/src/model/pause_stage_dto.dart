@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'pause_stage_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,50 +15,26 @@ part 'pause_stage_dto.g.dart';
 )
 class PauseStageDto {
   /// Returns a new [PauseStageDto] instance.
-  PauseStageDto({
+  PauseStageDto({required this.reason, this.comment});
 
-    required  this.reason,
-
-     this.comment,
-  });
-
-  @JsonKey(
-    
-    name: r'reason',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reason', required: true, includeIfNull: false)
   final PauseStageDtoReasonEnum reason;
 
-
-
-  @JsonKey(
-    
-    name: r'comment',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'comment', required: false, includeIfNull: false)
   final String? comment;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PauseStageDto &&
+          other.reason == reason &&
+          other.comment == comment;
 
+  @override
+  int get hashCode => reason.hashCode + comment.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is PauseStageDto &&
-      other.reason == reason &&
-      other.comment == comment;
-
-    @override
-    int get hashCode =>
-        reason.hashCode +
-        comment.hashCode;
-
-  factory PauseStageDto.fromJson(Map<String, dynamic> json) => _$PauseStageDtoFromJson(json);
+  factory PauseStageDto.fromJson(Map<String, dynamic> json) =>
+      _$PauseStageDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$PauseStageDtoToJson(this);
 
@@ -67,26 +42,22 @@ class PauseStageDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum PauseStageDtoReasonEnum {
-@JsonValue(r'materials')
-materials(r'materials'),
-@JsonValue(r'approval')
-approval(r'approval'),
-@JsonValue(r'force_majeure')
-forceMajeure(r'force_majeure'),
-@JsonValue(r'other')
-other(r'other');
+  @JsonValue(r'materials')
+  materials(r'materials'),
+  @JsonValue(r'approval')
+  approval(r'approval'),
+  @JsonValue(r'force_majeure')
+  forceMajeure(r'force_majeure'),
+  @JsonValue(r'other')
+  other(r'other');
 
-const PauseStageDtoReasonEnum(this.value);
+  const PauseStageDtoReasonEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

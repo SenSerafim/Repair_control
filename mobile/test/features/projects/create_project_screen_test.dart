@@ -66,10 +66,17 @@ Future<void> _pumpScreen(WidgetTester tester) async {
 /// animate. Затем pumpAndSettle для завершения анимации страницы.
 Future<void> _tapNext(WidgetTester tester) async {
   final btnFinder = find.widgetWithText(AppButton, 'Далее');
-  expect(btnFinder, findsOneWidget,
-      reason: 'Кнопка «Далее» должна быть на экране');
+  expect(
+    btnFinder,
+    findsOneWidget,
+    reason: 'Кнопка «Далее» должна быть на экране',
+  );
   final btn = tester.widget<AppButton>(btnFinder);
-  expect(btn.onPressed, isNotNull, reason: 'Кнопка «Далее» должна быть активна');
+  expect(
+    btn.onPressed,
+    isNotNull,
+    reason: 'Кнопка «Далее» должна быть активна',
+  );
   await btn.onPressed!();
   await tester.pumpAndSettle();
 }
@@ -121,70 +128,68 @@ void main() {
     },
   );
 
-  testWidgets(
-    'B. onReorder меняет порядок выбранных этапов в widget tree',
-    (tester) async {
-      await _pumpScreen(tester);
-      await _goToStep3(tester);
+  testWidgets('B. onReorder меняет порядок выбранных этапов в widget tree', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+    await _goToStep3(tester);
 
-      // Берём onReorder из ReorderableListView и переносим элемент 0 → 3
-      // (после последнего). Дефолтный порядок:
-      // [Демонтаж, Электрика, Чистовая отделка].
-      // После reorder(0, 3): [Электрика, Чистовая отделка, Демонтаж].
-      final reorderable = tester.widget<ReorderableListView>(
-        find.byType(ReorderableListView),
-      );
-      reorderable.onReorder(0, 3);
-      await tester.pumpAndSettle();
+    // Берём onReorder из ReorderableListView и переносим элемент 0 → 3
+    // (после последнего). Дефолтный порядок:
+    // [Демонтаж, Электрика, Чистовая отделка].
+    // После reorder(0, 3): [Электрика, Чистовая отделка, Демонтаж].
+    final reorderable = tester.widget<ReorderableListView>(
+      find.byType(ReorderableListView),
+    );
+    reorderable.onReorder(0, 3);
+    await tester.pumpAndSettle();
 
-      // Проверяем порядок по геометрии — Y координата сверху-вниз.
-      final demolitionY = tester.getTopLeft(find.text('Демонтаж')).dy;
-      final electricalY = tester.getTopLeft(find.text('Электрика')).dy;
-      final finishingY = tester.getTopLeft(find.text('Чистовая отделка')).dy;
+    // Проверяем порядок по геометрии — Y координата сверху-вниз.
+    final demolitionY = tester.getTopLeft(find.text('Демонтаж')).dy;
+    final electricalY = tester.getTopLeft(find.text('Электрика')).dy;
+    final finishingY = tester.getTopLeft(find.text('Чистовая отделка')).dy;
 
-      expect(
-        electricalY < finishingY,
-        isTrue,
-        reason: 'Электрика должна быть выше Чистовой после reorder(0, 3)',
-      );
-      expect(
-        finishingY < demolitionY,
-        isTrue,
-        reason: 'Чистовая отделка должна быть выше Демонтажа после reorder(0, 3)',
-      );
-    },
-  );
+    expect(
+      electricalY < finishingY,
+      isTrue,
+      reason: 'Электрика должна быть выше Чистовой после reorder(0, 3)',
+    );
+    expect(
+      finishingY < demolitionY,
+      isTrue,
+      reason: 'Чистовая отделка должна быть выше Демонтажа после reorder(0, 3)',
+    );
+  });
 
-  testWidgets(
-    'C. onReorder корректно обрабатывает newIndex > oldIndex',
-    (tester) async {
-      await _pumpScreen(tester);
-      await _goToStep3(tester);
+  testWidgets('C. onReorder корректно обрабатывает newIndex > oldIndex', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+    await _goToStep3(tester);
 
-      // Reorder из 0 → 2 (Flutter передаёт newIndex=2 как «после второго
-      // элемента»). Реализация в _reorderSelected вычитает 1 → effective
-      // index = 1. Дефолт: [Демонтаж, Электрика, Чистовая].
-      // После reorder(0, 2): [Электрика, Демонтаж, Чистовая].
-      final reorderable = tester.widget<ReorderableListView>(
-        find.byType(ReorderableListView),
-      );
-      reorderable.onReorder(0, 2);
-      await tester.pumpAndSettle();
+    // Reorder из 0 → 2 (Flutter передаёт newIndex=2 как «после второго
+    // элемента»). Реализация в _reorderSelected вычитает 1 → effective
+    // index = 1. Дефолт: [Демонтаж, Электрика, Чистовая].
+    // После reorder(0, 2): [Электрика, Демонтаж, Чистовая].
+    final reorderable = tester.widget<ReorderableListView>(
+      find.byType(ReorderableListView),
+    );
+    reorderable.onReorder(0, 2);
+    await tester.pumpAndSettle();
 
-      final demolitionY = tester.getTopLeft(find.text('Демонтаж')).dy;
-      final electricalY = tester.getTopLeft(find.text('Электрика')).dy;
-      final finishingY = tester.getTopLeft(find.text('Чистовая отделка')).dy;
+    final demolitionY = tester.getTopLeft(find.text('Демонтаж')).dy;
+    final electricalY = tester.getTopLeft(find.text('Электрика')).dy;
+    final finishingY = tester.getTopLeft(find.text('Чистовая отделка')).dy;
 
-      expect(
-        electricalY < demolitionY,
-        isTrue,
-        reason: 'Электрика должна быть выше Демонтажа',
-      );
-      expect(
-        demolitionY < finishingY,
-        isTrue,
-        reason: 'Демонтаж должен остаться выше Чистовой отделки',
-      );
-    },
-  );
+    expect(
+      electricalY < demolitionY,
+      isTrue,
+      reason: 'Электрика должна быть выше Демонтажа',
+    );
+    expect(
+      demolitionY < finishingY,
+      isTrue,
+      reason: 'Демонтаж должен остаться выше Чистовой отделки',
+    );
+  });
 }

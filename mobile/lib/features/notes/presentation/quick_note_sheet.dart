@@ -117,10 +117,7 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
             onChanged: (v) => setState(() => _visibility = v),
           ),
           const SizedBox(height: AppSpacing.x20),
-          AppButton(
-            label: 'Сохранить',
-            onPressed: _canSave ? _save : null,
-          ),
+          AppButton(label: 'Сохранить', onPressed: _canSave ? _save : null),
           const SizedBox(height: AppSpacing.x8),
           TextButton(
             onPressed: () {
@@ -208,7 +205,9 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
   }
 
   Future<void> _save() async {
-    final controller = ref.read(notesControllerProvider(widget.projectId).notifier);
+    final controller = ref.read(
+      notesControllerProvider(widget.projectId).notifier,
+    );
     if (_mode == _Mode.text) {
       final failure = await controller.create(
         scope: _visibility,
@@ -217,7 +216,11 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
       );
       if (!mounted) return;
       if (failure != null) {
-        AppToast.show(context, message: failure.userMessage, kind: AppToastKind.error);
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
         return;
       }
       Navigator.of(context).pop(true);
@@ -241,7 +244,11 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
       );
       if (!mounted) return;
       if (failure != null) {
-        AppToast.show(context, message: failure.userMessage, kind: AppToastKind.error);
+        AppToast.show(
+          context,
+          message: failure.userMessage,
+          kind: AppToastKind.error,
+        );
         return;
       }
       Navigator.of(context).pop(true);
@@ -484,7 +491,10 @@ class _PlayButtonState extends State<_PlayButton> {
     super.initState();
     _sub = widget.player.playerStateStream.listen((s) {
       if (!mounted) return;
-      setState(() => _playing = s.playing && s.processingState != ProcessingState.completed);
+      setState(
+        () => _playing =
+            s.playing && s.processingState != ProcessingState.completed,
+      );
     });
   }
 

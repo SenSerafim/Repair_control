@@ -98,16 +98,10 @@ class _AddPhotoBodyState extends ConsumerState<_AddPhotoBody> {
       // image_picker возвращает .mp4 на iOS/Android. Quicktime (.mov) тоже
       // допустим бэком — определяем по расширению, иначе fallback на mp4.
       final lower = picked.name.toLowerCase();
-      final mime = lower.endsWith('.mov')
-          ? 'video/quicktime'
-          : 'video/mp4';
+      final mime = lower.endsWith('.mov') ? 'video/quicktime' : 'video/mp4';
       final failure = await ref
           .read(stepDetailProvider(widget.detailKey).notifier)
-          .uploadVideo(
-            rawBytes: bytes,
-            filename: picked.name,
-            mimeType: mime,
-          );
+          .uploadVideo(rawBytes: bytes, filename: picked.name, mimeType: mime);
       if (!mounted) return;
       if (failure == null) {
         Navigator.of(context).pop(true);

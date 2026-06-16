@@ -15,16 +15,15 @@ import 'package:repair_control_api/src/model/mark_bought_dto.dart';
 import 'package:repair_control_api/src/model/resolve_material_dto.dart';
 
 class MaterialsApi {
-
   final Dio _dio;
 
   const MaterialsApi(this._dio);
 
   /// materialsControllerConfirmDelivery
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +33,7 @@ class MaterialsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerConfirmDelivery({ 
+  Future<Response<void>> materialsControllerConfirmDelivery({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -43,19 +42,18 @@ class MaterialsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}/confirm-delivery'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/materials/{id}/confirm-delivery'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -74,11 +72,11 @@ class MaterialsApi {
   }
 
   /// materialsControllerCreate
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [createMaterialRequestDto] 
+  /// * [projectId]
+  /// * [createMaterialRequestDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -88,7 +86,7 @@ class MaterialsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerCreate({ 
+  Future<Response<void>> materialsControllerCreate({
     required String projectId,
     required CreateMaterialRequestDto createMaterialRequestDto,
     CancelToken? cancelToken,
@@ -98,19 +96,18 @@ class MaterialsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/materials'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/materials'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -121,13 +118,10 @@ class MaterialsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(createMaterialRequestDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(createMaterialRequestDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -147,11 +141,11 @@ _bodyData=jsonEncode(createMaterialRequestDto);
   }
 
   /// materialsControllerDispute
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [disputeMaterialDto] 
+  /// * [id]
+  /// * [disputeMaterialDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -161,7 +155,7 @@ _bodyData=jsonEncode(createMaterialRequestDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerDispute({ 
+  Future<Response<void>> materialsControllerDispute({
     required String id,
     required DisputeMaterialDto disputeMaterialDto,
     CancelToken? cancelToken,
@@ -171,19 +165,18 @@ _bodyData=jsonEncode(createMaterialRequestDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}/dispute'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/materials/{id}/dispute'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -194,13 +187,10 @@ _bodyData=jsonEncode(createMaterialRequestDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(disputeMaterialDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(disputeMaterialDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -220,10 +210,10 @@ _bodyData=jsonEncode(disputeMaterialDto);
   }
 
   /// materialsControllerFinalize
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -233,7 +223,7 @@ _bodyData=jsonEncode(disputeMaterialDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerFinalize({ 
+  Future<Response<void>> materialsControllerFinalize({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -242,19 +232,18 @@ _bodyData=jsonEncode(disputeMaterialDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}/finalize'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/materials/{id}/finalize'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -273,10 +262,10 @@ _bodyData=jsonEncode(disputeMaterialDto);
   }
 
   /// materialsControllerGet
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -286,7 +275,7 @@ _bodyData=jsonEncode(disputeMaterialDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerGet({ 
+  Future<Response<void>> materialsControllerGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -295,19 +284,18 @@ _bodyData=jsonEncode(disputeMaterialDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/materials/{id}'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -326,12 +314,12 @@ _bodyData=jsonEncode(disputeMaterialDto);
   }
 
   /// materialsControllerList
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [projectId] 
-  /// * [status] 
-  /// * [stageId] 
+  /// * [projectId]
+  /// * [status]
+  /// * [stageId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -341,7 +329,7 @@ _bodyData=jsonEncode(disputeMaterialDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerList({ 
+  Future<Response<void>> materialsControllerList({
     required String projectId,
     required String status,
     required String stageId,
@@ -352,19 +340,18 @@ _bodyData=jsonEncode(disputeMaterialDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/projects/{projectId}/materials'.replaceAll('{' r'projectId' '}', projectId.toString());
+    final _path = r'/api/projects/{projectId}/materials'.replaceAll(
+      '{'
+      r'projectId'
+      '}',
+      projectId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -389,12 +376,12 @@ _bodyData=jsonEncode(disputeMaterialDto);
   }
 
   /// materialsControllerMarkBought
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [itemId] 
-  /// * [markBoughtDto] 
+  /// * [id]
+  /// * [itemId]
+  /// * [markBoughtDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -404,7 +391,7 @@ _bodyData=jsonEncode(disputeMaterialDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerMarkBought({ 
+  Future<Response<void>> materialsControllerMarkBought({
     required String id,
     required String itemId,
     required MarkBoughtDto markBoughtDto,
@@ -415,19 +402,25 @@ _bodyData=jsonEncode(disputeMaterialDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}/items/{itemId}/bought'.replaceAll('{' r'id' '}', id.toString()).replaceAll('{' r'itemId' '}', itemId.toString());
+    final _path = r'/api/materials/{id}/items/{itemId}/bought'
+        .replaceAll(
+          '{'
+          r'id'
+          '}',
+          id.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'itemId'
+          '}',
+          itemId.toString(),
+        );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -438,13 +431,10 @@ _bodyData=jsonEncode(disputeMaterialDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(markBoughtDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(markBoughtDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -464,11 +454,11 @@ _bodyData=jsonEncode(markBoughtDto);
   }
 
   /// materialsControllerResolve
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [resolveMaterialDto] 
+  /// * [id]
+  /// * [resolveMaterialDto]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -478,7 +468,7 @@ _bodyData=jsonEncode(markBoughtDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerResolve({ 
+  Future<Response<void>> materialsControllerResolve({
     required String id,
     required ResolveMaterialDto resolveMaterialDto,
     CancelToken? cancelToken,
@@ -488,19 +478,18 @@ _bodyData=jsonEncode(markBoughtDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}/resolve'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/materials/{id}/resolve'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -511,13 +500,10 @@ _bodyData=jsonEncode(markBoughtDto);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(resolveMaterialDto);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(resolveMaterialDto);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -537,10 +523,10 @@ _bodyData=jsonEncode(resolveMaterialDto);
   }
 
   /// materialsControllerSend
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -550,7 +536,7 @@ _bodyData=jsonEncode(resolveMaterialDto);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> materialsControllerSend({ 
+  Future<Response<void>> materialsControllerSend({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -559,19 +545,18 @@ _bodyData=jsonEncode(resolveMaterialDto);
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/materials/{id}/send'.replaceAll('{' r'id' '}', id.toString());
+    final _path = r'/api/materials/{id}/send'.replaceAll(
+      '{'
+      r'id'
+      '}',
+      id.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearer'},
         ],
         ...?extra,
       },
@@ -588,5 +573,4 @@ _bodyData=jsonEncode(resolveMaterialDto);
 
     return _response;
   }
-
 }

@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'distribute_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -17,99 +16,54 @@ part 'distribute_dto.g.dart';
 class DistributeDto {
   /// Returns a new [DistributeDto] instance.
   DistributeDto({
+    required this.toUserId,
 
-    required  this.toUserId,
+    required this.amount,
 
-    required  this.amount,
+    this.stageId,
 
-     this.stageId,
+    this.comment,
 
-     this.comment,
-
-     this.photoKey,
+    this.photoKey,
   });
 
-      /// Получатель (master)
-  @JsonKey(
-    
-    name: r'toUserId',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// Получатель (master)
+  @JsonKey(name: r'toUserId', required: true, includeIfNull: false)
   final String toUserId;
 
-
-
-      /// Сумма в копейках
-  @JsonKey(
-    
-    name: r'amount',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// Сумма в копейках
+  @JsonKey(name: r'amount', required: true, includeIfNull: false)
   final num amount;
 
-
-
-  @JsonKey(
-    
-    name: r'stageId',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'stageId', required: false, includeIfNull: false)
   final String? stageId;
 
-
-
-  @JsonKey(
-    
-    name: r'comment',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'comment', required: false, includeIfNull: false)
   final String? comment;
 
-
-
-  @JsonKey(
-    
-    name: r'photoKey',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'photoKey', required: false, includeIfNull: false)
   final String? photoKey;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DistributeDto &&
+          other.toUserId == toUserId &&
+          other.amount == amount &&
+          other.stageId == stageId &&
+          other.comment == comment &&
+          other.photoKey == photoKey;
 
+  @override
+  int get hashCode =>
+      toUserId.hashCode +
+      amount.hashCode +
+      stageId.hashCode +
+      comment.hashCode +
+      photoKey.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is DistributeDto &&
-      other.toUserId == toUserId &&
-      other.amount == amount &&
-      other.stageId == stageId &&
-      other.comment == comment &&
-      other.photoKey == photoKey;
-
-    @override
-    int get hashCode =>
-        toUserId.hashCode +
-        amount.hashCode +
-        stageId.hashCode +
-        comment.hashCode +
-        photoKey.hashCode;
-
-  factory DistributeDto.fromJson(Map<String, dynamic> json) => _$DistributeDtoFromJson(json);
+  factory DistributeDto.fromJson(Map<String, dynamic> json) =>
+      _$DistributeDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$DistributeDtoToJson(this);
 
@@ -117,6 +71,4 @@ class DistributeDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

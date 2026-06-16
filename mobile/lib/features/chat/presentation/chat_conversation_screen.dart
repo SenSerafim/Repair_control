@@ -71,9 +71,7 @@ class _ChatConversationScreenState
     // ref в dispose() стреляет _assertNotDisposed — берём провайдеры из кэша
     // контейнера, он переживает виджет.
     if (_isTyping && container != null) {
-      container
-          .read(socketServiceProvider)
-          .typing(chatId, typing: false);
+      container.read(socketServiceProvider).typing(chatId, typing: false);
     }
     if (container != null) {
       Future.microtask(() {
@@ -289,7 +287,9 @@ class _ChatConversationScreenState
     String? avatarUrl;
     String roleLabel;
 
-    final m = team?.members.where((mm) => mm.userId == authorUserId).firstOrNull;
+    final m = team?.members
+        .where((mm) => mm.userId == authorUserId)
+        .firstOrNull;
     final mu = m?.user;
     if (mu != null) {
       firstName = mu.firstName;
@@ -492,7 +492,8 @@ class _SenderIndex {
       if (p.leftAt != null) leftIds.add(p.userId);
     }
     final out = <String, _SenderInfo>{};
-    if (owner != null && (owner.firstName.isNotEmpty || owner.lastName.isNotEmpty)) {
+    if (owner != null &&
+        (owner.firstName.isNotEmpty || owner.lastName.isNotEmpty)) {
       out[owner.id] = _SenderInfo(
         userId: owner.id,
         displayName: owner.fullName,
@@ -586,7 +587,8 @@ class _Bubble extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     child: Semantics(
                       button: true,
-                      label: sender?.displayName ?? 'Открыть карточку участника',
+                      label:
+                          sender?.displayName ?? 'Открыть карточку участника',
                       child: AppAvatar(
                         seed: message.authorId,
                         name: sender?.displayName,
@@ -640,7 +642,9 @@ class _Bubble extends StatelessWidget {
               time: time,
               editedMark: message.isEdited && !message.isDeleted,
               forwardedLabel: null,
-              onLongPress: message.isDeleted ? null : () => _showActions(context),
+              onLongPress: message.isDeleted
+                  ? null
+                  : () => _showActions(context),
             ),
           ),
         ),

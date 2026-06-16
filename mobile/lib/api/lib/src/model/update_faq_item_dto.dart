@@ -7,7 +7,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'update_faq_item_dto.g.dart';
 
-
 @JsonSerializable(
   checked: true,
   createToJson: true,
@@ -16,66 +15,30 @@ part 'update_faq_item_dto.g.dart';
 )
 class UpdateFaqItemDto {
   /// Returns a new [UpdateFaqItemDto] instance.
-  UpdateFaqItemDto({
+  UpdateFaqItemDto({this.question, this.answer, this.orderIndex});
 
-     this.question,
-
-     this.answer,
-
-     this.orderIndex,
-  });
-
-  @JsonKey(
-    
-    name: r'question',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'question', required: false, includeIfNull: false)
   final String? question;
 
-
-
-  @JsonKey(
-    
-    name: r'answer',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'answer', required: false, includeIfNull: false)
   final String? answer;
 
-
-
-  @JsonKey(
-    
-    name: r'orderIndex',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'orderIndex', required: false, includeIfNull: false)
   final num? orderIndex;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UpdateFaqItemDto &&
+          other.question == question &&
+          other.answer == answer &&
+          other.orderIndex == orderIndex;
 
+  @override
+  int get hashCode => question.hashCode + answer.hashCode + orderIndex.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is UpdateFaqItemDto &&
-      other.question == question &&
-      other.answer == answer &&
-      other.orderIndex == orderIndex;
-
-    @override
-    int get hashCode =>
-        question.hashCode +
-        answer.hashCode +
-        orderIndex.hashCode;
-
-  factory UpdateFaqItemDto.fromJson(Map<String, dynamic> json) => _$UpdateFaqItemDtoFromJson(json);
+  factory UpdateFaqItemDto.fromJson(Map<String, dynamic> json) =>
+      _$UpdateFaqItemDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$UpdateFaqItemDtoToJson(this);
 
@@ -83,6 +46,4 @@ class UpdateFaqItemDto {
   String toString() {
     return toJson().toString();
   }
-
 }
-

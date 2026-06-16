@@ -55,7 +55,10 @@ void main() {
 
     test('заказчик НЕ имеет права distribute (это эксклюзив бригадира)', () {
       expect(
-        AccessGuard.can(SystemRole.customer, DomainAction.financePaymentDistribute),
+        AccessGuard.can(
+          SystemRole.customer,
+          DomainAction.financePaymentDistribute,
+        ),
         isFalse,
         reason: 'customer не должен иметь distribute — он не получатель аванса',
       );
@@ -82,17 +85,18 @@ void main() {
       }
     });
 
-    test('заказчик не создаёт самозакуп (но инструмент — self-custody модель доступна всем)', () {
-      for (final a in [
-        DomainAction.selfPurchaseCreate,
-      ]) {
-        expect(
-          AccessGuard.can(SystemRole.customer, a),
-          isFalse,
-          reason: 'customer не должен иметь $a (бекенд вернёт 403)',
-        );
-      }
-    });
+    test(
+      'заказчик не создаёт самозакуп (но инструмент — self-custody модель доступна всем)',
+      () {
+        for (final a in [DomainAction.selfPurchaseCreate]) {
+          expect(
+            AccessGuard.can(SystemRole.customer, a),
+            isFalse,
+            reason: 'customer не должен иметь $a (бекенд вернёт 403)',
+          );
+        }
+      },
+    );
   });
 
   group('AccessGuard — contractor (бригадир)', () {
@@ -165,27 +169,30 @@ void main() {
       }
     });
 
-    test('НЕ имеет stage-management / payment-create / distribute / approval-decide', () {
-      for (final a in [
-        DomainAction.stageManage,
-        DomainAction.stageStart,
-        DomainAction.stagePause,
-        DomainAction.financePaymentCreateAdvance,
-        DomainAction.financePaymentDistribute,
-        DomainAction.approvalDecide,
-        DomainAction.materialsManage,
-        DomainAction.chatCreateGroup,
-        DomainAction.documentWrite,
-        DomainAction.documentDelete,
-        DomainAction.projectInviteMember,
-      ]) {
-        expect(
-          AccessGuard.can(SystemRole.master, a),
-          isFalse,
-          reason: 'master не должен иметь $a',
-        );
-      }
-    });
+    test(
+      'НЕ имеет stage-management / payment-create / distribute / approval-decide',
+      () {
+        for (final a in [
+          DomainAction.stageManage,
+          DomainAction.stageStart,
+          DomainAction.stagePause,
+          DomainAction.financePaymentCreateAdvance,
+          DomainAction.financePaymentDistribute,
+          DomainAction.approvalDecide,
+          DomainAction.materialsManage,
+          DomainAction.chatCreateGroup,
+          DomainAction.documentWrite,
+          DomainAction.documentDelete,
+          DomainAction.projectInviteMember,
+        ]) {
+          expect(
+            AccessGuard.can(SystemRole.master, a),
+            isFalse,
+            reason: 'master не должен иметь $a',
+          );
+        }
+      },
+    );
   });
 
   group('AccessGuard — representative (П7.3 — read-only by default + чат)', () {

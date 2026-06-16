@@ -35,5 +35,5 @@ final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {
 
 final userProfileAggregateProvider =
     FutureProvider.family<UserProfileAggregate, String>((ref, userId) async {
-  return ref.read(userProfileRepositoryProvider).get(userId);
-});
+      return ref.read(userProfileRepositoryProvider).get(userId);
+    });

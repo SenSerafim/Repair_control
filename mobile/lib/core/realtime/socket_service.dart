@@ -29,17 +29,20 @@ class SocketEvents {
   static const exportReady = 'export:ready';
   static const exportFailed = 'export:failed';
   static const notificationNew = 'notification:new';
+
   /// chat:added — личное уведомление «тебя добавили в чат». Эмитится бэкендом
   /// в `user:{id}` комнату нового участника (см. ChatsGateway.onChatUserJoined).
   /// Payload: `{ chatId, projectId, type }`. Mobile инвалидирует список чатов,
   /// чтобы новый чат появился в inbox без pull-to-refresh.
   static const chatAdded = 'chat:added';
+
   /// project:membership_changed — тихий broadcast «состав команды изменился».
   /// Эмитится бэкендом в `user:{X}` комнаты всех участников проекта (включая
   /// нового/удалённого). Payload: `{ projectId, userId, role, action }`.
   /// `membership_sync_provider` использует событие для инвалидации списков
   /// проектов / команды / чатов без pull-to-refresh.
   static const projectMembershipChanged = 'project:membership_changed';
+
   /// approval:changed — точечный сигнал «обнови approvals», эмитится бэкендом
   /// для всех approval-родственных feed-событий (request/decide/escalate/cancel
   /// + mirror-approval lifecycle: selfpurchase/material/payment_dispute).
@@ -170,8 +173,10 @@ class SocketService {
         // счётчик попыток. Иначе оставляем — backoff будет расти 1→30s,
         // а не залипать на 1s при пинг-понг кике сразу после handshake.
         final connectedAt = _connectedAt;
-        final wasStable = connectedAt != null &&
-            DateTime.now().difference(connectedAt) >= _stableConnectionThreshold;
+        final wasStable =
+            connectedAt != null &&
+            DateTime.now().difference(connectedAt) >=
+                _stableConnectionThreshold;
         if (wasStable) _serverDisconnectAttempts = 0;
         _connectedAt = null;
         _logger.w('WS /chats disconnected: ${reason ?? "unknown"}');

@@ -37,9 +37,7 @@ class ProjectCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.n0,
             borderRadius: BorderRadius.circular(AppRadius.r20),
-            border: Border.all(
-              color: banner?.borderColor ?? AppColors.n200,
-            ),
+            border: Border.all(color: banner?.borderColor ?? AppColors.n200),
             boxShadow: AppShadows.sh2,
           ),
           child: ClipRRect(
@@ -81,9 +79,8 @@ class ProjectCard extends StatelessWidget {
                             padding: const EdgeInsets.all(AppSpacing.x6),
                             constraints: const BoxConstraints(),
                             color: AppColors.n400,
-                            onPressed: () => context.push(
-                              '/projects/${project.id}/notes',
-                            ),
+                            onPressed: () =>
+                                context.push('/projects/${project.id}/notes'),
                           ),
                           if (onMenu != null)
                             GestureDetector(
@@ -388,15 +385,9 @@ class _MiniDashboardRow extends StatelessWidget {
           color: isOverdue ? AppColors.redDot : null,
         ),
         const SizedBox(width: AppSpacing.x12),
-        _CardStat(
-          icon: PhosphorIconsRegular.listChecks,
-          value: stagesLabel,
-        ),
+        _CardStat(icon: PhosphorIconsRegular.listChecks, value: stagesLabel),
         const SizedBox(width: AppSpacing.x12),
-        _CardStat(
-          icon: PhosphorIconsRegular.gear,
-          value: inProgressLabel,
-        ),
+        _CardStat(icon: PhosphorIconsRegular.gear, value: inProgressLabel),
       ],
     );
   }

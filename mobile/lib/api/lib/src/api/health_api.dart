@@ -9,15 +9,13 @@ import 'dart:convert';
 import 'package:repair_control_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-
 class HealthApi {
-
   final Dio _dio;
 
   const HealthApi(this._dio);
 
   /// healthControllerHealth
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -29,7 +27,7 @@ class HealthApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> healthControllerHealth({ 
+  Future<Response<void>> healthControllerHealth({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -40,13 +38,8 @@ class HealthApi {
     final _path = r'/healthz';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       validateStatus: validateStatus,
     );
 
@@ -60,5 +53,4 @@ class HealthApi {
 
     return _response;
   }
-
 }

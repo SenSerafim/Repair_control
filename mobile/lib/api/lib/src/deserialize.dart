@@ -88,213 +88,311 @@ final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
 final _regMap = RegExp(r'^Map<String,(.*)>$');
 
-  ReturnType deserialize<ReturnType, BaseType>(dynamic value, String targetType, {bool growable= true}) {
-      switch (targetType) {
-        case 'String':
-          return '$value' as ReturnType;
-        case 'int':
-          return (value is int ? value : int.parse('$value')) as ReturnType;
-        case 'bool':
-          if (value is bool) {
-            return value as ReturnType;
-          }
-          final valueString = '$value'.toLowerCase();
-          return (valueString == 'true' || valueString == '1') as ReturnType;
-        case 'double':
-          return (value is double ? value : double.parse('$value')) as ReturnType;
-        case 'AcceptLegalDto':
-          return AcceptLegalDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AddMemberDto':
-          return AddMemberDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AddParticipantDto':
-          return AddParticipantDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AddRoleDto':
-          return AddRoleDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AddSubstepDto':
-          return AddSubstepDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AnswerQuestionDto':
-          return AnswerQuestionDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AskQuestionDto':
-          return AskQuestionDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'BanUserDto':
-          return BanUserDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'BroadcastFilterDto':
-          return BroadcastFilterDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ConfirmPhotoDto':
-          return ConfirmPhotoDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CopyProjectDto':
-          return CopyProjectDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateAdvanceDto':
-          return CreateAdvanceDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateApprovalDto':
-          return CreateApprovalDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateArticleDto':
-          return CreateArticleDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateExportDto':
-          return CreateExportDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateFaqItemDto':
-          return CreateFaqItemDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateFaqSectionDto':
-          return CreateFaqSectionDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateFeedbackDto':
-          return CreateFeedbackDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateGroupChatDto':
-          return CreateGroupChatDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateLegalDto':
-          return CreateLegalDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateMaterialRequestDto':
-          return CreateMaterialRequestDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateMessageDto':
-          return CreateMessageDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateNoteDto':
-          return CreateNoteDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreatePersonalChatDto':
-          return CreatePersonalChatDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateProjectDto':
-          return CreateProjectDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateSectionDto':
-          return CreateSectionDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateSelfPurchaseDto':
-          return CreateSelfPurchaseDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateStageDto':
-          return CreateStageDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateStageFromTemplateDto':
-          return CreateStageFromTemplateDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateStepDto':
-          return CreateStepDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CreateToolDto':
-          return CreateToolDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DecideApprovalDto':
-          return DecideApprovalDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DecideSelfPurchaseDto':
-          return DecideSelfPurchaseDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DisputeMaterialDto':
-          return DisputeMaterialDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DisputePaymentDto':
-          return DisputePaymentDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DistributeDto':
-          return DistributeDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EditMessageDto':
-          return EditMessageDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ForceArchiveDto':
-          return ForceArchiveDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ForwardMessageDto':
-          return ForwardMessageDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'InviteByPhoneDto':
-          return InviteByPhoneDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'IssueToolDto':
-          return IssueToolDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'LoginDto':
-          return LoginDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'LogoutDto':
-          return LogoutDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'MarkBoughtDto':
-          return MarkBoughtDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'MarkReadDto':
-          return MarkReadDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'MaterialItemInputDto':
-          return MaterialItemInputDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PatchChatDto':
-          return PatchChatDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PatchDocumentDto':
-          return PatchDocumentDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PatchFeedbackDto':
-          return PatchFeedbackDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PatchSettingDto':
-          return PatchSettingDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PauseStageDto':
-          return PauseStageDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PresignPhotoDto':
-          return PresignPhotoDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PresignUploadDto':
-          return PresignUploadDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PreviewDto':
-          return PreviewDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PutSettingDto':
-          return PutSettingDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RecoveryResetDto':
-          return RecoveryResetDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RecoverySendDto':
-          return RecoverySendDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RecoveryVerifyDto':
-          return RecoveryVerifyDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RefreshDto':
-          return RefreshDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RegisterDeviceDto':
-          return RegisterDeviceDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RegisterDto':
-          return RegisterDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ReorderItemDto':
-          return ReorderItemDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ReorderStagesDto':
-          return ReorderStagesDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ReorderStepItemDto':
-          return ReorderStepItemDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ReorderStepsDto':
-          return ReorderStepsDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ResolveMaterialDto':
-          return ResolveMaterialDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ResolvePaymentDto':
-          return ResolvePaymentDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ResubmitApprovalDto':
-          return ResubmitApprovalDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ReturnToolDto':
-          return ReturnToolDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SaveAsTemplateDto':
-          return SaveAsTemplateDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SendBroadcastDto':
-          return SendBroadcastDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SetActiveRoleDto':
-          return SetActiveRoleDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SetRolesDto':
-          return SetRolesDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateArticleDto':
-          return UpdateArticleDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateFaqItemDto':
-          return UpdateFaqItemDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateLegalDto':
-          return UpdateLegalDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateMembershipDto':
-          return UpdateMembershipDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateNoteDto':
-          return UpdateNoteDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateProfileDto':
-          return UpdateProfileDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateProjectDto':
-          return UpdateProjectDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateSectionDto':
-          return UpdateSectionDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateStageDto':
-          return UpdateStageDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateStepDto':
-          return UpdateStepDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateSubstepDto':
-          return UpdateSubstepDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UpdateToolDto':
-          return UpdateToolDto.fromJson(value as Map<String, dynamic>) as ReturnType;
-        default:
-          RegExpMatch? match;
+ReturnType deserialize<ReturnType, BaseType>(
+  dynamic value,
+  String targetType, {
+  bool growable = true,
+}) {
+  switch (targetType) {
+    case 'String':
+      return '$value' as ReturnType;
+    case 'int':
+      return (value is int ? value : int.parse('$value')) as ReturnType;
+    case 'bool':
+      if (value is bool) {
+        return value as ReturnType;
+      }
+      final valueString = '$value'.toLowerCase();
+      return (valueString == 'true' || valueString == '1') as ReturnType;
+    case 'double':
+      return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'AcceptLegalDto':
+      return AcceptLegalDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AddMemberDto':
+      return AddMemberDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'AddParticipantDto':
+      return AddParticipantDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AddRoleDto':
+      return AddRoleDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'AddSubstepDto':
+      return AddSubstepDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AnswerQuestionDto':
+      return AnswerQuestionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AskQuestionDto':
+      return AskQuestionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'BanUserDto':
+      return BanUserDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'BroadcastFilterDto':
+      return BroadcastFilterDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ConfirmPhotoDto':
+      return ConfirmPhotoDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CopyProjectDto':
+      return CopyProjectDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateAdvanceDto':
+      return CreateAdvanceDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateApprovalDto':
+      return CreateApprovalDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateArticleDto':
+      return CreateArticleDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateExportDto':
+      return CreateExportDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateFaqItemDto':
+      return CreateFaqItemDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateFaqSectionDto':
+      return CreateFaqSectionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateFeedbackDto':
+      return CreateFeedbackDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateGroupChatDto':
+      return CreateGroupChatDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateLegalDto':
+      return CreateLegalDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateMaterialRequestDto':
+      return CreateMaterialRequestDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateMessageDto':
+      return CreateMessageDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateNoteDto':
+      return CreateNoteDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreatePersonalChatDto':
+      return CreatePersonalChatDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateProjectDto':
+      return CreateProjectDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateSectionDto':
+      return CreateSectionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateSelfPurchaseDto':
+      return CreateSelfPurchaseDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateStageDto':
+      return CreateStageDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateStageFromTemplateDto':
+      return CreateStageFromTemplateDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateStepDto':
+      return CreateStepDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CreateToolDto':
+      return CreateToolDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DecideApprovalDto':
+      return DecideApprovalDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DecideSelfPurchaseDto':
+      return DecideSelfPurchaseDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DisputeMaterialDto':
+      return DisputeMaterialDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DisputePaymentDto':
+      return DisputePaymentDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DistributeDto':
+      return DistributeDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EditMessageDto':
+      return EditMessageDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ForceArchiveDto':
+      return ForceArchiveDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ForwardMessageDto':
+      return ForwardMessageDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'InviteByPhoneDto':
+      return InviteByPhoneDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IssueToolDto':
+      return IssueToolDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'LoginDto':
+      return LoginDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'LogoutDto':
+      return LogoutDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'MarkBoughtDto':
+      return MarkBoughtDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MarkReadDto':
+      return MarkReadDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'MaterialItemInputDto':
+      return MaterialItemInputDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PatchChatDto':
+      return PatchChatDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'PatchDocumentDto':
+      return PatchDocumentDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PatchFeedbackDto':
+      return PatchFeedbackDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PatchSettingDto':
+      return PatchSettingDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PauseStageDto':
+      return PauseStageDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PresignPhotoDto':
+      return PresignPhotoDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PresignUploadDto':
+      return PresignUploadDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PreviewDto':
+      return PreviewDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'PutSettingDto':
+      return PutSettingDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecoveryResetDto':
+      return RecoveryResetDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecoverySendDto':
+      return RecoverySendDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecoveryVerifyDto':
+      return RecoveryVerifyDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RefreshDto':
+      return RefreshDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RegisterDeviceDto':
+      return RegisterDeviceDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RegisterDto':
+      return RegisterDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ReorderItemDto':
+      return ReorderItemDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ReorderStagesDto':
+      return ReorderStagesDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ReorderStepItemDto':
+      return ReorderStepItemDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ReorderStepsDto':
+      return ReorderStepsDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ResolveMaterialDto':
+      return ResolveMaterialDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ResolvePaymentDto':
+      return ResolvePaymentDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ResubmitApprovalDto':
+      return ResubmitApprovalDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ReturnToolDto':
+      return ReturnToolDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SaveAsTemplateDto':
+      return SaveAsTemplateDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SendBroadcastDto':
+      return SendBroadcastDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SetActiveRoleDto':
+      return SetActiveRoleDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SetRolesDto':
+      return SetRolesDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'UpdateArticleDto':
+      return UpdateArticleDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateFaqItemDto':
+      return UpdateFaqItemDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateLegalDto':
+      return UpdateLegalDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateMembershipDto':
+      return UpdateMembershipDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateNoteDto':
+      return UpdateNoteDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateProfileDto':
+      return UpdateProfileDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateProjectDto':
+      return UpdateProjectDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateSectionDto':
+      return UpdateSectionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateStageDto':
+      return UpdateStageDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateStepDto':
+      return UpdateStepDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateSubstepDto':
+      return UpdateSubstepDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UpdateToolDto':
+      return UpdateToolDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    default:
+      RegExpMatch? match;
 
-          if (value is List && (match = _regList.firstMatch(targetType)) != null) {
-            targetType = match![1]!; // ignore: parameter_assignments
-            return value
-              .map<BaseType>((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable))
-              .toList(growable: growable) as ReturnType;
-          }
-          if (value is Set && (match = _regSet.firstMatch(targetType)) != null) {
-            targetType = match![1]!; // ignore: parameter_assignments
-            return value
-              .map<BaseType>((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable))
-              .toSet() as ReturnType;
-          }
-          if (value is Map && (match = _regMap.firstMatch(targetType)) != null) {
-            targetType = match![1]!.trim(); // ignore: parameter_assignments
-            return Map<String, BaseType>.fromIterables(
+      if (value is List && (match = _regList.firstMatch(targetType)) != null) {
+        targetType = match![1]!; // ignore: parameter_assignments
+        return value
+                .map<BaseType>(
+                  (dynamic v) => deserialize<BaseType, BaseType>(
+                    v,
+                    targetType,
+                    growable: growable,
+                  ),
+                )
+                .toList(growable: growable)
+            as ReturnType;
+      }
+      if (value is Set && (match = _regSet.firstMatch(targetType)) != null) {
+        targetType = match![1]!; // ignore: parameter_assignments
+        return value
+                .map<BaseType>(
+                  (dynamic v) => deserialize<BaseType, BaseType>(
+                    v,
+                    targetType,
+                    growable: growable,
+                  ),
+                )
+                .toSet()
+            as ReturnType;
+      }
+      if (value is Map && (match = _regMap.firstMatch(targetType)) != null) {
+        targetType = match![1]!.trim(); // ignore: parameter_assignments
+        return Map<String, BaseType>.fromIterables(
               value.keys as Iterable<String>,
-              value.values.map((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable)),
-            ) as ReturnType;
-          }
-          break;
-    }
-    throw Exception('Cannot deserialize');
+              value.values.map(
+                (dynamic v) => deserialize<BaseType, BaseType>(
+                  v,
+                  targetType,
+                  growable: growable,
+                ),
+              ),
+            )
+            as ReturnType;
+      }
+      break;
   }
+  throw Exception('Cannot deserialize');
+}

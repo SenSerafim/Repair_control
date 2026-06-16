@@ -304,28 +304,19 @@ final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
   // Мастеров приглашает бригадир — это явное продуктовое требование
   // (Серафим 08.06.2026): заказчик не должен видеть мастеров вообще.
   if (me != null && ownerId != null && me == ownerId) {
-    return const [
-      MembershipRole.representative,
-      MembershipRole.foreman,
-    ];
+    return const [MembershipRole.representative, MembershipRole.foreman];
   }
   final my = ref.watch(myMembershipInProjectProvider(projectId));
   if (my == null) return const [];
   switch (my.role) {
     case MembershipRole.customer:
-      return const [
-        MembershipRole.representative,
-        MembershipRole.foreman,
-      ];
+      return const [MembershipRole.representative, MembershipRole.foreman];
     case MembershipRole.representative:
       final delegated = ref.watch(representativeRightsProvider(projectId));
       if (!delegated.contains(DomainAction.projectInviteMember)) {
         return const [];
       }
-      return const [
-        MembershipRole.representative,
-        MembershipRole.foreman,
-      ];
+      return const [MembershipRole.representative, MembershipRole.foreman];
     case MembershipRole.foreman:
       return const [MembershipRole.master];
     case MembershipRole.master:
@@ -359,7 +350,9 @@ final canInProjectProvider =
       if (sysRole == SystemRole.admin) return true;
 
       final me = ref.watch(authControllerProvider).userId;
-      final projectAsync = ref.watch(projectControllerProvider(params.projectId));
+      final projectAsync = ref.watch(
+        projectControllerProvider(params.projectId),
+      );
       final ownerId = projectAsync.maybeWhen(
         data: (p) => p.ownerId,
         orElse: () => null,

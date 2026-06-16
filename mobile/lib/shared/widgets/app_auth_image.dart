@@ -46,8 +46,7 @@ class AppAuthImage extends ConsumerWidget {
           headers: token == null || token.isEmpty
               ? const {}
               : {'Authorization': 'Bearer $token'},
-          errorBuilder:
-              errorBuilder ?? (_, __, ___) => const SizedBox.shrink(),
+          errorBuilder: errorBuilder ?? (_, __, ___) => const SizedBox.shrink(),
         );
       },
     );

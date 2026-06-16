@@ -81,9 +81,10 @@ class PaymentCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('d MMM HH:mm', 'ru').format(
-                          payment.createdAt,
-                        ),
+                        DateFormat(
+                          'd MMM HH:mm',
+                          'ru',
+                        ).format(payment.createdAt),
                         style: AppTextStyles.caption,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
