@@ -440,7 +440,8 @@ class _ItemRow extends StatelessWidget {
         children: [
           if (item.photo?.thumbUrl != null) ...[
             GestureDetector(
-              onTap: () => _openPhoto(context, item.photo!.url ?? item.photo!.thumbUrl!),
+              onTap: () =>
+                  _openPhoto(context, item.photo!.url ?? item.photo!.thumbUrl!),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.r8),
                 child: Image.network(

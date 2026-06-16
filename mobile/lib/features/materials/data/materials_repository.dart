@@ -179,17 +179,18 @@ class MaterialsRepository {
   /// Серафим 08.06.2026: возвращаем bytes + Content-Type, чтобы клиент сам
   /// сохранил с правильным расширением. Backend может вернуть text/html
   /// (fallback puppeteer) — мобилка покажет в браузере, не в PDF reader'е.
-  Future<({Uint8List bytes, String mime})> downloadRequestPdf(String id) => _call(() async {
-    final r = await _dio.get<List<int>>(
-      '/api/materials/$id/pdf',
-      options: Options(
-        responseType: ResponseType.bytes,
-        headers: {'Accept': 'application/pdf,text/html'},
-      ),
-    );
-    final mime = r.headers.value('content-type') ?? 'application/pdf';
-    return (bytes: Uint8List.fromList(r.data!), mime: mime);
-  });
+  Future<({Uint8List bytes, String mime})> downloadRequestPdf(String id) =>
+      _call(() async {
+        final r = await _dio.get<List<int>>(
+          '/api/materials/$id/pdf',
+          options: Options(
+            responseType: ResponseType.bytes,
+            headers: {'Accept': 'application/pdf,text/html'},
+          ),
+        );
+        final mime = r.headers.value('content-type') ?? 'application/pdf';
+        return (bytes: Uint8List.fromList(r.data!), mime: mime);
+      });
 
   /// Пресайн на загрузку фото позиции (ТЗ NEWFIX §5.2).
   /// Используется общий /api/files/presign-upload, scope='materials/items'.

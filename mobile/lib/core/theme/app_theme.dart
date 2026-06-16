@@ -71,7 +71,10 @@ class AppTheme {
       // n400 (как у hint) → пользователь не видит что печатает. Жёстко
       // задаём n800 для value и n400 для hint.
       inputDecorationTheme: const InputDecorationTheme(
-        hintStyle: TextStyle(color: AppColors.n400, fontWeight: FontWeight.w500),
+        hintStyle: TextStyle(
+          color: AppColors.n400,
+          fontWeight: FontWeight.w500,
+        ),
         labelStyle: TextStyle(color: AppColors.n600),
       ),
     );
