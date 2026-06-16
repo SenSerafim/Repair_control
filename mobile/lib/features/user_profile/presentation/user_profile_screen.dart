@@ -578,7 +578,7 @@ class _ReclamationsSection extends StatelessWidget {
               ),
             )
           : const Text(
-              '— · домен рекламаций ещё не реализован',
+              'Рекламаций нет',
               style: TextStyle(color: AppColors.n400),
             ),
     );

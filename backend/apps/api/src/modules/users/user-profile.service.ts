@@ -39,10 +39,11 @@ export class UserProfileService {
 
     const viewerRole = await this.resolveViewerRoleInProject(viewerUserId, sharedProjects[0]?.id);
 
-    const [objects, monthStats, tools, payouts] = await Promise.all([
+    const [objects, monthStats, tools, reclamations, payouts] = await Promise.all([
       this.collectObjects(targetUserId, sharedProjects),
       this.collectMonthStats(targetUserId, sharedProjects),
       this.collectTools(targetUserId, sharedProjects),
+      this.collectReclamations(targetUserId, sharedProjects),
       this.collectPayouts(targetUserId, viewerUserId, viewerRole, sharedProjects),
     ]);
 
@@ -59,10 +60,7 @@ export class UserProfileService {
       objects,
       monthStats,
       tools,
-      // Reclamation domain ещё не реализован (ТЗ NEWFIX §4: «специально
-      // отметил, ни у кого нормально не реализовано»). Отдаём счётчик
-      // с нулями; mobile отрисует «—», когда домен появится — заполним.
-      reclamations: { completed: 0, total: 0 },
+      reclamations,
       payouts,
     };
   }
@@ -199,6 +197,36 @@ export class UserProfileService {
       serial: t.serial,
       photoKey: t.photoKey,
     }));
+  }
+
+  private async collectReclamations(
+    targetId: string,
+    sharedProjects: Array<{ id: string }>,
+  ): Promise<{ completed: number; total: number }> {
+    // total = defect approvals на шагах исполнителя; completed = шаг сейчас
+    // status='done' (переделка принята). Status-фильтр approval'а намеренно
+    // отсутствует — продуктовое решение pending (ТЗ NEWFIX §4 не уточняет).
+    if (sharedProjects.length === 0) return { completed: 0, total: 0 };
+    const projectIds = sharedProjects.map((p) => p.id);
+    const steps = await this.prisma.step.findMany({
+      where: {
+        assigneeIds: { has: targetId },
+        stage: { projectId: { in: projectIds } },
+      },
+      select: { id: true, status: true },
+    });
+    if (steps.length === 0) return { completed: 0, total: 0 };
+    const stepIds = steps.map((s) => s.id);
+    const doneStepIds = new Set(steps.filter((s) => s.status === 'done').map((s) => s.id));
+    const defects = await this.prisma.approval.findMany({
+      where: { scope: 'defect', stepId: { in: stepIds } },
+      select: { stepId: true },
+    });
+    let completed = 0;
+    for (const d of defects) {
+      if (d.stepId && doneStepIds.has(d.stepId)) completed += 1;
+    }
+    return { completed, total: defects.length };
   }
 
   private async collectPayouts(

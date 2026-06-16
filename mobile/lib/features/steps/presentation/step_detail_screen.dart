@@ -516,50 +516,61 @@ class _PhotoThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // NEWFIX TZ-фронт §8 — для видео thumbnail-генерация ещё не сделана на
-    // бэке, поэтому показываем placeholder с play-overlay вместо превью.
+    // NEWFIX TZ-фронт §8 — thumbnail-генерация для видео ещё не сделана на
+    // бэке: показываем placeholder с play-overlay; tap по плитке открывает
+    // fullscreen VideoPlayerScreen (chewie) с presigned URL.
     final isVideo = photo.isVideo;
     final url = isVideo ? null : (photo.thumbUrl ?? photo.url);
     return Stack(
       fit: StackFit.expand,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
-          child: url == null
-              ? ColoredBox(
-                  color: AppColors.n100,
-                  child: Icon(
-                    isVideo
-                        ? Icons.videocam_rounded
-                        : Icons.image_outlined,
-                    color: AppColors.n400,
-                  ),
-                )
-              : Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const ColoredBox(
-                    color: AppColors.n100,
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      color: AppColors.n400,
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: isVideo && photo.url != null
+                ? () => VideoPlayerScreen.open(context, url: photo.url!)
+                : null,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.r12),
+              child: url == null
+                  ? ColoredBox(
+                      color: AppColors.n100,
+                      child: Icon(
+                        isVideo
+                            ? Icons.videocam_rounded
+                            : Icons.image_outlined,
+                        color: AppColors.n400,
+                      ),
+                    )
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: AppColors.n100,
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppColors.n400,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+            ),
+          ),
         ),
         if (isVideo)
-          const Center(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColors.overlayBackdrop,
-                shape: BoxShape.circle,
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(6),
-                child: Icon(
-                  Icons.play_arrow_rounded,
-                  color: AppColors.n0,
-                  size: 22,
+          const IgnorePointer(
+            child: Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.overlayBackdrop,
+                  shape: BoxShape.circle,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppColors.n0,
+                    size: 22,
+                  ),
                 ),
               ),
             ),

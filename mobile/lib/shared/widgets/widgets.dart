@@ -57,3 +57,4 @@ export 'ru_phone_prefix.dart';
 export 'scope_badge.dart';
 export 'status_pill.dart';
 export 'success_screen.dart';
+export 'video_player_screen.dart';

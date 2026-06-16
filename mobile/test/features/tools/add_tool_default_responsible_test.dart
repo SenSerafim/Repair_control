@@ -176,8 +176,13 @@ void main() {
         await tester.tap(find.text('У сотрудника'));
         await tester.pumpAndSettle();
 
-        // Хинт виден (pre-fill бригадиром применён).
-        expect(find.text('По умолчанию — бригадир'), findsOneWidget);
+        // Хинт виден (pre-fill бригадиром применён). skipOffstage:false
+        // нужен потому что ListView с большим количеством полей форм
+        // отрендерил его в lazy-зону, недоступную обычному find.text.
+        expect(
+          find.text('По умолчанию — бригадир', skipOffstage: false),
+          findsOneWidget,
+        );
       },
     );
 

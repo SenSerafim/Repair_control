@@ -53,6 +53,35 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
   bool _foremanPrefillApplied = false;
 
   @override
+  void initState() {
+    super.initState();
+    final projectId = widget.projectId;
+    if (projectId == null) return;
+    // Pre-fill бригадира как ответственного при открытии экрана в контексте
+    // проекта. Подписка через ref.read(...future) одноразовая — не реагируем
+    // на смену состава команды в фоне, чтобы не затирать выбор пользователя.
+    Future.microtask(() async {
+      if (!mounted || _foremanPrefillApplied) return;
+      try {
+        final teamState = await ref.read(
+          teamControllerProvider(projectId).future,
+        );
+        if (!mounted || _foremanPrefillApplied) return;
+        final foremanId = resolveProjectForemanId(teamState.members);
+        if (foremanId == null) return;
+        setState(() {
+          _assignedEmployeeId = foremanId;
+          _foremanPrefillApplied = true;
+        });
+      } catch (e, st) {
+        // Pre-fill — UX-удобство, не блокирующая операция; но факт сбоя
+        // нужно видеть в логах, иначе тихие 500 от teamRepo маскируются.
+        debugPrint('[AddToolScreen] foreman prefill failed: $e\n$st');
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _name.dispose();
     _article.dispose();
@@ -102,23 +131,6 @@ class _AddToolScreenState extends ConsumerState<AddToolScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // NEWFIX TЗ-2 §8.3 (Task 6.4): когда экран открыт в контексте проекта,
-    // подписываемся на teamControllerProvider и pre-fill'им бригадира как
-    // ответственного сотрудника. Делаем только один раз, чтобы не затирать
-    // выбор пользователя.
-    final projectId = widget.projectId;
-    if (projectId != null && !_foremanPrefillApplied) {
-      final teamAsync = ref.watch(teamControllerProvider(projectId));
-      final foremanId = teamAsync.maybeWhen(
-        data: (s) => resolveProjectForemanId(s.members),
-        orElse: () => null,
-      );
-      if (foremanId != null) {
-        _assignedEmployeeId = foremanId;
-        _foremanPrefillApplied = true;
-      }
-    }
-
     return AppScaffold(
       showBack: true,
       title: 'Добавить инструмент',
