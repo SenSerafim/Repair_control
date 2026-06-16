@@ -316,9 +316,14 @@ class _MemberRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = member.user;
-    final name = user == null
-        ? 'Участник'
+    final fullName = user == null
+        ? ''
         : '${user.firstName} ${user.lastName}'.trim();
+    // Серафим 08.06.2026: если ФИО пусто — показываем телефон вместо
+    // безличного «Участник».
+    final name = fullName.isNotEmpty
+        ? fullName
+        : _phoneLabel(user?.phone ?? '');
     final isRepresentative = member.role == MembershipRole.representative;
     final isCustomerRow = member.role == MembershipRole.customer;
     final me = ref.watch(authControllerProvider).userId;
@@ -500,8 +505,10 @@ class _MemberRow extends ConsumerWidget {
     final commonProjects = await _loadCommonProjects(ref, userIdForCommon);
     if (!context.mounted) return;
     final parts = name.trim().split(RegExp(r'\s+'));
-    final fallbackFirstName =
-        user?.firstName ?? (parts.isNotEmpty ? parts.first : 'Участник');
+    final fallbackFirstName = user?.firstName ??
+        (parts.isNotEmpty && parts.first.isNotEmpty
+            ? parts.first
+            : _phoneLabel(user?.phone ?? ''));
     final fallbackLastName =
         user?.lastName ?? (parts.length > 1 ? parts.sublist(1).join(' ') : '');
     final isRepresentativeMember =
@@ -706,4 +713,13 @@ class _RemoveConfirm extends StatelessWidget {
       ],
     );
   }
+}
+
+// Серафим 08.06.2026: вместо безличного «Участник» когда ФИО пусто —
+// показываем последние 4 цифры телефона. Если и телефона нет — fallback.
+String _phoneLabel(String phone) {
+  final p = phone.trim();
+  if (p.isEmpty) return "Участник";
+  if (p.length <= 4) return p;
+  return "+•• ${p.substring(p.length - 4)}";
 }

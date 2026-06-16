@@ -504,12 +504,11 @@ class _SenderIndex {
     for (final m in team?.members ?? const <Membership>[]) {
       final u = m.user;
       if (u == null) continue;
+      final full = '${u.firstName} ${u.lastName}'.trim();
       out[u.id] = _SenderInfo(
         userId: u.id,
-        displayName: '${u.firstName} ${u.lastName}'.trim().isEmpty
-            ? 'Участник'
-            : '${u.firstName} ${u.lastName}'.trim(),
-        shortLabel: _shorten(u.firstName, u.lastName),
+        displayName: full.isEmpty ? _phoneLabel(u.phone) : full,
+        shortLabel: _shorten(u.firstName, u.lastName, u.phone),
         avatarUrl: u.avatarUrl,
         isActive: !leftIds.contains(u.id),
       );
@@ -519,14 +518,23 @@ class _SenderIndex {
 
   _SenderInfo? byId(String userId) => _byId[userId];
 
-  static String _shorten(String first, String last) {
+  static String _shorten(String first, String last, [String phone = '']) {
     final f = first.trim();
     final l = last.trim();
-    if (f.isEmpty && l.isEmpty) return 'Участник';
+    if (f.isEmpty && l.isEmpty) return _phoneLabel(phone);
     if (f.isEmpty) return l;
     if (l.isEmpty) return f;
     return '$f ${l.characters.first}.';
   }
+}
+
+// Серафим 08.06.2026: вместо безличного «Участник» когда ФИО пусто —
+// показываем последние 4 цифры телефона. Если и телефона нет — fallback.
+String _phoneLabel(String phone) {
+  final p = phone.trim();
+  if (p.isEmpty) return 'Участник';
+  if (p.length <= 4) return p;
+  return '+•• ${p.substring(p.length - 4)}';
 }
 
 class _Bubble extends StatelessWidget {

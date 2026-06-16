@@ -170,8 +170,10 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
   @override
   Widget build(BuildContext context) {
     final insets = MediaQuery.of(context).viewInsets;
+    // SafeArea со всех сторон: при isScrollControlled:true sheet может
+    // вытянуться до status bar / system nav — top:false ранее обрезал
+    // заголовок об верхнюю кромку (Серафим 08.06.2026).
     return SafeArea(
-      top: false,
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.x16,
