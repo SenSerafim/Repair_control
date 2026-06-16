@@ -113,6 +113,12 @@ class StepDetailScreen extends ConsumerWidget {
                 // Substep-чеклист и questions-thread скрыты (вопросы переехали в чат проекта).
                 _ReportSection(detailKey: _key, step: data.step),
                 const SizedBox(height: AppSpacing.x20),
+                // Серафим 08.06.2026: подшаги-чеклист вернули. Раньше
+                // секция была скрыта (// ignore: unused_element), но
+                // кнопка «Добавить подшаг» осталась в 3-точечном меню —
+                // пользователь нажимал и не видел результата.
+                _SubstepsSection(detailKey: _key, substeps: data.substeps),
+                const SizedBox(height: AppSpacing.x20),
                 _PhotosSection(detailKey: _key, photos: data.photos),
                 const SizedBox(height: AppSpacing.x24),
                 _ActionCtas(
@@ -319,7 +325,6 @@ class _MethodologyLink extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
 class _SubstepsSection extends ConsumerWidget {
   const _SubstepsSection({required this.detailKey, required this.substeps});
 
@@ -329,6 +334,12 @@ class _SubstepsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final done = substeps.where((s) => s.isDone).length;
+    final canAdd = ref.watch(
+      canInProjectProvider((
+        action: DomainAction.stepAddSubstep,
+        projectId: detailKey.projectId,
+      )),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -339,12 +350,13 @@ class _SubstepsSection extends ConsumerWidget {
             if (substeps.isNotEmpty)
               Text('$done из ${substeps.length}', style: AppTextStyles.caption),
             const Spacer(),
-            TextButton.icon(
-              onPressed: () =>
-                  showAddSubstepSheet(context, ref, key: detailKey),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Добавить'),
-            ),
+            if (canAdd)
+              TextButton.icon(
+                onPressed: () =>
+                    showAddSubstepSheet(context, ref, key: detailKey),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Добавить'),
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.x8),
@@ -874,6 +886,10 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
   String _savedHow = '';
   _ReportSaveStatus _status = _ReportSaveStatus.idle;
   String? _errorMessage;
+  // Серафим 08.06.2026: блок «Отчёт» свёрнут по дефолту, мастер раскрывает
+  // когда надо что-то написать. Без авто-раскрытия по факту существующего
+  // текста: в режиме просмотра тоже compact, чтобы экран был короче.
+  bool _collapsed = true;
   // Кэш контейнера: ref в dispose() стрелять нельзя — ConsumerStatefulElement
   // помечен disposed к моменту вызова, а контейнер живёт до конца приложения.
   ProviderContainer? _containerCache;
@@ -1057,59 +1073,101 @@ class _ReportSectionState extends ConsumerState<_ReportSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Text('Отчёт', style: AppTextStyles.h2),
-              const Spacer(),
-              if (!readOnly) _statusIndicator(),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Опционально опишите ход работы. Поля можно оставить пустыми — '
-            'шаг закроется и без отчёта.',
-            style: AppTextStyles.caption.copyWith(color: AppColors.n500),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          _LabeledField(
-            label: 'Что делал',
-            child: TextField(
-              controller: _whatDid,
-              focusNode: _whatFocus,
-              readOnly: readOnly,
-              maxLines: 4,
-              minLines: 2,
-              onChanged: (_) => _onTextChanged(),
-              decoration: const InputDecoration(
-                filled: true,
-                fillColor: AppColors.n50,
-                hintText: 'Например: уложил плитку в санузле',
-                border: OutlineInputBorder(borderSide: BorderSide.none),
+          InkWell(
+            onTap: () => setState(() => _collapsed = !_collapsed),
+            borderRadius: BorderRadius.circular(AppRadius.r8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  const Text('Отчёт', style: AppTextStyles.h2),
+                  const SizedBox(width: AppSpacing.x6),
+                  if (_hasContent())
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.brand,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  const Spacer(),
+                  if (!readOnly) _statusIndicator(),
+                  const SizedBox(width: 4),
+                  AnimatedRotation(
+                    duration: const Duration(milliseconds: 180),
+                    turns: _collapsed ? 0 : 0.5,
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.n500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.x12),
-          _LabeledField(
-            label: 'Как делал',
-            child: TextField(
-              controller: _howDid,
-              focusNode: _howFocus,
-              readOnly: readOnly,
-              maxLines: 4,
-              minLines: 2,
-              onChanged: (_) => _onTextChanged(),
-              decoration: const InputDecoration(
-                filled: true,
-                fillColor: AppColors.n50,
-                hintText: 'Например: с гидроизоляцией под плиткой, шов 2мм',
-                border: OutlineInputBorder(borderSide: BorderSide.none),
-              ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 180),
+            crossFadeState: _collapsed
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: const SizedBox(width: double.infinity, height: 0),
+            secondChild: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 4),
+                Text(
+                  'Опционально опишите ход работы. Поля можно оставить '
+                  'пустыми — шаг закроется и без отчёта.',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.n500),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+                _LabeledField(
+                  label: 'Что делал',
+                  child: TextField(
+                    controller: _whatDid,
+                    focusNode: _whatFocus,
+                    readOnly: readOnly,
+                    maxLines: 4,
+                    minLines: 2,
+                    onChanged: (_) => _onTextChanged(),
+                    decoration: const InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.n50,
+                      hintText: 'Например: уложил плитку в санузле',
+                      border: OutlineInputBorder(borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+                _LabeledField(
+                  label: 'Как делал',
+                  child: TextField(
+                    controller: _howDid,
+                    focusNode: _howFocus,
+                    readOnly: readOnly,
+                    maxLines: 4,
+                    minLines: 2,
+                    onChanged: (_) => _onTextChanged(),
+                    decoration: const InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.n50,
+                      hintText:
+                          'Например: с гидроизоляцией под плиткой, шов 2мм',
+                      border: OutlineInputBorder(borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
+  bool _hasContent() => _whatDid.text.trim().isNotEmpty ||
+      _howDid.text.trim().isNotEmpty;
 }
 
 class _LabeledField extends StatelessWidget {

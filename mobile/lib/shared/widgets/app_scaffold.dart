@@ -9,6 +9,7 @@ class AppScaffold extends StatefulWidget {
   const AppScaffold({
     required this.body,
     this.title,
+    this.titleWidget,
     this.leading,
     this.actions,
     this.bottom,
@@ -23,6 +24,11 @@ class AppScaffold extends StatefulWidget {
 
   final Widget body;
   final String? title;
+
+  /// Кастомный титульный виджет — если задан, перекрывает [title]. Нужен
+  /// когда в шапке должен быть не только текст, но и доп. элементы рядом
+  /// (статус-бейдж, счётчик и т.д.).
+  final Widget? titleWidget;
   final Widget? leading;
   final List<Widget>? actions;
   final Widget? bottom;
@@ -72,7 +78,9 @@ class _AppScaffoldState extends State<AppScaffold> {
       backgroundColor: widget.backgroundColor ?? AppColors.n50,
       appBar: hasAppBar
           ? AppBar(
-              title: widget.title == null ? null : Text(widget.title!),
+              title:
+                  widget.titleWidget ??
+                  (widget.title == null ? null : Text(widget.title!)),
               titleTextStyle: AppTextStyles.h1,
               leading:
                   widget.leading ??

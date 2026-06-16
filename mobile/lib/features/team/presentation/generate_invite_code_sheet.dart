@@ -1,7 +1,13 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/access/access_guard.dart';
@@ -512,13 +518,26 @@ class _StagePicker extends ConsumerWidget {
   }
 }
 
-class _Result extends ConsumerWidget {
+class _Result extends ConsumerStatefulWidget {
   const _Result({required this.state});
 
   final _BodyState state;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Result> createState() => _ResultState();
+}
+
+class _ResultState extends ConsumerState<_Result> {
+  // GlobalKey для RepaintBoundary вокруг QR — нужна для toImage()
+  // при «Скачать QR». ConsumerWidget пересоздаёт key каждый build,
+  // ломая boundary, поэтому _Result стейтфул.
+  final GlobalKey _qrKey = GlobalKey();
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final state = widget.state;
     final code = state._code!;
     final formatted = code.token.replaceAllMapped(
       RegExp(r'(\d{3})(\d{3})'),
@@ -590,6 +609,12 @@ class _Result extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.x16),
+                _InviteQrCard(
+                  code: code.token,
+                  projectTitle: projectTitle,
+                  qrKey: _qrKey,
+                ),
+                const SizedBox(height: AppSpacing.x16),
                 _ShareMessagePreview(message: shareMessage),
                 if (code.stageIds.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.x12),
@@ -631,12 +656,65 @@ class _Result extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.x8),
         AppButton(
+          label: 'Скачать QR',
+          icon: Icons.download_rounded,
+          variant: AppButtonVariant.secondary,
+          isLoading: _saving,
+          onPressed: () => _downloadQr(context, code.token, projectTitle),
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        AppButton(
           label: 'Готово',
           variant: AppButtonVariant.ghost,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ],
     );
+  }
+
+  Future<void> _downloadQr(
+    BuildContext context,
+    String code,
+    String projectTitle,
+  ) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final boundary =
+          _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw StateError('QR ещё не отрисовался');
+      }
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw StateError('Не удалось сериализовать PNG');
+      }
+      final pngBytes = byteData.buffer.asUint8List();
+      final dir = await getTemporaryDirectory();
+      final safeTitle = projectTitle
+          .replaceAll(RegExp(r'[^\wа-яА-Я0-9 ]'), '')
+          .trim()
+          .replaceAll(' ', '_');
+      final filename = 'invite_${safeTitle}_$code.png';
+      final file = await File('${dir.path}/$filename').writeAsBytes(pngBytes);
+      if (!mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
+        subject: 'QR-код приглашения · $projectTitle',
+        text: 'Отсканируйте QR, чтобы присоединиться к проекту. '
+            'Код: $code',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message: 'Не удалось сохранить QR: $e',
+        kind: AppToastKind.error,
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   static Future<void> _copy(
@@ -760,6 +838,76 @@ class _ScopeNote extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// QR-карточка с кодом приглашения. Обёрнута в RepaintBoundary,
+/// чтобы по [qrKey] можно было сделать toImage() и сохранить PNG.
+class _InviteQrCard extends StatelessWidget {
+  const _InviteQrCard({
+    required this.code,
+    required this.projectTitle,
+    required this.qrKey,
+  });
+
+  final String code;
+  final String projectTitle;
+  final GlobalKey qrKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: RepaintBoundary(
+        key: qrKey,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            color: AppColors.n0,
+            borderRadius: BorderRadius.circular(AppRadius.r16),
+            border: Border.all(color: AppColors.n200),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                projectTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.n500,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              QrImageView(
+                data: code,
+                version: QrVersions.auto,
+                size: 200,
+                backgroundColor: AppColors.n0,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: AppColors.n900,
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: AppColors.n900,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x10),
+              Text(
+                code.replaceAllMapped(
+                  RegExp(r'(\d{3})(\d{3})'),
+                  (m) => '${m.group(1)} ${m.group(2)}',
+                ),
+                style: AppTextStyles.h2.copyWith(
+                  letterSpacing: 1.6,
+                  color: AppColors.n900,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

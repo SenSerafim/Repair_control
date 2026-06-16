@@ -48,7 +48,7 @@ class ProjectCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(height: 3, color: project.semaphore.dot),
+                Container(height: 3, color: project.effectiveSemaphore.dot),
                 if (banner != null) _AlertBanner(spec: banner),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 8, 14),
@@ -133,8 +133,8 @@ class ProjectCard extends StatelessWidget {
                       Row(
                         children: [
                           StatusPill(
-                            label: project.semaphoreLabel,
-                            semaphore: project.semaphore,
+                            label: project.effectiveSemaphoreLabel,
+                            semaphore: project.effectiveSemaphore,
                           ),
                           const SizedBox(width: AppSpacing.x8),
                           Expanded(
@@ -153,7 +153,7 @@ class ProjectCard extends StatelessWidget {
                           Expanded(
                             child: _ProgressBar(
                               value: progress,
-                              semaphore: project.semaphore,
+                              semaphore: project.effectiveSemaphore,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.x10),
@@ -188,7 +188,7 @@ class ProjectCard extends StatelessWidget {
 
   static _BannerSpec? _bannerFor(Project p) {
     if (p.isArchived || p.progressCache >= 100) return null;
-    if (p.plannedEnd != null && p.semaphore == Semaphore.red) {
+    if (p.plannedEnd != null && p.effectiveSemaphore == Semaphore.red) {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final due = DateTime(
@@ -207,7 +207,7 @@ class ProjectCard extends StatelessWidget {
         );
       }
     }
-    if (p.semaphore == Semaphore.blue) {
+    if (p.effectiveSemaphore == Semaphore.blue) {
       return const _BannerSpec(
         icon: PhosphorIconsRegular.bellRinging,
         text: 'Есть согласования, ждущие вашего решения',
@@ -329,6 +329,9 @@ class _ProgressBar extends StatelessWidget {
     Semaphore.plan => const LinearGradient(
       colors: [AppColors.brandMid, AppColors.brand],
     ),
+    Semaphore.paused => const LinearGradient(
+      colors: [AppColors.n300, AppColors.n400],
+    ),
   };
 
   static Color _solidFor(Semaphore s) => switch (s) {
@@ -371,6 +374,12 @@ class _MiniDashboardRow extends StatelessWidget {
       daysLabel = '${daysToDeadline.abs()}д просрочено';
     }
 
+    final stats = project.stageStats;
+    final stagesLabel = stats == null ? '—/—' : '${stats.done}/${stats.total}';
+    final inProgressLabel = stats == null
+        ? '— в работе'
+        : '${stats.inProgress} в работе';
+
     return Row(
       children: [
         _CardStat(
@@ -379,18 +388,14 @@ class _MiniDashboardRow extends StatelessWidget {
           color: isOverdue ? AppColors.redDot : null,
         ),
         const SizedBox(width: AppSpacing.x12),
-        // TODO(newfix-§1): подставить project.stagesDone / project.stagesTotal,
-        // когда payload `/projects` начнёт их отдавать (или появится
-        // агрегатный провайдер). Сейчас — заглушка `—/—`.
-        const _CardStat(
+        _CardStat(
           icon: PhosphorIconsRegular.listChecks,
-          value: '—/—',
+          value: stagesLabel,
         ),
         const SizedBox(width: AppSpacing.x12),
-        // TODO(newfix-§1): подставить project.stagesInProgress, см. выше.
-        const _CardStat(
+        _CardStat(
           icon: PhosphorIconsRegular.gear,
-          value: '— в работе',
+          value: inProgressLabel,
         ),
       ],
     );

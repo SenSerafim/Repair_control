@@ -118,6 +118,7 @@ class AppConsoleBanner extends StatelessWidget {
     Semaphore.yellow => PhosphorIconsFill.warning,
     Semaphore.red => PhosphorIconsFill.warningOctagon,
     Semaphore.blue => PhosphorIconsFill.clock,
+    Semaphore.paused => PhosphorIconsFill.pause,
     _ => PhosphorIconsFill.info,
   };
 }

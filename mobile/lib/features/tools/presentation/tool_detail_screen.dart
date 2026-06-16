@@ -10,6 +10,8 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../projects/domain/membership.dart';
+import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
 import '../domain/tool.dart';
 
@@ -81,6 +83,16 @@ class _Body extends ConsumerWidget {
         ],
         if (canClaim) ...[
           _ClaimCta(toolId: tool.id, projectId: tool.projectId!),
+          const SizedBox(height: AppSpacing.x16),
+        ],
+        // NEWFIX TZ-2 §9 — кнопка «Передать сотруднику»: видна, когда
+        // инструмент сейчас у меня (либо я владелец, либо я claim'нул),
+        // и он привязан к проекту (есть из чего выбрать team).
+        if (tool.isInProject && isHeldByMe) ...[
+          _TransferToEmployeeCta(
+            toolId: tool.id,
+            projectId: tool.projectId!,
+          ),
           const SizedBox(height: AppSpacing.x16),
         ],
         _InfoCard(tool: tool, df: df),
@@ -670,6 +682,178 @@ class _TimelineRow extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// NEWFIX TZ-2 §9 — кнопка «Передать сотруднику» в карточке инструмента.
+/// Открывает bottom-sheet с командой проекта (foreman/master, не я сам),
+/// на тапе вызывает `assignToEmployee` и инвалидирует борд проекта.
+class _TransferToEmployeeCta extends ConsumerStatefulWidget {
+  const _TransferToEmployeeCta({
+    required this.toolId,
+    required this.projectId,
+  });
+  final String toolId;
+  final String projectId;
+
+  @override
+  ConsumerState<_TransferToEmployeeCta> createState() =>
+      _TransferToEmployeeCtaState();
+}
+
+class _TransferToEmployeeCtaState
+    extends ConsumerState<_TransferToEmployeeCta> {
+  bool _busy = false;
+
+  Future<void> _open() async {
+    if (_busy) return;
+    final picked = await showAppBottomSheet<String>(
+      context: context,
+      child: _TeamPickerSheet(projectId: widget.projectId),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _busy = true);
+    final failure = await ref
+        .read(myToolsProvider.notifier)
+        .assignToEmployee(
+          toolId: widget.toolId,
+          employeeUserId: picked,
+        );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (failure != null) {
+      AppToast.show(
+        context,
+        message: failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } else {
+      ref.invalidate(toolDetailProvider(widget.toolId));
+      ref.invalidate(projectToolsBoardProvider(widget.projectId));
+      AppToast.show(
+        context,
+        message: 'Инструмент передан',
+        kind: AppToastKind.success,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppButton(
+      label: 'Передать сотруднику',
+      icon: PhosphorIconsBold.handArrowUp,
+      isLoading: _busy,
+      onPressed: _open,
+    );
+  }
+}
+
+class _TeamPickerSheet extends ConsumerWidget {
+  const _TeamPickerSheet({required this.projectId});
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(teamControllerProvider(projectId));
+    final meId = ref.watch(authControllerProvider).userId;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const AppBottomSheetHeader(title: 'Передать инструмент'),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Не удалось загрузить команду: $e'),
+            ),
+            data: (team) {
+              final list = team.members
+                  .where(
+                    (m) =>
+                        (m.role == MembershipRole.foreman ||
+                            m.role == MembershipRole.master) &&
+                        m.userId != meId,
+                  )
+                  .toList();
+              if (list.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'В команде нет бригадиров и мастеров.\n'
+                    'Пригласите их в проекте, чтобы передать инструмент.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.n400),
+                  ),
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 4),
+                itemBuilder: (_, i) {
+                  final m = list[i];
+                  final name = [m.user?.firstName, m.user?.lastName]
+                      .whereType<String>()
+                      .where((s) => s.isNotEmpty)
+                      .join(' ');
+                  final roleLabel =
+                      m.role == MembershipRole.foreman ? 'Бригадир' : 'Мастер';
+                  return Material(
+                    color: AppColors.n50,
+                    borderRadius: BorderRadius.circular(AppRadius.r12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(AppRadius.r12),
+                      onTap: () => Navigator.of(context).pop(m.userId),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name.isEmpty ? 'Без имени' : name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$roleLabel · ${m.user?.phone ?? ''}',
+                                    style: const TextStyle(
+                                      color: AppColors.n500,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.n400,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
       ],
     );
   }

@@ -177,7 +177,45 @@ export class ProjectsService {
       where,
       orderBy: { updatedAt: 'desc' },
     });
-    return projects.map((p) => this.serialize(p));
+    // NEWFIX §1 — мини-дашборд карточки проекта: бэк отдаёт счётчики
+    // этапов (done / total / in_progress), чтобы клиент не делал N+1.
+    // Одна батчевая выборка статусов этапов по всем найденным projectIds.
+    const stageCounts = await this.aggregateStageCounts(projects.map((p) => p.id));
+    return projects.map((p) => ({
+      ...this.serialize(p),
+      ...(stageCounts.get(p.id) ?? { stagesDone: 0, stagesTotal: 0, stagesInProgress: 0 }),
+    }));
+  }
+
+  /**
+   * Счёт по projectId: stagesTotal, stagesDone (status=done),
+   * stagesInProgress (status ∈ {active, paused, review} — реально начатые,
+   * кроме pending и кроме done).
+   */
+  private async aggregateStageCounts(
+    projectIds: string[],
+  ): Promise<Map<string, { stagesDone: number; stagesTotal: number; stagesInProgress: number }>> {
+    const out = new Map<
+      string,
+      { stagesDone: number; stagesTotal: number; stagesInProgress: number }
+    >();
+    if (projectIds.length === 0) return out;
+    const stages = await this.prisma.stage.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { projectId: true, status: true },
+    });
+    for (const pid of projectIds) {
+      out.set(pid, { stagesDone: 0, stagesTotal: 0, stagesInProgress: 0 });
+    }
+    for (const s of stages) {
+      const c = out.get(s.projectId)!;
+      c.stagesTotal += 1;
+      if (s.status === 'done') c.stagesDone += 1;
+      else if (s.status === 'active' || s.status === 'paused' || s.status === 'review') {
+        c.stagesInProgress += 1;
+      }
+    }
+    return out;
   }
 
   async update(projectId: string, input: UpdateProjectInput, actorUserId: string) {

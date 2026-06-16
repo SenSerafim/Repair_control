@@ -3,13 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/access/access_guard.dart';
+import '../../../core/access/system_role.dart';
 import '../../../core/error/api_error.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../chat/application/chats_controller.dart';
+import '../../profile/application/profile_controller.dart';
 import '../application/projects_list_controller.dart';
 import '../data/invitations_repository.dart';
+import '../domain/membership.dart';
 
 /// P2: ввод 6-значного кода приглашения для присоединения к проекту.
 class JoinByCodeScreen extends ConsumerStatefulWidget {
@@ -55,10 +59,23 @@ class _JoinByCodeScreenState extends ConsumerState<JoinByCodeScreen> {
     try {
       final repo = ref.read(invitationsRepositoryProvider);
       final result = await repo.joinByCode(code);
+
+      // Список «Мои проекты» фильтруется по activeRole (каждая роль =
+      // изолированный «аккаунт»). Если присоединились с ролью, отличной
+      // от текущей активной — проект не появится в списке, пока не
+      // переключить роль. Делаем это автоматически.
+      final joinedSysRole = _toSystemRole(result.role);
+      final activeRole = ref.read(activeRoleProvider);
+      if (joinedSysRole != null && joinedSysRole != activeRole) {
+        await ref
+            .read(profileControllerProvider.notifier)
+            .setActiveRole(joinedSysRole);
+        // setActiveRole сам инвалидирует activeProjects + archived.
+      }
+
       // Мгновенный UX-фидбек: WS-broadcast `project:membership_changed` тоже
       // прилетит (см. membership_sync.dart), но локальная инвалидация даёт
-      // нулевую задержку — пользователь, нажав «Назад», сразу видит проект
-      // в списке без pull-to-refresh.
+      // нулевую задержку.
       ref
         ..invalidate(activeProjectsProvider)
         ..invalidate(myChatsProvider);
@@ -84,6 +101,13 @@ class _JoinByCodeScreenState extends ConsumerState<JoinByCodeScreen> {
       });
     }
   }
+
+  SystemRole? _toSystemRole(MembershipRole role) => switch (role) {
+    MembershipRole.customer => SystemRole.customer,
+    MembershipRole.representative => SystemRole.representative,
+    MembershipRole.foreman => SystemRole.contractor,
+    MembershipRole.master => SystemRole.master,
+  };
 
   String _humanError(ApiError api) {
     final code = api.statusCode;

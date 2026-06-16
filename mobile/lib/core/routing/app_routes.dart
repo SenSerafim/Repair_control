@@ -32,6 +32,7 @@ class AppRoutes {
 
   // Tabs (root-level в HomeShell).
   static const contractors = '/contractors';
+  static const budget = '/budget';
   static const chats = '/chats';
   static const chatDetail = '/chats/:chatId';
   static String chatDetailWith(String chatId) => '/chats/$chatId';

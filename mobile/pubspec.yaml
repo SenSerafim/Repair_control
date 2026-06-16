@@ -1,7 +1,7 @@
 name: repair_control
 description: "Repair Control — мобильное приложение для контроля ремонтных работ."
 publish_to: 'none'
-version: 1.9.1+11
+version: 1.9.2+12
 
 environment:
   sdk: ^3.11.4
@@ -60,6 +60,7 @@ dependencies:
   pdfx: ^2.8.0
   open_filex: ^4.5.0
   share_plus: ^10.1.2
+  qr_flutter: ^4.1.0
 
   # Utils
   intl: ^0.20.2

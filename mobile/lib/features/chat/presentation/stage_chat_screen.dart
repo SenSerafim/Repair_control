@@ -45,14 +45,21 @@ class _StageChatScreenState extends ConsumerState<StageChatScreen> {
         }
         if (snap.hasError || snap.data == null) {
           final err = snap.error;
-          final subtitle = err is ApiError && err.message != null
-              ? err.message
-              : 'Попробуйте ещё раз';
+          // ChatsRepository оборачивает DioException в ChatsException; ApiError
+          // приходит только если кто-то бросил его напрямую. Проверяем оба.
+          String? msg;
+          if (err is ChatsException) {
+            msg = err.apiError.message ?? err.failure.userMessage;
+          } else if (err is ApiError) {
+            msg = err.message;
+          }
           return Scaffold(
             appBar: AppBar(),
             body: AppErrorState(
               title: 'Не удалось открыть чат этапа',
-              subtitle: subtitle,
+              subtitle: (msg == null || msg.isEmpty)
+                  ? 'Попробуйте ещё раз'
+                  : msg,
               onRetry: _retry,
             ),
           );

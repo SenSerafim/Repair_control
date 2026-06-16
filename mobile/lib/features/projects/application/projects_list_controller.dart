@@ -24,10 +24,12 @@ enum ProjectsFilter {
 
   bool matches(Project p) => switch (this) {
     ProjectsFilter.all => true,
-    ProjectsFilter.ok => p.semaphore == Semaphore.green,
-    ProjectsFilter.approval => p.semaphore == Semaphore.blue,
-    ProjectsFilter.late_ => p.semaphore == Semaphore.red,
-    ProjectsFilter.delay => p.semaphore == Semaphore.yellow,
+    ProjectsFilter.ok => p.effectiveSemaphore == Semaphore.green,
+    ProjectsFilter.approval =>
+      p.effectiveSemaphore == Semaphore.blue ||
+          p.effectiveSemaphore == Semaphore.paused,
+    ProjectsFilter.late_ => p.effectiveSemaphore == Semaphore.red,
+    ProjectsFilter.delay => p.effectiveSemaphore == Semaphore.yellow,
   };
 }
 

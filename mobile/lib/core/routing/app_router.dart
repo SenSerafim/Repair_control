@@ -79,6 +79,7 @@ import '../../features/projects/domain/membership.dart';
 import '../../features/team/presentation/add_member_screen.dart';
 import '../../features/team/presentation/add_representative_screen.dart';
 import '../../features/team/presentation/assign_stage_screen.dart';
+import '../../features/finance/presentation/budget_tab_screen.dart';
 import '../../features/team/presentation/contractors_screen.dart';
 import '../../features/team/presentation/member_found_screen.dart';
 import '../../features/team/presentation/member_not_found_screen.dart';
@@ -594,6 +595,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const ContractorsScreen(),
           ),
           GoRoute(
+            path: AppRoutes.budget,
+            builder: (_, __) => const BudgetTabScreen(),
+          ),
+          GoRoute(
             path: AppRoutes.chats,
             builder: (_, __) => const ChatsScreen(),
             routes: [
@@ -877,7 +882,9 @@ class _HomeShellState extends ConsumerState<_HomeShell> {
 
   static const _tabs = [
     _Tab(AppRoutes.projects, Icons.home_outlined, 'Проекты'),
-    _Tab(AppRoutes.contractors, Icons.people_outline_rounded, 'Команда'),
+    // NEWFIX TZ-2 §6 — на месте «Команды» теперь «Бюджет». «Команда»
+    // переехала внутрь Чатов (`/chats/team`).
+    _Tab(AppRoutes.budget, Icons.account_balance_wallet_outlined, 'Бюджет'),
     _Tab(AppRoutes.chats, Icons.chat_bubble_outline_rounded, 'Чаты'),
     _Tab(AppRoutes.profile, Icons.person_outline_rounded, 'Профиль'),
   ];

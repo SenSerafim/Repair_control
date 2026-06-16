@@ -69,9 +69,43 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
       approvalsControllerProvider(widget.projectId),
     );
 
+    // NEWFIX-2 §«Оптимизация шапки» — этап + бейдж в AppBar (не два уровня
+    // под back-кнопкой). Берём stage из синхронного среза стейджа-списка;
+    // во время loading/error — фоллбэк на 'Этап' и пустой leading.
+    final headerStage = stagesAsync.maybeWhen(
+      data: (list) {
+        for (final s in list) {
+          if (s.id == widget.stageId) return s;
+        }
+        return null;
+      },
+      orElse: () => null,
+    );
+    final headerDisplay = headerStage == null
+        ? null
+        : StageDisplayStatus.of(headerStage);
+
     return AppScaffold(
       showBack: true,
-      title: 'Этап',
+      title: headerStage == null ? 'Этап' : null,
+      titleWidget: headerStage == null
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    headerStage.title,
+                    style: AppTextStyles.h1,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                StageStatusBadge(display: headerDisplay!),
+              ],
+            ),
       padding: EdgeInsets.zero,
       // NEWFIX Task 2.2 — иконка «Бюджет этапа» убрана из шапки: бюджет
       // теперь доступен через StageQuickActionsRow между исполнителями и
@@ -211,7 +245,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
           );
           return Column(
             children: [
-              _StageHeader(stage: stage, display: display),
+              // _StageHeader удалён: title+badge переехали в AppBar
+              // (titleWidget). Назначение бригадира/мастера доступно через
+              // «+» в StageExecutorsRow.
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.x16,
@@ -423,136 +459,6 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// Header: back + title + badge + 3-dot menu
-// ─────────────────────────────────────────────────────────────────────
-class _StageHeader extends ConsumerWidget {
-  const _StageHeader({required this.stage, required this.display});
-
-  final Stage stage;
-  final StageDisplayStatus display;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      color: AppColors.n0,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x20,
-        AppSpacing.x4,
-        AppSpacing.x16,
-        AppSpacing.x12,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  stage.title,
-                  style: AppTextStyles.h1,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.more_vert_rounded),
-                onPressed: () => _openMenu(context, ref),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x6),
-          StageStatusBadge(display: display),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
-    // П1.7 / 4.6 — пункт «Сохранить как шаблон» удалён.
-    // П1.11 / 4.8 / 7.5 — меню переиспользовано под назначение бригадира/мастера.
-    // 2026-05: canInProjectProvider честно учитывает membership-роль +
-    // делегированные представителю права (canEditStages/canCreateStages),
-    // тогда как старый canProvider смотрел только глобальную активную роль.
-    final canManageStages = ref.read(
-      canInProjectProvider((
-        action: DomainAction.stageManage,
-        projectId: stage.projectId,
-      )),
-    );
-    await showAppBottomSheet<void>(
-      context: context,
-      // Builder даёт `sheetContext` внутри модалки — он гарантированно
-      // смонтирован, пока бот.шит открыт. Старый код звал
-      // `Navigator.of(context)` с внешним контекстом `_StageHeader`, и если
-      // header успевал отвалиться (например, real-time refresh stages),
-      // Navigator.of падал с `Null check operator on null value`.
-      child: Builder(
-        builder: (sheetContext) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AppBottomSheetHeader(title: 'Действия'),
-          if (canManageStages) ...[
-            ListTile(
-              leading: const Icon(
-                Icons.engineering_outlined,
-                color: AppColors.brand,
-              ),
-              title: const Text('Назначить бригадира'),
-              subtitle: const Text('Один бригадир на этап'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                if (!context.mounted) return;
-                _showAssignSheet(context, ref, kind: _AssignKind.foreman);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.handyman_outlined,
-                color: AppColors.brand,
-              ),
-              title: const Text('Назначить мастера'),
-              subtitle: const Text(
-                'Если мастер не назначен — этап ведёт сам бригадир',
-              ),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                if (!context.mounted) return;
-                _showAssignSheet(context, ref, kind: _AssignKind.master);
-              },
-            ),
-          ],
-          if (!canManageStages)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Text(
-                'Дополнительных действий нет — нужны права на управление этапом.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF656b7a)),
-                textAlign: TextAlign.center,
-              ),
-            ),
-        ],
-      ),
-      ),
-    );
-  }
-
-  Future<void> _showAssignSheet(
-    BuildContext context,
-    WidgetRef ref, {
-    required _AssignKind kind,
-  }) async {
-    await showAppBottomSheet<void>(
-      context: context,
-      child: _AssignMemberSheet(
-        projectId: stage.projectId,
-        stageId: stage.id,
-        kind: kind,
-      ),
-    );
-  }
-}
 
 enum _AssignKind { foreman, master }
 

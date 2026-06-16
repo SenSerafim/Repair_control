@@ -83,7 +83,9 @@ class _EditProjectScreenState extends ConsumerState<EditProjectScreen> {
         _address.text.trim() != (_initial!.address ?? '') ||
         _description.text.trim() != (_initial!.description ?? '') ||
         MoneyInput.readKopecks(_workBudget) != _initial!.workBudget ||
-        MoneyInput.readKopecks(_materialsBudget) != _initial!.materialsBudget;
+        MoneyInput.readKopecks(_materialsBudget) != _initial!.materialsBudget ||
+        _plannedStart != _initial!.plannedStart ||
+        _plannedEnd != _initial!.plannedEnd;
     if (newDirty != _dirty) setState(() => _dirty = newDirty);
   }
 

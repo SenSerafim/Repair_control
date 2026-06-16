@@ -42,25 +42,50 @@ class Project with _$Project {
     required DateTime updatedAt,
   }) = _Project;
 
-  static Project parse(Map<String, dynamic> json) => Project(
-    id: json['id'] as String,
-    ownerId: json['ownerId'] as String,
-    title: json['title'] as String,
-    address: json['address'] as String?,
-    description: json['description'] as String?,
-    plannedStart: _date(json['plannedStart']),
-    plannedEnd: _date(json['plannedEnd']),
-    status: ProjectStatus.fromString(json['status'] as String?),
-    workBudget: (json['workBudget'] as num?)?.toInt() ?? 0,
-    materialsBudget: (json['materialsBudget'] as num?)?.toInt() ?? 0,
-    progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
-    semaphore: _semaphore(json['semaphoreCache'] as String?),
-    planApproved: json['planApproved'] as bool? ?? false,
-    requiresPlanApproval: json['requiresPlanApproval'] as bool? ?? false,
-    archivedAt: _date(json['archivedAt']),
-    createdAt: DateTime.parse(json['createdAt'] as String),
-    updatedAt: DateTime.parse(json['updatedAt'] as String),
-  );
+  static Project parse(Map<String, dynamic> json) {
+    final p = Project(
+      id: json['id'] as String,
+      ownerId: json['ownerId'] as String,
+      title: json['title'] as String,
+      address: json['address'] as String?,
+      description: json['description'] as String?,
+      plannedStart: _date(json['plannedStart']),
+      plannedEnd: _date(json['plannedEnd']),
+      status: ProjectStatus.fromString(json['status'] as String?),
+      workBudget: (json['workBudget'] as num?)?.toInt() ?? 0,
+      materialsBudget: (json['materialsBudget'] as num?)?.toInt() ?? 0,
+      progressCache: (json['progressCache'] as num?)?.toInt() ?? 0,
+      semaphore: _semaphore(json['semaphoreCache'] as String?),
+      planApproved: json['planApproved'] as bool? ?? false,
+      requiresPlanApproval: json['requiresPlanApproval'] as bool? ?? false,
+      archivedAt: _date(json['archivedAt']),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+    );
+    // NEWFIX §1 — счётчики этапов приходят с listForUser (backend
+    // aggregateStageCounts). Сохраняем в внешний кеш, чтобы не дёргать
+    // freezed-регенерацию ради 3 полей.
+    final total = (json['stagesTotal'] as num?)?.toInt();
+    if (total != null) {
+      ProjectStageStats._cache[p.id] = (
+        done: (json['stagesDone'] as num?)?.toInt() ?? 0,
+        total: total,
+        inProgress: (json['stagesInProgress'] as num?)?.toInt() ?? 0,
+      );
+    }
+    return p;
+  }
+}
+
+typedef ProjectStageStatsRecord = ({int done, int total, int inProgress});
+
+/// Кеш счётчиков этапов проекта (NEWFIX §1). Заполняется в `Project.parse`
+/// из payload бекенда, читается в карточке проекта.
+class ProjectStageStats {
+  ProjectStageStats._();
+  static final Map<String, ProjectStageStatsRecord> _cache = {};
+
+  static ProjectStageStatsRecord? of(String projectId) => _cache[projectId];
 }
 
 DateTime? _date(Object? raw) {
@@ -79,6 +104,8 @@ Semaphore _semaphore(String? raw) {
       return Semaphore.red;
     case 'blue':
       return Semaphore.blue;
+    case 'paused':
+      return Semaphore.paused;
     case null:
     case 'plan':
     default:
@@ -89,13 +116,36 @@ Semaphore _semaphore(String? raw) {
 extension ProjectX on Project {
   bool get isArchived => status == ProjectStatus.archived;
 
-  String get semaphoreLabel => switch (semaphore) {
-    Semaphore.green => 'По графику',
-    Semaphore.yellow => 'Отставание',
-    Semaphore.red => 'Просрочен',
-    Semaphore.blue => 'Согласования',
-    Semaphore.plan => 'В плане',
-  };
+  /// Клиентский фикс рассинхрона с `semaphoreCache` (cron 15 мин + recalc по
+  /// триггерам). Если у проекта дедлайн прошёл, но кеш ещё green/blue/yellow —
+  /// поднимаем флаг сами: `paused`, когда план не утверждён (блокер у
+  /// заказчика), иначе `red`. Не трогаем cache=done/red — там бекенд уже прав.
+  Semaphore get effectiveSemaphore {
+    if (isArchived) return semaphore;
+    if (semaphore == Semaphore.red || semaphore == Semaphore.plan) {
+      return semaphore;
+    }
+    if (plannedEnd == null) return semaphore;
+    final now = DateTime.now();
+    final due = DateTime(plannedEnd!.year, plannedEnd!.month, plannedEnd!.day);
+    final today = DateTime(now.year, now.month, now.day);
+    if (!due.isBefore(today)) return semaphore;
+    return planApproved ? Semaphore.red : Semaphore.paused;
+  }
+
+  String get semaphoreLabel => _labelFor(semaphore);
+  String get effectiveSemaphoreLabel => _labelFor(effectiveSemaphore);
 
   int get totalBudget => workBudget + materialsBudget;
+
+  ProjectStageStatsRecord? get stageStats => ProjectStageStats.of(id);
 }
+
+String _labelFor(Semaphore s) => switch (s) {
+  Semaphore.green => 'По графику',
+  Semaphore.yellow => 'Отставание',
+  Semaphore.red => 'Просрочен',
+  Semaphore.blue => 'Согласования',
+  Semaphore.plan => 'В плане',
+  Semaphore.paused => 'На паузе',
+};

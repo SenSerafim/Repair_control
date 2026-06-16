@@ -12,9 +12,11 @@ import '../../../shared/widgets/widgets.dart';
 import '../../approvals/application/approvals_controller.dart';
 import '../../approvals/domain/approval.dart';
 import '../../materials/application/materials_controller.dart';
+import '../../projects/domain/membership.dart';
 import '../../selfpurchase/application/selfpurchase_controller.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
+import '../../team/application/team_controller.dart';
 import '../application/budget_controller.dart';
 import '../application/payments_controller.dart';
 import '../domain/budget.dart';
@@ -188,6 +190,41 @@ class BudgetScreen extends ConsumerWidget {
                     BudgetTab.materials => _MaterialsTab(projectId: projectId),
                     BudgetTab.history => _HistoryTab(projectId: projectId),
                   },
+                  // NEWFIX TZ-2 §5 — кнопки «Новая выплата / + Расход» едины
+                  // для всех табов бюджета (раньше были только на Выплатах).
+                  if (canCreatePayment)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.x16,
+                        AppSpacing.x8,
+                        AppSpacing.x16,
+                        AppSpacing.x16,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: AppButton(
+                              label: 'Новая выплата',
+                              icon: Icons.add_rounded,
+                              onPressed: () => context.push(
+                                '/projects/$projectId/payments/new',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.x8),
+                          Expanded(
+                            child: AppButton(
+                              label: '+ Расход',
+                              variant: AppButtonVariant.ghost,
+                              onPressed: () => showAddExpenseSheet(
+                                context,
+                                projectId: projectId,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -258,7 +295,7 @@ class _Header extends ConsumerWidget {
 
 /// Таб «Выплаты»: sub-summary chip + список выплат + (опц.) кнопка-создания.
 /// Возвращает Column — встраивается в общий SingleChildScrollView страницы.
-class _PaymentsTab extends ConsumerWidget {
+class _PaymentsTab extends ConsumerStatefulWidget {
   const _PaymentsTab({
     required this.projectId,
     required this.canCreatePayment,
@@ -268,9 +305,40 @@ class _PaymentsTab extends ConsumerWidget {
   final bool canCreatePayment;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PaymentsTab> createState() => _PaymentsTabState();
+}
+
+class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
+  // Серафим 08.06.2026: фильтр по этапу в бюджете — таб «Выплаты».
+  // 'all' = все этапы; иначе срез по Payment.stageId.
+  String _stageId = 'all';
+
+  @override
+  Widget build(BuildContext context) {
+    final projectId = widget.projectId;
     final paymentsAsync = ref.watch(paymentsControllerProvider(projectId));
     final approvalsAsync = ref.watch(approvalsControllerProvider(projectId));
+    final stagesAsync = ref.watch(stagesControllerProvider(projectId));
+    final stages = stagesAsync.value ?? const <Stage>[];
+    // Резолвим userId → «Имя Ф.» из команды проекта; до загрузки или для
+    // удалённых участников fallback — сокращённый id.
+    final team = ref.watch(teamControllerProvider(projectId)).value;
+    String resolveName(String userId) {
+      ProjectMemberUser? u;
+      if (team != null) {
+        for (final m in team.members) {
+          if (m.userId == userId) {
+            u = m.user;
+            break;
+          }
+        }
+      }
+      if (u == null || u.firstName.isEmpty) {
+        return userId.length <= 12 ? userId : '${userId.substring(0, 12)}…';
+      }
+      final ln = u.lastName.isEmpty ? '' : ' ${u.lastName[0]}.';
+      return '${u.firstName}$ln'.trim();
+    }
     return paymentsAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.x40),
@@ -280,7 +348,13 @@ class _PaymentsTab extends ConsumerWidget {
         title: 'Не удалось загрузить выплаты',
         onRetry: () => ref.invalidate(paymentsControllerProvider(projectId)),
       ),
-      data: (payments) {
+      data: (allPayments) {
+        // Фильтрация по этапу. Payment.stageId = null → попадает только под
+        // 'all'. Total пересчитывается от отфильтрованного среза, чтобы
+        // соответствовать видимым строкам.
+        final payments = _stageId == 'all'
+            ? allPayments
+            : allPayments.where((p) => p.stageId == _stageId).toList();
         final total = payments.fold<int>(0, (a, p) => a + p.amount);
 
         // Pending-extras (доп.работы) уведомление.
@@ -297,6 +371,27 @@ class _PaymentsTab extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: AppSpacing.x10),
+            if (stages.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x16,
+                ),
+                child: AppFilterPillBar(
+                  key: const ValueKey('budget_payments_stage_filter'),
+                  padding: EdgeInsets.zero,
+                  activeId: _stageId,
+                  onSelect: (id) => setState(() => _stageId = id),
+                  chips: [
+                    const AppFilterPillSpec(id: 'all', label: 'Все этапы'),
+                    for (final s in stages)
+                      AppFilterPillSpec(
+                        id: s.id,
+                        label: 'Этап ${s.orderIndex + 1}',
+                      ),
+                  ],
+                ),
+              ),
             const SizedBox(height: AppSpacing.x10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16),
@@ -336,47 +431,16 @@ class _PaymentsTab extends ConsumerWidget {
                   ),
                   child: PaymentRowCard(
                     payment: p,
-                    recipientName: _shorten(p.toUserId),
+                    recipientName: resolveName(p.toUserId),
                     onTap: () =>
                         context.push(AppRoutes.paymentDetailWith(p.id)),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.x8),
               ],
-            if (canCreatePayment)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.x16,
-                  AppSpacing.x16,
-                  AppSpacing.x16,
-                  AppSpacing.x8,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AppButton(
-                        label: 'Новая выплата',
-                        icon: Icons.add_rounded,
-                        onPressed: () =>
-                            context.push('/projects/$projectId/payments/new'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.x8),
-                    // ТЗ NEWFIX §5.1: «+ Расход» — bottom-sheet с CoinKeeper-flow.
-                    // Делит низ экрана пополам с «+ Выплата».
-                    Expanded(
-                      child: AppButton(
-                        label: '+ Расход',
-                        variant: AppButtonVariant.ghost,
-                        onPressed: () => showAddExpenseSheet(
-                          context,
-                          projectId: projectId,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Кнопки «Новая выплата / + Расход» вынесены наружу таба —
+            // они видны и на «Материалах», и на «Истории» (см. главный
+            // build BudgetScreen, после switch).
             const SizedBox(height: AppSpacing.x24),
           ],
         );
@@ -384,8 +448,6 @@ class _PaymentsTab extends ConsumerWidget {
     );
   }
 
-  String _shorten(String userId) =>
-      userId.length <= 12 ? userId : '${userId.substring(0, 12)}…';
 }
 
 class _PendingExtrasBanner extends StatelessWidget {

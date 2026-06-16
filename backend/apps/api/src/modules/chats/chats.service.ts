@@ -81,7 +81,27 @@ export class ChatsService {
     const existing = await (client as any).chat.findFirst({
       where: { stageId, type: ChatType.stage, archivedAt: null },
     });
-    if (existing) return existing as Chat;
+    if (existing) {
+      // Bug-fix: владелец проекта (customer) может открыть «чат этапа»
+      // ПОСЛЕ того как бригадир его создал. existing-возврат не пропускал
+      // owner в participants → следующий GET /chats/:id выдавал 403.
+      // Добавляем owner идемпотентно, если его там ещё нет.
+      if (createdById === stage.project.ownerId) {
+        const already = await (client as any).chatParticipant.findFirst({
+          where: { chatId: existing.id, userId: createdById, leftAt: null },
+        });
+        if (!already) {
+          await (client as any).chatParticipant.create({
+            data: {
+              chatId: existing.id,
+              userId: createdById,
+              joinedAt: this.clock.now(),
+            },
+          });
+        }
+      }
+      return existing as Chat;
+    }
     const chat = (await (client as any).chat.create({
       data: {
         type: ChatType.stage,
@@ -96,6 +116,14 @@ export class ChatsService {
       if (m.role === 'master' && Array.isArray(m.stageIds) && m.stageIds.includes(stageId)) {
         participantIds.add(m.userId);
       }
+    }
+    // Если ensure запустил сам owner проекта (customer открыл «чат этапа»
+    // из step_detail или quick-actions) — добавляем его в participants
+    // явно. Иначе он бы получил 403 на /chats/:id, потому что чат свежий
+    // и visibleToCustomer=false по дефолту. По смыслу: владелец сам пришёл,
+    // прятать чат от него странно.
+    if (createdById === stage.project.ownerId) {
+      participantIds.add(createdById);
     }
     for (const uid of participantIds) {
       await (client as any).chatParticipant.create({

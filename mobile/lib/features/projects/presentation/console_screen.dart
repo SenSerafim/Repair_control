@@ -141,7 +141,7 @@ class _BodyState extends ConsumerState<_Body> {
         .length;
 
     final effectiveSemaphore = stages.isEmpty
-        ? project.semaphore
+        ? project.effectiveSemaphore
         : computeProjectTrafficLight(stages).semaphore;
 
     final p = stages.isEmpty
@@ -263,7 +263,7 @@ class _BodyState extends ConsumerState<_Body> {
         onAction: () => context.push(AppRoutes.approvals),
       );
     }
-    return switch (p.semaphore) {
+    return switch (p.effectiveSemaphore) {
       Semaphore.green => null,
       Semaphore.yellow => const AppConsoleBanner(
         semaphore: Semaphore.yellow,
@@ -284,6 +284,13 @@ class _BodyState extends ConsumerState<_Body> {
         subtitle:
             'Этап на приёмке или ждёт согласования. '
             'Видно, чьего хода ждём.',
+      ),
+      Semaphore.paused => const AppConsoleBanner(
+        semaphore: Semaphore.paused,
+        title: 'Работы заблокированы',
+        subtitle:
+            'Дедлайн проекта прошёл, а план ещё не согласован. '
+            'Бригадир ждёт решения заказчика.',
       ),
       _ => null,
     };
@@ -424,7 +431,7 @@ class _ConHeader extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: _TrafficBadge(
-                semaphore: project.semaphore,
+                semaphore: project.effectiveSemaphore,
                 delta: _deltaFor(project),
               ),
             ),
@@ -444,7 +451,7 @@ class _ConHeader extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     final due = DateTime(end.year, end.month, end.day);
     final diff = today.difference(due).inDays;
-    return switch (p.semaphore) {
+    return switch (p.effectiveSemaphore) {
       Semaphore.red when diff > 0 => '+$diff ${_dayWord(diff)}',
       Semaphore.yellow when diff < 0 => '$diff ${_dayWord(-diff)}',
       _ => null,
@@ -515,6 +522,7 @@ class _TrafficBadge extends StatelessWidget {
       Semaphore.yellow => 'Отставание',
       Semaphore.red => 'Просрочка',
       Semaphore.blue => 'Ждёт действия',
+      Semaphore.paused => 'На паузе',
       _ => 'План',
     };
     return Container(
@@ -599,11 +607,12 @@ class _HouseSection extends StatelessWidget {
     final stageNo = activeStage != null
         ? activeStage!.orderIndex + 1
         : doneCount;
-    final statusLabel = switch (project.semaphore) {
+    final statusLabel = switch (project.effectiveSemaphore) {
       Semaphore.green => 'По графику',
       Semaphore.yellow => 'Отставание',
       Semaphore.red => 'Просрочка',
       Semaphore.blue => 'Ждёт действия',
+      Semaphore.paused => 'На паузе',
       _ => 'Планирование',
     };
 
@@ -634,7 +643,7 @@ class _HouseSection extends StatelessWidget {
                 children: [
                   AppHouseProgress(
                     percent: percent,
-                    semaphore: project.semaphore,
+                    semaphore: project.effectiveSemaphore,
                     size: 220,
                     bouncePulse: bouncePulse,
                     subtitle: total > 0
@@ -858,6 +867,16 @@ class _StatsRow extends StatelessWidget {
     // project.progressCache как индикатор прогресса.
     final stageDone = stages.where((s) => s.status == StageStatus.done).length;
     final stageTotal = stages.length;
+    // «В работе» = только реально запущенные: active / paused / review.
+    // pending = «Не начат» и не должен попадать в этот счётчик.
+    final stageInProgress = stages
+        .where(
+          (s) =>
+              s.status == StageStatus.active ||
+              s.status == StageStatus.paused ||
+              s.status == StageStatus.review,
+        )
+        .length;
 
     final daysToDeadline = project.plannedEnd == null
         ? null
@@ -903,9 +922,9 @@ class _StatsRow extends StatelessWidget {
               label: 'ЭТАПЫ',
               value: '$stageDone',
               total: '$stageTotal',
-              subtext: '${stageTotal - stageDone} в работе',
+              subtext: '$stageInProgress в работе',
               progress: stageTotal == 0 ? 0 : stageDone / stageTotal,
-              semaphore: project.semaphore,
+              semaphore: project.effectiveSemaphore,
             ),
           ),
         ],

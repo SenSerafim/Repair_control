@@ -9,6 +9,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../projects/application/project_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
@@ -96,7 +97,7 @@ class TeamScreen extends ConsumerWidget {
             return AppEmptyState(
               title: 'Пока нет участников',
               subtitle: canManage
-                  ? 'Пригласите представителя, бригадира или мастера — '
+                  ? 'Пригласите представителя или бригадира — '
                         'они получат доступ к проекту сразу после входа.\n\n'
                         'Самый быстрый способ — сгенерировать 6-значный код '
                         'и отправить его получателю в любой мессенджер.'
@@ -119,7 +120,28 @@ class TeamScreen extends ConsumerWidget {
           // даёт порядок и человекочитаемые названия.
           final stagesAsync = ref.watch(stagesControllerProvider(projectId));
           final stages = stagesAsync.value ?? const <Stage>[];
-          final grouped = _groupByStage(team.members, stages);
+          // Серафим 08.06.2026: заказчик/представитель не должны видеть
+          // мастеров в команде — мастеров приглашает бригадир, у заказчика
+          // нет контекста по ним.
+          final me = ref.watch(authControllerProvider).userId;
+          final projectAsync = ref.watch(projectControllerProvider(projectId));
+          final ownerId = projectAsync.maybeWhen(
+            data: (p) => p.ownerId,
+            orElse: () => null,
+          );
+          final myMembership = ref.watch(
+            myMembershipInProjectProvider(projectId),
+          );
+          final viewerIsCustomerSide =
+              (me != null && ownerId != null && me == ownerId) ||
+              myMembership?.role == MembershipRole.customer ||
+              myMembership?.role == MembershipRole.representative;
+          final visibleMembers = viewerIsCustomerSide
+              ? team.members
+                    .where((m) => m.role != MembershipRole.master)
+                    .toList()
+              : team.members;
+          final grouped = _groupByStage(visibleMembers, stages);
           final stageOrder = [
             for (final s in stages)
               if ((grouped[s.id] ?? const []).isNotEmpty) s,

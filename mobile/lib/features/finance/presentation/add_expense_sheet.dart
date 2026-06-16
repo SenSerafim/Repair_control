@@ -172,7 +172,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
     final insets = MediaQuery.of(context).viewInsets;
     return SafeArea(
       top: false,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.x16,
           AppSpacing.x14,

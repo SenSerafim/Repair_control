@@ -55,10 +55,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _matchesFilter(Project p) {
     return switch (_filter) {
       _SearchFilter.all => true,
-      _SearchFilter.overdue => p.semaphore == Semaphore.red,
-      _SearchFilter.atRisk => p.semaphore == Semaphore.yellow,
-      _SearchFilter.onTrack => p.semaphore == Semaphore.green,
-      _SearchFilter.awaiting => p.semaphore == Semaphore.blue,
+      _SearchFilter.overdue => p.effectiveSemaphore == Semaphore.red,
+      _SearchFilter.atRisk => p.effectiveSemaphore == Semaphore.yellow,
+      _SearchFilter.onTrack => p.effectiveSemaphore == Semaphore.green,
+      _SearchFilter.awaiting =>
+        p.effectiveSemaphore == Semaphore.blue ||
+            p.effectiveSemaphore == Semaphore.paused,
     };
   }
 

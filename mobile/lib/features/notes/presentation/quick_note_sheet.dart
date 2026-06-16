@@ -60,12 +60,26 @@ class _QuickNoteSheetState extends ConsumerState<_QuickNoteSheet> {
   Duration? _recordedDuration;
 
   @override
+  void initState() {
+    super.initState();
+    // _canSave зависит от _text.text.trim().isNotEmpty, но TextField не
+    // дёргает setState родителя при печати — кнопка «Сохранить» оставалась
+    // неактивной до смены mode/visibility. Слушаем контроллер напрямую.
+    _text.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
     _ticker?.cancel();
     _recSub?.cancel();
     unawaited(_recorder.stop());
     unawaited(_recorder.dispose());
     unawaited(_player.dispose());
+    _text.removeListener(_onTextChanged);
     _text.dispose();
     super.dispose();
   }

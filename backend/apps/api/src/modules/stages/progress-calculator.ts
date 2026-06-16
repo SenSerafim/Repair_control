@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, Stage, StageStatus } from '@prisma/client';
 import { Clock, PrismaService } from '@app/common';
 
-export type SemaphoreColor = 'green' | 'yellow' | 'red' | 'blue' | 'done';
+export type SemaphoreColor = 'green' | 'yellow' | 'red' | 'blue' | 'done' | 'paused';
+
+export interface ProjectSemaphoreContext {
+  plannedEnd: Date | null;
+  planApproved: boolean;
+}
 
 export interface StageSnapshot {
   id: string;
@@ -117,9 +122,15 @@ export class ProgressCalculator {
 
   async recalcProject(projectId: string, tx?: Prisma.TransactionClient): Promise<void> {
     const client = tx ?? this.prisma;
-    const stages = await client.stage.findMany({ where: { projectId } });
+    const [stages, project] = await Promise.all([
+      client.stage.findMany({ where: { projectId } }),
+      client.project.findUnique({
+        where: { id: projectId },
+        select: { plannedEnd: true, planApproved: true },
+      }),
+    ]);
     const progress = this.computeProjectProgress(stages);
-    const color = this.computeProjectSemaphore(stages);
+    const color = this.computeProjectSemaphore(stages, project ?? undefined);
     await client.project.update({
       where: { id: projectId },
       data: { progressCache: progress, semaphoreCache: color },
@@ -132,11 +143,32 @@ export class ProgressCalculator {
     return Math.round((done / stages.length) * 100);
   }
 
-  computeProjectSemaphore(stages: Stage[]): SemaphoreColor {
-    if (stages.length === 0) return 'green';
+  computeProjectSemaphore(
+    stages: Stage[],
+    projectCtx?: ProjectSemaphoreContext,
+    now: Date = this.clock.now(),
+  ): SemaphoreColor {
+    if (stages.length === 0) {
+      // Пустой проект, но дедлайн уже прошёл и плана нет — «На паузе»
+      // (блокировано согласованием плана у заказчика). Если план одобрен,
+      // но этапов всё ещё нет — это «Просрочен».
+      if (projectCtx?.plannedEnd && projectCtx.plannedEnd.getTime() < now.getTime()) {
+        return projectCtx.planApproved ? 'red' : 'paused';
+      }
+      return 'green';
+    }
     if (stages.every((s) => s.status === 'done')) return 'done';
-    const colors = stages.map((s) => this.stageSemaphore(s).color);
+    const colors = stages.map((s) => this.stageSemaphore(s, now).color);
     if (colors.includes('red')) return 'red';
+
+    // Проектный дедлайн прошёл, но этапы сами по себе не подсветили red.
+    // Это типичная картина «план не утверждён → этапов нет, дата уже
+    // прошла» либо «этапы расписаны, но без plannedEnd». Показываем
+    // блокер «На паузе», если план ещё не утверждён; иначе — «Просрочен».
+    if (projectCtx?.plannedEnd && projectCtx.plannedEnd.getTime() < now.getTime()) {
+      return projectCtx.planApproved ? 'red' : 'paused';
+    }
+
     if (colors.includes('blue')) return 'blue';
     if (colors.includes('yellow')) return 'yellow';
     return 'green';

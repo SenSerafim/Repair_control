@@ -300,11 +300,13 @@ final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
     data: (p) => p.ownerId,
     orElse: () => null,
   );
+  // Заказчик/представитель приглашают только бригадира и представителя.
+  // Мастеров приглашает бригадир — это явное продуктовое требование
+  // (Серафим 08.06.2026): заказчик не должен видеть мастеров вообще.
   if (me != null && ownerId != null && me == ownerId) {
     return const [
       MembershipRole.representative,
       MembershipRole.foreman,
-      MembershipRole.master,
     ];
   }
   final my = ref.watch(myMembershipInProjectProvider(projectId));
@@ -314,7 +316,6 @@ final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
       return const [
         MembershipRole.representative,
         MembershipRole.foreman,
-        MembershipRole.master,
       ];
     case MembershipRole.representative:
       final delegated = ref.watch(representativeRightsProvider(projectId));
@@ -324,7 +325,6 @@ final invitableRolesProvider = Provider.family<List<MembershipRole>, String>((
       return const [
         MembershipRole.representative,
         MembershipRole.foreman,
-        MembershipRole.master,
       ];
     case MembershipRole.foreman:
       return const [MembershipRole.master];

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../projects/presentation/money_input.dart';
+import '../../stages/application/stages_controller.dart';
 import '../../team/application/team_controller.dart';
 import '../application/payments_controller.dart';
 
@@ -26,6 +28,7 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
   final _amount = TextEditingController();
   final _comment = TextEditingController();
   String? _toUserId;
+  String? _stageId;
   bool _submitting = false;
   String? _error;
 
@@ -55,6 +58,7 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
         .createAdvance(
           toUserId: _toUserId!,
           amount: amountKop,
+          stageId: _stageId,
           comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
@@ -118,23 +122,51 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
                   )
                   .toList();
               if (foremen.isEmpty && masters.isEmpty) {
+                final totalMembers = team.members.length;
+                final foremenAll = team.members
+                    .where((m) => m.role == MembershipRole.foreman)
+                    .length;
+                final mastersAll = team.members
+                    .where((m) => m.role == MembershipRole.master)
+                    .length;
+                // Если в команде кто-то есть, но они — это вы сами
+                // (legacy: customer-owner с дублирующей foreman-ролью),
+                // показываем диагностику. Иначе — стандартное приглашение.
+                final selfBlocks = (foremenAll > 0 || mastersAll > 0);
                 return Container(
                   padding: const EdgeInsets.all(AppSpacing.x12),
                   decoration: BoxDecoration(
                     color: AppColors.yellowBg,
                     borderRadius: AppRadius.card,
                   ),
-                  child: Text(
-                    'В команде нет бригадиров и мастеров. Пригласите их в проекте.',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.yellowText,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        selfBlocks
+                            ? 'Нет получателей кроме вас самих '
+                                  '(в команде: бригадиров — $foremenAll, '
+                                  'мастеров — $mastersAll, всего — $totalMembers). '
+                                  'Аванс самому себе перевести нельзя.'
+                            : 'В команде нет бригадиров и мастеров. '
+                                  'Пригласите их в проекте.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.yellowText,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.x10),
+                      _AddRecipientBar(projectId: widget.projectId),
+                    ],
                   ),
                 );
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // NEWFIX TZ-2 §5 — быстрая кнопка «Добавить получателя»
+                  // прямо в форме (чтобы не возвращаться в Команду проекта).
+                  _AddRecipientBar(projectId: widget.projectId),
+                  const SizedBox(height: AppSpacing.x12),
                   if (foremen.isNotEmpty) ...[
                     const Text('Бригадир', style: AppTextStyles.caption),
                     const SizedBox(height: AppSpacing.x6),
@@ -174,6 +206,17 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
             controller: _amount,
             label: 'Сумма аванса',
             hint: 'Сколько переводите',
+          ),
+          const SizedBox(height: AppSpacing.x16),
+          // ТЗ §4: к каждой выплате опционально привязывается этап,
+          // чтобы потом можно было видеть «бюджет этапа» и историю по нему.
+          // В форме расхода селектор есть, тут добавляем для симметрии.
+          const Text('Этап (опционально)', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          _StagePickerAdvance(
+            projectId: widget.projectId,
+            selectedStageId: _stageId,
+            onChanged: (id) => setState(() => _stageId = id),
           ),
           const SizedBox(height: AppSpacing.x16),
           const Text('Комментарий (опционально)', style: AppTextStyles.caption),
@@ -268,6 +311,76 @@ class _RecipientTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Селектор этапа для формы аванса. Аналогичен `_StagePicker` из
+/// add_expense_sheet, но локальный (избегаем циклов между модулями).
+class _StagePickerAdvance extends ConsumerWidget {
+  const _StagePickerAdvance({
+    required this.projectId,
+    required this.selectedStageId,
+    required this.onChanged,
+  });
+
+  final String projectId;
+  final String? selectedStageId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(stagesControllerProvider(projectId));
+    return async.when(
+      loading: () => const SizedBox(
+        height: 32,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => Text(
+        'Не удалось загрузить этапы',
+        style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
+      ),
+      data: (stages) => Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          ChoiceChip(
+            label: const Text('Без этапа'),
+            selected: selectedStageId == null,
+            onSelected: (_) => onChanged(null),
+          ),
+          for (final s in stages)
+            ChoiceChip(
+              label: Text('Этап ${s.orderIndex + 1}'),
+              selected: selectedStageId == s.id,
+              onSelected: (_) => onChanged(s.id),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Кнопка-плашка «Добавить получателя в проект» прямо в форме аванса:
+/// открывает существующий flow `/projects/:id/team/add`.
+class _AddRecipientBar extends StatelessWidget {
+  const _AddRecipientBar({required this.projectId});
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppButton(
+      label: 'Добавить получателя',
+      icon: Icons.person_add_alt_1_rounded,
+      variant: AppButtonVariant.ghost,
+      onPressed: () =>
+          context.push(AppRoutes.projectAddMemberWith(projectId)),
     );
   }
 }

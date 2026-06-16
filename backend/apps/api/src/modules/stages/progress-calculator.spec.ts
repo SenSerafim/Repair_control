@@ -131,6 +131,83 @@ describe('project-level semaphore', () => {
     ] as any;
     expect(c.computeProjectSemaphore(stages)).toBe('yellow');
   });
+
+  it('проект просрочен + план НЕ утверждён → paused (блокер у заказчика)', () => {
+    const c = calc();
+    // plannedStart в будущем, чтобы сам этап не уехал в late_start
+    const stages = [
+      {
+        ...stage(),
+        status: 'pending',
+        plannedStart: new Date('2026-07-01T00:00:00Z'),
+        plannedEnd: new Date('2026-08-01T00:00:00Z'),
+      },
+    ] as any;
+    const ctx = {
+      plannedEnd: new Date('2026-05-01T00:00:00Z'),
+      planApproved: false,
+    };
+    expect(c.computeProjectSemaphore(stages, ctx)).toBe('paused');
+  });
+
+  it('проект просрочен + план утверждён → red', () => {
+    const c = calc();
+    const stages = [
+      {
+        ...stage(),
+        status: 'pending',
+        plannedStart: new Date('2026-07-01T00:00:00Z'),
+        plannedEnd: new Date('2026-08-01T00:00:00Z'),
+      },
+    ] as any;
+    const ctx = {
+      plannedEnd: new Date('2026-05-01T00:00:00Z'),
+      planApproved: true,
+    };
+    expect(c.computeProjectSemaphore(stages, ctx)).toBe('red');
+  });
+
+  it('пустой проект + дедлайн прошёл + план НЕ утверждён → paused', () => {
+    const c = calc();
+    const ctx = {
+      plannedEnd: new Date('2026-05-01T00:00:00Z'),
+      planApproved: false,
+    };
+    expect(c.computeProjectSemaphore([], ctx)).toBe('paused');
+  });
+
+  it('проект просрочен, но этап уже сам red → red (не маскируем под paused)', () => {
+    const c = calc();
+    const stages = [
+      {
+        ...stage(),
+        status: 'active',
+        plannedEnd: new Date('2026-04-01T00:00:00Z'),
+      },
+    ] as any;
+    const ctx = {
+      plannedEnd: new Date('2026-05-01T00:00:00Z'),
+      planApproved: false,
+    };
+    expect(c.computeProjectSemaphore(stages, ctx)).toBe('red');
+  });
+
+  it('проект в будущем + план НЕ утверждён → старая логика по этапам', () => {
+    const c = calc();
+    const stages = [
+      {
+        ...stage(),
+        status: 'pending',
+        plannedStart: new Date('2026-07-01T00:00:00Z'),
+        plannedEnd: new Date('2026-08-01T00:00:00Z'),
+      },
+    ] as any;
+    const ctx = {
+      plannedEnd: new Date('2026-09-01T00:00:00Z'),
+      planApproved: false,
+    };
+    expect(c.computeProjectSemaphore(stages, ctx)).toBe('green');
+  });
 });
 
 describe('computeStageProgress — формула со шагами (gaps §2.3)', () => {

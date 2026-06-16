@@ -4,7 +4,10 @@ import '../../core/theme/text_styles.dart';
 import '../../core/theme/tokens.dart';
 
 /// Статусный светофор проекта/этапа/выплаты.
-enum Semaphore { plan, green, yellow, red, blue }
+/// `paused` — проектный блокер: дедлайн прошёл, но план ещё не согласован
+/// (бригадир не может начать; ждём заказчика). Семантика отличается от
+/// stage.paused: тут это маркер «работы заблокированы внешним фактором».
+enum Semaphore { plan, green, yellow, red, blue, paused }
 
 extension SemaphoreColors on Semaphore {
   Color get dot => switch (this) {
@@ -13,6 +16,7 @@ extension SemaphoreColors on Semaphore {
     Semaphore.yellow => AppColors.yellowDot,
     Semaphore.red => AppColors.redDot,
     Semaphore.blue => AppColors.blueDot,
+    Semaphore.paused => AppColors.n500,
   };
 
   Color get bg => switch (this) {
@@ -21,6 +25,7 @@ extension SemaphoreColors on Semaphore {
     Semaphore.yellow => AppColors.yellowBg,
     Semaphore.red => AppColors.redBg,
     Semaphore.blue => AppColors.blueBg,
+    Semaphore.paused => AppColors.n100,
   };
 
   Color get text => switch (this) {
@@ -29,6 +34,7 @@ extension SemaphoreColors on Semaphore {
     Semaphore.yellow => AppColors.yellowText,
     Semaphore.red => AppColors.redText,
     Semaphore.blue => AppColors.blueText,
+    Semaphore.paused => AppColors.n700,
   };
 
   /// Stripe-градиент по статусу — для верхней полоски карточек этапов
@@ -39,6 +45,7 @@ extension SemaphoreColors on Semaphore {
     Semaphore.yellow => AppGradients.stripeYellow,
     Semaphore.red => AppGradients.stripeRed,
     Semaphore.blue => AppGradients.stripeBrand,
+    Semaphore.paused => AppGradients.stripePlan,
   };
 }
 
