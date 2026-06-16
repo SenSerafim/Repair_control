@@ -12,12 +12,21 @@ import 'stage_banner_data.dart';
 /// Один виджет, switch по типу [data]. Active вариант тикает таймером раз в
 /// секунду; остальные варианты статичные.
 class StageStatusBanner extends StatelessWidget {
-  const StageStatusBanner({required this.data, this.onContact, super.key});
+  const StageStatusBanner({
+    required this.data,
+    this.onContact,
+    this.onAssignContractor,
+    super.key,
+  });
 
   final StageBannerData data;
 
   /// Используется только для overdue — открывает чат с заказчиком.
   final VoidCallback? onContact;
+
+  /// Серафим 08.06.2026: красный «Бригадир не назначен» — кликабельный,
+  /// ведёт на экран добавления участника. null = не кликабельная.
+  final VoidCallback? onAssignContractor;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +46,9 @@ class StageStatusBanner extends StatelessWidget {
           actorName: actorName,
           attempt: attempt,
         ),
-      WaitingNoContractorBanner() => const _WaitingNoContractor(),
+      WaitingNoContractorBanner() => _WaitingNoContractor(
+        onAssign: onAssignContractor,
+      ),
       DoneBanner() => const _Done(),
     };
   }
@@ -422,18 +433,28 @@ class _Rejected extends StatelessWidget {
 // Waiting — красный «Бригадир не назначен»
 // ─────────────────────────────────────────────────────────────────────
 class _WaitingNoContractor extends StatelessWidget {
-  const _WaitingNoContractor();
+  const _WaitingNoContractor({this.onAssign});
+
+  final VoidCallback? onAssign;
 
   @override
   Widget build(BuildContext context) {
-    return _BaseBanner(
+    final banner = _BaseBanner(
       bg: AppColors.redBg,
       border: AppColors.redDot.withValues(alpha: 0.4),
       icon: Icons.person_off_outlined,
       iconColor: AppColors.redText,
       title: 'Бригадир не назначен',
-      subtitle: 'Этап не может быть запущен.',
+      subtitle: onAssign != null
+          ? 'Этап не может быть запущен. Нажмите, чтобы назначить.'
+          : 'Этап не может быть запущен.',
       titleColor: AppColors.redText,
+    );
+    if (onAssign == null) return banner;
+    return InkWell(
+      onTap: onAssign,
+      borderRadius: BorderRadius.circular(AppRadius.r16),
+      child: banner,
     );
   }
 }

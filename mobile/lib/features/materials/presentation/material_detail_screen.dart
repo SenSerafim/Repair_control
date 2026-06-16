@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -10,6 +11,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/materials_controller.dart';
 import '../data/materials_repository.dart';
 import '../domain/material_request.dart';
@@ -56,6 +58,50 @@ class MaterialDetailScreen extends ConsumerWidget {
             tooltip: 'Сформировать PDF',
             icon: const Icon(Icons.picture_as_pdf_outlined),
             onPressed: canExport ? () => _sharePdf(ctx, ref, r) : null,
+          );
+        }),
+        // Серафим 08.06.2026: ⋮-меню в шапке заявки.
+        // Удалить — только автор + статус created/cancelled (backend
+        // FSM). Редактирование позиций не в скоупе (большой рефактор).
+        Builder(builder: (ctx) {
+          final r = async.valueOrNull;
+          final me = ref.watch(authControllerProvider).userId;
+          // Удалить можно только до согласования (pendingApproval) или
+          // после отказа/отмены (rejected). После approved/delivered/
+          // accepted — бэк отдаст 403.
+          final canDelete = r != null &&
+              me != null &&
+              r.createdById == me &&
+              (r.status == MaterialRequestStatus.pendingApproval ||
+                  r.status == MaterialRequestStatus.rejected);
+          return PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            tooltip: 'Действия',
+            onSelected: (v) {
+              if (v == 'delete') _confirmDelete(ctx, ref);
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'delete',
+                enabled: canDelete,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: canDelete ? AppColors.redText : AppColors.n400,
+                    ),
+                    const SizedBox(width: AppSpacing.x8),
+                    Text(
+                      'Удалить',
+                      style: TextStyle(
+                        color: canDelete ? AppColors.redText : AppColors.n400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           );
         }),
       ],
@@ -146,6 +192,44 @@ class MaterialDetailScreen extends ConsumerWidget {
     } on MaterialsException catch (e) {
       messenger?.showSnackBar(
         SnackBar(content: Text('Не удалось сформировать PDF: ${e.failure.name}')),
+      );
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext ctx, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        title: const Text('Удалить заявку?'),
+        content: const Text(
+          'Это действие необратимо. Удалить можно только заявку, которая '
+          'ещё не согласована или была отклонена.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.redText),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final repo = ref.read(materialsRepositoryProvider);
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    try {
+      await repo.deleteRequest(requestId);
+      ref.invalidate(materialsControllerProvider(projectId));
+      if (!ctx.mounted) return;
+      messenger?.showSnackBar(const SnackBar(content: Text('Заявка удалена')));
+      ctx.pop();
+    } on MaterialsException catch (e) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Не удалось удалить: ${e.failure.name}')),
       );
     }
   }

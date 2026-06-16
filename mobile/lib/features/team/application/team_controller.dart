@@ -65,6 +65,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
     required MembershipRole role,
     Map<String, bool>? permissions,
     List<String>? stageIds,
+    String? specialization,
   }) async {
     try {
       await ref
@@ -75,6 +76,7 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
             role: role,
             permissions: permissions,
             stageIds: stageIds,
+            specialization: specialization,
           );
       await _refresh();
       return null;

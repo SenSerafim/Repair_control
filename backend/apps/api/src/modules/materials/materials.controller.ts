@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -160,5 +161,26 @@ export class MaterialsController {
       actorUserId: req.user.userId,
       comment: dto.comment,
     });
+  }
+
+  /**
+   * Удалить заявку — только автор и только в статусе `created`/`cancelled`
+   * (нельзя ронять уже согласованную, иначе бюджет/чеки рассинхронятся).
+   * Soft-delete отсутствует — материалов мало, физическое удаление ок.
+   * Серафим 08.06.2026: ⋮-меню на заявке требует Edit/Delete; Edit пока
+   * не в скоупе (FSM позиций).
+   */
+  @Delete('materials/:id')
+  @RequireAccess({
+    action: 'materials.manage',
+    resource: 'material_request',
+    resourceIdFrom: { source: 'params', key: 'id' },
+  })
+  async deleteRequest(@Req() req: { user: AuthenticatedUser }, @Param('id') id: string) {
+    await this.materials.deleteRequest({
+      requestId: id,
+      actorUserId: req.user.userId,
+    });
+    return { ok: true };
   }
 }

@@ -49,6 +49,9 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
   String? _error;
   String? _phoneError;
   MembershipRole? _role;
+  // Серафим 08.06.2026: специализация при добавлении мастера. null = не
+  // выбрана (можно оставить пустым). Отправляется только когда role=master.
+  String? _specialization;
 
   @override
   void dispose() {
@@ -101,7 +104,12 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
     });
     final failure = await ref
         .read(teamControllerProvider(widget.projectId).notifier)
-        .addMember(userId: result!.user!.id, role: role);
+        .addMember(
+          userId: result!.user!.id,
+          role: role,
+          specialization:
+              role == MembershipRole.master ? _specialization : null,
+        );
     if (!mounted) return;
     setState(() => _submitting = false);
     if (failure == null) {
@@ -252,13 +260,44 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
                   _RolePicker(
                     roles: allowed,
                     value: _role,
-                    onChanged: (r) => setState(() => _role = r),
+                    onChanged: (r) => setState(() {
+                      _role = r;
+                      if (r != MembershipRole.master) _specialization = null;
+                    }),
                   ),
                   const SizedBox(height: AppSpacing.x6),
                   Text(
                     _hintFor(_role),
                     style: AppTextStyles.micro.copyWith(color: AppColors.n400),
                   ),
+                  if (_role == MembershipRole.master) ...[
+                    const SizedBox(height: AppSpacing.x12),
+                    const Text(
+                      'Специализация (опционально)',
+                      style: AppTextStyles.caption,
+                    ),
+                    const SizedBox(height: AppSpacing.x6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final s in const [
+                          'Плиточник',
+                          'Сантехник',
+                          'Электрик',
+                          'Маляр',
+                          'Широкого профиля',
+                        ])
+                          ChoiceChip(
+                            label: Text(s),
+                            selected: _specialization == s,
+                            onSelected: (sel) => setState(
+                              () => _specialization = sel ? s : null,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.x16),
                   if (_result!.user != null)
                     AppButton(

@@ -216,6 +216,7 @@ enum FeedEventKind {
   material_request_sent
   material_request_approved
   material_request_cancelled
+  material_request_deleted
   material_item_bought
   material_request_finalized
   material_delivered
@@ -510,6 +511,10 @@ model Membership {
   removedById   String?
   /// Персональный hide-флаг — проект скрыт у этого пользователя без выхода.
   hiddenForUser Boolean        @default(false)
+  /// Серафим 08.06.2026: специализация мастера, опционально. Свободная
+  /// строка (плиточник / сантехник / электрик / широкого профиля / etc).
+  /// Используется только для роли master, для остальных игнорируется.
+  specialization String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

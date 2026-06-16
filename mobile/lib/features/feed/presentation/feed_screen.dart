@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../exports/presentation/export_sheet.dart';
+import '../../team/application/team_controller.dart';
 import '../application/feed_controller.dart';
 import '../data/feed_repository.dart';
 import '../domain/feed_event.dart';
@@ -148,7 +149,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               ),
             );
           }
-          return _FeedRow(event: filtered[i]);
+          return _FeedRow(event: filtered[i], projectId: widget.projectId);
         },
       ),
     );
@@ -201,21 +202,39 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 }
 
-class _FeedRow extends StatelessWidget {
-  const _FeedRow({required this.event});
+class _FeedRow extends ConsumerWidget {
+  const _FeedRow({required this.event, required this.projectId});
 
   final FeedEvent event;
+  final String projectId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final stageTitle = event.payload['stageTitle'] as String?;
     final reason = event.payload['reason'] as String?;
     final timeStr = DateFormat(
       'dd.MM.yyyy, HH:mm',
       'ru',
     ).format(event.createdAt);
+    // Серафим 08.06.2026: имя инициатора события — резолвится из team.
+    String? actorName;
+    final team = ref.watch(teamControllerProvider(projectId)).valueOrNull;
+    if (team != null && event.actorId.isNotEmpty) {
+      for (final m in team.members) {
+        if (m.userId == event.actorId) {
+          final u = m.user;
+          if (u != null && u.firstName.isNotEmpty) {
+            actorName = u.lastName.isEmpty
+                ? u.firstName
+                : '${u.firstName} ${u.lastName[0]}.';
+          }
+          break;
+        }
+      }
+    }
     final subtitleParts = <String>[
       timeStr,
+      if (actorName != null) actorName,
       if (stageTitle != null && stageTitle.isNotEmpty) stageTitle,
     ];
     if (reason != null && reason.isNotEmpty) {

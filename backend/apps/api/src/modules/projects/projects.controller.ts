@@ -213,6 +213,7 @@ export class ProjectsController {
       role: dto.role,
       permissions: dto.permissions,
       stageIds: dto.stageIds,
+      specialization: dto.specialization,
     });
   }
 

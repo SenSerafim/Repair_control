@@ -493,4 +493,46 @@ export class MaterialsService {
     });
     return result;
   }
+
+  async deleteRequest(input: { requestId: string; actorUserId: string }) {
+    const request = await this.prisma.materialRequest.findUnique({
+      where: { id: input.requestId },
+      select: {
+        id: true,
+        projectId: true,
+        stageId: true,
+        title: true,
+        status: true,
+        createdById: true,
+      },
+    });
+    if (!request) {
+      throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'material request not found');
+    }
+    if (request.createdById !== input.actorUserId) {
+      throw new ForbiddenError(
+        ErrorCodes.MATERIAL_REQUEST_DELETE_AUTHOR_ONLY,
+        'only the author can delete a material request',
+      );
+    }
+    // FSM: удалять можно только до согласования (pending_approval) или после
+    // отказа/отмены (cancelled). Open/delivered/accepted роняют бюджет.
+    if (request.status !== 'pending_approval' && request.status !== 'cancelled') {
+      throw new ForbiddenError(
+        ErrorCodes.MATERIAL_REQUEST_DELETE_FORBIDDEN_STATUS,
+        'cannot delete request after approval — cancel via reject first',
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.materialRequest.delete({ where: { id: request.id } });
+      await this.feed.emit({
+        tx,
+        kind: 'material_request_deleted',
+        projectId: request.projectId,
+        stageId: request.stageId,
+        actorId: input.actorUserId,
+        payload: { requestId: request.id, title: request.title },
+      });
+    });
+  }
 }

@@ -15,6 +15,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../stages/application/stages_controller.dart';
+import '../../team/application/team_controller.dart';
 import '../application/step_detail_controller.dart';
 import '../application/steps_controller.dart';
 import '../domain/question.dart';
@@ -508,6 +509,7 @@ class _PhotosSection extends ConsumerWidget {
             itemBuilder: (_, i) {
               final photo = photos[i];
               return _PhotoThumb(
+                projectId: detailKey.projectId,
                 photo: photo,
                 onDelete: () => ref
                     .read(stepDetailProvider(detailKey).notifier)
@@ -520,14 +522,19 @@ class _PhotosSection extends ConsumerWidget {
   }
 }
 
-class _PhotoThumb extends StatelessWidget {
-  const _PhotoThumb({required this.photo, required this.onDelete});
+class _PhotoThumb extends ConsumerWidget {
+  const _PhotoThumb({
+    required this.projectId,
+    required this.photo,
+    required this.onDelete,
+  });
 
+  final String projectId;
   final StepPhoto photo;
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // NEWFIX TZ-фронт §8 — thumbnail-генерация для видео ещё не сделана на
     // бэке: показываем placeholder с play-overlay; tap по плитке открывает
     // fullscreen VideoPlayerScreen (chewie) с presigned URL.
@@ -587,6 +594,66 @@ class _PhotoThumb extends StatelessWidget {
               ),
             ),
           ),
+        // Серафим 08.06.2026: подпись медиа (кто загрузил, когда).
+        // Резолвится из team — fallback на «—» если автор ушёл из проекта.
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x00000000),
+                    Color(0xCC000000),
+                  ],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(AppRadius.r12),
+                  bottomRight: Radius.circular(AppRadius.r12),
+                ),
+              ),
+              child: Builder(builder: (_) {
+                final team = ref
+                    .watch(teamControllerProvider(projectId))
+                    .valueOrNull;
+                String name = '—';
+                if (team != null) {
+                  for (final m in team.members) {
+                    if (m.userId == photo.uploadedBy) {
+                      final u = m.user;
+                      if (u != null && u.firstName.isNotEmpty) {
+                        name = u.lastName.isEmpty
+                            ? u.firstName
+                            : '${u.firstName} ${u.lastName[0]}.';
+                      }
+                      break;
+                    }
+                  }
+                }
+                final dt = photo.createdAt.toLocal();
+                final hh = dt.hour.toString().padLeft(2, '0');
+                final mm = dt.minute.toString().padLeft(2, '0');
+                final dd = dt.day.toString().padLeft(2, '0');
+                final mo = dt.month.toString().padLeft(2, '0');
+                return Text(
+                  '$name · $dd.$mo $hh:$mm',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.n0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                );
+              }),
+            ),
+          ),
+        ),
         Positioned(
           top: 4,
           right: 4,
@@ -785,17 +852,45 @@ class _ActionCtas extends ConsumerWidget {
       final stages = ref.watch(stagesControllerProvider(projectId)).value;
       final stage = stages?.where((s) => s.id == stageId).firstOrNull;
       final foremanId = stage?.foremanIds.firstOrNull;
-      if (foremanId == null) return const SizedBox.shrink();
-      return AppButton(
-        label: 'Отправить на доработку',
-        variant: AppButtonVariant.secondary,
-        onPressed: () => showReclamationSheet(
-          context,
-          ref,
-          projectId: projectId,
-          stepId: step.id,
-          addresseeId: foremanId,
-        ),
+      // Серафим 08.06.2026: для заказчика при step.isDone — ДВЕ кнопки:
+      // «Согласовать» (зелёная) + «Отправить на доработку» (нейтральная).
+      // «Отправить на доработку» остаётся доступной ВСЕГДА (даже после
+      // согласования) — на случай выявленных позже косяков («трещина
+      // через неделю»).
+      final reworkBtn = foremanId == null
+          ? null
+          : AppButton(
+              label: 'Отправить на доработку',
+              variant: AppButtonVariant.secondary,
+              onPressed: () => showReclamationSheet(
+                context,
+                ref,
+                projectId: projectId,
+                stepId: step.id,
+                addresseeId: foremanId,
+              ),
+            );
+      // У шага нет отдельного статуса «accepted» — done = принят. Зелёная
+      // CTA «Согласовать» закрывает диалог и оставляет шаг done. Если
+      // вернётся проблема — заказчик использует «Отправить на доработку».
+      final approveBtn = AppButton(
+        label: 'Согласовать',
+        variant: AppButtonVariant.success,
+        onPressed: () {
+          AppToast.show(
+            context,
+            message: 'Шаг согласован',
+            kind: AppToastKind.success,
+          );
+        },
+      );
+      if (reworkBtn == null) return approveBtn;
+      return Row(
+        children: [
+          Expanded(child: approveBtn),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(child: reworkBtn),
+        ],
       );
     }
 

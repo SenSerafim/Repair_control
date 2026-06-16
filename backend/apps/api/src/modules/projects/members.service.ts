@@ -22,6 +22,8 @@ export interface AddMembershipInput {
   role: MembershipRole;
   permissions?: Record<string, unknown>;
   stageIds?: string[];
+  /// Серафим 08.06.2026: специализация для роли master, опциональна.
+  specialization?: string | null;
 }
 
 /**
@@ -159,6 +161,7 @@ export class MembersService {
               invitedById: input.actorUserId,
               permissions: permissions as Prisma.InputJsonValue,
               stageIds: input.stageIds ?? [],
+              specialization: input.role === 'master' ? (input.specialization ?? null) : null,
             },
           })
         : await tx.membership.create({
@@ -169,6 +172,7 @@ export class MembersService {
               invitedById: input.actorUserId,
               permissions: permissions as Prisma.InputJsonValue,
               stageIds: input.stageIds ?? [],
+              specialization: input.role === 'master' ? (input.specialization ?? null) : null,
             },
           });
       // Появление foreman включает требование согласования плана работ (ТЗ §4.4, gaps §3.2)

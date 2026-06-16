@@ -127,6 +127,8 @@ export const ErrorCodes = {
   MATERIAL_INVALID_STATUS: 'materials.invalid_status',
   MATERIAL_PRICE_REQUIRED: 'materials.price_required',
   MATERIAL_CONFIRM_FORBIDDEN: 'materials.confirm_forbidden',
+  MATERIAL_REQUEST_DELETE_AUTHOR_ONLY: 'materials.delete_author_only',
+  MATERIAL_REQUEST_DELETE_FORBIDDEN_STATUS: 'materials.delete_forbidden_status',
   IDEMPOTENCY_MISMATCH: 'idempotency.request_mismatch',
   IDEMPOTENCY_MISSING_USER: 'idempotency.missing_user',
   SELFPURCHASE_NOT_FOUND: 'selfpurchase.not_found',

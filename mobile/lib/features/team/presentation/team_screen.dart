@@ -419,12 +419,21 @@ class _MemberRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    member.role.displayName,
+                    () {
+                      final spec = MembershipSpecialization.of(member.id);
+                      if (member.role == MembershipRole.master &&
+                          spec != null) {
+                        return '${member.role.displayName} · $spec';
+                      }
+                      return member.role.displayName;
+                    }(),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: _roleColor(roleTone),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

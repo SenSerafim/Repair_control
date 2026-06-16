@@ -74,6 +74,7 @@ class TeamRepository {
     required MembershipRole role,
     Map<String, bool>? permissions,
     List<String>? stageIds,
+    String? specialization,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/projects/$projectId/members',
@@ -82,6 +83,8 @@ class TeamRepository {
         'role': role.name,
         if (permissions != null) 'permissions': permissions,
         if (stageIds != null) 'stageIds': stageIds,
+        if (specialization != null && specialization.isNotEmpty)
+          'specialization': specialization,
       },
     );
     return Membership.parse(r.data!);

@@ -85,8 +85,20 @@ class Membership with _$Membership {
     if (stageIds.isNotEmpty) {
       MembershipStageIds._cache[m.id] = stageIds;
     }
+    // Серафим 08.06.2026: специализация для master, side-channel как
+    // stageIds (без регенерации freezed).
+    final spec = json['specialization'];
+    if (spec is String && spec.isNotEmpty) {
+      MembershipSpecialization._cache[m.id] = spec;
+    }
     return m;
   }
+}
+
+class MembershipSpecialization {
+  MembershipSpecialization._();
+  static final Map<String, String> _cache = {};
+  static String? of(String membershipId) => _cache[membershipId];
 }
 
 DateTime _parseMembershipDate(Object? raw) {

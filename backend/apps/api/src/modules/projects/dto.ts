@@ -132,6 +132,12 @@ export class AddMemberDto {
   @IsArray()
   @IsString({ each: true })
   stageIds?: string[];
+
+  /// Серафим 08.06.2026: специализация (опционально, только для master).
+  @ApiProperty({ required: false, type: String })
+  @IsOptional()
+  @IsString()
+  specialization?: string;
 }
 
 export class UpdateMembershipDto {

@@ -313,6 +313,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     data: StageBannerData.fromStage(stage, display)!,
                     onContact: () =>
                         _openProjectChat(widget.projectId, stage.id),
+                    onAssignContractor: () => context.push(
+                      AppRoutes.projectAddMemberWith(widget.projectId),
+                    ),
                   ),
                 ),
               StageTabsBar(

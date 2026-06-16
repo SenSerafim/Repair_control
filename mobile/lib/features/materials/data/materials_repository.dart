@@ -168,6 +168,12 @@ class MaterialsRepository {
         return MaterialRequest.parse(r.data!);
       });
 
+  /// Удалить заявку. Backend: автор + статус created|cancelled.
+  /// Серафим 08.06.2026: ⋮-меню в шапке заявки.
+  Future<void> deleteRequest(String id) => _call(() async {
+    await _dio.delete<void>('/api/materials/$id');
+  });
+
   /// ТЗ NEWFIX §5.3: скачать PDF заявки (для share-flow в магазин).
   /// Backend /api/materials/:id/pdf отдаёт PDF inline; auth-header добавляется
   /// через основной Dio (interceptor).
