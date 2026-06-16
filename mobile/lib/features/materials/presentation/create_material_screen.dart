@@ -186,6 +186,9 @@ class _CreateMaterialScreenState extends ConsumerState<CreateMaterialScreen> {
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: ListView(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.x40,
+          ),
           children: [
             const SizedBox(height: AppSpacing.x16),
             if (_error != null) ...[

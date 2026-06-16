@@ -25,6 +25,8 @@ mixin _$MaterialItemPhoto {
   String get uploadedBy => throw _privateConstructorUsedError;
   bool get exifCleared => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
+  String? get url => throw _privateConstructorUsedError;
+  String? get thumbUrl => throw _privateConstructorUsedError;
 
   /// Create a copy of MaterialItemPhoto
   /// with the given fields replaced by the non-null parameter values.
@@ -49,6 +51,8 @@ abstract class $MaterialItemPhotoCopyWith<$Res> {
     String uploadedBy,
     bool exifCleared,
     DateTime createdAt,
+    String? url,
+    String? thumbUrl,
   });
 }
 
@@ -75,6 +79,8 @@ class _$MaterialItemPhotoCopyWithImpl<$Res, $Val extends MaterialItemPhoto>
     Object? uploadedBy = null,
     Object? exifCleared = null,
     Object? createdAt = null,
+    Object? url = freezed,
+    Object? thumbUrl = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -110,6 +116,14 @@ class _$MaterialItemPhotoCopyWithImpl<$Res, $Val extends MaterialItemPhoto>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            url: freezed == url
+                ? _value.url
+                : url // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            thumbUrl: freezed == thumbUrl
+                ? _value.thumbUrl
+                : thumbUrl // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -134,6 +148,8 @@ abstract class _$$MaterialItemPhotoImplCopyWith<$Res>
     String uploadedBy,
     bool exifCleared,
     DateTime createdAt,
+    String? url,
+    String? thumbUrl,
   });
 }
 
@@ -159,6 +175,8 @@ class __$$MaterialItemPhotoImplCopyWithImpl<$Res>
     Object? uploadedBy = null,
     Object? exifCleared = null,
     Object? createdAt = null,
+    Object? url = freezed,
+    Object? thumbUrl = freezed,
   }) {
     return _then(
       _$MaterialItemPhotoImpl(
@@ -194,6 +212,14 @@ class __$$MaterialItemPhotoImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        url: freezed == url
+            ? _value.url
+            : url // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        thumbUrl: freezed == thumbUrl
+            ? _value.thumbUrl
+            : thumbUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -211,6 +237,8 @@ class _$MaterialItemPhotoImpl implements _MaterialItemPhoto {
     required this.uploadedBy,
     required this.exifCleared,
     required this.createdAt,
+    this.url,
+    this.thumbUrl,
   });
 
   @override
@@ -229,10 +257,14 @@ class _$MaterialItemPhotoImpl implements _MaterialItemPhoto {
   final bool exifCleared;
   @override
   final DateTime createdAt;
+  @override
+  final String? url;
+  @override
+  final String? thumbUrl;
 
   @override
   String toString() {
-    return 'MaterialItemPhoto(id: $id, fileKey: $fileKey, thumbKey: $thumbKey, mimeType: $mimeType, sizeBytes: $sizeBytes, uploadedBy: $uploadedBy, exifCleared: $exifCleared, createdAt: $createdAt)';
+    return 'MaterialItemPhoto(id: $id, fileKey: $fileKey, thumbKey: $thumbKey, mimeType: $mimeType, sizeBytes: $sizeBytes, uploadedBy: $uploadedBy, exifCleared: $exifCleared, createdAt: $createdAt, url: $url, thumbUrl: $thumbUrl)';
   }
 
   @override
@@ -253,7 +285,10 @@ class _$MaterialItemPhotoImpl implements _MaterialItemPhoto {
             (identical(other.exifCleared, exifCleared) ||
                 other.exifCleared == exifCleared) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.thumbUrl, thumbUrl) ||
+                other.thumbUrl == thumbUrl));
   }
 
   @override
@@ -267,6 +302,8 @@ class _$MaterialItemPhotoImpl implements _MaterialItemPhoto {
     uploadedBy,
     exifCleared,
     createdAt,
+    url,
+    thumbUrl,
   );
 
   /// Create a copy of MaterialItemPhoto
@@ -291,6 +328,8 @@ abstract class _MaterialItemPhoto implements MaterialItemPhoto {
     required final String uploadedBy,
     required final bool exifCleared,
     required final DateTime createdAt,
+    final String? url,
+    final String? thumbUrl,
   }) = _$MaterialItemPhotoImpl;
 
   @override
@@ -309,6 +348,10 @@ abstract class _MaterialItemPhoto implements MaterialItemPhoto {
   bool get exifCleared;
   @override
   DateTime get createdAt;
+  @override
+  String? get url;
+  @override
+  String? get thumbUrl;
 
   /// Create a copy of MaterialItemPhoto
   /// with the given fields replaced by the non-null parameter values.

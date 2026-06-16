@@ -107,6 +107,8 @@ class MaterialItemPhoto with _$MaterialItemPhoto {
     required String uploadedBy,
     required bool exifCleared,
     required DateTime createdAt,
+    String? url,
+    String? thumbUrl,
   }) = _MaterialItemPhoto;
 
   static MaterialItemPhoto parse(Map<String, dynamic> json) =>
@@ -119,6 +121,8 @@ class MaterialItemPhoto with _$MaterialItemPhoto {
         uploadedBy: json['uploadedBy'] as String,
         exifCleared: json['exifCleared'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        url: json['url'] as String?,
+        thumbUrl: json['thumbUrl'] as String?,
       );
 }
 

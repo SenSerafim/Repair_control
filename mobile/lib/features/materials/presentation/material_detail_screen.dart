@@ -192,15 +192,19 @@ class MaterialDetailScreen extends ConsumerWidget {
     );
     try {
       final repo = ref.read(materialsRepositoryProvider);
-      final bytes = await repo.downloadRequestPdf(r.id);
+      final got = await repo.downloadRequestPdf(r.id);
       final dir = await getTemporaryDirectory();
       final safeTitle = r.title
           .replaceAll(RegExp(r'[^\wа-яА-Я\- ]+'), '')
           .trim();
-      final file = File('${dir.path}/zayavka-${r.id}.pdf');
-      await file.writeAsBytes(bytes, flush: true);
+      // Серафим 08.06.2026: расширение по фактическому mime — иначе
+      // text/html сохранялся как .pdf и просмотрщик ломался.
+      final isPdf = got.mime.toLowerCase().contains('pdf');
+      final ext = isPdf ? 'pdf' : 'html';
+      final file = File('${dir.path}/zayavka-${r.id}.$ext');
+      await file.writeAsBytes(got.bytes, flush: true);
       await Share.shareXFiles([
-        XFile(file.path, mimeType: 'application/pdf'),
+        XFile(file.path, mimeType: got.mime),
       ], subject: safeTitle.isEmpty ? 'Заявка' : safeTitle);
     } on MaterialsException catch (e) {
       messenger?.showSnackBar(
@@ -434,6 +438,32 @@ class _ItemRow extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (item.photo?.thumbUrl != null) ...[
+            GestureDetector(
+              onTap: () => _openPhoto(context, item.photo!.url ?? item.photo!.thumbUrl!),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.r8),
+                child: Image.network(
+                  item.photo!.thumbUrl!,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: ColoredBox(
+                      color: AppColors.n100,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: AppColors.n400,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x10),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,6 +513,42 @@ class _ItemRow extends StatelessWidget {
 
   String _fmtQty(double q) =>
       q == q.roundToDouble() ? q.toInt().toString() : q.toString();
+
+  // Серафим 08.06.2026: открыть фото позиции на весь экран.
+  void _openPhoto(BuildContext context, String url) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.n0,
+                    size: 48,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: MediaQuery.of(ctx).padding.top + 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded, color: AppColors.n0),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _SectionLabel extends StatelessWidget {

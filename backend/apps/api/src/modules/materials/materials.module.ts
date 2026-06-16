@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { FilesModule } from '@app/files';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { ExportsModule } from '../exports/exports.module';
 import { MaterialsController } from './materials.controller';
@@ -7,7 +8,7 @@ import { MaterialsScheduler } from './materials.scheduler';
 import { MaterialsService } from './materials.service';
 
 @Module({
-  imports: [forwardRef(() => ApprovalsModule), ExportsModule],
+  imports: [forwardRef(() => ApprovalsModule), ExportsModule, FilesModule],
   controllers: [MaterialsController],
   providers: [MaterialsService, MaterialsScheduler, MaterialsPdfService],
   exports: [MaterialsService],

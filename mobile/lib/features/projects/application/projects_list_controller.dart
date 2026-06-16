@@ -53,18 +53,29 @@ class ActiveProjectsController extends AsyncNotifier<List<Project>> {
     final role = ref.watch(activeRoleProvider);
     return ref
         .read(projectsRepositoryProvider)
-        .list(status: ProjectStatus.active, role: role?.name);
+        .list(status: ProjectStatus.active, role: role?.name)
+        .then(_excludeDone);
+  }
+
+  /// Серафим 08.06.2026: проекты, у которых ВСЕ этапы выполнены
+  /// (semaphore=done), не должны болтаться в «Активных» — пользователь
+  /// ждёт, что они «уйдут в завершённые». Архивирование пока ручное, так
+  /// что хотя бы скрываем из списка active.
+  List<Project> _excludeDone(List<Project> list) {
+    // 100% завершённость = все этапы done (backend выставляет
+    // semaphoreCache='done', но enum в моб не имеет этого значения —
+    // парсится как `plan`. Ловим по progressCache).
+    return list.where((p) => p.progressCache < 100).toList();
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
       final role = ref.read(activeRoleProvider);
-      state = AsyncData(
-        await ref
-            .read(projectsRepositoryProvider)
-            .list(status: ProjectStatus.active, role: role?.name),
-      );
+      final list = await ref
+          .read(projectsRepositoryProvider)
+          .list(status: ProjectStatus.active, role: role?.name);
+      state = AsyncData(_excludeDone(list));
     } on ProjectsException catch (e, st) {
       state = AsyncError(e, st);
     }

@@ -176,15 +176,19 @@ class MaterialsRepository {
   /// ТЗ NEWFIX §5.3: скачать PDF заявки (для share-flow в магазин).
   /// Backend /api/materials/:id/pdf отдаёт PDF inline; auth-header добавляется
   /// через основной Dio (interceptor).
-  Future<Uint8List> downloadRequestPdf(String id) => _call(() async {
+  /// Серафим 08.06.2026: возвращаем bytes + Content-Type, чтобы клиент сам
+  /// сохранил с правильным расширением. Backend может вернуть text/html
+  /// (fallback puppeteer) — мобилка покажет в браузере, не в PDF reader'е.
+  Future<({Uint8List bytes, String mime})> downloadRequestPdf(String id) => _call(() async {
     final r = await _dio.get<List<int>>(
       '/api/materials/$id/pdf',
       options: Options(
         responseType: ResponseType.bytes,
-        headers: {'Accept': 'application/pdf'},
+        headers: {'Accept': 'application/pdf,text/html'},
       ),
     );
-    return Uint8List.fromList(r.data!);
+    final mime = r.headers.value('content-type') ?? 'application/pdf';
+    return (bytes: Uint8List.fromList(r.data!), mime: mime);
   });
 
   /// Пресайн на загрузку фото позиции (ТЗ NEWFIX §5.2).

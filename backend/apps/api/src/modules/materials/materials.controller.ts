@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Header,
   Param,
   Post,
   Query,
@@ -87,10 +86,10 @@ export class MaterialsController {
     resource: 'material_request',
     resourceIdFrom: { source: 'params', key: 'id' },
   })
-  @Header('Content-Type', 'application/pdf')
   async pdfForRequest(@Param('id') id: string, @Res({ passthrough: false }) res: Response) {
-    const buffer = await this.pdf.renderForRequest(id);
-    res.setHeader('Content-Disposition', `inline; filename="request-${id}.pdf"`);
+    const { buffer, mime, ext } = await this.pdf.renderForRequest(id);
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Content-Disposition', `inline; filename="request-${id}.${ext}"`);
     res.setHeader('Content-Length', buffer.length.toString());
     res.end(buffer);
   }

@@ -9,6 +9,7 @@ import {
   NotFoundError,
   PrismaService,
 } from '@app/common';
+import { FilesService } from '@app/files';
 import { FeedService } from '../feed/feed.service';
 import { ApprovalsService } from '../approvals/approvals.service';
 
@@ -68,7 +69,38 @@ export class MaterialsService {
     private readonly clock: Clock,
     @Inject(forwardRef(() => ApprovalsService))
     private readonly approvals: ApprovalsService,
+    private readonly files: FilesService,
   ) {}
+
+  /**
+   * Серафим 08.06.2026: фото позиции — отдаём с presigned URL, чтобы
+   * мобилка могла сразу показать миниатюру в детале заявки.
+   * Сбоит → отдаём null (UI деградирует gracefully).
+   */
+  private async attachPhotoUrls<T extends { items: any[] }>(req: T): Promise<T> {
+    if (!req.items) return req;
+    for (const item of req.items) {
+      if (item.photo && item.photo.fileKey) {
+        try {
+          const got = await this.files.createPresignedDownload(item.photo.fileKey);
+          item.photo.url = got.url;
+        } catch {
+          item.photo.url = null;
+        }
+        if (item.photo.thumbKey) {
+          try {
+            const got = await this.files.createPresignedDownload(item.photo.thumbKey);
+            item.photo.thumbUrl = got.url;
+          } catch {
+            item.photo.thumbUrl = item.photo.url ?? null;
+          }
+        } else {
+          item.photo.thumbUrl = item.photo.url ?? null;
+        }
+      }
+    }
+    return req;
+  }
 
   /**
    * Создаёт заявку.
@@ -232,7 +264,7 @@ export class MaterialsService {
   ) {
     const r = await this.prisma.materialRequest.findUnique({
       where: { id: materialRequestId },
-      include: { items: true },
+      include: { items: { include: { photo: true } } },
     });
     if (!r) throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');
     if (r.status !== 'pending_approval') {
@@ -297,10 +329,10 @@ export class MaterialsService {
   async get(id: string): Promise<MaterialRequest> {
     const r = await this.prisma.materialRequest.findUnique({
       where: { id },
-      include: { items: true },
+      include: { items: { include: { photo: true } } },
     });
     if (!r) throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');
-    return r;
+    return this.attachPhotoUrls(r);
   }
 
   async listForProject(
@@ -310,11 +342,13 @@ export class MaterialsService {
     const where: Prisma.MaterialRequestWhereInput = { projectId };
     if (filter?.status) where.status = filter.status as any;
     if (filter?.stageId) where.stageId = filter.stageId;
-    return this.prisma.materialRequest.findMany({
+    const list = await this.prisma.materialRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { items: true },
+      include: { items: { include: { photo: true } } },
     });
+    for (const r of list) await this.attachPhotoUrls(r);
+    return list;
   }
 
   /**
@@ -382,7 +416,7 @@ export class MaterialsService {
   }): Promise<MaterialRequest> {
     const existing = await this.prisma.materialRequest.findUnique({
       where: { id: input.requestId },
-      include: { items: true },
+      include: { items: { include: { photo: true } } },
     });
     if (!existing) {
       throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');
@@ -453,7 +487,7 @@ export class MaterialsService {
   }): Promise<MaterialRequest> {
     const existing = await this.prisma.materialRequest.findUnique({
       where: { id: input.requestId },
-      include: { items: true },
+      include: { items: { include: { photo: true } } },
     });
     if (!existing) {
       throw new NotFoundError(ErrorCodes.MATERIAL_REQUEST_NOT_FOUND, 'request not found');

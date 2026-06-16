@@ -16,7 +16,9 @@ export class MaterialsPdfService {
     private readonly renderer: PdfRendererService,
   ) {}
 
-  async renderForRequest(requestId: string): Promise<Buffer> {
+  async renderForRequest(
+    requestId: string,
+  ): Promise<{ buffer: Buffer; mime: string; ext: string }> {
     const request = await this.prisma.materialRequest.findUnique({
       where: { id: requestId },
       include: {
@@ -28,11 +30,11 @@ export class MaterialsPdfService {
     if (!request) throw new NotFoundException('material_request not found');
     const html = this.buildHtml(request);
     const pdf = await this.renderer.renderHtmlToPdf(html);
-    if (pdf) return pdf;
-    // Fallback: plain UTF-8 HTML как «доставка лучше чем ничего», чтобы
-    // мобайл хотя бы что-то получил. Mime отдаём application/pdf — клиент
-    // увидит, что внутри html, но share-flow не сломается.
-    return Buffer.from(html, 'utf8');
+    if (pdf) return { buffer: pdf, mime: 'application/pdf', ext: 'pdf' };
+    // Серафим 08.06.2026: если puppeteer недоступен (staging без интернета),
+    // отдаём HTML с честным mime. Раньше отдавали HTML под видом PDF —
+    // получался «кривой» файл, мобилка не могла открыть.
+    return { buffer: Buffer.from(html, 'utf8'), mime: 'text/html; charset=utf-8', ext: 'html' };
   }
 
   private buildHtml(req: {
