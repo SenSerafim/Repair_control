@@ -256,17 +256,22 @@ class _ChatConversationScreenState
   }
 
   bool _sameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    // createdAt приходит в UTC (бэк) — сравниваем календарные дни в локали,
+    // иначе граница суток съезжает у пользователей не в UTC (Егор 23.06.2026).
+    final la = a.toLocal();
+    final lb = b.toLocal();
+    return la.year == lb.year && la.month == lb.month && la.day == lb.day;
   }
 
   String _formatDateSeparator(DateTime t) {
+    final lt = t.toLocal();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final tDate = DateTime(t.year, t.month, t.day);
+    final tDate = DateTime(lt.year, lt.month, lt.day);
     final diff = today.difference(tDate).inDays;
     if (diff == 0) return 'Сегодня';
     if (diff == 1) return 'Вчера';
-    return DateFormat('d MMMM y', 'ru').format(t);
+    return DateFormat('d MMMM y', 'ru').format(lt);
   }
 
   /// П1.4 — карточка собеседника при тапе на кружок-аватар.
@@ -567,7 +572,8 @@ class _Bubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final body = message.isDeleted ? 'Сообщение удалено' : (message.text ?? '');
-    final time = DateFormat('HH:mm', 'ru').format(message.createdAt);
+    // createdAt в UTC — переводим в локаль, иначе время отстаёт на оффсет TZ.
+    final time = DateFormat('HH:mm', 'ru').format(message.createdAt.toLocal());
     final senderColor = _seedColor(message.authorId);
     final baseLabel = sender?.shortLabel ?? _fallbackName(message.authorId);
     // ТЗ §10.3 — пометка «удалён из команды» для покинувшего участника.

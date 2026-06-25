@@ -38,6 +38,12 @@ export interface CreateProjectToolInput {
   serial?: string;
   purchaseDate?: Date;
   condition?: ToolConditionInput;
+  /// NEWFIX — паритет с формой «Мои инструменты»: статус/место/сотрудник.
+  /// Дефолт статуса в проекте — on_project. in_storage → storageLocation,
+  /// with_employee → assignedEmployeeId.
+  status?: ToolStatusInput;
+  storageLocation?: string;
+  assignedEmployeeId?: string;
 }
 
 export interface UpdateToolInput {
@@ -239,18 +245,35 @@ export class ToolsService {
     if (ownerId !== input.actorUserId) {
       await this.requireMember(input.projectId, ownerId, ErrorCodes.TOOL_OWNER_NOT_PROJECT_MEMBER);
     }
+    // Паритет с «Мои инструменты»: статус (дефолт on_project) + место/сотрудник.
+    const status: ToolStatus = (input.status as ToolStatus | undefined) ?? 'on_project';
+    this.validateStatusFields(status, {
+      storageLocation: input.storageLocation,
+      assignedEmployeeId: input.assignedEmployeeId,
+    });
+    // Если статус «у сотрудника» — он же текущий держатель; иначе владелец.
+    const holderId = status === 'with_employee' ? input.assignedEmployeeId! : ownerId;
+    if (status === 'with_employee') {
+      await this.requireMember(
+        input.projectId,
+        input.assignedEmployeeId!,
+        ErrorCodes.TOOL_OWNER_NOT_PROJECT_MEMBER,
+      );
+    }
     const tool = await this.prisma.$transaction(async (tx) => {
       const created = await tx.toolItem.create({
         data: {
           ownerId,
-          currentHolderId: ownerId,
+          currentHolderId: holderId,
           name: input.name.trim(),
           article: input.article?.trim() || null,
           photoKey: input.photoKey ?? null,
           serial: input.serial ?? null,
           purchaseDate: input.purchaseDate ?? null,
           condition: (input.condition as ToolCondition | undefined) ?? null,
-          status: 'on_project',
+          status,
+          storageLocation: status === 'in_storage' ? input.storageLocation?.trim() || null : null,
+          assignedEmployeeId: status === 'with_employee' ? input.assignedEmployeeId! : null,
           projectId: input.projectId,
         },
       });
@@ -258,7 +281,7 @@ export class ToolsService {
         data: {
           toolItemId: created.id,
           projectId: input.projectId,
-          holderId: ownerId,
+          holderId,
           previousHolderId: null,
           note: null,
         },

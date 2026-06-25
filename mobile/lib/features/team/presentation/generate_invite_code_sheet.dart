@@ -54,6 +54,7 @@ class _BodyState extends ConsumerState<_Body> {
   // дефолтное all-false и ловил 403 на любом действии).
   final Map<RepresentativeRight, bool> _permissions = {};
   final Set<String> _selectedStageIds = {};
+  String? _specialization;
   bool _busy = false;
   String? _error;
   InviteCode? _code;
@@ -88,6 +89,7 @@ class _BodyState extends ConsumerState<_Body> {
         role: role,
         permissions: perms,
         stageIds: stageIds,
+        specialization: role == MembershipRole.master ? _specialization : null,
       );
       if (!mounted) return;
       setState(() {
@@ -176,6 +178,7 @@ class _Form extends ConsumerWidget {
                       // Сбросим частные настройки при смене роли.
                       state._permissions.clear();
                       state._selectedStageIds.clear();
+                      state._specialization = null;
                     });
                   },
                 ),
@@ -240,6 +243,18 @@ class _Form extends ConsumerWidget {
                     },
                   ),
                 ],
+                if (state._role == MembershipRole.master) ...[
+                  const SizedBox(height: AppSpacing.x16),
+                  const _SectionLabel('Специализация (опционально)'),
+                  const SizedBox(height: AppSpacing.x8),
+                  _MasterSpecializationPicker(
+                    value: state._specialization,
+                    onChanged: (value) {
+                      // ignore: invalid_use_of_protected_member
+                      state.setState(() => state._specialization = value);
+                    },
+                  ),
+                ],
                 if (state._error != null) ...[
                   const SizedBox(height: AppSpacing.x12),
                   AppInlineError(message: state._error!),
@@ -267,6 +282,39 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(text, style: AppTextStyles.caption);
+  }
+}
+
+class _MasterSpecializationPicker extends StatelessWidget {
+  const _MasterSpecializationPicker({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  static const _values = [
+    'Плиточник',
+    'Сантехник',
+    'Электрик',
+    'Широкого профиля',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final item in _values)
+          ChoiceChip(
+            label: Text(item),
+            selected: value == item,
+            onSelected: (selected) => onChanged(selected ? item : null),
+          ),
+      ],
+    );
   }
 }
 

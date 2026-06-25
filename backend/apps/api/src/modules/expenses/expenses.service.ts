@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@app/common';
+import { FilesService } from '@app/files';
 import type { ExpenseCategoryLike } from './dto';
 
 interface CreateInput {
@@ -21,7 +22,22 @@ interface CreateInput {
  */
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly files: FilesService,
+  ) {}
+
+  /**
+   * NEWFIX §5: добавляем presigned `photoUrl` к чеку, чтобы клиент мог открыть
+   * деталь расхода с фото (в БД хранится только photoKey). TTL — из FilesModule.
+   */
+  private async withPhotoUrl<T extends { photoKey: string | null }>(
+    expense: T,
+  ): Promise<T & { photoUrl: string | null }> {
+    if (!expense.photoKey) return { ...expense, photoUrl: null };
+    const { url } = await this.files.createPresignedDownload(expense.photoKey);
+    return { ...expense, photoUrl: url };
+  }
 
   async create(input: CreateInput) {
     if (input.stageId) {
@@ -34,7 +50,7 @@ export class ExpensesService {
         throw new BadRequestException('stage_belongs_to_other_project');
       }
     }
-    return this.prisma.expense.create({
+    const created = await this.prisma.expense.create({
       data: {
         projectId: input.projectId,
         createdById: input.createdById,
@@ -46,13 +62,14 @@ export class ExpensesService {
         photoKey: input.photoKey,
       },
     });
+    return this.withPhotoUrl(created);
   }
 
   async listForProject(
     projectId: string,
     opts?: { stageId?: string; category?: ExpenseCategoryLike },
   ) {
-    return this.prisma.expense.findMany({
+    const rows = await this.prisma.expense.findMany({
       where: {
         projectId,
         ...(opts?.stageId !== undefined ? { stageId: opts.stageId } : {}),
@@ -60,6 +77,7 @@ export class ExpensesService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return Promise.all(rows.map((r) => this.withPhotoUrl(r)));
   }
 
   async totalForProject(projectId: string) {

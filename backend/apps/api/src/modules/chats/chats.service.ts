@@ -255,11 +255,13 @@ export class ChatsService {
       where: {
         projectId,
         archivedAt: null,
-        // По решению заказчика — один общий чат проекта на всех. Stage-чаты
-        // остаются в БД для совместимости, но в inbox не показываем —
-        // иначе foreman/master видит дубль project+stage по одному и тому
-        // же поводу. Personal/group — оставляем.
-        type: { in: [ChatType.project, ChatType.personal, ChatType.group] },
+        // Егор 23.06.2026: чаты этапов теперь показываем в inbox — участник
+        // (в т.ч. заказчик, открывший «Чат этапа») должен находить свою
+        // переписку. participants-фильтр ниже отдаёт только чаты, где
+        // пользователь активный участник, поэтому лишнего не покажем.
+        type: {
+          in: [ChatType.project, ChatType.stage, ChatType.personal, ChatType.group],
+        },
         participants: { some: { userId: actorUserId, leftAt: null } },
       },
       include: {
@@ -288,7 +290,10 @@ export class ChatsService {
         archivedAt: null,
         // только проекты, которые ещё активны (не в архиве)
         project: { archivedAt: null },
-        type: { in: [ChatType.project, ChatType.personal, ChatType.group] },
+        // Егор 23.06.2026: stage-чаты участника тоже в агрегированном inbox.
+        type: {
+          in: [ChatType.project, ChatType.stage, ChatType.personal, ChatType.group],
+        },
         participants: { some: { userId: actorUserId, leftAt: null } },
       },
       include: {

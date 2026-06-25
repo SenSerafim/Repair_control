@@ -558,12 +558,10 @@ class _Step3 extends StatelessWidget {
               return Padding(
                 key: ValueKey('selected_${item.key}'),
                 padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-                child: ReorderableDelayedDragStartListener(
+                child: _SelectedStageRow(
+                  item: item,
                   index: i,
-                  child: _SelectedStageRow(
-                    item: item,
-                    onRemove: () => onRemoveAt(i),
-                  ),
+                  onRemove: () => onRemoveAt(i),
                 ),
               );
             },
@@ -618,9 +616,14 @@ class _Step3 extends StatelessWidget {
 /// Строка из секции «Этапы проекта (порядок)» — отображает выбранный пресет
 /// или кастомный этап. Слева — drag-handle, справа — кнопка удаления.
 class _SelectedStageRow extends StatelessWidget {
-  const _SelectedStageRow({required this.item, required this.onRemove});
+  const _SelectedStageRow({
+    required this.item,
+    required this.index,
+    required this.onRemove,
+  });
 
   final _StageItem item;
+  final int index;
   final VoidCallback onRemove;
 
   @override
@@ -638,12 +641,23 @@ class _SelectedStageRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            PhosphorIconsRegular.dotsSixVertical,
-            size: 18,
-            color: AppColors.n500,
+          ReorderableDelayedDragStartListener(
+            index: index,
+            child: Tooltip(
+              message: 'Перетащить этап',
+              child: Container(
+                width: 32,
+                height: 40,
+                alignment: Alignment.center,
+                child: Icon(
+                  PhosphorIconsRegular.dotsSixVertical,
+                  size: 20,
+                  color: AppColors.n500,
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Container(
             width: 36,
             height: 36,

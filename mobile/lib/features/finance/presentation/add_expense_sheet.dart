@@ -10,28 +10,31 @@ import '../../../shared/utils/image_compress.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../data/expenses_repository.dart';
 import '../domain/expense.dart';
 
 /// ТЗ NEWFIX §5.1: bottom-sheet «Добавить расход» (CoinKeeper-flow).
 /// Поля сверху вниз: Фото чека (опц.) · Этап (опц.) · Категория · Название ·
 /// Сумма · Комментарий.
-Future<bool> showAddExpenseSheet(
+/// Возвращает созданный [Expense] (или null, если отменили) — чтобы вызывающий
+/// мог открыть деталь-шит сразу после добавления (Егор 23.06.2026).
+Future<Expense?> showAddExpenseSheet(
   BuildContext context, {
   required String projectId,
   String? initialStageId,
 }) async {
-  final ok = await showModalBottomSheet<bool>(
+  // Используем общий враппер showAppBottomSheet: root-navigator (перекрывает
+  // нижний таб-бар), maxHeight 0.92 (sheet больше не наезжает на status bar),
+  // handle, SafeArea и компенсация клавиатуры. Своя реализация тянулась до
+  // самой верхней кромки и обрезала заголовок (Егор 23.06.2026).
+  return showAppBottomSheet<Expense>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: AppColors.n0,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.r16)),
+    child: _AddExpenseSheet(
+      projectId: projectId,
+      initialStageId: initialStageId,
     ),
-    builder: (_) =>
-        _AddExpenseSheet(projectId: projectId, initialStageId: initialStageId),
   );
-  return ok ?? false;
 }
 
 class _AddExpenseSheet extends ConsumerStatefulWidget {
@@ -144,7 +147,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
       _error = null;
     });
     try {
-      await ref
+      final created = await ref
           .read(expensesRepositoryProvider)
           .create(
             projectId: widget.projectId,
@@ -157,7 +160,7 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
           );
       ref.invalidate(projectExpensesProvider(widget.projectId));
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(created);
     } on ExpensesException catch (e) {
       if (mounted) {
         setState(() => _error = 'Не удалось сохранить: ${e.failure.name}');
@@ -169,105 +172,94 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final insets = MediaQuery.of(context).viewInsets;
-    // SafeArea со всех сторон: при isScrollControlled:true sheet может
-    // вытянуться до status bar / system nav — top:false ранее обрезал
-    // заголовок об верхнюю кромку (Серафим 08.06.2026).
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.x16,
-          AppSpacing.x14,
-          AppSpacing.x16,
-          AppSpacing.x16 + insets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Center(
-              child: SizedBox(
-                width: 40,
-                height: 4,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.n200,
-                    borderRadius: BorderRadius.all(Radius.circular(2)),
-                  ),
+    // Handle, SafeArea, maxHeight и компенсацию клавиатуры даёт враппер
+    // showAppBottomSheet — здесь только скролл-контент.
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Шапка: заголовок + явная кнопка закрытия (Егор 23.06.2026 —
+          // «кнопки назад нет»). По swipe-down sheet тоже закрывается.
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Добавить расход',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            const Text(
-              'Добавить расход',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: AppSpacing.x14),
-            if (_error != null) ...[
-              AppInlineError(message: _error!),
-              const SizedBox(height: AppSpacing.x10),
-            ],
-            _ReceiptPicker(
-              thumb: _receiptThumb,
-              uploading: _uploadingReceipt,
-              onPick: _pickReceipt,
-              onClear: () => setState(() {
-                _receiptFileKey = null;
-                _receiptThumb = null;
-              }),
-            ),
-            const SizedBox(height: AppSpacing.x14),
-            const Text('Этап (опционально)', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            _StagePicker(
-              projectId: widget.projectId,
-              selectedStageId: _stageId,
-              onChanged: (id) => setState(() => _stageId = id),
-            ),
-            const SizedBox(height: AppSpacing.x14),
-            const Text('Категория', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final c in ExpenseCategory.values)
-                  ChoiceChip(
-                    label: Text(c.displayName),
-                    selected: _category == c,
-                    onSelected: (_) => setState(() => _category = c),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x14),
-            const Text('Название', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            TextField(
-              controller: _name,
-              decoration: const InputDecoration(
-                hintText: 'Например, «Цемент М500»',
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).pop(false),
+                tooltip: 'Закрыть',
               ),
-            ),
-            const SizedBox(height: AppSpacing.x14),
-            const Text('Сумма', style: AppTextStyles.caption),
-            const SizedBox(height: AppSpacing.x6),
-            MoneyInput(controller: _amount, label: 'Сумма'),
-            const SizedBox(height: AppSpacing.x14),
-            const Text(
-              'Комментарий (опционально)',
-              style: AppTextStyles.caption,
-            ),
-            const SizedBox(height: AppSpacing.x6),
-            TextField(
-              controller: _comment,
-              maxLines: 3,
-              maxLength: 500,
-              decoration: const InputDecoration(hintText: 'Детали'),
-            ),
-            const SizedBox(height: AppSpacing.x16),
-            AppButton(label: 'Добавить', isLoading: _busy, onPressed: _submit),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          if (_error != null) ...[
+            AppInlineError(message: _error!),
+            const SizedBox(height: AppSpacing.x10),
           ],
-        ),
+          _ReceiptPicker(
+            thumb: _receiptThumb,
+            uploading: _uploadingReceipt,
+            onPick: _pickReceipt,
+            onClear: () => setState(() {
+              _receiptFileKey = null;
+              _receiptThumb = null;
+            }),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          const Text('Этап (опционально)', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          _StagePicker(
+            projectId: widget.projectId,
+            selectedStageId: _stageId,
+            onChanged: (id) => setState(() => _stageId = id),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          const Text('Категория', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final c in ExpenseCategory.values)
+                ChoiceChip(
+                  label: Text(c.displayName),
+                  selected: _category == c,
+                  onSelected: (_) => setState(() => _category = c),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          const Text('Название', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          TextField(
+            controller: _name,
+            decoration: const InputDecoration(
+              hintText: 'Например, «Цемент М500»',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x14),
+          const Text('Сумма', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          MoneyInput(controller: _amount, label: 'Сумма'),
+          const SizedBox(height: AppSpacing.x14),
+          const Text('Комментарий (опционально)', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          TextField(
+            controller: _comment,
+            maxLines: 3,
+            maxLength: 500,
+            decoration: const InputDecoration(hintText: 'Детали'),
+          ),
+          const SizedBox(height: AppSpacing.x16),
+          AppButton(label: 'Добавить', isLoading: _busy, onPressed: _submit),
+        ],
       ),
     );
   }
@@ -313,13 +305,19 @@ class _StagePicker extends ConsumerWidget {
           ),
           for (final s in stages)
             ChoiceChip(
-              label: Text('Этап ${s.orderIndex + 1}'),
+              label: Text(_stageLabel(s)),
               selected: selectedStageId == s.id,
               onSelected: (_) => onChanged(s.id),
             ),
         ],
       ),
     );
+  }
+
+  String _stageLabel(Stage stage) {
+    final title = stage.title.trim();
+    if (title.isNotEmpty) return title;
+    return 'Этап ${stage.orderIndex + 1}';
   }
 }
 

@@ -8,7 +8,6 @@ import '../../../core/access/access_guard.dart';
 import '../../../core/access/domain_actions.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../shared/widgets/status_pill.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../approvals/application/approvals_controller.dart';
 import '../../chat/application/chats_controller.dart';
@@ -77,9 +76,9 @@ class _BodyState extends ConsumerState<_Body> {
   StageStatusFilter _stageFilter = StageStatusFilter.all;
 
   /// Task 5.5 — collapse-toggle для иллюстрации `AppHouseProgress`.
-  /// Дефолт = развёрнуто. Без персиста между сессиями (scope creep —
-  /// см. план §5.5: persistence помечен как nice-to-have).
-  bool _houseCollapsed = false;
+  /// Дефолт = свернуто: рабочая область проекта важнее декоративной сцены,
+  /// дом можно раскрыть шевроном рядом со статусом.
+  bool _houseCollapsed = true;
 
   @override
   void dispose() {
@@ -114,9 +113,17 @@ class _BodyState extends ConsumerState<_Body> {
       prev,
       next,
     ) {
-      final oldP = prev?.value?.progressCache ?? 0;
+      // Празднуем только РЕАЛЬНЫЙ in-session переход <100 → 100.
+      // prev?.value == null — первый эмит (заход на уже завершённый проект):
+      // раньше oldP падал в 0 и «Дом построен» всплывал при каждом открытии.
+      // И не празднуем для проекта из одного этапа — принять единственный этап
+      // ≠ «построил дом» (Егор 23.06.2026).
+      if (prev?.value == null) return;
+      final oldP = prev!.value!.progressCache;
       final newP = next.value?.progressCache ?? 0;
-      if (oldP < 100 && newP >= 100) {
+      final stageCount =
+          ref.read(stagesControllerProvider(projectId)).value?.length ?? 0;
+      if (oldP < 100 && newP >= 100 && stageCount > 1) {
         HouseCelebrationOverlay.show(context);
       }
     });
@@ -352,10 +359,6 @@ class _ConHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                 ],
-                // NEWFIX-2 §19 — иконка «Заметки проекта» переехала на
-                // карточку проекта в списке (ProjectCard). В шапке консоли
-                // её больше нет — экран «Заметки» доступен с карточки и
-                // через кнопку «Все заметки проекта» из quick-note sheet.
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -1200,8 +1203,8 @@ class _ConsoleSkeleton extends StatelessWidget {
 /// — «Этапы и работа» (Этапы / Согласования)
 /// — «Команда и общение» (Команда / Чаты)
 /// — «Финансы» (Бюджет / Материалы / Самозакуп / Инструмент) — role-gated
-/// — «Документы и лента» (Документы / Лента / Методология) — без «Экспорты»
-///   (NEWFIX-2 §14.3) и без «Заметки» (§11.6, вход в шапке).
+/// — «Документы и лента» (Заметки / Документы / Лента / Методология) — без
+///   «Экспорты» (NEWFIX-2 §14.3).
 ///
 /// Сетка адаптивная: 2 в строку, последняя плитка может быть `wide`.
 class _NavSections extends ConsumerWidget {
@@ -1268,8 +1271,12 @@ class _NavSections extends ConsumerWidget {
     ];
 
     final docsAndFeed = <AppNavTileSpec>[
-      // NEWFIX-2 §11.6 — плитка «Заметки» убрана: вход теперь через иконку
-      // в шапке проекта, дублирование в NavGrid не нужно.
+      AppNavTileSpec(
+        icon: PhosphorIconsFill.notepad,
+        iconColor: AppColors.brand,
+        label: 'Заметки',
+        onTap: () => context.push('/projects/$projectId/notes'),
+      ),
       AppNavTileSpec(
         icon: PhosphorIconsFill.fileText,
         iconColor: AppColors.n700,

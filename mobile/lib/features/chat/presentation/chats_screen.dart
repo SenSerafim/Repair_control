@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/access/access_guard.dart';
-import '../../../core/access/system_role.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
+import '../../projects/application/project_controller.dart';
+import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../application/chats_controller.dart';
 import '../data/chats_repository.dart';
 import '../domain/chat.dart';
@@ -70,15 +71,10 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
               onAction: () => context.go(AppRoutes.projects),
             );
           }
-          // Фильтр для customer (как и в ProjectChatsScreen) —
-          // прячем чаты этапов, которые бригадир не сделал видимыми.
-          final role = ref.watch(activeRoleProvider);
-          final visible = items.where((it) {
-            final c = it.chat;
-            if (role != SystemRole.customer) return true;
-            if (c.type != ChatType.stage) return true;
-            return c.visibleToCustomer;
-          }).toList();
+          // Егор 23.06.2026: чаты этапов теперь тоже в inbox. Бэкенд отдаёт
+          // только чаты, где пользователь — активный участник (включая
+          // заказчика, открывшего «Чат этапа»), поэтому ничего не прячем.
+          final visible = items;
 
           // ТЗ §10.3 — «Поиск по названию чата». Case-insensitive фильтр
           // в-памяти по title чата, projectTitle и last-message preview.
@@ -254,6 +250,24 @@ class ProjectChatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(projectChatsProvider(projectId));
+    // Название проекта для подзаголовка чатов (вместо общего «Проект»).
+    final projectTitle = ref
+        .watch(projectControllerProvider(projectId))
+        .maybeWhen(data: (p) => p.title, orElse: () => null);
+    // Этапы проекта — чтобы подписать stage-чаты «Чат этапа · <название>».
+    final stages =
+        ref.watch(stagesControllerProvider(projectId)).value ?? const <Stage>[];
+    String? stageTitleFor(Chat c) {
+      if (c.type != ChatType.stage || c.stageId == null) return null;
+      for (final s in stages) {
+        if (s.id == c.stageId) {
+          return s.title.trim().isNotEmpty
+              ? s.title
+              : 'Этап ${s.orderIndex + 1}';
+        }
+      }
+      return null;
+    }
 
     return AppScaffold(
       showBack: true,
@@ -276,15 +290,9 @@ class ProjectChatsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(projectChatsProvider(projectId)),
         ),
         data: (chats) {
-          // ТЗ §10.2 + §6.2: customer не видит чат этапа, если бригадир
-          // явно не включил `visibleToCustomer`. Бэкенд так же фильтрует,
-          // но клиент дублирует на случай stale-данных.
-          final role = ref.watch(activeRoleProvider);
-          final visible = chats.where((c) {
-            if (role != SystemRole.customer) return true;
-            if (c.type != ChatType.stage) return true;
-            return c.visibleToCustomer;
-          }).toList();
+          // Егор 23.06.2026: показываем и чаты этапов — бэкенд уже ограничил
+          // выдачу чатами, где пользователь активный участник.
+          final visible = chats;
           if (visible.isEmpty) {
             return Center(
               child: AppEmptyState(
@@ -314,6 +322,8 @@ class ProjectChatsScreen extends ConsumerWidget {
               itemBuilder: (_, i) {
                 final row = _ChatRow(
                   chat: visible[i],
+                  subtitle: projectTitle,
+                  stageTitle: stageTitleFor(visible[i]),
                   onTap: () =>
                       context.push(AppRoutes.chatDetailWith(visible[i].id)),
                 );
@@ -330,12 +340,30 @@ class ProjectChatsScreen extends ConsumerWidget {
 }
 
 class _ChatRow extends StatelessWidget {
-  const _ChatRow({required this.chat, required this.onTap});
+  const _ChatRow({
+    required this.chat,
+    required this.onTap,
+    this.subtitle,
+    this.stageTitle,
+  });
 
   final Chat chat;
   final VoidCallback onTap;
 
+  /// Подзаголовок-fallback, когда в чате ещё нет сообщений. В пер-проектном
+  /// списке передаём сюда название проекта (а не общий тип «Проект») —
+  /// Егор 23.06.2026. В агрегированном inbox остаётся тип чата.
+  final String? subtitle;
+
+  /// Название этапа для stage-чата → заголовок «Чат этапа · <название>»
+  /// (Егор 23.06.2026). Резолвится на клиенте из списка этапов проекта.
+  final String? stageTitle;
+
   String _titleText() {
+    if (chat.type == ChatType.stage) {
+      final st = stageTitle?.trim();
+      if (st != null && st.isNotEmpty) return 'Чат этапа · $st';
+    }
     return chat.title ??
         (chat.type == ChatType.project
             ? 'Общий чат проекта'
@@ -345,14 +373,16 @@ class _ChatRow extends StatelessWidget {
   }
 
   String _formatTime(DateTime t) {
+    // lastMessageAt в UTC — переводим в локаль (Егор 23.06.2026).
+    final lt = t.toLocal();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final tDate = DateTime(t.year, t.month, t.day);
+    final tDate = DateTime(lt.year, lt.month, lt.day);
     final diff = today.difference(tDate).inDays;
-    if (diff == 0) return DateFormat('HH:mm', 'ru').format(t);
+    if (diff == 0) return DateFormat('HH:mm', 'ru').format(lt);
     if (diff == 1) return 'вчера';
-    if (diff < 7) return DateFormat('EEE', 'ru').format(t);
-    return DateFormat('d MMM', 'ru').format(t);
+    if (diff < 7) return DateFormat('EEE', 'ru').format(lt);
+    return DateFormat('d MMM', 'ru').format(lt);
   }
 
   @override
@@ -417,7 +447,9 @@ class _ChatRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      chat.lastMessagePreview ?? chat.type.displayName,
+                      chat.lastMessagePreview ??
+                          subtitle ??
+                          chat.type.displayName,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,

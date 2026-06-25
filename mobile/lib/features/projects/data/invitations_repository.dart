@@ -56,6 +56,7 @@ class InvitationsRepository {
     required MembershipRole role,
     Map<String, bool>? permissions,
     List<String>? stageIds,
+    String? specialization,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/projects/$projectId/invitations/generate-code',
@@ -63,6 +64,8 @@ class InvitationsRepository {
         'role': role.name,
         if (permissions != null) 'permissions': permissions,
         if (stageIds != null) 'stageIds': stageIds,
+        if (specialization != null && specialization.isNotEmpty)
+          'specialization': specialization,
       },
     );
     return InviteCode.fromJson(r.data!);

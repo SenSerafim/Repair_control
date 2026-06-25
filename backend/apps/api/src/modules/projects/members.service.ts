@@ -94,36 +94,51 @@ export class MembersService {
       throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'only the owner can have role=customer');
     }
 
-    // Defense-in-depth: AccessGuard уже пропустил actor'а через
-    // `project.invite_member`, но матрица разрешает бригадиру эту action
-    // (rbac.matrix.ts:38 «restricted to master role inside service»).
-    // Здесь точечно проверяем приглашаемую роль:
-    //   • бригадир приглашает только мастеров (ТЗ §1.5);
-    //   • представитель приглашает любого, но добавить ещё одного представителя
-    //     может только с canAddRepresentative (rbac.types.ts:105 / П7.x).
-    if (input.actorUserId !== project.ownerId) {
-      const actorMembership = await this.prisma.membership.findFirst({
-        where: {
-          projectId: input.projectId,
-          userId: input.actorUserId,
-          removedAt: null,
-        },
-        select: { role: true, permissions: true },
-      });
-      if (actorMembership?.role === 'foreman' && input.role !== 'master') {
-        throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'foreman can invite only masters');
-      }
-      if (actorMembership?.role === 'representative' && input.role === 'representative') {
-        const actorPerms = (actorMembership.permissions ?? {}) as Record<
-          string,
-          boolean | undefined
-        >;
-        if (!actorPerms.canAddRepresentative) {
-          throw new ForbiddenError(
-            ErrorCodes.FORBIDDEN,
-            'representative needs canAddRepresentative to invite another representative',
-          );
-        }
+    const actorMembership =
+      input.actorUserId === project.ownerId
+        ? null
+        : await this.prisma.membership.findFirst({
+            where: {
+              projectId: input.projectId,
+              userId: input.actorUserId,
+              removedAt: null,
+            },
+            select: { role: true, permissions: true },
+          });
+    const actorRole: MembershipRole =
+      input.actorUserId === project.ownerId ? 'customer' : (actorMembership?.role ?? 'master');
+
+    // Defense-in-depth: AccessGuard проверяет только само действие
+    // `project.invite_member`, а продуктовые ограничения зависят от того,
+    // КОГО добавляют:
+    //   • заказчик/представитель добавляют только представителя или бригадира;
+    //   • бригадир добавляет только мастеров;
+    //   • мастеру добавлять участников нельзя.
+    if (
+      (actorRole === 'customer' || actorRole === 'representative') &&
+      !['representative', 'foreman'].includes(input.role)
+    ) {
+      throw new ForbiddenError(
+        ErrorCodes.FORBIDDEN,
+        'customer side can invite only representative or foreman',
+      );
+    }
+    if (actorRole === 'foreman' && input.role !== 'master') {
+      throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'foreman can invite only masters');
+    }
+    if (actorRole === 'master') {
+      throw new ForbiddenError(ErrorCodes.FORBIDDEN, 'master cannot invite project members');
+    }
+    if (actorRole === 'representative' && input.role === 'representative') {
+      const actorPerms = (actorMembership?.permissions ?? {}) as Record<
+        string,
+        boolean | undefined
+      >;
+      if (!actorPerms.canAddRepresentative) {
+        throw new ForbiddenError(
+          ErrorCodes.FORBIDDEN,
+          'representative needs canAddRepresentative to invite another representative',
+        );
       }
     }
 
@@ -629,12 +644,9 @@ export class MembersService {
   /**
    * Видимость команды.
    *
-   * 2026-05-13 раунд: заказчик подтвердил «мастер — одна сущность, видна всем
-   * в команде проекта независимо от того, кто его пригласил». Это упрощает
-   * прежнюю §1.4-иерархию (где invitedById/stage-intersection скрывали
-   * мастеров от заказчика/представителя/чужого бригадира): теперь каждый
-   * активный участник видит весь активный состав. Outsider'у возвращаем
-   * пустой список (контроллер всё равно отдаст 403 раньше).
+   * Заказчик и представитель работают через бригадира: мастеров они не видят.
+   * Бригадир и мастер видят рабочий состав. Outsider'у возвращаем пустой
+   * список (контроллер всё равно отдаст 403 раньше).
    */
   async listVisibleForViewer(projectId: string, viewerUserId: string) {
     const all = await this.list(projectId);
@@ -650,8 +662,7 @@ export class MembersService {
    * Чистый фильтр видимости: применяется к уже загруженному списку memberships.
    * Используется и `listVisibleForViewer` (per-project /members), и
    * `UsersService.listTeammates` (нижний таб «Команда»), чтобы правила
-   * видимости не дрейфовали между двумя источниками. После раунда 2026-05-13
-   * правило одно: активный участник проекта видит всех активных участников.
+   * видимости не дрейфовали между двумя источниками.
    */
   async applyVisibility<
     M extends {
@@ -662,8 +673,17 @@ export class MembersService {
       permissions: unknown;
     },
   >(memberships: M[], viewerUserId: string, ownerId: string, _projectId: string): Promise<M[]> {
-    if (viewerUserId === ownerId) return memberships;
-    if (memberships.some((m) => m.userId === viewerUserId)) return memberships;
+    if (viewerUserId === ownerId) {
+      return memberships.filter((m) => m.role !== 'master');
+    }
+    const viewerMembership = memberships.find((m) => m.userId === viewerUserId);
+    if (!viewerMembership) return [];
+    if (viewerMembership.role === 'customer' || viewerMembership.role === 'representative') {
+      return memberships.filter((m) => m.role !== 'master');
+    }
+    if (viewerMembership.role === 'foreman' || viewerMembership.role === 'master') {
+      return memberships;
+    }
     return [];
   }
 

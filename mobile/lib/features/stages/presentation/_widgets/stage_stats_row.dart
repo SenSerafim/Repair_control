@@ -71,7 +71,7 @@ class _Cell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x12),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
         child: Column(
           children: [
             Text(

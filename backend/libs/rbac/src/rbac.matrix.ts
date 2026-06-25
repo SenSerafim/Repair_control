@@ -102,6 +102,13 @@ export const canAccess = (action: DomainAction, ctx: AccessContext): boolean => 
       return false;
 
     case 'approval.request':
+      // NEWFIX §4.1: defect (доработка/рекламация) — customer-facing. Заказчик
+      // и его представитель отправляют выполненный шаг на доработку бригадиру
+      // (заказчик → бригадир → мастер). Прочие scope инициируют исполнители.
+      if (ctx.requestScope === 'defect') {
+        if (ctx.systemRole === 'customer' && ctx.projectOwnerId === ctx.userId) return true;
+        if (ctx.membershipRole === 'representative') return true;
+      }
       if (ctx.membershipRole === 'foreman') return true;
       if (ctx.membershipRole === 'master') return true;
       return false;

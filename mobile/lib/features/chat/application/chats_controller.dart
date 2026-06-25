@@ -23,6 +23,14 @@ final projectChatsProvider =
       ProjectChatsController.new,
     );
 
+/// Резолв «чат этапа по stageId». ensureStageChat идемпотентен, а chatId
+/// этапа стабилен — поэтому кешируем результат (НЕ autoDispose): первый вход
+/// делает POST со спиннером, повторные открытия мгновенные, без повторной
+/// загрузки (Егор 23.06.2026 — «кнопка чата грузится повторно очень долго»).
+final stageChatProvider = FutureProvider.family<Chat, String>((ref, stageId) {
+  return ref.read(chatsRepositoryProvider).ensureStageChat(stageId);
+});
+
 /// Агрегированные чаты пользователя через все активные проекты —
 /// для mobile-таба «Чаты». Live-update через WS: при notification:new
 /// (kind=chat_message_new / membership_added) или project:membership_changed

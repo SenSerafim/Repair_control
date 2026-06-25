@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,31 @@ class ToolsException implements Exception {
   ToolsException(this.failure, this.apiError);
   final AuthFailure failure;
   final ApiError apiError;
+}
+
+/// Presign-ответ на загрузку фото инструмента (scope='tools/photos').
+class ToolPhotoPresign {
+  ToolPhotoPresign({
+    required this.fileKey,
+    required this.url,
+    required this.method,
+    required this.headers,
+  });
+
+  factory ToolPhotoPresign.fromJson(Map<String, dynamic> json) =>
+      ToolPhotoPresign(
+        fileKey: (json['key'] ?? json['fileKey']) as String,
+        url: (json['url'] ?? json['uploadUrl']) as String,
+        method: json['method'] as String? ?? 'PUT',
+        headers: (json['headers'] as Map<String, dynamic>? ?? const {}).map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
+      );
+
+  final String fileKey;
+  final String url;
+  final String method;
+  final Map<String, String> headers;
 }
 
 /// Self-custody модель (2026-05-12). API:
@@ -148,6 +175,9 @@ class ToolsRepository {
     String? serial,
     DateTime? purchaseDate,
     ToolCondition? condition,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/projects/$projectId/tools',
@@ -160,6 +190,11 @@ class ToolsRepository {
         if (purchaseDate != null)
           'purchaseDate': purchaseDate.toUtc().toIso8601String(),
         if (condition != null) 'condition': condition.apiValue,
+        if (status != null) 'status': status.apiValue,
+        if (storageLocation != null && storageLocation.isNotEmpty)
+          'storageLocation': storageLocation,
+        if (assignedEmployeeId != null)
+          'assignedEmployeeId': assignedEmployeeId,
       },
     );
     return ToolItem.parse(r.data!);
@@ -213,6 +248,55 @@ class ToolsRepository {
             .map((e) => ToolCustodyEvent.parse(e as Map<String, dynamic>))
             .toList();
       });
+
+  /// Presign на фото инструмента. Общий /api/files/presign-upload,
+  /// scope='tools/photos' (политика — только изображения, см. FilesModule).
+  Future<ToolPhotoPresign> presignPhoto({
+    required String mimeType,
+    required int sizeBytes,
+    required String originalName,
+  }) => _call(() async {
+    final r = await _dio.post<Map<String, dynamic>>(
+      '/api/files/presign-upload',
+      data: {
+        'originalName': originalName,
+        'mimeType': mimeType,
+        'sizeBytes': sizeBytes,
+        'scope': 'tools/photos',
+      },
+    );
+    return ToolPhotoPresign.fromJson(r.data!);
+  });
+
+  /// Raw PUT в S3 (MinIO) по presigned URL — отдельный Dio без auth-interceptor.
+  Future<void> uploadToStorage({
+    required ToolPhotoPresign presigned,
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    final raw = Dio();
+    try {
+      await raw.request<void>(
+        presigned.url,
+        data: bytes,
+        options: Options(
+          method: presigned.method,
+          headers: {
+            ...presigned.headers,
+            'Content-Type': mimeType,
+            'Content-Length': bytes.length.toString(),
+          },
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+    } on DioException catch (e) {
+      final api = ApiError.fromDio(e);
+      throw ToolsException(AuthFailure.fromApiError(api), api);
+    } finally {
+      raw.close();
+    }
+  }
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

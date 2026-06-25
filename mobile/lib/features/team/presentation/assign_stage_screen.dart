@@ -96,6 +96,7 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
               userId: widget.args.userId,
               role: MembershipRole.master,
               stageIds: [stage.id],
+              specialization: widget.args.specialization,
             );
         if (fail != null) {
           throw _AssignFailureMessage(fail.userMessage);
@@ -149,7 +150,11 @@ class _AssignStageScreenState extends ConsumerState<AssignStageScreen> {
     setState(() => _busy = true);
     final fail = await ref
         .read(teamControllerProvider(widget.projectId).notifier)
-        .addMember(userId: widget.args.userId, role: MembershipRole.master);
+        .addMember(
+          userId: widget.args.userId,
+          role: MembershipRole.master,
+          specialization: widget.args.specialization,
+        );
     if (!mounted) return;
     setState(() => _busy = false);
     if (fail == null) {

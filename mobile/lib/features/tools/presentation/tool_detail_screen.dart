@@ -322,7 +322,7 @@ class _InfoCard extends StatelessWidget {
             _DetailRow(label: 'Серийный №', value: tool.serial!),
           ],
           const _Divider(),
-          _DetailRow(label: 'Статус', value: tool.status.displayName),
+          _DetailRow(label: 'Статус', value: _statusValue(tool)),
           if (tool.status == ToolStatus.inStorage &&
               tool.storageLocation != null &&
               tool.storageLocation!.isNotEmpty) ...[
@@ -334,6 +334,17 @@ class _InfoCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Для статуса «У сотрудника» дописываем имя держателя — иначе непонятно,
+  /// у кого именно инструмент (Егор 23.06.2026). В проектном виде это же имя
+  /// дублирует карточка `_HolderBlock`, но в «Моих инструментах» её нет.
+  String _statusValue(ToolItem tool) {
+    if (tool.status == ToolStatus.withEmployee) {
+      final name = tool.holder?.displayName.trim() ?? '';
+      if (name.isNotEmpty) return 'У сотрудника · $name';
+    }
+    return tool.status.displayName;
   }
 }
 

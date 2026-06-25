@@ -142,7 +142,14 @@ class _AddMemberBodyState extends ConsumerState<_AddMemberBody> {
     try {
       final invitation = await ref
           .read(teamRepositoryProvider)
-          .invite(projectId: widget.projectId, phone: result.phone, role: role);
+          .invite(
+            projectId: widget.projectId,
+            phone: result.phone,
+            role: role,
+            specialization: role == MembershipRole.master
+                ? _specialization
+                : null,
+          );
       if (!mounted) return;
       setState(() {
         _submitting = false;

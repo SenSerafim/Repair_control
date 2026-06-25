@@ -132,6 +132,13 @@ const _hiddenFeedKinds = <String>{
 extension FeedEventX on FeedEvent {
   FeedCategory get category => FeedCategory.fromKind(kind);
 
+  String? _payloadString(String key) {
+    final value = payload[key];
+    if (value is! String) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   /// Должно ли событие отображаться в потребительской ленте проекта.
   /// `false` — событие записано в БД (для аудита/админки), но UI его прячет.
   bool get isUiVisible => !_hiddenFeedKinds.contains(kind);
@@ -188,19 +195,34 @@ extension FeedEventX on FeedEvent {
 
   /// Человекочитаемый заголовок события.
   String get summary {
+    final title = _payloadString('title') ?? _payloadString('stageTitle');
+    final quotedTitle = title == null ? '' : ' «$title»';
+    if (kind == 'stage_created') return 'Добавлен этап$quotedTitle';
+    if (kind == 'step_created') return 'Добавлен шаг$quotedTitle';
+    if (kind == 'material_request_sent') {
+      return title == null
+          ? 'Создана заявка на материалы'
+          : 'Создана заявка «$title»';
+    }
+    if (kind == 'budget_updated') {
+      return switch (_payloadString('reason')) {
+        'material_approved' => 'Бюджет пересчитан по заявке',
+        'payment_created' => 'Бюджет пересчитан после выплаты',
+        _ => 'Бюджет пересчитан',
+      };
+    }
+
     // Простой маппинг для самых частых событий.
     const labels = <String, String>{
       'project_created': 'Создан проект',
       'project_archived': 'Проект в архиве',
       'project_restored': 'Проект восстановлен',
-      'stage_created': 'Новый этап',
       'stage_started': 'Этап запущен',
       'stage_paused': 'Этап на паузе',
       'stage_resumed': 'Этап возобновлён',
       'stage_sent_to_review': 'Этап на приёмку',
       'stage_accepted': 'Этап принят',
       'stage_rejected_by_customer': 'Этап отклонён',
-      'step_created': 'Новый шаг',
       'step_completed': 'Шаг выполнен',
       'step_uncompleted': 'Шаг снят с выполнения',
       'photo_attached': 'Загружено фото',
@@ -212,13 +234,11 @@ extension FeedEventX on FeedEvent {
       'approval_rejected': 'Отклонено',
       'plan_approved': 'План согласован',
       'deadline_changed': 'Изменён дедлайн',
-      'payment_created': 'Новая выплата',
-      'material_request_sent': 'Заявка на материалы',
+      'payment_created': 'Добавлена выплата',
       'document_uploaded': 'Загружен документ',
       'export_ready': 'Экспорт готов',
-      'membership_added': 'Новый участник',
-      'extra_work_requested': 'Запрос доп.работы',
-      'budget_updated': 'Обновлён бюджет',
+      'membership_added': 'Добавлен участник',
+      'extra_work_requested': 'Запрошены доп.работы',
     };
     final hit = labels[kind];
     if (hit != null) return hit;
@@ -228,5 +248,22 @@ extension FeedEventX on FeedEvent {
     // префикс категории как читаемый заголовок: «Этап», «Шаг»,
     // «Финансы» и т.д.
     return category.displayName;
+  }
+
+  /// Человекочитаемое пояснение к technical `payload.reason`.
+  ///
+  /// В UI нельзя показывать сырой enum (`material_approved`), это служебный
+  /// контракт между доменами. Здесь переводим известные причины, неизвестные
+  /// скрываем, чтобы новая backend-причина не протекла в интерфейс.
+  String? get reasonText {
+    return switch (_payloadString('reason')) {
+      'material_approved' => 'Заявка на материалы согласована',
+      'payment_created' => 'Создана выплата',
+      'materials' => 'Ожидание материалов',
+      'approval' => 'Ожидание согласования',
+      'force_majeure' => 'Форс-мажор',
+      'other' => 'Другая причина',
+      _ => null,
+    };
   }
 }

@@ -161,6 +161,11 @@ export class InviteByPhoneDto {
   @ApiProperty({ enum: ['customer', 'representative', 'foreman', 'master'] })
   @IsEnum(['customer', 'representative', 'foreman', 'master'])
   role!: 'customer' | 'representative' | 'foreman' | 'master';
+
+  @ApiProperty({ required: false, type: String })
+  @IsOptional()
+  @IsString()
+  specialization?: string;
 }
 
 export class CopyProjectDto {
@@ -199,6 +204,11 @@ export class GenerateInviteCodeDto {
   @IsArray()
   @IsString({ each: true })
   stageIds?: string[];
+
+  @ApiProperty({ required: false, type: String })
+  @IsOptional()
+  @IsString()
+  specialization?: string;
 }
 
 export class JoinByCodeDto {

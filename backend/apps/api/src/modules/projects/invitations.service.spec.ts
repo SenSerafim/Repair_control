@@ -31,6 +31,7 @@ interface InvRow {
   token: string;
   permissions: Record<string, boolean> | null;
   stageIds: string[];
+  specialization?: string | null;
   acceptedBy: string | null;
   acceptedAt: Date | null;
   createdAt: Date;
@@ -38,7 +39,7 @@ interface InvRow {
 }
 
 const mkPrisma = () => {
-  const projects = new Map<string, { id: string }>();
+  const projects = new Map<string, { id: string; ownerId: string }>();
   const memberships: Array<{
     id?: string;
     projectId: string;
@@ -98,6 +99,7 @@ const mkPrisma = () => {
           token: data.token,
           permissions: data.permissions ?? null,
           stageIds: data.stageIds ?? [],
+          specialization: data.specialization ?? null,
           acceptedBy: null,
           acceptedAt: null,
           createdAt: new Date(),
@@ -129,7 +131,8 @@ const mkPrisma = () => {
 describe('InvitationsService — invite-by-code (P2)', () => {
   it('generateCode: создаёт 6-значный pending invitation', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
+    st.memberships.push({ id: 'm-foreman', projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const svc = new InvitationsService(
       st.prisma,
       new FixedClock(NOW),
@@ -139,11 +142,13 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     );
     const inv = await svc.generateCode({
       projectId: 'p1',
-      byUserId: 'owner1',
+      byUserId: 'foreman1',
       role: 'master',
+      specialization: 'Электрик',
     });
     expect(inv.token).toMatch(/^\d{6}$/);
     expect(inv.role).toBe('master');
+    expect([...st.invitations.values()][0].specialization).toBe('Электрик');
     expect(inv.expiresAt.getTime()).toBeGreaterThan(NOW.getTime());
   });
 
@@ -163,7 +168,8 @@ describe('InvitationsService — invite-by-code (P2)', () => {
 
   it('joinByCode: успех — создаёт membership, статус accepted', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
+    st.memberships.push({ id: 'm-foreman', projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const svc = new InvitationsService(
       st.prisma,
       new FixedClock(NOW),
@@ -173,24 +179,26 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     );
     const inv = await svc.generateCode({
       projectId: 'p1',
-      byUserId: 'owner1',
+      byUserId: 'foreman1',
       role: 'master',
+      specialization: 'Сантехник',
     });
     const result = await svc.joinByCode('newUser', inv.token);
     expect(result.projectId).toBe('p1');
     expect(result.membership.role).toBe('master');
+    expect(result.membership.specialization).toBe('Сантехник');
     // invitation closed
     const updated = [...st.invitations.values()][0];
     expect(updated.status).toBe('accepted');
     expect(updated.acceptedBy).toBe('newUser');
     expect(updated.acceptedAt).toBeTruthy();
-    // membership created
-    expect(st.memberships).toHaveLength(1);
+    // membership created; foreman fixture already existed.
+    expect(st.memberships.filter((m) => m.role === 'master')).toHaveLength(1);
   });
 
   it('joinByCode: код не найден → NotFoundException', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
     const svc = new InvitationsService(
       st.prisma,
       new FixedClock(NOW),
@@ -203,7 +211,7 @@ describe('InvitationsService — invite-by-code (P2)', () => {
 
   it('joinByCode: код просрочен → GoneException', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
     const past = new Date(NOW.getTime() - 24 * 60 * 60 * 1000);
     st.invitations.set('inv1', {
       id: 'inv1',
@@ -233,8 +241,9 @@ describe('InvitationsService — invite-by-code (P2)', () => {
 
   it('joinByCode: уже активный участник с этой ролью → ConflictException', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
     st.memberships.push({ id: 'm-existing', projectId: 'p1', userId: 'u1', role: 'master' });
+    st.memberships.push({ id: 'm-foreman', projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const svc = new InvitationsService(
       st.prisma,
       new FixedClock(NOW),
@@ -244,7 +253,7 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     );
     const inv = await svc.generateCode({
       projectId: 'p1',
-      byUserId: 'owner1',
+      byUserId: 'foreman1',
       role: 'master',
     });
     await expect(svc.joinByCode('u1', inv.token)).rejects.toThrow(ConflictException);
@@ -252,7 +261,8 @@ describe('InvitationsService — invite-by-code (P2)', () => {
 
   it('joinByCode: soft-removed membership реанимируется, а не создаётся новая (фикс «уже в проекте» после leaveTeam)', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
+    st.memberships.push({ id: 'm-foreman', projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     // Имитация состояния после leaveTeam: запись осталась в БД с removedAt.
     // До фикса invitations.service.findFirst игнорировал removedAt и кидал
     // 409 на повторный join — мобильный клиент видел «уже в проекте» при
@@ -274,7 +284,7 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     );
     const inv = await svc.generateCode({
       projectId: 'p1',
-      byUserId: 'owner1',
+      byUserId: 'foreman1',
       role: 'master',
     });
 
@@ -283,14 +293,15 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     // 1) Возвращается тот же membership.id (revive), а не создаётся дубль.
     expect(result.membership.id).toBe('m-old');
     // 2) removedAt/removedById очищены — пользователь снова активен.
-    expect(st.memberships).toHaveLength(1);
-    expect(st.memberships[0].removedAt).toBeNull();
-    expect(st.memberships[0].removedById).toBeNull();
+    expect(st.memberships.filter((m) => m.role === 'master')).toHaveLength(1);
+    const restored = st.memberships.find((m) => m.id === 'm-old')!;
+    expect(restored.removedAt).toBeNull();
+    expect(restored.removedById).toBeNull();
   });
 
   it('generateCode: сохраняет permissions и stageIds для representative', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
     const svc = new InvitationsService(
       st.prisma,
       new FixedClock(NOW),
@@ -327,7 +338,8 @@ describe('InvitationsService — invite-by-code (P2)', () => {
 
   it('joinByCode: эмитит feed.membership_added и project.membership.changed (ТЗ §10.1/§13.2)', async () => {
     const st = mkPrisma();
-    st.projects.set('p1', { id: 'p1' });
+    st.projects.set('p1', { id: 'p1', ownerId: 'owner1' });
+    st.memberships.push({ id: 'm-foreman', projectId: 'p1', userId: 'foreman1', role: 'foreman' });
     const chats = mkChats();
     const feed = mkFeed();
     const members = mkMembers();
@@ -335,7 +347,7 @@ describe('InvitationsService — invite-by-code (P2)', () => {
     const svc = new InvitationsService(st.prisma, new FixedClock(NOW), chats, feed, members);
     const inv = await svc.generateCode({
       projectId: 'p1',
-      byUserId: 'owner1',
+      byUserId: 'foreman1',
       role: 'master',
     });
 

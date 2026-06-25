@@ -95,6 +95,9 @@ export interface AccessContext {
   chatType?: 'project' | 'stage' | 'personal' | 'group';
   // S5: контекст документа (для document.* actions)
   documentUploadedById?: string;
+  // NEWFIX §4.1: scope из тела запроса (для approval.request — defect инициирует
+  // заказчик/представитель, прочие scope — исполнители).
+  requestScope?: string;
 }
 
 export interface RepresentativeRights {

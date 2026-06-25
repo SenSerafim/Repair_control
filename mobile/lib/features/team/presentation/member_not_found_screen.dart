@@ -41,6 +41,7 @@ class MemberNotFoundScreen extends ConsumerStatefulWidget {
 
 class _MemberNotFoundScreenState extends ConsumerState<MemberNotFoundScreen> {
   MembershipRole? _role;
+  String? _specialization;
   bool _busy = false;
   InviteCode? _code;
   String? _error;
@@ -58,7 +59,13 @@ class _MemberNotFoundScreenState extends ConsumerState<MemberNotFoundScreen> {
     try {
       final code = await ref
           .read(invitationsRepositoryProvider)
-          .generateCode(projectId: widget.projectId, role: role);
+          .generateCode(
+            projectId: widget.projectId,
+            role: role,
+            specialization: role == MembershipRole.master
+                ? _specialization
+                : null,
+          );
       if (!mounted) return;
       setState(() {
         _busy = false;
@@ -164,10 +171,28 @@ class _MemberNotFoundScreenState extends ConsumerState<MemberNotFoundScreen> {
               selected: _role == r,
               onTap: () => setState(() {
                 _role = r;
+                if (r != MembershipRole.master) _specialization = null;
                 _error = null;
               }),
             ),
             const SizedBox(height: AppSpacing.x8),
+          ],
+          if (_role == MembershipRole.master) ...[
+            const SizedBox(height: AppSpacing.x8),
+            const Text(
+              'СПЕЦИАЛИЗАЦИЯ',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n400,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x10),
+            _SpecializationPicker(
+              value: _specialization,
+              onChanged: (value) => setState(() => _specialization = value),
+            ),
           ],
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -533,6 +558,36 @@ class _RoleRow extends StatelessWidget {
           'Владелец проекта',
         );
     }
+  }
+}
+
+class _SpecializationPicker extends StatelessWidget {
+  const _SpecializationPicker({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  static const _values = [
+    'Плиточник',
+    'Сантехник',
+    'Электрик',
+    'Широкого профиля',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final item in _values)
+          ChoiceChip(
+            label: Text(item),
+            selected: value == item,
+            onSelected: (selected) => onChanged(selected ? item : null),
+          ),
+      ],
+    );
   }
 }
 

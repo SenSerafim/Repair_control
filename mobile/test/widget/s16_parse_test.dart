@@ -164,4 +164,36 @@ void main() {
       }
     });
   });
+
+  group('FeedEventX display labels', () {
+    FeedEvent event(String kind, [Map<String, dynamic> payload = const {}]) =>
+        FeedEvent(
+          id: 'f1',
+          projectId: 'p1',
+          kind: kind,
+          actorId: 'u1',
+          payload: payload,
+          createdAt: DateTime(2026, 5, 16, 12, 42),
+        );
+
+    test('stage_created uses verb + stage title', () {
+      expect(
+        event('stage_created', {'title': 'Демонтаж'}).summary,
+        'Добавлен этап «Демонтаж»',
+      );
+    });
+
+    test('budget_updated material reason is human-readable', () {
+      final e = event('budget_updated', {'reason': 'material_approved'});
+      expect(e.summary, 'Бюджет пересчитан по заявке');
+      expect(e.reasonText, 'Заявка на материалы согласована');
+    });
+
+    test('unknown reason is hidden instead of leaking backend enum', () {
+      expect(
+        event('budget_updated', {'reason': 'new_backend_enum'}).reasonText,
+        isNull,
+      );
+    });
+  });
 }

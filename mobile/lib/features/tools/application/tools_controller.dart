@@ -220,6 +220,9 @@ class ProjectToolsBoardController
     String? article,
     String? photoKey,
     String? serial,
+    ToolStatus? status,
+    String? storageLocation,
+    String? assignedEmployeeId,
   }) async {
     try {
       final t = await _repo.createInProject(
@@ -229,6 +232,9 @@ class ProjectToolsBoardController
         article: article,
         photoKey: photoKey,
         serial: serial,
+        status: status,
+        storageLocation: storageLocation,
+        assignedEmployeeId: assignedEmployeeId,
       );
       _upsert(t);
       return null;

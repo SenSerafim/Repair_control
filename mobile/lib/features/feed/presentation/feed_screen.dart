@@ -219,7 +219,7 @@ class _FeedRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stageTitle = event.payload['stageTitle'] as String?;
-    final reason = event.payload['reason'] as String?;
+    final reason = event.reasonText;
     final timeStr = DateFormat(
       'dd.MM.yyyy, HH:mm',
       'ru',
@@ -246,7 +246,7 @@ class _FeedRow extends ConsumerWidget {
       if (stageTitle != null && stageTitle.isNotEmpty) stageTitle,
     ];
     if (reason != null && reason.isNotEmpty) {
-      subtitleParts.add('Причина: $reason');
+      subtitleParts.add(reason);
     }
     return Container(
       color: AppColors.n0,

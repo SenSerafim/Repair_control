@@ -15,6 +15,13 @@ const DEFAULT_SCOPE_POLICIES: ScopePolicy[] = [
     maxSizeMb: 25,
   },
   {
+    // Фото инструментов (форма «Добавить инструмент» — профиль и проект).
+    // Только изображения, до 25 MB (на клиенте жмём до 1920px/JPEG).
+    prefix: 'tools/',
+    allowedMimes: ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp'],
+    maxSizeMb: 25,
+  },
+  {
     // E11 — голосовые заметки на проекте (NEWFIX-2 §11.4). Лимит — 25 MB,
     // что ≈ 25 минут в m4a/aac@128kbps; больше для quick-capture не нужно.
     prefix: 'notes/audio/',

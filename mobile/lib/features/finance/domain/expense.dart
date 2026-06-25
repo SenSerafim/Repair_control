@@ -64,6 +64,7 @@ class Expense {
     this.stageId,
     this.comment,
     this.photoKey,
+    this.photoUrl,
   });
 
   final String id;
@@ -74,6 +75,10 @@ class Expense {
   final int amount;
   final String? comment;
   final String? photoKey;
+
+  /// Presigned GET-URL чека (бэк отдаёт вместе с расходом, TTL ~15 мин).
+  /// Нужен для показа фото в деталь-шите — в БД лежит только [photoKey].
+  final String? photoUrl;
   final DateTime createdAt;
 
   static Expense parse(Map<String, dynamic> json) => Expense(
@@ -85,6 +90,7 @@ class Expense {
     amount: (json['amount'] as num?)?.toInt() ?? 0,
     comment: json['comment'] as String?,
     photoKey: json['photoKey'] as String?,
+    photoUrl: json['photoUrl'] as String?,
     createdAt:
         DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
         DateTime.now(),

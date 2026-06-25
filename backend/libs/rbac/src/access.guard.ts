@@ -33,6 +33,9 @@ export class AccessGuard implements CanActivate {
     const accessCtx: AccessContext = {
       userId: user.userId,
       systemRole: user.systemRole,
+      // scope из тела (approval.request): guard выполняется после body-parser,
+      // до validation-pipe — сырой строки достаточно для RBAC-ветвления.
+      requestScope: typeof req.body?.scope === 'string' ? (req.body.scope as string) : undefined,
     };
 
     if (requirement.resource === 'project' && requirement.resourceIdFrom) {

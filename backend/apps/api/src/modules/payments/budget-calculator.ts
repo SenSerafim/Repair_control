@@ -231,8 +231,19 @@ export class BudgetCalculator {
     const selfPurchases = await this.prisma.selfPurchase.findMany({
       where: { projectId, status: 'approved', byRole: 'foreman' },
     });
+    // NEWFIX §5: «Расходы» (чеки этапа/проекта) тоже расходуют бюджет.
+    // Маппинг категорий в 2 корзины: materials → «Материалы», остальные
+    // (transport/rental/services/other) → «Работы». Так всё попадает в
+    // «Потрачено», и work+materials сходятся с total (Егор 23.06.2026).
+    const expenses = await this.prisma.expense.findMany({ where: { projectId } });
+    const sumExpenses = (rows: typeof expenses): Money =>
+      rows.reduce((acc, e) => acc.plus(Money.ofKopeks(e.amount)), Money.zero());
+    const expenseWorkAll = sumExpenses(expenses.filter((e) => e.category !== 'materials'));
+    const expenseMaterialsAll = sumExpenses(expenses.filter((e) => e.category === 'materials'));
 
-    const workSpent = payments.reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero());
+    const workSpent = payments
+      .reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero())
+      .plus(expenseWorkAll);
     const materialsFromRequests = materialRequests.reduce(
       (acc, r) =>
         acc.plus(
@@ -247,7 +258,9 @@ export class BudgetCalculator {
       (acc, sp) => acc.plus(Money.ofKopeks(sp.amount)),
       Money.zero(),
     );
-    const materialsSpent = materialsFromRequests.plus(materialsFromSelfPurchases);
+    const materialsSpent = materialsFromRequests
+      .plus(materialsFromSelfPurchases)
+      .plus(expenseMaterialsAll);
 
     // П1.3 / 5.1 — wizard создаёт проект с workBudget/materialsBudget на Project,
     // но не заводит этапы автоматически. Если сумма по этапам = 0, делаем fallback
@@ -274,9 +287,16 @@ export class BudgetCalculator {
     const stages: StageBudgetDTO[] = project.stages
       .filter((s) => this.stageVisibleTo(viewer, s.id, s.foremanIds))
       .map((s) => {
+        const stageExpenseWork = sumExpenses(
+          expenses.filter((e) => e.stageId === s.id && e.category !== 'materials'),
+        );
+        const stageExpenseMaterials = sumExpenses(
+          expenses.filter((e) => e.stageId === s.id && e.category === 'materials'),
+        );
         const stageWorkSpent = payments
           .filter((p) => p.stageId === s.id)
-          .reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero());
+          .reduce((acc, p) => acc.plus(Money.ofKopeks(p.amount)), Money.zero())
+          .plus(stageExpenseWork);
         const stageMaterialsFromReq = materialRequests
           .filter((r) => r.stageId === s.id)
           .reduce(
@@ -292,7 +312,9 @@ export class BudgetCalculator {
         const stageMaterialsFromSp = selfPurchases
           .filter((sp) => sp.stageId === s.id)
           .reduce((acc, sp) => acc.plus(Money.ofKopeks(sp.amount)), Money.zero());
-        const stageMaterialsSpent = stageMaterialsFromReq.plus(stageMaterialsFromSp);
+        const stageMaterialsSpent = stageMaterialsFromReq
+          .plus(stageMaterialsFromSp)
+          .plus(stageExpenseMaterials);
         return {
           stageId: s.id,
           title: s.title,

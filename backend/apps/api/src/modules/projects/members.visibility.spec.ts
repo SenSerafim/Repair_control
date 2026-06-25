@@ -90,45 +90,23 @@ describe('MembersService.applyVisibility — единая команда (2026-0
     }),
   ];
 
-  it('заказчик видит всю команду — включая мастеров, нанятых бригадиром', async () => {
+  it('заказчик видит только заказчика, представителей и бригадиров', async () => {
     const svc = mkSvc();
     const out = await svc.applyVisibility(memberships, owner, owner, 'p1');
-    expect(visibleUserIds(out)).toEqual(
-      [
-        owner,
-        foreman,
-        otherForeman,
-        repPlain,
-        masterByOwner,
-        masterByForeman,
-        otherStageMaster,
-      ].sort(),
-    );
+    expect(visibleUserIds(out)).toEqual([owner, foreman, otherForeman, repPlain].sort());
   });
 
-  it('owner без явной customer-membership получает то же самое', async () => {
+  it('owner без явной customer-membership тоже не видит мастеров', async () => {
     const svc = mkSvc();
     const trimmed = memberships.filter((x) => x.role !== 'customer');
     const out = await svc.applyVisibility(trimmed, owner, owner, 'p1');
-    expect(visibleUserIds(out)).toEqual(
-      [foreman, otherForeman, repPlain, masterByOwner, masterByForeman, otherStageMaster].sort(),
-    );
+    expect(visibleUserIds(out)).toEqual([foreman, otherForeman, repPlain].sort());
   });
 
-  it('представитель видит весь состав команды', async () => {
+  it('представитель не видит мастеров', async () => {
     const svc = mkSvc();
     const out = await svc.applyVisibility(memberships, repPlain, owner, 'p1');
-    expect(visibleUserIds(out)).toEqual(
-      [
-        owner,
-        foreman,
-        otherForeman,
-        repPlain,
-        masterByOwner,
-        masterByForeman,
-        otherStageMaster,
-      ].sort(),
-    );
+    expect(visibleUserIds(out)).toEqual([owner, foreman, otherForeman, repPlain].sort());
   });
 
   it('бригадир видит мастеров другого бригадира', async () => {

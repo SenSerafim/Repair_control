@@ -541,6 +541,8 @@ model ProjectInvitation {
   permissions Json?
   /// Если приглашают на конкретные этапы — список Stage.id.
   stageIds    String[]         @default([])
+  /// Опциональная специализация мастера, если приглашение создано на role=master.
+  specialization String?
   acceptedBy  String?
   acceptedAt  DateTime?
   createdAt   DateTime         @default(now())

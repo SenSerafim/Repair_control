@@ -8,6 +8,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../projects/presentation/money_input.dart';
+import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../../team/application/team_controller.dart';
 import '../application/payments_controller.dart';
 import '../domain/payment.dart';
@@ -32,15 +34,22 @@ Future<bool> showDistributeSheet(
 /// [available] — текущий доступный остаток кассы (advancesReceived − distributed).
 /// Может быть отрицательным; запрет на ввод суммы больше available — не
 /// блокируем (по ТЗ §4.2 бригадир может «уйти в минус» из карманных).
+/// [initialStageId] предзаполняется на бюджете конкретного этапа; в общем
+/// бюджете этап выбирается вручную.
 Future<bool> showPayMasterFromWalletSheet(
   BuildContext context,
   WidgetRef ref, {
   required String projectId,
   required int available,
+  String? initialStageId,
 }) async {
   final result = await showAppBottomSheet<bool>(
     context: context,
-    child: _PayFromWalletBody(projectId: projectId, available: available),
+    child: _PayFromWalletBody(
+      projectId: projectId,
+      available: available,
+      initialStageId: initialStageId,
+    ),
     isScrollControlled: true,
   );
   return result ?? false;
@@ -500,10 +509,15 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _PayFromWalletBody extends ConsumerStatefulWidget {
-  const _PayFromWalletBody({required this.projectId, required this.available});
+  const _PayFromWalletBody({
+    required this.projectId,
+    required this.available,
+    this.initialStageId,
+  });
 
   final String projectId;
   final int available;
+  final String? initialStageId;
 
   @override
   ConsumerState<_PayFromWalletBody> createState() => _PayFromWalletBodyState();
@@ -513,12 +527,14 @@ class _PayFromWalletBodyState extends ConsumerState<_PayFromWalletBody> {
   final _amount = TextEditingController();
   final _comment = TextEditingController();
   String? _toUserId;
+  String? _stageId;
   bool _submitting = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _stageId = widget.initialStageId;
     _amount.addListener(_onAmountChanged);
   }
 
@@ -558,6 +574,7 @@ class _PayFromWalletBodyState extends ConsumerState<_PayFromWalletBody> {
         .distributeFromWallet(
           toUserId: _toUserId!,
           amount: amountKop,
+          stageId: _stageId,
           comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
         );
     if (!mounted) return;
@@ -649,6 +666,14 @@ class _PayFromWalletBodyState extends ConsumerState<_PayFromWalletBody> {
           const SizedBox(height: 6),
           _WalletAfterHint(afterPayout: _afterPayout, exceeds: _exceedsWallet),
           const SizedBox(height: AppSpacing.x12),
+          const Text('Этап (опционально)', style: AppTextStyles.caption),
+          const SizedBox(height: AppSpacing.x6),
+          _PaymentStagePicker(
+            projectId: widget.projectId,
+            selectedStageId: _stageId,
+            onChanged: (id) => setState(() => _stageId = id),
+          ),
+          const SizedBox(height: AppSpacing.x12),
           const Text('Комментарий', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.x6),
           TextField(
@@ -707,6 +732,62 @@ class _WalletAfterHint extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _PaymentStagePicker extends ConsumerWidget {
+  const _PaymentStagePicker({
+    required this.projectId,
+    required this.selectedStageId,
+    required this.onChanged,
+  });
+
+  final String projectId;
+  final String? selectedStageId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(stagesControllerProvider(projectId));
+    return async.when(
+      loading: () => const SizedBox(
+        height: 32,
+        child: Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => Text(
+        'Не удалось загрузить этапы',
+        style: AppTextStyles.caption.copyWith(color: AppColors.redDot),
+      ),
+      data: (stages) => Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          ChoiceChip(
+            label: const Text('Без этапа'),
+            selected: selectedStageId == null,
+            onSelected: (_) => onChanged(null),
+          ),
+          for (final s in stages)
+            ChoiceChip(
+              label: Text(_stageLabel(s)),
+              selected: selectedStageId == s.id,
+              onSelected: (_) => onChanged(s.id),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _stageLabel(Stage stage) {
+    final title = stage.title.trim();
+    if (title.isNotEmpty) return title;
+    return 'Этап ${stage.orderIndex + 1}';
   }
 }
 

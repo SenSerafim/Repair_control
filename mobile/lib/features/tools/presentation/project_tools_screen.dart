@@ -1,15 +1,20 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../shared/utils/image_compress.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../team/application/team_controller.dart';
 import '../application/tools_controller.dart';
+import '../data/tools_repository.dart';
 import '../domain/responsible_resolver.dart';
 import '../domain/tool.dart';
 
@@ -377,6 +382,17 @@ class _AddToolToProjectSheetState
   _AddMode _mode = _AddMode.fromMy;
   final _name = TextEditingController();
   final _serial = TextEditingController();
+  // NEWFIX (Егор 23.06.2026): паритет формы «Новый» с «Мои инструменты» —
+  // артикул, статус (склад/объект/у сотрудника), место, ответственный.
+  final _article = TextEditingController();
+  final _storage = TextEditingController();
+  ToolStatus _newStatus = ToolStatus.onProject;
+  String? _newAssignedEmployeeId;
+  // Фото инструмента: до отправки храним fileKey (presigned) + локальные байты
+  // для превью (как в шите расхода).
+  String? _photoFileKey;
+  Uint8List? _photoThumb;
+  bool _uploadingPhoto = false;
   String? _selectedOwnerId;
 
   /// NEWFIX TЗ-2 §8.3 (Task 6.4): ответственный сотрудник для attach-flow
@@ -395,7 +411,70 @@ class _AddToolToProjectSheetState
   void dispose() {
     _name.dispose();
     _serial.dispose();
+    _article.dispose();
+    _storage.dispose();
     super.dispose();
+  }
+
+  /// Фото инструмента: pick → compress (1920/JPEG) → presign → PUT в S3.
+  /// Храним fileKey + локальные байты для превью. На submit уходит photoKey.
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_uploadingPhoto || _busy) return;
+    setState(() => _uploadingPhoto = true);
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 100,
+      );
+      if (picked == null) {
+        if (mounted) setState(() => _uploadingPhoto = false);
+        return;
+      }
+      final compressed = compressImage(await picked.readAsBytes());
+      if (compressed == null) {
+        if (!mounted) return;
+        setState(() => _uploadingPhoto = false);
+        AppToast.show(
+          context,
+          message: 'Не удалось обработать фото',
+          kind: AppToastKind.error,
+        );
+        return;
+      }
+      final repo = ref.read(toolsRepositoryProvider);
+      final presigned = await repo.presignPhoto(
+        mimeType: compressed.mimeType,
+        sizeBytes: compressed.sizeBytes,
+        originalName: picked.name,
+      );
+      await repo.uploadToStorage(
+        presigned: presigned,
+        bytes: compressed.bytes,
+        mimeType: compressed.mimeType,
+      );
+      if (!mounted) return;
+      setState(() {
+        _photoFileKey = presigned.fileKey;
+        _photoThumb = compressed.bytes;
+        _uploadingPhoto = false;
+      });
+    } on ToolsException catch (e) {
+      if (!mounted) return;
+      setState(() => _uploadingPhoto = false);
+      AppToast.show(
+        context,
+        message: e.failure.userMessage,
+        kind: AppToastKind.error,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _uploadingPhoto = false);
+      AppToast.show(
+        context,
+        message: 'Не удалось загрузить фото',
+        kind: AppToastKind.error,
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -450,10 +529,31 @@ class _AddToolToProjectSheetState
         );
         return;
       }
+      if (_newStatus == ToolStatus.withEmployee &&
+          _newAssignedEmployeeId == null) {
+        setState(() => _busy = false);
+        AppToast.show(
+          context,
+          message: 'Выберите сотрудника, у которого инструмент',
+          kind: AppToastKind.error,
+        );
+        return;
+      }
       final failure = await controller.createInProject(
         name: name,
         ownerId: _selectedOwnerId,
         serial: _serial.text.trim().isEmpty ? null : _serial.text.trim(),
+        article: _article.text.trim().isEmpty ? null : _article.text.trim(),
+        photoKey: _photoFileKey,
+        status: _newStatus,
+        storageLocation:
+            _newStatus == ToolStatus.inStorage &&
+                _storage.text.trim().isNotEmpty
+            ? _storage.text.trim()
+            : null,
+        assignedEmployeeId: _newStatus == ToolStatus.withEmployee
+            ? _newAssignedEmployeeId
+            : null,
       );
       if (!mounted) return;
       setState(() => _busy = false);
@@ -529,6 +629,20 @@ class _AddToolToProjectSheetState
               _BrandNewContent(
                 name: _name,
                 serial: _serial,
+                article: _article,
+                storage: _storage,
+                status: _newStatus,
+                onStatusChanged: (v) => setState(() => _newStatus = v),
+                assignedEmployeeId: _newAssignedEmployeeId,
+                onAssignedChanged: (v) =>
+                    setState(() => _newAssignedEmployeeId = v),
+                photoThumb: _photoThumb,
+                uploadingPhoto: _uploadingPhoto,
+                onPickPhoto: _pickPhoto,
+                onClearPhoto: () => setState(() {
+                  _photoFileKey = null;
+                  _photoThumb = null;
+                }),
                 projectId: widget.projectId,
                 selectedOwnerId: _selectedOwnerId,
                 onOwnerChanged: (v) => setState(() => _selectedOwnerId = v),
@@ -881,6 +995,16 @@ class _BrandNewContent extends ConsumerWidget {
   const _BrandNewContent({
     required this.name,
     required this.serial,
+    required this.article,
+    required this.storage,
+    required this.status,
+    required this.onStatusChanged,
+    required this.assignedEmployeeId,
+    required this.onAssignedChanged,
+    required this.photoThumb,
+    required this.uploadingPhoto,
+    required this.onPickPhoto,
+    required this.onClearPhoto,
     required this.projectId,
     required this.selectedOwnerId,
     required this.onOwnerChanged,
@@ -889,6 +1013,16 @@ class _BrandNewContent extends ConsumerWidget {
 
   final TextEditingController name;
   final TextEditingController serial;
+  final TextEditingController article;
+  final TextEditingController storage;
+  final ToolStatus status;
+  final ValueChanged<ToolStatus> onStatusChanged;
+  final String? assignedEmployeeId;
+  final ValueChanged<String?> onAssignedChanged;
+  final Uint8List? photoThumb;
+  final bool uploadingPhoto;
+  final Future<void> Function(ImageSource source) onPickPhoto;
+  final VoidCallback onClearPhoto;
   final String projectId;
   final String? selectedOwnerId;
   final ValueChanged<String?> onOwnerChanged;
@@ -905,6 +1039,13 @@ class _BrandNewContent extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        _ToolPhotoPicker(
+          thumb: photoThumb,
+          uploading: uploadingPhoto,
+          onPick: onPickPhoto,
+          onClear: onClearPhoto,
+        ),
+        const SizedBox(height: AppSpacing.x12),
         AppInput(
           controller: name,
           label: 'Название',
@@ -912,10 +1053,50 @@ class _BrandNewContent extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.x12),
         AppInput(
+          controller: article,
+          label: 'Артикул',
+          placeholder: 'Артикул производителя — для общей базы',
+        ),
+        const SizedBox(height: AppSpacing.x12),
+        AppInput(
           controller: serial,
           label: 'Серийный номер',
           placeholder: 'Опционально',
         ),
+        const SizedBox(height: AppSpacing.x12),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Статус',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final st in ToolStatus.values)
+              ChoiceChip(
+                label: Text(st.displayName),
+                selected: status == st,
+                onSelected: (_) => onStatusChanged(st),
+              ),
+          ],
+        ),
+        if (status == ToolStatus.inStorage) ...[
+          const SizedBox(height: AppSpacing.x12),
+          AppInput(
+            controller: storage,
+            label: 'Номер места / название склада',
+            placeholder: 'Гараж, Склад №1, Балкон…',
+          ),
+        ],
         const SizedBox(height: AppSpacing.x12),
         Row(
           children: [
@@ -979,6 +1160,52 @@ class _BrandNewContent extends ConsumerWidget {
             );
           },
         ),
+        // Статус «У сотрудника» → выбор сотрудника, у которого инструмент.
+        if (status == ToolStatus.withEmployee) ...[
+          const SizedBox(height: AppSpacing.x12),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'У какого сотрудника',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.n700,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          async.when(
+            loading: () => const SizedBox(
+              height: 56,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, __) => const Text(
+              'Не удалось загрузить команду',
+              style: TextStyle(fontSize: 11, color: AppColors.redDot),
+            ),
+            data: (teamState) {
+              final members = teamState.members;
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 180),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final m in members)
+                      _OwnerRow(
+                        title: _displayName(m),
+                        role: m.role.displayName,
+                        isMe: m.userId == me,
+                        selected: assignedEmployeeId == m.userId,
+                        onTap: () => onAssignedChanged(m.userId),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ],
     );
   }
@@ -988,6 +1215,87 @@ class _BrandNewContent extends ConsumerWidget {
     if (u == null) return m.userId;
     final s = '${u.firstName} ${u.lastName}'.trim();
     return s.isEmpty ? m.userId : s;
+  }
+}
+
+/// Фото инструмента: кнопка «Сделать фото» / «Из галереи» либо превью с
+/// крестиком. Зеркалит receipt-picker формы расхода (Егор 23.06.2026).
+class _ToolPhotoPicker extends StatelessWidget {
+  const _ToolPhotoPicker({
+    required this.thumb,
+    required this.uploading,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final Uint8List? thumb;
+  final bool uploading;
+  final Future<void> Function(ImageSource source) onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    if (thumb != null) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.x8),
+        decoration: BoxDecoration(
+          color: AppColors.n50,
+          borderRadius: BorderRadius.circular(AppRadius.r12),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.r8),
+              child: Image.memory(
+                thumb!,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            const Expanded(
+              child: Text(
+                'Фото прикреплено',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.n800,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: onClear,
+              tooltip: 'Удалить фото',
+            ),
+          ],
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: const Text('Сделать фото'),
+            onPressed: uploading ? null : () => onPick(ImageSource.camera),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        IconButton.outlined(
+          icon: uploading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.photo_library_outlined),
+          onPressed: uploading ? null : () => onPick(ImageSource.gallery),
+          tooltip: 'Из галереи',
+        ),
+      ],
+    );
   }
 }
 

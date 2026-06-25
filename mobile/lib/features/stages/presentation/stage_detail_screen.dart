@@ -10,6 +10,7 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../approvals/application/approvals_controller.dart';
 import '../../approvals/domain/approval.dart';
 import '../../approvals/presentation/_widgets/reject_sheet.dart';
@@ -243,6 +244,15 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               projectId: widget.projectId,
             )),
           );
+          final meId = ref.watch(authControllerProvider).userId;
+          final ownerId = projectAsync.valueOrNull?.ownerId;
+          final myMembership = ref.watch(
+            myMembershipInProjectProvider(widget.projectId),
+          );
+          final viewerIsCustomerSide =
+              (meId != null && ownerId != null && meId == ownerId) ||
+              myMembership?.role == MembershipRole.customer ||
+              myMembership?.role == MembershipRole.representative;
           return Column(
             children: [
               // _StageHeader удалён: title+badge переехали в AppBar
@@ -251,9 +261,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.x16,
-                  AppSpacing.x12,
+                  AppSpacing.x8,
                   AppSpacing.x16,
-                  AppSpacing.x10,
+                  AppSpacing.x8,
                 ),
                 child: StageStatsRow(
                   progressPct: stage.progressCache,
@@ -270,13 +280,14 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   AppSpacing.x16,
                   0,
                   AppSpacing.x16,
-                  AppSpacing.x12,
+                  AppSpacing.x8,
                 ),
                 child: StageExecutorsRow(
                   projectId: widget.projectId,
                   foremanIds: stage.foremanIds,
                   masterId: stage.masterId,
                   canAssign: canManageStages,
+                  showMaster: !viewerIsCustomerSide,
                   onAssignForeman: () => _openAssignSheet(
                     context,
                     stage,
@@ -306,10 +317,17 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     AppSpacing.x16,
                     0,
                     AppSpacing.x16,
-                    AppSpacing.x12,
+                    AppSpacing.x8,
                   ),
                   child: StageStatusBanner(
                     data: StageBannerData.fromStage(stage, display)!,
+                    isForemanSide:
+                        ref
+                            .watch(
+                              myMembershipInProjectProvider(widget.projectId),
+                            )
+                            ?.role ==
+                        MembershipRole.foreman,
                     onContact: () =>
                         _openProjectChat(widget.projectId, stage.id),
                     onAssignContractor: () => context.push(
@@ -867,6 +885,24 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         projectId: widget.projectId,
       )),
     );
+    // План ОТПРАВЛЯЕТ исполнитель (бригадир), а СОГЛАСУЕТ заказчик/
+    // представитель. Generic-права stageManage/stageStart есть и у заказчика
+    // («owner может всё»), поэтому submit/start vs approve различаем по роли в
+    // проекте — иначе заказчику предлагают отправить план себе же на
+    // согласование и «Запустить этап» (Егор 23.06.2026).
+    final myRole = ref
+        .watch(myMembershipInProjectProvider(widget.projectId))
+        ?.role;
+    final isApproverSide =
+        myRole == MembershipRole.customer ||
+        myRole == MembershipRole.representative;
+    final isForemanSide = myRole == MembershipRole.foreman;
+    // Пауза / возобновление / «На проверку» / «Исправить и отправить снова» —
+    // операционные действия исполнителя (бригадир/мастер). Заказчик их не
+    // делает: он только согласует план и принимает работу. Иначе заказчик мог
+    // сам отправить этап на проверку и сам же принять (Егор 23.06.2026).
+    final isExecutorSide =
+        myRole == MembershipRole.foreman || myRole == MembershipRole.master;
     final children = <Widget>[];
 
     // Все элементы children должны быть Expanded — Row делит ширину поровну
@@ -875,14 +911,30 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     // добавляются в общий for-loop ниже, не внутри case'ов.
     switch (widget.display) {
       case StageDisplayStatus.pending:
+      case StageDisplayStatus.lateStart:
+        // pending и lateStart (старт просрочен) имеют одинаковый набор CTA.
         // План требуется, не одобрен → бригадир видит «Отправить план», а
-        // заказчик/представитель с canApprove — «Согласовать план». Тогда
-        // кнопка «Запустить» появится после approve. Если план не требуется
-        // (project.requiresPlanApproval=false) — бригадир может стартовать
-        // сразу, без plan-approval.
+        // заказчик/представитель — «Согласовать план». «Запустить этап»
+        // показываем только исполнителю-бригадиру и только когда план уже
+        // одобрен (или не требуется). Заказчик этап не стартует.
         final showPlanCta = widget.planRequired && !widget.planApproved;
-        if (showPlanCta && canManageStage) {
-          // Inline submit: pending уже есть → disabled-метка, иначе POST.
+        if (showPlanCta && isApproverSide && canDecide) {
+          // Заказчик/представитель: CTA — открыть экран plan-approval
+          // (карточка Approve/Reject). Он согласует, а не отправляет.
+          children.add(
+            Expanded(
+              child: AppButton(
+                label: 'Согласовать план',
+                icon: Icons.task_alt_rounded,
+                onPressed: () => context.push(
+                  AppRoutes.projectPlanApprovalWith(widget.projectId),
+                ),
+              ),
+            ),
+          );
+        } else if (showPlanCta && isForemanSide && canManageStage) {
+          // Бригадир отправляет план заказчику. Inline submit: pending уже
+          // есть → disabled-метка, иначе POST.
           children.add(
             Expanded(
               flex: 2,
@@ -900,34 +952,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
               ),
             ),
           );
-        } else if (showPlanCta && canDecide) {
-          // У заказчика/представителя CTA — открыть экран plan-approval
-          // (там карточка с Approve/Reject). Сюда не попадает foreman.
-          children.add(
-            Expanded(
-              child: AppButton(
-                label: 'Согласовать план',
-                icon: Icons.task_alt_rounded,
-                onPressed: () => context.push(
-                  AppRoutes.projectPlanApprovalWith(widget.projectId),
-                ),
-              ),
-            ),
-          );
-        } else if (canStart) {
-          children.add(
-            Expanded(
-              child: AppButton(
-                label: 'Запустить этап',
-                icon: Icons.play_arrow_rounded,
-                isLoading: _busy,
-                onPressed: _busy ? null : _tryStart,
-              ),
-            ),
-          );
-        }
-      case StageDisplayStatus.lateStart:
-        if (canStart) {
+        } else if (!showPlanCta && isForemanSide && canStart) {
           children.add(
             Expanded(
               child: AppButton(
@@ -941,7 +966,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         }
       case StageDisplayStatus.active:
       case StageDisplayStatus.overdue:
-        if (canPause) {
+        if (isExecutorSide && canPause) {
           children.add(
             Expanded(
               child: AppButton(
@@ -961,14 +986,14 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
             ),
           );
         }
-        if (canRequest) {
+        if (isExecutorSide && canRequest) {
           // ТЗ §2.4: «На приёмку» доступно только когда все шаги завершены
           // (progressCache=100). Backend дублирует проверку — но кнопка
           // disabled даёт мгновенный фидбек без запроса.
+          // flex равный «Паузе» — кнопки делят ширину пополам.
           final canSendToReview = widget.stage.progressCache >= 100;
           children.add(
             Expanded(
-              flex: 2,
               child: AppButton(
                 label: canSendToReview ? 'На проверку' : 'Завершите все шаги',
                 isLoading: _busy,
@@ -983,7 +1008,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           );
         }
       case StageDisplayStatus.paused:
-        if (canPause) {
+        if (isExecutorSide && canPause) {
           children.add(
             Expanded(
               child: AppButton(
@@ -1015,7 +1040,6 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           );
           children.add(
             Expanded(
-              flex: 2,
               child: AppButton(
                 label: 'Принять работу',
                 variant: AppButtonVariant.success,
@@ -1025,7 +1049,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           );
         }
       case StageDisplayStatus.rejected:
-        if (canRequest) {
+        if (isExecutorSide && canRequest) {
           children.add(
             Expanded(
               child: AppButton(

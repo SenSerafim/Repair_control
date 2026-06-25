@@ -158,6 +158,9 @@ export class ToolsController {
       serial: dto.serial,
       purchaseDate: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
       condition: dto.condition,
+      status: dto.status,
+      storageLocation: dto.storageLocation,
+      assignedEmployeeId: dto.assignedEmployeeId,
     });
   }
 

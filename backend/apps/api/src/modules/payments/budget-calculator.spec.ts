@@ -8,6 +8,7 @@ const mkPrisma = () => {
     payments: [] as any[],
     materialRequests: [] as any[],
     selfPurchases: [] as any[],
+    expenses: [] as any[],
     memberships: [] as any[],
     users: [] as any[],
   };
@@ -106,6 +107,15 @@ const mkPrisma = () => {
         }),
       ),
     },
+    expense: {
+      findMany: jest.fn(({ where }: any) =>
+        state.expenses.filter((e: any) => {
+          if (where?.projectId && e.projectId !== where.projectId) return false;
+          if (where?.stageId && e.stageId !== where.stageId) return false;
+          return true;
+        }),
+      ),
+    },
     user: {
       findMany: jest.fn(({ where }: any) => {
         if (!where?.id?.in) return state.users;
@@ -184,6 +194,52 @@ describe('BudgetCalculator', () => {
     expect(b.total.spent).toBe(350_000_00);
     expect(b.stages).toHaveLength(2);
     expect(b.stages[0].work.spent).toBe(300_000_00);
+  });
+
+  it('NEWFIX §5: расходы попадают в spent (materials→материалы, прочее→работы)', async () => {
+    const { prisma, state } = mkPrisma();
+    state.project = { id: 'p1', ownerId: 'cust1' };
+    state.stages = [
+      {
+        id: 's1',
+        projectId: 'p1',
+        title: 'Этап 1',
+        orderIndex: 0,
+        workBudget: BigInt(500_000_00),
+        materialsBudget: BigInt(100_000_00),
+        foremanIds: ['foreman1'],
+      },
+    ];
+    state.payments = [];
+    state.materialRequests = [];
+    state.expenses = [
+      // materials → корзина «Материалы», на этапе s1
+      {
+        id: 'e1',
+        projectId: 'p1',
+        stageId: 's1',
+        category: 'materials',
+        amount: BigInt(10_000_00),
+      },
+      // transport → «Работы», на этапе s1
+      {
+        id: 'e2',
+        projectId: 'p1',
+        stageId: 's1',
+        category: 'transport',
+        amount: BigInt(20_000_00),
+      },
+      // other без этапа → «Работы», проектный
+      { id: 'e3', projectId: 'p1', stageId: null, category: 'other', amount: BigInt(5_000_00) },
+    ];
+
+    const calc = new BudgetCalculator(prisma);
+    const b = await calc.getProjectBudget('p1', { userId: 'cust1', isOwner: true });
+    expect(b.materials.spent).toBe(10_000_00);
+    expect(b.work.spent).toBe(25_000_00); // 20k transport + 5k other
+    expect(b.total.spent).toBe(35_000_00);
+    expect(b.stages[0].materials.spent).toBe(10_000_00);
+    expect(b.stages[0].work.spent).toBe(20_000_00); // только этап s1, без no-stage 5k
   });
 
   it('master видит master-view (свои выплаты, без общего бюджета)', async () => {

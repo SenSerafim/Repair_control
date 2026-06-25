@@ -25,6 +25,7 @@ class StageExecutorsRow extends ConsumerWidget {
     required this.foremanIds,
     required this.masterId,
     required this.canAssign,
+    required this.showMaster,
     required this.onAssignForeman,
     required this.onAssignMaster,
     super.key,
@@ -34,6 +35,7 @@ class StageExecutorsRow extends ConsumerWidget {
   final List<String> foremanIds;
   final String? masterId;
   final bool canAssign;
+  final bool showMaster;
   final VoidCallback onAssignForeman;
   final VoidCallback onAssignMaster;
 
@@ -64,15 +66,17 @@ class StageExecutorsRow extends ConsumerWidget {
                 onTap: canAssign ? onAssignForeman : null,
               ),
             ),
-            Container(width: 1, color: AppColors.n100),
-            Expanded(
-              child: _ExecutorCell(
-                kind: _ExecutorKind.master,
-                member: master,
-                canAssign: canAssign,
-                onTap: canAssign ? onAssignMaster : null,
+            if (showMaster) ...[
+              Container(width: 1, color: AppColors.n100),
+              Expanded(
+                child: _ExecutorCell(
+                  kind: _ExecutorKind.master,
+                  member: master,
+                  canAssign: canAssign,
+                  onTap: canAssign ? onAssignMaster : null,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -124,7 +128,7 @@ class _ExecutorCell extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.x12,
-          vertical: AppSpacing.x10,
+          vertical: AppSpacing.x8,
         ),
         child: Row(
           children: [

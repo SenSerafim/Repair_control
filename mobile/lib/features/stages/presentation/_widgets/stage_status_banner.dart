@@ -16,10 +16,15 @@ class StageStatusBanner extends StatelessWidget {
     required this.data,
     this.onContact,
     this.onAssignContractor,
+    this.isForemanSide = true,
     super.key,
   });
 
   final StageBannerData data;
+
+  /// Запуск этапа — действие бригадира. Для заказчика/представителя текст
+  /// late-start баннера информационный, без призыва «нажмите «Старт»».
+  final bool isForemanSide;
 
   /// Используется только для overdue — открывает чат с заказчиком.
   final VoidCallback? onContact;
@@ -39,7 +44,10 @@ class StageStatusBanner extends StatelessWidget {
         daysLate: daysLate,
         onContact: onContact,
       ),
-      LateStartBanner(:final startedDue) => _LateStart(startedDue: startedDue),
+      LateStartBanner(:final startedDue) => _LateStart(
+        startedDue: startedDue,
+        isForemanSide: isForemanSide,
+      ),
       RejectedBanner(:final reasonText, :final actorName, :final attempt) =>
         _Rejected(
           reasonText: reasonText,
@@ -324,9 +332,10 @@ class _Overdue extends StatelessWidget {
 // LateStart — yellow «Дата старта прошла»
 // ─────────────────────────────────────────────────────────────────────
 class _LateStart extends StatelessWidget {
-  const _LateStart({this.startedDue});
+  const _LateStart({this.startedDue, this.isForemanSide = true});
 
   final DateTime? startedDue;
+  final bool isForemanSide;
 
   @override
   Widget build(BuildContext context) {
@@ -338,8 +347,9 @@ class _LateStart extends StatelessWidget {
       icon: Icons.hourglass_top_rounded,
       iconColor: AppColors.yellowText,
       title: 'Не начат вовремя',
-      subtitle:
-          'Дата старта$dateLabel прошла. Назначьте бригадира и нажмите «Старт».',
+      subtitle: isForemanSide
+          ? 'Дата старта$dateLabel прошла. Назначьте бригадира и нажмите «Старт».'
+          : 'Дата старта$dateLabel прошла. Ожидайте запуска этапа бригадиром.',
       titleColor: AppColors.yellowText,
     );
   }

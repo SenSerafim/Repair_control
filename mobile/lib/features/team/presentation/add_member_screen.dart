@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/access/access_guard.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -89,8 +90,21 @@ class _AddMemberScreenState extends ConsumerState<AddMemberScreen> {
       orElse: () => '...',
     );
     final teamState = ref.watch(teamControllerProvider(widget.projectId));
+    // Заказчик (и его представитель) не управляют мастерами — их заводит
+    // бригадир. Поэтому в быстром списке «недавно добавленных» мастеров им
+    // не показываем (Егор 23.06.2026).
+    final myRole = ref
+        .watch(myMembershipInProjectProvider(widget.projectId))
+        ?.role;
+    final customerSide =
+        myRole == MembershipRole.customer ||
+        myRole == MembershipRole.representative;
     final recentMembers = teamState.maybeWhen<List<Membership>>(
-      data: (s) => s.members.where((m) => m.user != null).take(5).toList(),
+      data: (s) => s.members
+          .where((m) => m.user != null)
+          .where((m) => !customerSide || m.role != MembershipRole.master)
+          .take(5)
+          .toList(),
       orElse: () => const <Membership>[],
     );
 
@@ -285,10 +299,20 @@ class MemberFoundArgs {
     required this.firstName,
     required this.lastName,
     required this.phone,
+    this.specialization,
   });
 
   final String userId;
   final String firstName;
   final String lastName;
   final String phone;
+  final String? specialization;
+
+  MemberFoundArgs copyWith({String? specialization}) => MemberFoundArgs(
+    userId: userId,
+    firstName: firstName,
+    lastName: lastName,
+    phone: phone,
+    specialization: specialization,
+  );
 }

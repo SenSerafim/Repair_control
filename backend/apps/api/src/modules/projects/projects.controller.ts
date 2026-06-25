@@ -304,6 +304,7 @@ export class ProjectsController {
       actorUserId: req.user.userId,
       phone: dto.phone,
       role: dto.role,
+      specialization: dto.specialization,
     });
   }
 
@@ -329,6 +330,7 @@ export class ProjectsController {
       role: dto.role,
       permissions: dto.permissions,
       stageIds: dto.stageIds,
+      specialization: dto.specialization,
     });
   }
 

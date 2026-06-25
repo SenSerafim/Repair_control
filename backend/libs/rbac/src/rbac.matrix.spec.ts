@@ -153,6 +153,32 @@ describe('RBAC matrix — ТЗ §1.5', () => {
     });
   });
 
+  describe('approval.request', () => {
+    it('foreman and master request approvals (any scope)', () => {
+      expect(canAccess('approval.request', foreman())).toBe(true);
+      expect(canAccess('approval.request', master())).toBe(true);
+    });
+    it('customer/representative cannot request non-defect scopes', () => {
+      expect(canAccess('approval.request', customer(true))).toBe(false);
+      expect(canAccess('approval.request', representative())).toBe(false);
+      expect(canAccess('approval.request', { ...customer(true), requestScope: 'extra_work' })).toBe(
+        false,
+      );
+    });
+    it('NEWFIX §4.1: customer-owner and representative may request scope=defect (rework)', () => {
+      expect(canAccess('approval.request', { ...customer(true), requestScope: 'defect' })).toBe(
+        true,
+      );
+      expect(canAccess('approval.request', { ...representative(), requestScope: 'defect' })).toBe(
+        true,
+      );
+      // не-владелец customer (чужой проект) — нет
+      expect(canAccess('approval.request', { ...customer(false), requestScope: 'defect' })).toBe(
+        false,
+      );
+    });
+  });
+
   describe('finance.budget.edit', () => {
     it('only owner or permitted representative', () => {
       expect(canAccess('finance.budget.edit', customer(true))).toBe(true);

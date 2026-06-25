@@ -19,7 +19,9 @@ import '../../stages/domain/stage.dart';
 import '../../team/application/team_controller.dart';
 import '../application/budget_controller.dart';
 import '../application/payments_controller.dart';
+import '../data/expenses_repository.dart';
 import '../domain/budget.dart';
+import '../domain/expense.dart';
 import '../domain/money_flow.dart';
 import '_widgets/budget_hero_card.dart';
 import '_widgets/budget_materials_table.dart';
@@ -29,6 +31,7 @@ import '_widgets/foreman_wallet_card.dart';
 import '_widgets/money_summary_chip.dart';
 import '_widgets/payment_row_card.dart';
 import 'add_expense_sheet.dart';
+import 'expense_detail_sheet.dart';
 import 'payment_sheets.dart';
 
 /// Активный таб бюджета — хранится в ProviderScope `_budgetTabProvider`.
@@ -41,11 +44,24 @@ final _materialsRangeProvider = StateProvider.autoDispose<DateRange>(
   (ref) => const DateRange(),
 );
 
+String _stageFilterLabel(Stage stage) {
+  final title = stage.title.trim();
+  if (title.isNotEmpty) return title;
+  return 'Этап ${stage.orderIndex + 1}';
+}
+
 /// e-budget — главный экран бюджета: hero + 3 таба.
 class BudgetScreen extends ConsumerWidget {
-  const BudgetScreen({required this.projectId, super.key});
+  const BudgetScreen({required this.projectId, this.lockedStageId, super.key});
 
   final String projectId;
+
+  /// Когда задан — экран открыт как «Бюджет этапа» (проект → этап → бюджет).
+  /// Внешний вид 1:1 с бюджетом из меню (Егор 23.06.2026). Отличия только:
+  ///  · заголовок = название этапа;
+  ///  · «Новая выплата» / «+ Расход» предзаполняют stageId этого этапа.
+  /// Всё остальное (hero, табы, фильтры) — как в проектном бюджете.
+  final String? lockedStageId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,11 +84,33 @@ class BudgetScreen extends ConsumerWidget {
       )),
     );
 
+    // Когда экран открыт как «Бюджет этапа» — резолвим название этапа для
+    // заголовка. До загрузки этапов показываем нейтральное «Бюджет этапа».
+    Stage? lockedStage;
+    if (lockedStageId != null) {
+      final list = ref.watch(stagesControllerProvider(projectId)).value;
+      if (list != null) {
+        for (final s in list) {
+          if (s.id == lockedStageId) {
+            lockedStage = s;
+            break;
+          }
+        }
+      }
+    }
+    final screenTitle = lockedStageId == null
+        ? 'Бюджет проекта'
+        : lockedStage == null
+        ? 'Бюджет этапа'
+        : lockedStage.title.trim().isNotEmpty
+        ? 'Этап ${lockedStage.orderIndex + 1}: ${lockedStage.title}'
+        : 'Этап ${lockedStage.orderIndex + 1}';
+
     if (!canViewBudget) {
-      return const AppScaffold(
+      return AppScaffold(
         showBack: true,
-        title: 'Бюджет проекта',
-        body: Center(
+        title: screenTitle,
+        body: const Center(
           child: AppEmptyState(
             title: 'Бюджет недоступен',
             subtitle:
@@ -104,7 +142,7 @@ class BudgetScreen extends ConsumerWidget {
 
     return AppScaffold(
       showBack: true,
-      title: 'Бюджет проекта',
+      title: screenTitle,
       padding: EdgeInsets.zero,
       // NEWFIX Task 8.1 — общий «звоночек» уведомлений в шапке.
       actions: const [AppNotificationsBell()],
@@ -159,7 +197,11 @@ class BudgetScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Header(budget: b, projectId: projectId),
+                  _Header(
+                    budget: b,
+                    projectId: projectId,
+                    lockedStageId: lockedStageId,
+                  ),
                   if (headerZero || b.noStageBudget)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
@@ -208,9 +250,15 @@ class BudgetScreen extends ConsumerWidget {
                             child: AppButton(
                               label: 'Новая выплата',
                               icon: Icons.add_rounded,
-                              onPressed: () => context.push(
-                                '/projects/$projectId/payments/new',
-                              ),
+                              onPressed: () {
+                                final uri = Uri(
+                                  path: '/projects/$projectId/payments/new',
+                                  queryParameters: lockedStageId == null
+                                      ? null
+                                      : {'stageId': lockedStageId},
+                                );
+                                context.push(uri.toString());
+                              },
                             ),
                           ),
                           const SizedBox(width: AppSpacing.x8),
@@ -218,10 +266,26 @@ class BudgetScreen extends ConsumerWidget {
                             child: AppButton(
                               label: '+ Расход',
                               variant: AppButtonVariant.ghost,
-                              onPressed: () => showAddExpenseSheet(
-                                context,
-                                projectId: projectId,
-                              ),
+                              onPressed: () async {
+                                final created = await showAddExpenseSheet(
+                                  context,
+                                  projectId: projectId,
+                                  initialStageId: lockedStageId,
+                                );
+                                if (created != null) {
+                                  ref.invalidate(
+                                    projectBudgetProvider(projectId),
+                                  );
+                                  // Сразу открываем деталь-шит созданного
+                                  // расхода (Егор 23.06.2026).
+                                  if (context.mounted) {
+                                    await showExpenseDetailSheet(
+                                      context,
+                                      created,
+                                    );
+                                  }
+                                }
+                              },
                             ),
                           ),
                         ],
@@ -240,10 +304,15 @@ class BudgetScreen extends ConsumerWidget {
 /// Hero (общий бюджет + 2 mini-card). Для роли foreman сверху добавляется
 /// «Моя касса» с агрегированным остатком (получено − распределено).
 class _Header extends ConsumerWidget {
-  const _Header({required this.budget, required this.projectId});
+  const _Header({
+    required this.budget,
+    required this.projectId,
+    this.lockedStageId,
+  });
 
   final ProjectBudget budget;
   final String projectId;
+  final String? lockedStageId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -278,6 +347,7 @@ class _Header extends ConsumerWidget {
                 ref,
                 projectId: projectId,
                 available: wallet.available,
+                initialStageId: lockedStageId,
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
@@ -381,10 +451,7 @@ class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
                   chips: [
                     const AppFilterPillSpec(id: 'all', label: 'Все этапы'),
                     for (final s in stages)
-                      AppFilterPillSpec(
-                        id: s.id,
-                        label: 'Этап ${s.orderIndex + 1}',
-                      ),
+                      AppFilterPillSpec(id: s.id, label: _stageFilterLabel(s)),
                   ],
                 ),
               ),
@@ -687,10 +754,7 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                   chips: [
                     const AppFilterPillSpec(id: 'all', label: 'Все этапы'),
                     for (final s in stages)
-                      AppFilterPillSpec(
-                        id: s.id,
-                        label: 'Этап ${s.orderIndex + 1}',
-                      ),
+                      AppFilterPillSpec(id: s.id, label: _stageFilterLabel(s)),
                   ],
                 ),
               ),
@@ -1278,7 +1342,14 @@ class _HistoryTab extends ConsumerStatefulWidget {
   ConsumerState<_HistoryTab> createState() => _HistoryTabState();
 }
 
-enum _HistoryFilter { all, advances, distributions, selfpurchases, materials }
+enum _HistoryFilter {
+  all,
+  advances,
+  distributions,
+  selfpurchases,
+  materials,
+  expenses,
+}
 
 class _HistoryTabState extends ConsumerState<_HistoryTab> {
   _HistoryFilter _filter = _HistoryFilter.all;
@@ -1292,6 +1363,12 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
       to: range.to,
     );
     final flowAsync = ref.watch(moneyFlowFilteredProvider(query));
+    // Расходы («+ Расход») — отдельная сущность, не входящая в MoneyFlow.
+    // Подмешиваем их в ленту движения денег: иначе зафиксированный расход
+    // не виден нигде (Егор 23.06.2026).
+    final expenses =
+        ref.watch(projectExpensesProvider(widget.projectId)).value ??
+        const <Expense>[];
     return flowAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.x40),
@@ -1390,6 +1467,21 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
             );
           }
         }
+        if (_filter == _HistoryFilter.all ||
+            _filter == _HistoryFilter.expenses) {
+          for (final e in expenses) {
+            rows.add(
+              _HistoryRow(
+                kind: _HistoryKind.expense,
+                title: e.name.isEmpty ? e.category.displayName : e.name,
+                subtitle: 'расход · ${e.category.displayName}',
+                amount: e.amount,
+                when: e.createdAt,
+                expense: e,
+              ),
+            );
+          }
+        }
         rows.sort((a, b) => b.when.compareTo(a.when));
 
         return Padding(
@@ -1467,7 +1559,14 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                 )
               else
                 for (final r in rows) ...[
-                  _HistoryRowCard(row: r),
+                  if (r.expense != null)
+                    InkWell(
+                      borderRadius: AppRadius.card,
+                      onTap: () => showExpenseDetailSheet(context, r.expense!),
+                      child: _HistoryRowCard(row: r),
+                    )
+                  else
+                    _HistoryRowCard(row: r),
                   const SizedBox(height: AppSpacing.x8),
                 ],
               const SizedBox(height: AppSpacing.x16),
@@ -1484,10 +1583,18 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
     _HistoryFilter.distributions => 'Распределения',
     _HistoryFilter.selfpurchases => 'Самозакуп',
     _HistoryFilter.materials => 'Материалы',
+    _HistoryFilter.expenses => 'Расходы',
   };
 }
 
-enum _HistoryKind { advance, distribution, selfpurchase, material, rejected }
+enum _HistoryKind {
+  advance,
+  distribution,
+  selfpurchase,
+  material,
+  rejected,
+  expense,
+}
 
 class _HistoryRow {
   _HistoryRow({
@@ -1496,12 +1603,16 @@ class _HistoryRow {
     required this.subtitle,
     required this.amount,
     required this.when,
+    this.expense,
   });
   final _HistoryKind kind;
   final String title;
   final String subtitle;
   final int amount;
   final DateTime when;
+
+  /// Заполняется для kind=expense — по тапу открываем деталь-шит чека.
+  final Expense? expense;
 }
 
 class _HistoryRowCard extends StatelessWidget {
@@ -1535,6 +1646,11 @@ class _HistoryRowCard extends StatelessWidget {
         Icons.cancel_outlined,
         AppColors.n500,
         AppColors.n100,
+      ),
+      _HistoryKind.expense => (
+        Icons.receipt_long_outlined,
+        AppColors.brand,
+        AppColors.brandLight,
       ),
     };
     final isRejected = row.kind == _HistoryKind.rejected;

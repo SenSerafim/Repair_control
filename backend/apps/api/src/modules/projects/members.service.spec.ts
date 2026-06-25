@@ -70,6 +70,17 @@ const mkPrisma = () => {
     },
     $transaction: jest.fn(async (fn: any) => fn(prisma)),
     membership: {
+      findFirst: jest.fn(({ where }: any) => {
+        return (
+          memberships.find((m) => {
+            if (where.projectId && m.projectId !== where.projectId) return false;
+            if (where.userId && m.userId !== where.userId) return false;
+            if (where.role && m.role !== where.role) return false;
+            if (where.removedAt === null && m.removedAt) return false;
+            return true;
+          }) ?? null
+        );
+      }),
       findUnique: jest.fn(({ where }: any) => {
         if (where.id) return memberships.find((m) => m.id === where.id) ?? null;
         const { projectId, userId, role } = where.projectId_userId_role;
@@ -201,6 +212,7 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
   it('soft-removed membership реанимируется при повторном add (фикс «уже в проекте»)', async () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
+    memberships.push({ id: 'm-foreman', projectId: 'p1', userId: 'u-foreman', role: 'foreman' });
     // Имитация состояния после leaveTeam: запись осталась с removedAt!=null.
     memberships.push({
       id: 'm-old',
@@ -215,16 +227,17 @@ describe('MembersService — self-foreman prohibition (ТЗ §1.5)', () => {
 
     const result = await svc.addMembership({
       projectId: 'p1',
-      actorUserId: 'u-owner',
+      actorUserId: 'u-foreman',
       userId: 'u-master',
       role: 'master',
     });
 
     // Реанимация той же строки, не дубль.
     expect((result as any).id).toBe('m-old');
-    expect(memberships).toHaveLength(1);
-    expect(memberships[0].removedAt).toBeNull();
-    expect(memberships[0].invitedById).toBe('u-owner');
+    expect(memberships).toHaveLength(2);
+    const restored = memberships.find((m) => m.id === 'm-old')!;
+    expect(restored.removedAt).toBeNull();
+    expect(restored.invitedById).toBe('u-foreman');
   });
 
   it('несуществующий проект → 404', async () => {
@@ -318,8 +331,8 @@ describe('MembersService — real-time membership broadcast (ТЗ §13.2)', () =
   it('addMembership эмитит project.membership.changed со списком recipients', async () => {
     const { prisma, projects, memberships } = mkPrisma();
     projects.set('p1', { id: 'p1', ownerId: 'u-owner' });
-    // У проекта уже есть owner-membership + бригадир: имитируем «добавляем
-    // мастера в существующую команду».
+    // У проекта уже есть owner-membership + бригадир: мастер добавляется
+    // бригадиром, заказчик мастеров не добавляет.
     memberships.push({ id: 'm0', projectId: 'p1', userId: 'u-owner', role: 'customer' });
     memberships.push({ id: 'm1', projectId: 'p1', userId: 'u-foreman1', role: 'foreman' });
     const events = mkEvents();
@@ -327,7 +340,7 @@ describe('MembersService — real-time membership broadcast (ТЗ §13.2)', () =
 
     await svc.addMembership({
       projectId: 'p1',
-      actorUserId: 'u-owner',
+      actorUserId: 'u-foreman1',
       userId: 'u-master',
       role: 'master',
     });

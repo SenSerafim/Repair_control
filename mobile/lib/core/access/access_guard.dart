@@ -44,6 +44,11 @@ class AccessGuard {
       DomainAction.projectArchive,
       DomainAction.projectInviteMember,
       DomainAction.stageManage,
+      // stage.start у заказчика остаётся в матрице (owner = всё в проекте,
+      // как в backend rbac.matrix.ts), НО запуск этапа в UI скрыт от
+      // заказчика — это действие бригадира (см. stage_detail_screen
+      // action-bar, гейт по роли). Менять матрицу не стали: ломает
+      // owner-can-do-everything модель + e2e single-actor флоу (Егор 23.06.2026).
       DomainAction.stageStart,
       DomainAction.stagePause,
       DomainAction.stepManage,

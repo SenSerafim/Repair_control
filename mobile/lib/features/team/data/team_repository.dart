@@ -143,10 +143,16 @@ class TeamRepository {
     required String projectId,
     required String phone,
     required MembershipRole role,
+    String? specialization,
   }) => _call(() async {
     final r = await _dio.post<Map<String, dynamic>>(
       '/api/projects/$projectId/invitations',
-      data: {'phone': phone, 'role': role.name},
+      data: {
+        'phone': phone,
+        'role': role.name,
+        if (specialization != null && specialization.isNotEmpty)
+          'specialization': specialization,
+      },
     );
     return Invitation.parse(r.data!);
   });

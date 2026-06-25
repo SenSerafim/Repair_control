@@ -48,10 +48,17 @@ class StageRequestsTab extends ConsumerWidget {
       data: (items) {
         final filtered = items.where((r) => r.stageId == stageId).toList();
         if (filtered.isEmpty) {
-          return const AppEmptyState(
-            title: 'Нет заявок на этом этапе',
-            subtitle: 'Создайте заявку с экрана «Заявки проекта».',
-            icon: Icons.inventory_2_outlined,
+          // Внутри IndexedStack (StackFit.loose + topStart) AppEmptyState
+          // сжимается по ширине и прижимается влево. SizedBox(width: infinity)
+          // растягивает на всю ширину, чтобы centered-контент реально
+          // центрировался (тот же приём, что в stage_checklist_tab).
+          return const SizedBox(
+            width: double.infinity,
+            child: AppEmptyState(
+              title: 'Нет заявок на этом этапе',
+              subtitle: 'Создайте заявку с экрана «Заявки проекта».',
+              icon: Icons.inventory_2_outlined,
+            ),
           );
         }
         return RefreshIndicator(

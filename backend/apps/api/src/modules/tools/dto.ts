@@ -129,6 +129,28 @@ export class CreateProjectToolDto {
   @IsOptional()
   @IsEnum(TOOL_CONDITIONS)
   condition?: ToolConditionValue;
+
+  @ApiPropertyOptional({
+    enum: ['in_storage', 'on_project', 'with_employee'],
+    description: 'NEWFIX — паритет с «Мои инструменты»; по умолчанию on_project.',
+  })
+  @IsOptional()
+  @IsEnum(['in_storage', 'on_project', 'with_employee'])
+  status?: ToolStatusValue;
+
+  @ApiPropertyOptional({
+    maxLength: 200,
+    description: 'Свободный текст («Склад №1», «Гараж»). Для status=in_storage.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  storageLocation?: string;
+
+  @ApiPropertyOptional({ description: 'Если status=with_employee — ID сотрудника.' })
+  @IsOptional()
+  @IsString()
+  assignedEmployeeId?: string;
 }
 
 /**

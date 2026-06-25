@@ -10,14 +10,20 @@ import '../../auth/application/auth_controller.dart';
 import '../../projects/domain/membership.dart';
 import '../../projects/presentation/money_input.dart';
 import '../../stages/application/stages_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../../team/application/team_controller.dart';
 import '../application/payments_controller.dart';
 
 /// e-advance / s-budget-advance / e-pay-new — создание аванса бригадиру.
 class CreateAdvanceScreen extends ConsumerStatefulWidget {
-  const CreateAdvanceScreen({required this.projectId, super.key});
+  const CreateAdvanceScreen({
+    required this.projectId,
+    this.initialStageId,
+    super.key,
+  });
 
   final String projectId;
+  final String? initialStageId;
 
   @override
   ConsumerState<CreateAdvanceScreen> createState() =>
@@ -31,6 +37,12 @@ class _CreateAdvanceScreenState extends ConsumerState<CreateAdvanceScreen> {
   String? _stageId;
   bool _submitting = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _stageId = widget.initialStageId;
+  }
 
   @override
   void dispose() {
@@ -357,13 +369,19 @@ class _StagePickerAdvance extends ConsumerWidget {
           ),
           for (final s in stages)
             ChoiceChip(
-              label: Text('Этап ${s.orderIndex + 1}'),
+              label: Text(_stageLabel(s)),
               selected: selectedStageId == s.id,
               onSelected: (_) => onChanged(s.id),
             ),
         ],
       ),
     );
+  }
+
+  String _stageLabel(Stage stage) {
+    final title = stage.title.trim();
+    if (title.isNotEmpty) return title;
+    return 'Этап ${stage.orderIndex + 1}';
   }
 }
 

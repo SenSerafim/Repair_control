@@ -24,6 +24,7 @@ export interface GenerateInviteCodeInput {
   role: MembershipRole;
   permissions?: Record<string, boolean>;
   stageIds?: string[];
+  specialization?: string | null;
 }
 
 @Injectable()
@@ -48,25 +49,39 @@ export class InvitationsService {
     role: MembershipRole;
     permissions?: Record<string, boolean>;
     stageIds?: string[];
+    specialization?: string | null;
   }) {
     const project = await this.prisma.project.findUnique({ where: { id: params.projectId } });
     if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
 
-    if (project.ownerId !== params.actorUserId) {
-      const actor = await this.prisma.membership.findFirst({
-        where: { projectId: params.projectId, userId: params.actorUserId },
-        select: { role: true, permissions: true },
-      });
-      if (actor?.role === 'foreman' && params.role !== 'master') {
-        throw new ForbiddenException('foreman can invite only master role');
-      }
-      if (actor?.role === 'representative' && params.role === 'representative') {
-        const actorPerms = (actor.permissions ?? {}) as Record<string, boolean | undefined>;
-        if (!actorPerms.canAddRepresentative) {
-          throw new ForbiddenException(
-            'representative needs canAddRepresentative to invite another representative',
-          );
-        }
+    const actor =
+      project.ownerId === params.actorUserId
+        ? null
+        : await this.prisma.membership.findFirst({
+            where: { projectId: params.projectId, userId: params.actorUserId, removedAt: null },
+            select: { role: true, permissions: true },
+          });
+    const actorRole: MembershipRole =
+      project.ownerId === params.actorUserId ? 'customer' : (actor?.role ?? 'master');
+
+    if (
+      (actorRole === 'customer' || actorRole === 'representative') &&
+      !['representative', 'foreman'].includes(params.role)
+    ) {
+      throw new ForbiddenException('customer side can invite only representative or foreman');
+    }
+    if (actorRole === 'foreman' && params.role !== 'master') {
+      throw new ForbiddenException('foreman can invite only master role');
+    }
+    if (actorRole === 'master') {
+      throw new ForbiddenException('master cannot invite project members');
+    }
+    if (actorRole === 'representative' && params.role === 'representative') {
+      const actorPerms = (actor?.permissions ?? {}) as Record<string, boolean | undefined>;
+      if (!actorPerms.canAddRepresentative) {
+        throw new ForbiddenException(
+          'representative needs canAddRepresentative to invite another representative',
+        );
       }
     }
 
@@ -96,6 +111,7 @@ export class InvitationsService {
             token,
             permissions: (sanitizedPermissions ?? undefined) as Record<string, boolean> | undefined,
             stageIds: params.stageIds ?? [],
+            specialization: params.role === 'master' ? (params.specialization ?? null) : null,
             expiresAt,
           },
         });
@@ -145,21 +161,34 @@ export class InvitationsService {
     // foreman→project.invite_member на уровне роли — здесь сужаем до
     // конкретной приглашаемой роли (ТЗ §1.5: foreman не приглашает
     // representative/foreman). Представитель — только с canAddRepresentative.
-    if (project.ownerId !== input.byUserId) {
-      const actor = await this.prisma.membership.findFirst({
-        where: { projectId: input.projectId, userId: input.byUserId },
-        select: { role: true, permissions: true },
-      });
-      if (actor?.role === 'foreman' && input.role !== 'master') {
-        throw new ForbiddenException('foreman can invite only master role');
-      }
-      if (actor?.role === 'representative' && input.role === 'representative') {
-        const actorPerms = (actor.permissions ?? {}) as Record<string, boolean | undefined>;
-        if (!actorPerms.canAddRepresentative) {
-          throw new ForbiddenException(
-            'representative needs canAddRepresentative to invite another representative',
-          );
-        }
+    const actor =
+      project.ownerId === input.byUserId
+        ? null
+        : await this.prisma.membership.findFirst({
+            where: { projectId: input.projectId, userId: input.byUserId, removedAt: null },
+            select: { role: true, permissions: true },
+          });
+    const actorRole: MembershipRole =
+      project.ownerId === input.byUserId ? 'customer' : (actor?.role ?? 'master');
+
+    if (
+      (actorRole === 'customer' || actorRole === 'representative') &&
+      !['representative', 'foreman'].includes(input.role)
+    ) {
+      throw new ForbiddenException('customer side can invite only representative or foreman');
+    }
+    if (actorRole === 'foreman' && input.role !== 'master') {
+      throw new ForbiddenException('foreman can invite only master role');
+    }
+    if (actorRole === 'master') {
+      throw new ForbiddenException('master cannot invite project members');
+    }
+    if (actorRole === 'representative' && input.role === 'representative') {
+      const actorPerms = (actor?.permissions ?? {}) as Record<string, boolean | undefined>;
+      if (!actorPerms.canAddRepresentative) {
+        throw new ForbiddenException(
+          'representative needs canAddRepresentative to invite another representative',
+        );
       }
     }
 
@@ -180,6 +209,7 @@ export class InvitationsService {
             token: code,
             permissions: (sanitizedPermissions ?? undefined) as Record<string, boolean> | undefined,
             stageIds: input.stageIds ?? [],
+            specialization: input.role === 'master' ? (input.specialization ?? null) : null,
             expiresAt,
           },
           select: {
@@ -187,6 +217,7 @@ export class InvitationsService {
             token: true,
             role: true,
             stageIds: true,
+            specialization: true,
             expiresAt: true,
           },
         });
@@ -268,6 +299,7 @@ export class InvitationsService {
               invitedById: inv.invitedById,
               permissions: membershipPermissions as object,
               stageIds: inv.stageIds ?? [],
+              specialization: inv.role === 'master' ? inv.specialization : null,
             },
           })
         : await tx.membership.create({
@@ -278,6 +310,7 @@ export class InvitationsService {
               invitedById: inv.invitedById,
               permissions: membershipPermissions as object,
               stageIds: inv.stageIds ?? [],
+              specialization: inv.role === 'master' ? inv.specialization : null,
             },
           });
       // Появление foreman включает требование согласования плана (зеркалит

@@ -117,11 +117,17 @@ class TeamController extends FamilyAsyncNotifier<TeamState, String> {
   Future<AuthFailure?> invite({
     required String phone,
     required MembershipRole role,
+    String? specialization,
   }) async {
     try {
       await ref
           .read(teamRepositoryProvider)
-          .invite(projectId: arg, phone: phone, role: role);
+          .invite(
+            projectId: arg,
+            phone: phone,
+            role: role,
+            specialization: specialization,
+          );
       await _refresh();
       return null;
     } on TeamException catch (e) {

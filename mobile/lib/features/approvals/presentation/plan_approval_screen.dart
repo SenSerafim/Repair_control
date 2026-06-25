@@ -11,6 +11,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/utils/money.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../projects/application/project_controller.dart';
+import '../../projects/domain/membership.dart';
 import '../../projects/domain/project.dart';
 import '../../stages/application/stages_controller.dart';
 import '../../stages/domain/stage.dart';
@@ -90,6 +91,13 @@ class _Body extends ConsumerWidget {
         projectId: project.id,
       )),
     );
+    // План отправляет бригадир, согласует заказчик/представитель. canRequest
+    // есть и у заказчика, поэтому submit-кнопку показываем только исполнителю
+    // по роли в проекте — иначе заказчику предлагают отправить план себе же
+    // (Егор 23.06.2026).
+    final isForemanSide =
+        ref.watch(myMembershipInProjectProvider(project.id))?.role ==
+        MembershipRole.foreman;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -98,6 +106,7 @@ class _Body extends ConsumerWidget {
           planApproved: project.planApproved,
           requiresPlanApproval: project.requiresPlanApproval,
           pendingApproval: pendingApproval,
+          isForemanSide: isForemanSide,
         ),
         const SizedBox(height: AppSpacing.x16),
         _Summary(stages: stages, project: project),
@@ -122,6 +131,7 @@ class _Body extends ConsumerWidget {
           pendingApproval: pendingApproval,
           canDecide: canDecide,
           canRequest: canRequest,
+          isForemanSide: isForemanSide,
           planApproved: project.planApproved,
         ),
       ],
@@ -134,11 +144,13 @@ class _StatusBanner extends StatelessWidget {
     required this.planApproved,
     required this.requiresPlanApproval,
     required this.pendingApproval,
+    required this.isForemanSide,
   });
 
   final bool planApproved;
   final bool requiresPlanApproval;
   final Approval? pendingApproval;
+  final bool isForemanSide;
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +177,9 @@ class _StatusBanner extends StatelessWidget {
       return (
         Icons.schedule_outlined,
         'План не согласован',
-        'Отправьте план на согласование заказчику.',
+        isForemanSide
+            ? 'Отправьте план на согласование заказчику.'
+            : 'Бригадир ещё не отправил план на согласование.',
         AppColors.n500,
       );
     }();
@@ -430,6 +444,7 @@ class _Actions extends ConsumerWidget {
     required this.pendingApproval,
     required this.canDecide,
     required this.canRequest,
+    required this.isForemanSide,
     required this.planApproved,
   });
 
@@ -438,6 +453,7 @@ class _Actions extends ConsumerWidget {
   final Approval? pendingApproval;
   final bool canDecide;
   final bool canRequest;
+  final bool isForemanSide;
   final bool planApproved;
 
   @override
@@ -472,7 +488,9 @@ class _Actions extends ConsumerWidget {
       );
     }
 
-    if (!canRequest) return const SizedBox.shrink();
+    // Отправляет план только бригадир. Заказчик/представитель здесь ничего не
+    // отправляют — ждут, пока бригадир пришлёт план (см. _StatusBanner).
+    if (!canRequest || !isForemanSide) return const SizedBox.shrink();
     if (stages.isEmpty) {
       return const AppInlineError(
         message: 'Нечего отправлять — план пуст. Сначала добавьте этапы.',

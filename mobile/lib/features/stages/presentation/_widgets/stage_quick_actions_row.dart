@@ -36,7 +36,7 @@ class StageQuickActionsRow extends StatelessWidget {
         AppSpacing.x16,
         0,
         AppSpacing.x16,
-        AppSpacing.x12,
+        AppSpacing.x8,
       ),
       child: Row(
         children: [

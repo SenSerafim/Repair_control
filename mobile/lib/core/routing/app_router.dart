@@ -453,6 +453,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         pageBuilder: slideUpPage(
                           (_, state) => CreateAdvanceScreen(
                             projectId: state.pathParameters['projectId']!,
+                            initialStageId:
+                                state.uri.queryParameters['stageId'],
                           ),
                         ),
                       ),
@@ -461,6 +463,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         pageBuilder: slideUpPage(
                           (_, state) => CreateAdvanceScreen(
                             projectId: state.pathParameters['projectId']!,
+                            initialStageId:
+                                state.uri.queryParameters['stageId'],
                           ),
                         ),
                       ),
