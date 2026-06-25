@@ -181,7 +181,7 @@ async function main(): Promise<void> {
     create: {
       id: 'demo-project-archived',
       ownerId: customerId,
-      title: 'Офис на Мясницкой (завершён)',
+      title: 'Офис на Мясницкой',
       address: 'г. Москва, ул. Мясницкая 5',
       status: 'archived',
       plannedStart: new Date('2025-01-10T00:00:00Z'),
