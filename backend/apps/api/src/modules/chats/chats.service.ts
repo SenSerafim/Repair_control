@@ -268,7 +268,7 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
-        project: { select: { id: true, title: true } },
+        project: { select: { id: true, title: true, status: true } },
         stage: { select: { id: true, title: true, orderIndex: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -277,19 +277,17 @@ export class ChatsService {
   }
 
   /**
-   * Список всех чатов пользователя через все активные проекты.
+   * Список всех чатов пользователя через все проекты, где он участник.
    * Используется на mobile-табе «Чаты» (агрегированный inbox), чтобы
    * не заставлять пользователя сначала открывать конкретный проект.
    *
-   * Возвращает чаты вместе с `project: { id, title }` — клиент группирует
-   * их по проекту для UX «папка по проекту».
+   * Возвращает чаты вместе с `project: { id, title, status }` — клиент
+   * группирует их по проекту и опускает completed/archived вниз.
    */
   async listForUser(actorUserId: string): Promise<SerializedChat[]> {
     const chats = await this.prisma.chat.findMany({
       where: {
         archivedAt: null,
-        // только проекты, которые ещё активны (не в архиве)
-        project: { archivedAt: null },
         // Егор 23.06.2026: stage-чаты участника тоже в агрегированном inbox.
         type: {
           in: [ChatType.project, ChatType.stage, ChatType.personal, ChatType.group],
@@ -300,13 +298,14 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
-        project: { select: { id: true, title: true } },
+        project: { select: { id: true, title: true, status: true } },
         stage: { select: { id: true, title: true, orderIndex: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
     const filtered = chats.filter(
-      (c): c is typeof c & { project: { id: string; title: string } } => c.project !== null,
+      (c): c is typeof c & { project: { id: string; title: string; status: string } } =>
+        c.project !== null,
     );
     return this.enrichManyWithLastMessageAndUnread(filtered, actorUserId);
   }
@@ -318,7 +317,7 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
-        project: { select: { id: true, title: true } },
+        project: { select: { id: true, title: true, status: true } },
         stage: { select: { id: true, title: true, orderIndex: true } },
       },
     });
@@ -603,7 +602,7 @@ export class ChatsService {
         leftAt: Date | null;
         lastReadAt?: Date | null;
       }[];
-      project?: { id: string; title: string } | null;
+      project?: { id: string; title: string; status?: string } | null;
       stage?: { id: string; title: string; orderIndex: number } | null;
     },
     extras?: {
@@ -622,6 +621,7 @@ export class ChatsService {
         ? {
             id: chat.project.id,
             title: chat.project.title,
+            status: chat.project.status,
           }
         : null,
       stage: chat.stage

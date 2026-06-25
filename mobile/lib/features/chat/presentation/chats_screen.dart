@@ -96,10 +96,21 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
           // Группировка по projectId с сохранением исходного порядка.
           final grouped = <String, List<MyChatItem>>{};
           final projectTitles = <String, String>{};
+          final archivedProjects = <String, bool>{};
           for (final it in filtered) {
             grouped.putIfAbsent(it.projectId, () => []).add(it);
             projectTitles[it.projectId] = it.projectTitle;
+            archivedProjects[it.projectId] =
+                (archivedProjects[it.projectId] ?? false) ||
+                it.isArchivedProject;
           }
+          final groups = grouped.entries.toList()
+            ..sort((a, b) {
+              final aArchived = archivedProjects[a.key] ?? false;
+              final bArchived = archivedProjects[b.key] ?? false;
+              if (aArchived == bArchived) return 0;
+              return aArchived ? 1 : -1;
+            });
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(myChatsProvider),
             child: Column(
@@ -121,9 +132,10 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: [
-                        for (final entry in grouped.entries) ...[
+                        for (final entry in groups) ...[
                           _ProjectGroupHeader(
                             title: projectTitles[entry.key] ?? 'Проект',
+                            archived: archivedProjects[entry.key] ?? false,
                             onTap: () => context.push(
                               AppRoutes.projectDetailWith(entry.key),
                             ),
@@ -208,9 +220,14 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _ProjectGroupHeader extends StatelessWidget {
-  const _ProjectGroupHeader({required this.title, required this.onTap});
+  const _ProjectGroupHeader({
+    required this.title,
+    required this.archived,
+    required this.onTap,
+  });
 
   final String title;
+  final bool archived;
   final VoidCallback onTap;
 
   @override
@@ -236,6 +253,28 @@ class _ProjectGroupHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (archived) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.n200,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: const Text(
+                    'Архивный',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.n700,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,

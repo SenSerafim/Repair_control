@@ -22,6 +22,7 @@ class DemoChatsRepository extends ChatsRepository {
           chat: c,
           projectId: DemoData.projectId,
           projectTitle: DemoData.project.title,
+          projectStatus: DemoData.project.status.name,
         ),
       )
       .toList();

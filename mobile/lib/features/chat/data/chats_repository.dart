@@ -26,11 +26,16 @@ class MyChatItem {
     required this.chat,
     required this.projectId,
     required this.projectTitle,
+    required this.projectStatus,
   });
 
   final Chat chat;
   final String projectId;
   final String projectTitle;
+  final String projectStatus;
+
+  bool get isArchivedProject =>
+      projectStatus == 'completed' || projectStatus == 'archived';
 }
 
 String chatProjectTitleForInbox(String raw) {
@@ -73,7 +78,7 @@ class ChatsRepository {
     return Chat.parse(r.data!);
   });
 
-  /// Все чаты текущего пользователя через все его активные проекты.
+  /// Все чаты текущего пользователя через все его проекты.
   /// Используется на mobile-табе «Чаты» (agg-inbox).
   Future<List<MyChatItem>> listMine() => _call(() async {
     final r = await _dio.get<List<dynamic>>('/api/me/chats');
@@ -91,6 +96,7 @@ class ChatsRepository {
         projectTitle: chatProjectTitleForInbox(
           chat.project?.title ?? project?['title'] as String? ?? '',
         ),
+        projectStatus: project?['status'] as String? ?? '',
       );
     }).toList();
   });
