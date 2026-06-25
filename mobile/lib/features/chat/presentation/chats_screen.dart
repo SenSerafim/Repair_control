@@ -15,6 +15,35 @@ import '../data/chats_repository.dart';
 import '../domain/chat.dart';
 import 'new_chat_sheet.dart';
 
+String _chatTitleText({
+  required Chat chat,
+  String? projectTitle,
+  String? stageTitle,
+  int? stageOrderIndex,
+}) {
+  final customTitle = chat.title?.trim();
+  if (customTitle != null && customTitle.isNotEmpty) return customTitle;
+
+  if (chat.type == ChatType.stage) {
+    final project = projectTitle?.trim();
+    final stage = stageTitle?.trim();
+    final stageLabel = stage != null && stage.isNotEmpty
+        ? stage
+        : stageOrderIndex != null
+        ? 'Этап ${stageOrderIndex + 1}'
+        : null;
+    if (stageLabel != null) {
+      final projectLabel = project != null && project.isNotEmpty
+          ? project
+          : 'Проект';
+      return '$projectLabel - $stageLabel';
+    }
+    return project != null && project.isNotEmpty ? project : 'Проект';
+  }
+
+  return chat.type == ChatType.project ? 'Общий чат проекта' : 'Личный';
+}
+
 class ChatsScreen extends ConsumerStatefulWidget {
   const ChatsScreen({super.key});
 
@@ -83,7 +112,12 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
               ? visible
               : visible.where((it) {
                   final c = it.chat;
-                  final title = (c.title ?? c.type.displayName).toLowerCase();
+                  final title = _chatTitleText(
+                    chat: c,
+                    projectTitle: it.projectTitle,
+                    stageTitle: it.stageTitle,
+                    stageOrderIndex: it.stageOrderIndex,
+                  ).toLowerCase();
                   final project = it.projectTitle.toLowerCase();
                   final preview = (c.lastMessagePreview ?? '').toLowerCase();
                   return title.contains(q) ||
@@ -129,6 +163,9 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
                           for (final it in entry.value)
                             _ChatRow(
                               chat: it.chat,
+                              projectTitle: it.projectTitle,
+                              stageTitle: it.stageTitle,
+                              stageOrderIndex: it.stageOrderIndex,
                               onTap: () => context.push(
                                 AppRoutes.chatDetailWith(it.chat.id),
                               ),
@@ -254,7 +291,7 @@ class ProjectChatsScreen extends ConsumerWidget {
     final projectTitle = ref
         .watch(projectControllerProvider(projectId))
         .maybeWhen(data: (p) => p.title, orElse: () => null);
-    // Этапы проекта — чтобы подписать stage-чаты «Чат этапа · <название>».
+    // Этапы проекта — чтобы подписать stage-чаты «Проект - <название>».
     final stages =
         ref.watch(stagesControllerProvider(projectId)).value ?? const <Stage>[];
     String? stageTitleFor(Chat c) {
@@ -322,6 +359,7 @@ class ProjectChatsScreen extends ConsumerWidget {
               itemBuilder: (_, i) {
                 final row = _ChatRow(
                   chat: visible[i],
+                  projectTitle: projectTitle,
                   subtitle: projectTitle,
                   stageTitle: stageTitleFor(visible[i]),
                   onTap: () =>
@@ -344,7 +382,9 @@ class _ChatRow extends StatelessWidget {
     required this.chat,
     required this.onTap,
     this.subtitle,
+    this.projectTitle,
     this.stageTitle,
+    this.stageOrderIndex,
   });
 
   final Chat chat;
@@ -355,22 +395,17 @@ class _ChatRow extends StatelessWidget {
   /// Егор 23.06.2026. В агрегированном inbox остаётся тип чата.
   final String? subtitle;
 
-  /// Название этапа для stage-чата → заголовок «Чат этапа · <название>»
-  /// (Егор 23.06.2026). Резолвится на клиенте из списка этапов проекта.
+  /// Название этапа для stage-чата → заголовок «Проект - <название>».
   final String? stageTitle;
+  final String? projectTitle;
+  final int? stageOrderIndex;
 
-  String _titleText() {
-    if (chat.type == ChatType.stage) {
-      final st = stageTitle?.trim();
-      if (st != null && st.isNotEmpty) return 'Чат этапа · $st';
-    }
-    return chat.title ??
-        (chat.type == ChatType.project
-            ? 'Общий чат проекта'
-            : chat.type == ChatType.stage
-            ? 'Чат этапа'
-            : 'Личный');
-  }
+  String _titleText() => _chatTitleText(
+    chat: chat,
+    projectTitle: projectTitle,
+    stageTitle: stageTitle,
+    stageOrderIndex: stageOrderIndex,
+  );
 
   String _formatTime(DateTime t) {
     // lastMessageAt в UTC — переводим в локаль (Егор 23.06.2026).

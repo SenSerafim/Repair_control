@@ -1,7 +1,7 @@
 name: repair_control
 description: "Repair Control — мобильное приложение для контроля ремонтных работ."
 publish_to: 'none'
-version: 1.9.7+17
+version: 1.9.8+18
 
 environment:
   sdk: ^3.11.4

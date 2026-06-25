@@ -14,6 +14,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../onboarding/presentation/widgets/tour_anchor.dart';
 import '../../projects/data/projects_repository.dart';
 import '../../projects/domain/membership.dart';
+import '../../stages/application/stages_controller.dart';
 import '../../team/application/team_controller.dart';
 import '../../team/data/team_repository.dart';
 import '../application/chats_controller.dart';
@@ -139,6 +140,10 @@ class _ChatConversationScreenState
     final ownerAsync = projectId == null
         ? null
         : ref.watch(_projectOwnerProvider(projectId));
+    final stages = projectId == null || chat?.type != ChatType.stage
+        ? null
+        : ref.watch(stagesControllerProvider(projectId)).value;
+    final stage = stages?.where((s) => s.id == chat?.stageId).firstOrNull;
     final senders = _SenderIndex.build(
       team: teamAsync?.value,
       owner: ownerAsync?.value,
@@ -147,7 +152,12 @@ class _ChatConversationScreenState
 
     return AppScaffold(
       showBack: true,
-      title: _resolveTitle(chat, ownerAsync?.value),
+      title: _resolveTitle(
+        chat,
+        ownerAsync?.value,
+        stageTitle: stage?.title,
+        stageOrderIndex: stage?.orderIndex,
+      ),
       padding: EdgeInsets.zero,
       body: Column(
         children: [
@@ -240,14 +250,32 @@ class _ChatConversationScreenState
     );
   }
 
-  String _resolveTitle(Chat? chat, _OwnerUser? owner) {
+  String _resolveTitle(
+    Chat? chat,
+    _OwnerUser? owner, {
+    String? stageTitle,
+    int? stageOrderIndex,
+  }) {
     if (chat == null) return 'Чат';
     if (chat.title != null && chat.title!.isNotEmpty) return chat.title!;
     switch (chat.type) {
       case ChatType.project:
         return 'Общий чат проекта';
       case ChatType.stage:
-        return 'Чат этапа';
+        final project = owner?.projectTitle.trim();
+        final stage = stageTitle?.trim();
+        final stageLabel = stage != null && stage.isNotEmpty
+            ? stage
+            : stageOrderIndex != null
+            ? 'Этап ${stageOrderIndex + 1}'
+            : null;
+        if (stageLabel == null) {
+          return project != null && project.isNotEmpty ? project : 'Проект';
+        }
+        final projectLabel = project != null && project.isNotEmpty
+            ? project
+            : 'Проект';
+        return '$projectLabel - $stageLabel';
       case ChatType.group:
         return 'Группа';
       case ChatType.personal:

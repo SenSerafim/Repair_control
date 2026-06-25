@@ -268,6 +268,7 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
+        stage: { select: { id: true, title: true, orderIndex: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -301,6 +302,7 @@ export class ChatsService {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
         project: { select: { id: true, title: true } },
+        stage: { select: { id: true, title: true, orderIndex: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -321,6 +323,7 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
+        stage: { select: { id: true, title: true, orderIndex: true } },
       },
     });
     if (!chat) throw new NotFoundError(ErrorCodes.CHAT_NOT_FOUND, 'chat not found');
@@ -604,6 +607,7 @@ export class ChatsService {
         leftAt: Date | null;
         lastReadAt?: Date | null;
       }[];
+      stage?: { id: string; title: string; orderIndex: number } | null;
     },
     extras?: {
       lastMessageAt?: Date | null;
@@ -617,6 +621,13 @@ export class ChatsService {
       type: chat.type,
       projectId: chat.projectId,
       stageId: chat.stageId,
+      stage: chat.stage
+        ? {
+            id: chat.stage.id,
+            title: chat.stage.title,
+            orderIndex: chat.stage.orderIndex,
+          }
+        : null,
       title: chat.title,
       visibleToCustomer: chat.visibleToCustomer,
       createdById: chat.createdById,
@@ -648,6 +659,7 @@ export class ChatsService {
         leftAt: Date | null;
         lastReadAt?: Date | null;
       }[];
+      stage?: { id: string; title: string; orderIndex: number } | null;
     },
   >(chats: T[], actorUserId: string): Promise<SerializedChat[]> {
     if (chats.length === 0) return [];
