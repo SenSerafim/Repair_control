@@ -548,8 +548,8 @@ class _StagePicker extends ConsumerWidget {
                 label: Text(s.title),
                 selected: selected.contains(s.id),
                 onSelected: (_) => onToggle(s.id),
-                selectedColor: AppColors.brandLight,
-                checkmarkColor: AppColors.brand,
+                selectedColor: AppColors.brand,
+                checkmarkColor: AppColors.n0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                   side: BorderSide(

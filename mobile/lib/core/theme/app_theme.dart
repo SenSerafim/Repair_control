@@ -66,6 +66,39 @@ class AppTheme {
         thickness: 1,
       ),
       iconTheme: const IconThemeData(color: AppColors.n600, size: 20),
+      chipTheme: ChipThemeData(
+        color: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return AppColors.n100;
+          if (states.contains(WidgetState.selected)) return AppColors.brand;
+          return AppColors.n100;
+        }),
+        side: WidgetStateBorderSide.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const BorderSide(color: AppColors.brand, width: 1.5);
+          }
+          return const BorderSide(color: AppColors.n200);
+        }),
+        checkmarkColor: AppColors.n0,
+        labelStyle: TextStyle(
+          color: WidgetStateColor.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) return AppColors.n400;
+            if (states.contains(WidgetState.selected)) return AppColors.n0;
+            return AppColors.n700;
+          }),
+          fontWeight: FontWeight.w700,
+        ),
+        secondaryLabelStyle: TextStyle(
+          color: WidgetStateColor.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) return AppColors.n400;
+            if (states.contains(WidgetState.selected)) return AppColors.n0;
+            return AppColors.n700;
+          }),
+          fontWeight: FontWeight.w700,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+      ),
       // Серафим 08.06.2026: текст в полях ввода должен быть чёрный/тёмный,
       // а не цвета подсказки. По дефолту TextField берёт subtitle1.color =
       // n400 (как у hint) → пользователь не видит что печатает. Жёстко
@@ -149,6 +182,47 @@ class AppTheme {
         thickness: 1,
       ),
       iconTheme: const IconThemeData(color: AppColorsDark.n600, size: 20),
+      chipTheme: ChipThemeData(
+        color: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return AppColorsDark.n100;
+          if (states.contains(WidgetState.selected)) return AppColorsDark.brand;
+          return AppColorsDark.n100;
+        }),
+        side: WidgetStateBorderSide.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const BorderSide(color: AppColorsDark.brand, width: 1.5);
+          }
+          return const BorderSide(color: AppColorsDark.n200);
+        }),
+        checkmarkColor: AppColorsDark.n900,
+        labelStyle: TextStyle(
+          color: WidgetStateColor.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return AppColorsDark.n400;
+            }
+            if (states.contains(WidgetState.selected)) {
+              return AppColorsDark.n900;
+            }
+            return AppColorsDark.n700;
+          }),
+          fontWeight: FontWeight.w700,
+        ),
+        secondaryLabelStyle: TextStyle(
+          color: WidgetStateColor.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return AppColorsDark.n400;
+            }
+            if (states.contains(WidgetState.selected)) {
+              return AppColorsDark.n900;
+            }
+            return AppColorsDark.n700;
+          }),
+          fontWeight: FontWeight.w700,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+      ),
     );
   }
 }
