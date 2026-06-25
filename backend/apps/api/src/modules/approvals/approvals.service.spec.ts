@@ -24,7 +24,7 @@ const NOW = new Date('2026-06-10T12:00:00Z');
 type ProjectRow = {
   id: string;
   ownerId: string;
-  status: 'active' | 'archived';
+  status: 'active' | 'completed' | 'archived';
   planApproved?: boolean;
   requiresPlanApproval?: boolean;
 };

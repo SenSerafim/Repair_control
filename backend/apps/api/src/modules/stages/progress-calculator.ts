@@ -126,14 +126,16 @@ export class ProgressCalculator {
       client.stage.findMany({ where: { projectId } }),
       client.project.findUnique({
         where: { id: projectId },
-        select: { plannedEnd: true, planApproved: true },
+        select: { plannedEnd: true, planApproved: true, status: true },
       }),
     ]);
     const progress = this.computeProjectProgress(stages);
     const color = this.computeProjectSemaphore(stages, project ?? undefined);
+    const status =
+      project?.status === 'archived' ? 'archived' : progress >= 100 ? 'completed' : 'active';
     await client.project.update({
       where: { id: projectId },
-      data: { progressCache: progress, semaphoreCache: color },
+      data: { progressCache: progress, semaphoreCache: color, status },
     });
   }
 

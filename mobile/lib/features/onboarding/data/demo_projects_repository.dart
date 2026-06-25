@@ -13,7 +13,9 @@ class DemoProjectsRepository extends ProjectsRepository {
 
   @override
   Future<List<Project>> list({ProjectStatus? status, String? role}) async {
-    if (status == ProjectStatus.archived) return const [];
+    if (status == ProjectStatus.completed || status == ProjectStatus.archived) {
+      return const [];
+    }
     return [DemoData.project];
   }
 

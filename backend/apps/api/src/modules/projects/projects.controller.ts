@@ -61,7 +61,7 @@ export class ProjectsController {
   @Get()
   async list(
     @Req() req: { user: AuthenticatedUser },
-    @Query('status') status?: 'active' | 'archived',
+    @Query('status') status?: 'active' | 'completed' | 'archived',
     @Query('role') roleQuery?: string,
   ) {
     // Активная роль фильтрует видимость: customer видит только свои

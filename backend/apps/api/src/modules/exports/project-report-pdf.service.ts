@@ -1642,7 +1642,9 @@ export class ProjectReportPdfService {
   }
 
   private fmtProjectStatus(s: string): string {
-    return s === 'archived' ? 'архивный' : 'активный';
+    if (s === 'archived') return 'архивный';
+    if (s === 'completed') return 'завершённый';
+    return 'активный';
   }
   private fmtStageStatus(s: string): string {
     return (

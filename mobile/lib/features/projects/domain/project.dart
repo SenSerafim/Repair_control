@@ -6,6 +6,7 @@ part 'project.freezed.dart';
 
 enum ProjectStatus {
   active,
+  completed,
   archived;
 
   static ProjectStatus fromString(String? raw) {
@@ -115,13 +116,15 @@ Semaphore _semaphore(String? raw) {
 
 extension ProjectX on Project {
   bool get isArchived => status == ProjectStatus.archived;
+  bool get isCompleted =>
+      status == ProjectStatus.completed || progressCache >= 100;
 
   /// Клиентский фикс рассинхрона с `semaphoreCache` (cron 15 мин + recalc по
   /// триггерам). Если у проекта дедлайн прошёл, но кеш ещё green/blue/yellow —
   /// поднимаем флаг сами: `paused`, когда план не утверждён (блокер у
   /// заказчика), иначе `red`. Не трогаем cache=done/red — там бекенд уже прав.
   Semaphore get effectiveSemaphore {
-    if (isArchived) return semaphore;
+    if (isArchived || isCompleted) return semaphore;
     if (semaphore == Semaphore.red || semaphore == Semaphore.plan) {
       return semaphore;
     }

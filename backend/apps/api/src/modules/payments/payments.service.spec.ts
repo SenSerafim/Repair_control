@@ -8,7 +8,11 @@ import {
   PrismaService,
 } from '@app/common';
 
-type ProjectRow = { id: string; ownerId: string; status: 'active' | 'archived' };
+type ProjectRow = {
+  id: string;
+  ownerId: string;
+  status: 'active' | 'completed' | 'archived';
+};
 type MembershipRow = {
   projectId: string;
   userId: string;

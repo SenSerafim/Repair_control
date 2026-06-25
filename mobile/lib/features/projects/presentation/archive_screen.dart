@@ -76,7 +76,12 @@ class ArchiveScreen extends ConsumerWidget {
                         AppArchiveCard(
                           title: items[i].title,
                           meta: _meta(items[i]),
-                          onRestore: () => _restore(context, ref, items[i]),
+                          primaryLabel: items[i].isArchived
+                              ? 'Восстановить'
+                              : 'В архив',
+                          onRestore: items[i].isArchived
+                              ? () => _restore(context, ref, items[i])
+                              : () => _archiveCompleted(context, ref, items[i]),
                           onDownload: () =>
                               _downloadZip(context, ref, items[i]),
                         ),
@@ -107,11 +112,39 @@ class ArchiveScreen extends ConsumerWidget {
   static String _meta(Project p) {
     final df = DateFormat('d MMM yyyy', 'ru');
     final archived = p.archivedAt;
-    final progressLabel = p.progressCache >= 100 ? '· 100%' : '';
+    final progressLabel = p.isCompleted ? '· 100%' : '';
     return [
-      if (archived != null) 'Завершён ${df.format(archived)}',
+      if (archived != null)
+        'В архиве ${df.format(archived)}'
+      else if (p.isCompleted)
+        'Завершён',
       progressLabel,
     ].where((s) => s.isNotEmpty).join(' ');
+  }
+
+  Future<void> _archiveCompleted(
+    BuildContext context,
+    WidgetRef ref,
+    Project project,
+  ) async {
+    final confirmed = await showAppBottomSheet<bool>(
+      context: context,
+      child: _ArchiveCompletedSheet(projectTitle: project.title),
+    );
+    if (confirmed ?? false) {
+      final failure = await ref
+          .read(activeProjectsProvider.notifier)
+          .archiveById(project.id);
+      ref.invalidate(archivedProjectsProvider);
+      if (!context.mounted) return;
+      AppToast.show(
+        context,
+        message: failure == null
+            ? 'Проект отправлен в архив'
+            : failure.userMessage,
+        kind: failure == null ? AppToastKind.success : AppToastKind.error,
+      );
+    }
   }
 
   Future<void> _restore(
@@ -467,6 +500,76 @@ class _RestoreSheet extends StatelessWidget {
         AppButton(
           label: 'Восстановить',
           icon: PhosphorIconsBold.arrowCounterClockwise,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        AppButton(
+          label: 'Отмена',
+          variant: AppButtonVariant.secondary,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+      ],
+    );
+  }
+}
+
+class _ArchiveCompletedSheet extends StatelessWidget {
+  const _ArchiveCompletedSheet({required this.projectTitle});
+
+  final String projectTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: AppColors.greenLight,
+              borderRadius: BorderRadius.circular(AppRadius.r20),
+            ),
+            child: Icon(
+              PhosphorIconsRegular.archive,
+              size: 28,
+              color: AppColors.greenDark,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.x14),
+        const Center(
+          child: Text(
+            'Отправить в архив?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.n900,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Center(
+          child: Text(
+            '«$projectTitle» завершён и останется доступен для ZIP-сводки',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.n500,
+              height: 1.55,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.x20),
+        AppButton(
+          label: 'В архив',
+          icon: PhosphorIconsBold.archive,
           onPressed: () => Navigator.of(context).pop(true),
         ),
         const SizedBox(height: AppSpacing.x8),

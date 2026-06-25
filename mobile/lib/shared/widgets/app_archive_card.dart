@@ -5,13 +5,14 @@ import '../../core/theme/tokens.dart';
 /// Карточка архивного проекта (s-archive).
 ///
 /// Title + meta-line, под ними split-row из 2 кликабельных половин
-/// «Восстановить» (синяя) / «Скачать ZIP» (серая).
+/// primary-action (синяя) / «Скачать ZIP» (серая).
 class AppArchiveCard extends StatelessWidget {
   const AppArchiveCard({
     required this.title,
     required this.meta,
     required this.onRestore,
     required this.onDownload,
+    this.primaryLabel = 'Восстановить',
     super.key,
   });
 
@@ -19,6 +20,7 @@ class AppArchiveCard extends StatelessWidget {
   final String meta;
   final VoidCallback onRestore;
   final VoidCallback onDownload;
+  final String primaryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +65,12 @@ class AppArchiveCard extends StatelessWidget {
               Expanded(
                 child: InkWell(
                   onTap: onRestore,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Center(
                       child: Text(
-                        'Восстановить',
-                        style: TextStyle(
+                        primaryLabel,
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.brand,

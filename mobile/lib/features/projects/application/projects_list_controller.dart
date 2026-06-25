@@ -121,23 +121,36 @@ class ArchivedProjectsController extends AsyncNotifier<List<Project>> {
   @override
   Future<List<Project>> build() async {
     final role = ref.watch(activeRoleProvider);
-    return ref
-        .read(projectsRepositoryProvider)
-        .list(status: ProjectStatus.archived, role: role?.name);
+    return _loadCompletedAndArchived(role?.name);
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     try {
       final role = ref.read(activeRoleProvider);
-      state = AsyncData(
-        await ref
-            .read(projectsRepositoryProvider)
-            .list(status: ProjectStatus.archived, role: role?.name),
-      );
+      state = AsyncData(await _loadCompletedAndArchived(role?.name));
     } on ProjectsException catch (e, st) {
       state = AsyncError(e, st);
     }
+  }
+
+  Future<List<Project>> _loadCompletedAndArchived(String? role) async {
+    final repo = ref.read(projectsRepositoryProvider);
+    final completed = await repo.list(
+      status: ProjectStatus.completed,
+      role: role,
+    );
+    final archived = await repo.list(
+      status: ProjectStatus.archived,
+      role: role,
+    );
+    final byId = <String, Project>{};
+    for (final p in [...completed, ...archived]) {
+      byId[p.id] = p;
+    }
+    final items = byId.values.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return items;
   }
 
   Future<AuthFailure?> restoreById(String projectId) async {
