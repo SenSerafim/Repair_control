@@ -94,6 +94,7 @@ export interface SerializedChat {
   type: ChatType;
   projectId: string | null;
   stageId: string | null;
+  project?: { id: string; title: string } | null;
   stage?: { id: string; title: string; orderIndex: number } | null;
   title: string | null;
   visibleToCustomer: boolean;

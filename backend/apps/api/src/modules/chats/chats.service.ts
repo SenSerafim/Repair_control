@@ -268,6 +268,7 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
+        project: { select: { id: true, title: true } },
         stage: { select: { id: true, title: true, orderIndex: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -283,9 +284,7 @@ export class ChatsService {
    * Возвращает чаты вместе с `project: { id, title }` — клиент группирует
    * их по проекту для UX «папка по проекту».
    */
-  async listForUser(
-    actorUserId: string,
-  ): Promise<(SerializedChat & { project: { id: string; title: string } })[]> {
+  async listForUser(actorUserId: string): Promise<SerializedChat[]> {
     const chats = await this.prisma.chat.findMany({
       where: {
         archivedAt: null,
@@ -309,11 +308,7 @@ export class ChatsService {
     const filtered = chats.filter(
       (c): c is typeof c & { project: { id: string; title: string } } => c.project !== null,
     );
-    const enriched = await this.enrichManyWithLastMessageAndUnread(filtered, actorUserId);
-    return enriched.map((s, i) => ({
-      ...s,
-      project: { id: filtered[i].project.id, title: filtered[i].project.title },
-    }));
+    return this.enrichManyWithLastMessageAndUnread(filtered, actorUserId);
   }
 
   async get(chatId: string, actorUserId: string): Promise<SerializedChat> {
@@ -323,6 +318,7 @@ export class ChatsService {
         participants: {
           select: { userId: true, joinedAt: true, leftAt: true, lastReadAt: true },
         },
+        project: { select: { id: true, title: true } },
         stage: { select: { id: true, title: true, orderIndex: true } },
       },
     });
@@ -607,6 +603,7 @@ export class ChatsService {
         leftAt: Date | null;
         lastReadAt?: Date | null;
       }[];
+      project?: { id: string; title: string } | null;
       stage?: { id: string; title: string; orderIndex: number } | null;
     },
     extras?: {
@@ -621,6 +618,12 @@ export class ChatsService {
       type: chat.type,
       projectId: chat.projectId,
       stageId: chat.stageId,
+      project: chat.project
+        ? {
+            id: chat.project.id,
+            title: chat.project.title,
+          }
+        : null,
       stage: chat.stage
         ? {
             id: chat.stage.id,
@@ -659,6 +662,7 @@ export class ChatsService {
         leftAt: Date | null;
         lastReadAt?: Date | null;
       }[];
+      project?: { id: string; title: string } | null;
       stage?: { id: string; title: string; orderIndex: number } | null;
     },
   >(chats: T[], actorUserId: string): Promise<SerializedChat[]> {

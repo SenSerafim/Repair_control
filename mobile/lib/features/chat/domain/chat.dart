@@ -53,12 +53,48 @@ class ChatParticipant with _$ChatParticipant {
 }
 
 @freezed
+class ChatProjectContext with _$ChatProjectContext {
+  const factory ChatProjectContext({
+    required String id,
+    required String title,
+  }) = _ChatProjectContext;
+
+  static ChatProjectContext? parse(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    return ChatProjectContext(
+      id: raw['id'] as String? ?? '',
+      title: raw['title'] as String? ?? '',
+    );
+  }
+}
+
+@freezed
+class ChatStageContext with _$ChatStageContext {
+  const factory ChatStageContext({
+    required String id,
+    required String title,
+    required int orderIndex,
+  }) = _ChatStageContext;
+
+  static ChatStageContext? parse(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    return ChatStageContext(
+      id: raw['id'] as String? ?? '',
+      title: raw['title'] as String? ?? '',
+      orderIndex: (raw['orderIndex'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+@freezed
 class Chat with _$Chat {
   const factory Chat({
     required String id,
     required ChatType type,
     String? projectId,
     String? stageId,
+    ChatProjectContext? project,
+    ChatStageContext? stage,
     String? title,
     required bool visibleToCustomer,
     required String createdById,
@@ -74,6 +110,8 @@ class Chat with _$Chat {
     type: ChatType.fromString(json['type'] as String?),
     projectId: json['projectId'] as String?,
     stageId: json['stageId'] as String?,
+    project: ChatProjectContext.parse(json['project']),
+    stage: ChatStageContext.parse(json['stage']),
     title: json['title'] as String?,
     visibleToCustomer: json['visibleToCustomer'] as bool? ?? true,
     createdById: json['createdById'] as String? ?? '',
@@ -85,6 +123,46 @@ class Chat with _$Chat {
     lastMessagePreview: json['lastMessagePreview'] as String?,
     lastMessageAt: _d(json['lastMessageAt']),
   );
+}
+
+extension ChatDisplayTitle on Chat {
+  String displayTitle({
+    String? projectTitleFallback,
+    String? stageTitleFallback,
+    String? personalTitleFallback,
+  }) {
+    final customTitle = title?.trim();
+    if (customTitle != null && customTitle.isNotEmpty) return customTitle;
+
+    switch (type) {
+      case ChatType.project:
+        return 'Общий чат проекта';
+      case ChatType.stage:
+        final projectTitle = (project?.title ?? projectTitleFallback)?.trim();
+        final stageTitle = (stage?.title ?? stageTitleFallback)?.trim();
+        final stageLabel = stageTitle != null && stageTitle.isNotEmpty
+            ? stageTitle
+            : stage != null
+            ? 'Этап ${stage!.orderIndex + 1}'
+            : null;
+        if (stageLabel == null) {
+          return projectTitle != null && projectTitle.isNotEmpty
+              ? projectTitle
+              : 'Проект';
+        }
+        final projectLabel = projectTitle != null && projectTitle.isNotEmpty
+            ? projectTitle
+            : 'Проект';
+        return '$projectLabel - $stageLabel';
+      case ChatType.group:
+        return 'Группа';
+      case ChatType.personal:
+        final personalTitle = personalTitleFallback?.trim();
+        return personalTitle != null && personalTitle.isNotEmpty
+            ? personalTitle
+            : 'Личный чат';
+    }
+  }
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

@@ -26,15 +26,11 @@ class MyChatItem {
     required this.chat,
     required this.projectId,
     required this.projectTitle,
-    this.stageTitle,
-    this.stageOrderIndex,
   });
 
   final Chat chat;
   final String projectId;
   final String projectTitle;
-  final String? stageTitle;
-  final int? stageOrderIndex;
 }
 
 class ChatsRepository {
@@ -72,13 +68,14 @@ class ChatsRepository {
       final m = e as Map<String, dynamic>;
       final chat = Chat.parse(m);
       final project = m['project'] as Map<String, dynamic>?;
-      final stage = m['stage'] as Map<String, dynamic>?;
       return MyChatItem(
         chat: chat,
-        projectId: project?['id'] as String? ?? chat.projectId ?? '',
-        projectTitle: project?['title'] as String? ?? '',
-        stageTitle: stage?['title'] as String?,
-        stageOrderIndex: (stage?['orderIndex'] as num?)?.toInt(),
+        projectId:
+            chat.project?.id ??
+            project?['id'] as String? ??
+            chat.projectId ??
+            '',
+        projectTitle: chat.project?.title ?? project?['title'] as String? ?? '',
       );
     }).toList();
   });

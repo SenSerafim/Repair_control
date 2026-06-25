@@ -196,11 +196,345 @@ abstract class _ChatParticipant implements ChatParticipant {
 }
 
 /// @nodoc
+mixin _$ChatProjectContext {
+  String get id => throw _privateConstructorUsedError;
+  String get title => throw _privateConstructorUsedError;
+
+  /// Create a copy of ChatProjectContext
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $ChatProjectContextCopyWith<ChatProjectContext> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ChatProjectContextCopyWith<$Res> {
+  factory $ChatProjectContextCopyWith(
+    ChatProjectContext value,
+    $Res Function(ChatProjectContext) then,
+  ) = _$ChatProjectContextCopyWithImpl<$Res, ChatProjectContext>;
+  @useResult
+  $Res call({String id, String title});
+}
+
+/// @nodoc
+class _$ChatProjectContextCopyWithImpl<$Res, $Val extends ChatProjectContext>
+    implements $ChatProjectContextCopyWith<$Res> {
+  _$ChatProjectContextCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of ChatProjectContext
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? id = null, Object? title = null}) {
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            title: null == title
+                ? _value.title
+                : title // ignore: cast_nullable_to_non_nullable
+                      as String,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$ChatProjectContextImplCopyWith<$Res>
+    implements $ChatProjectContextCopyWith<$Res> {
+  factory _$$ChatProjectContextImplCopyWith(
+    _$ChatProjectContextImpl value,
+    $Res Function(_$ChatProjectContextImpl) then,
+  ) = __$$ChatProjectContextImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String id, String title});
+}
+
+/// @nodoc
+class __$$ChatProjectContextImplCopyWithImpl<$Res>
+    extends _$ChatProjectContextCopyWithImpl<$Res, _$ChatProjectContextImpl>
+    implements _$$ChatProjectContextImplCopyWith<$Res> {
+  __$$ChatProjectContextImplCopyWithImpl(
+    _$ChatProjectContextImpl _value,
+    $Res Function(_$ChatProjectContextImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of ChatProjectContext
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? id = null, Object? title = null}) {
+    return _then(
+      _$ChatProjectContextImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        title: null == title
+            ? _value.title
+            : title // ignore: cast_nullable_to_non_nullable
+                  as String,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$ChatProjectContextImpl implements _ChatProjectContext {
+  const _$ChatProjectContextImpl({required this.id, required this.title});
+
+  @override
+  final String id;
+  @override
+  final String title;
+
+  @override
+  String toString() {
+    return 'ChatProjectContext(id: $id, title: $title)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ChatProjectContextImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.title, title) || other.title == title));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id, title);
+
+  /// Create a copy of ChatProjectContext
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ChatProjectContextImplCopyWith<_$ChatProjectContextImpl> get copyWith =>
+      __$$ChatProjectContextImplCopyWithImpl<_$ChatProjectContextImpl>(
+        this,
+        _$identity,
+      );
+}
+
+abstract class _ChatProjectContext implements ChatProjectContext {
+  const factory _ChatProjectContext({
+    required final String id,
+    required final String title,
+  }) = _$ChatProjectContextImpl;
+
+  @override
+  String get id;
+  @override
+  String get title;
+
+  /// Create a copy of ChatProjectContext
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ChatProjectContextImplCopyWith<_$ChatProjectContextImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+mixin _$ChatStageContext {
+  String get id => throw _privateConstructorUsedError;
+  String get title => throw _privateConstructorUsedError;
+  int get orderIndex => throw _privateConstructorUsedError;
+
+  /// Create a copy of ChatStageContext
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $ChatStageContextCopyWith<ChatStageContext> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ChatStageContextCopyWith<$Res> {
+  factory $ChatStageContextCopyWith(
+    ChatStageContext value,
+    $Res Function(ChatStageContext) then,
+  ) = _$ChatStageContextCopyWithImpl<$Res, ChatStageContext>;
+  @useResult
+  $Res call({String id, String title, int orderIndex});
+}
+
+/// @nodoc
+class _$ChatStageContextCopyWithImpl<$Res, $Val extends ChatStageContext>
+    implements $ChatStageContextCopyWith<$Res> {
+  _$ChatStageContextCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of ChatStageContext
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? title = null,
+    Object? orderIndex = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            title: null == title
+                ? _value.title
+                : title // ignore: cast_nullable_to_non_nullable
+                      as String,
+            orderIndex: null == orderIndex
+                ? _value.orderIndex
+                : orderIndex // ignore: cast_nullable_to_non_nullable
+                      as int,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$ChatStageContextImplCopyWith<$Res>
+    implements $ChatStageContextCopyWith<$Res> {
+  factory _$$ChatStageContextImplCopyWith(
+    _$ChatStageContextImpl value,
+    $Res Function(_$ChatStageContextImpl) then,
+  ) = __$$ChatStageContextImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String id, String title, int orderIndex});
+}
+
+/// @nodoc
+class __$$ChatStageContextImplCopyWithImpl<$Res>
+    extends _$ChatStageContextCopyWithImpl<$Res, _$ChatStageContextImpl>
+    implements _$$ChatStageContextImplCopyWith<$Res> {
+  __$$ChatStageContextImplCopyWithImpl(
+    _$ChatStageContextImpl _value,
+    $Res Function(_$ChatStageContextImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of ChatStageContext
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? title = null,
+    Object? orderIndex = null,
+  }) {
+    return _then(
+      _$ChatStageContextImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        title: null == title
+            ? _value.title
+            : title // ignore: cast_nullable_to_non_nullable
+                  as String,
+        orderIndex: null == orderIndex
+            ? _value.orderIndex
+            : orderIndex // ignore: cast_nullable_to_non_nullable
+                  as int,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$ChatStageContextImpl implements _ChatStageContext {
+  const _$ChatStageContextImpl({
+    required this.id,
+    required this.title,
+    required this.orderIndex,
+  });
+
+  @override
+  final String id;
+  @override
+  final String title;
+  @override
+  final int orderIndex;
+
+  @override
+  String toString() {
+    return 'ChatStageContext(id: $id, title: $title, orderIndex: $orderIndex)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ChatStageContextImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.title, title) || other.title == title) &&
+            (identical(other.orderIndex, orderIndex) ||
+                other.orderIndex == orderIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id, title, orderIndex);
+
+  /// Create a copy of ChatStageContext
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ChatStageContextImplCopyWith<_$ChatStageContextImpl> get copyWith =>
+      __$$ChatStageContextImplCopyWithImpl<_$ChatStageContextImpl>(
+        this,
+        _$identity,
+      );
+}
+
+abstract class _ChatStageContext implements ChatStageContext {
+  const factory _ChatStageContext({
+    required final String id,
+    required final String title,
+    required final int orderIndex,
+  }) = _$ChatStageContextImpl;
+
+  @override
+  String get id;
+  @override
+  String get title;
+  @override
+  int get orderIndex;
+
+  /// Create a copy of ChatStageContext
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ChatStageContextImplCopyWith<_$ChatStageContextImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$Chat {
   String get id => throw _privateConstructorUsedError;
   ChatType get type => throw _privateConstructorUsedError;
   String? get projectId => throw _privateConstructorUsedError;
   String? get stageId => throw _privateConstructorUsedError;
+  ChatProjectContext? get project => throw _privateConstructorUsedError;
+  ChatStageContext? get stage => throw _privateConstructorUsedError;
   String? get title => throw _privateConstructorUsedError;
   bool get visibleToCustomer => throw _privateConstructorUsedError;
   String get createdById => throw _privateConstructorUsedError;
@@ -226,6 +560,8 @@ abstract class $ChatCopyWith<$Res> {
     ChatType type,
     String? projectId,
     String? stageId,
+    ChatProjectContext? project,
+    ChatStageContext? stage,
     String? title,
     bool visibleToCustomer,
     String createdById,
@@ -235,6 +571,9 @@ abstract class $ChatCopyWith<$Res> {
     String? lastMessagePreview,
     DateTime? lastMessageAt,
   });
+
+  $ChatProjectContextCopyWith<$Res>? get project;
+  $ChatStageContextCopyWith<$Res>? get stage;
 }
 
 /// @nodoc
@@ -256,6 +595,8 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
     Object? type = null,
     Object? projectId = freezed,
     Object? stageId = freezed,
+    Object? project = freezed,
+    Object? stage = freezed,
     Object? title = freezed,
     Object? visibleToCustomer = null,
     Object? createdById = null,
@@ -283,6 +624,14 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
                 ? _value.stageId
                 : stageId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            project: freezed == project
+                ? _value.project
+                : project // ignore: cast_nullable_to_non_nullable
+                      as ChatProjectContext?,
+            stage: freezed == stage
+                ? _value.stage
+                : stage // ignore: cast_nullable_to_non_nullable
+                      as ChatStageContext?,
             title: freezed == title
                 ? _value.title
                 : title // ignore: cast_nullable_to_non_nullable
@@ -319,6 +668,34 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
           as $Val,
     );
   }
+
+  /// Create a copy of Chat
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ChatProjectContextCopyWith<$Res>? get project {
+    if (_value.project == null) {
+      return null;
+    }
+
+    return $ChatProjectContextCopyWith<$Res>(_value.project!, (value) {
+      return _then(_value.copyWith(project: value) as $Val);
+    });
+  }
+
+  /// Create a copy of Chat
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $ChatStageContextCopyWith<$Res>? get stage {
+    if (_value.stage == null) {
+      return null;
+    }
+
+    return $ChatStageContextCopyWith<$Res>(_value.stage!, (value) {
+      return _then(_value.copyWith(stage: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -334,6 +711,8 @@ abstract class _$$ChatImplCopyWith<$Res> implements $ChatCopyWith<$Res> {
     ChatType type,
     String? projectId,
     String? stageId,
+    ChatProjectContext? project,
+    ChatStageContext? stage,
     String? title,
     bool visibleToCustomer,
     String createdById,
@@ -343,6 +722,11 @@ abstract class _$$ChatImplCopyWith<$Res> implements $ChatCopyWith<$Res> {
     String? lastMessagePreview,
     DateTime? lastMessageAt,
   });
+
+  @override
+  $ChatProjectContextCopyWith<$Res>? get project;
+  @override
+  $ChatStageContextCopyWith<$Res>? get stage;
 }
 
 /// @nodoc
@@ -361,6 +745,8 @@ class __$$ChatImplCopyWithImpl<$Res>
     Object? type = null,
     Object? projectId = freezed,
     Object? stageId = freezed,
+    Object? project = freezed,
+    Object? stage = freezed,
     Object? title = freezed,
     Object? visibleToCustomer = null,
     Object? createdById = null,
@@ -388,6 +774,14 @@ class __$$ChatImplCopyWithImpl<$Res>
             ? _value.stageId
             : stageId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        project: freezed == project
+            ? _value.project
+            : project // ignore: cast_nullable_to_non_nullable
+                  as ChatProjectContext?,
+        stage: freezed == stage
+            ? _value.stage
+            : stage // ignore: cast_nullable_to_non_nullable
+                  as ChatStageContext?,
         title: freezed == title
             ? _value.title
             : title // ignore: cast_nullable_to_non_nullable
@@ -433,6 +827,8 @@ class _$ChatImpl implements _Chat {
     required this.type,
     this.projectId,
     this.stageId,
+    this.project,
+    this.stage,
     this.title,
     required this.visibleToCustomer,
     required this.createdById,
@@ -451,6 +847,10 @@ class _$ChatImpl implements _Chat {
   final String? projectId;
   @override
   final String? stageId;
+  @override
+  final ChatProjectContext? project;
+  @override
+  final ChatStageContext? stage;
   @override
   final String? title;
   @override
@@ -478,7 +878,7 @@ class _$ChatImpl implements _Chat {
 
   @override
   String toString() {
-    return 'Chat(id: $id, type: $type, projectId: $projectId, stageId: $stageId, title: $title, visibleToCustomer: $visibleToCustomer, createdById: $createdById, createdAt: $createdAt, participants: $participants, unreadCount: $unreadCount, lastMessagePreview: $lastMessagePreview, lastMessageAt: $lastMessageAt)';
+    return 'Chat(id: $id, type: $type, projectId: $projectId, stageId: $stageId, project: $project, stage: $stage, title: $title, visibleToCustomer: $visibleToCustomer, createdById: $createdById, createdAt: $createdAt, participants: $participants, unreadCount: $unreadCount, lastMessagePreview: $lastMessagePreview, lastMessageAt: $lastMessageAt)';
   }
 
   @override
@@ -491,6 +891,8 @@ class _$ChatImpl implements _Chat {
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
             (identical(other.stageId, stageId) || other.stageId == stageId) &&
+            (identical(other.project, project) || other.project == project) &&
+            (identical(other.stage, stage) || other.stage == stage) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.visibleToCustomer, visibleToCustomer) ||
                 other.visibleToCustomer == visibleToCustomer) &&
@@ -517,6 +919,8 @@ class _$ChatImpl implements _Chat {
     type,
     projectId,
     stageId,
+    project,
+    stage,
     title,
     visibleToCustomer,
     createdById,
@@ -542,6 +946,8 @@ abstract class _Chat implements Chat {
     required final ChatType type,
     final String? projectId,
     final String? stageId,
+    final ChatProjectContext? project,
+    final ChatStageContext? stage,
     final String? title,
     required final bool visibleToCustomer,
     required final String createdById,
@@ -560,6 +966,10 @@ abstract class _Chat implements Chat {
   String? get projectId;
   @override
   String? get stageId;
+  @override
+  ChatProjectContext? get project;
+  @override
+  ChatStageContext? get stage;
   @override
   String? get title;
   @override
