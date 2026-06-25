@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/text_styles.dart';
 import '../../core/theme/tokens.dart';
@@ -73,15 +74,26 @@ class _AppScaffoldState extends State<AppScaffold> {
   Widget build(BuildContext context) {
     final hasAppBar =
         widget.title != null || widget.showBack || widget.actions != null;
+    final titleStyle = Theme.of(context).appBarTheme.titleTextStyle;
 
     return Scaffold(
       backgroundColor: widget.backgroundColor ?? AppColors.n50,
       appBar: hasAppBar
           ? AppBar(
+              backgroundColor: AppColors.n0,
+              foregroundColor: AppColors.n800,
+              surfaceTintColor: AppColors.n0,
+              systemOverlayStyle: const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                statusBarBrightness: Brightness.light,
+              ),
               title:
                   widget.titleWidget ??
                   (widget.title == null ? null : Text(widget.title!)),
-              titleTextStyle: AppTextStyles.h1,
+              titleTextStyle: (titleStyle ?? AppTextStyles.h1).copyWith(
+                color: AppColors.n900,
+              ),
               leading:
                   widget.leading ??
                   (widget.showBack

@@ -103,7 +103,7 @@ class _RejectBodyState extends State<_RejectBody> {
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: 'Опишите, что не так...',
-              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
               filled: true,
               fillColor: AppColors.n50,
               contentPadding: const EdgeInsets.all(12),

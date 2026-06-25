@@ -61,7 +61,7 @@ class _MethodologySearchScreenState
                 size: 20,
               ),
               hintText: 'Например, «гипсокартон»',
-              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
               filled: true,
               fillColor: AppColors.n0,
               contentPadding: const EdgeInsets.symmetric(

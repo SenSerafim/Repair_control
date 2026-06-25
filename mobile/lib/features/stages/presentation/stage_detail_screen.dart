@@ -1243,7 +1243,7 @@ class _CreateRegularStepBodyState extends State<_CreateRegularStepBody> {
             onSubmitted: (_) => _submit(),
             decoration: InputDecoration(
               hintText: 'Что нужно сделать?',
-              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
               filled: true,
               fillColor: AppColors.n50,
               contentPadding: const EdgeInsets.all(12),

@@ -602,7 +602,7 @@ class _DateTile extends StatelessWidget {
 
 InputDecoration _dec(String hint) => InputDecoration(
   hintText: hint,
-  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+  hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
   filled: true,
   fillColor: AppColors.n0,
   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

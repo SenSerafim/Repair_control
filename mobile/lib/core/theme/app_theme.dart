@@ -101,12 +101,11 @@ class AppTheme {
       ),
       // Серафим 08.06.2026: текст в полях ввода должен быть чёрный/тёмный,
       // а не цвета подсказки. По дефолту TextField берёт subtitle1.color =
-      // n400 (как у hint) → пользователь не видит что печатает. Жёстко
-      // задаём n800 для value и n400 для hint.
+      // n400 (как у hint) → пользователь не видит что печатает.
       inputDecorationTheme: const InputDecorationTheme(
         hintStyle: TextStyle(
-          color: AppColors.n400,
-          fontWeight: FontWeight.w500,
+          color: AppColors.n500,
+          fontWeight: FontWeight.w600,
         ),
         labelStyle: TextStyle(color: AppColors.n600),
       ),

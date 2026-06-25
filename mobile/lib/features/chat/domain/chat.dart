@@ -132,37 +132,40 @@ extension ChatDisplayTitle on Chat {
     String? personalTitleFallback,
   }) {
     final customTitle = title?.trim();
-    if (customTitle != null && customTitle.isNotEmpty) return customTitle;
 
     switch (type) {
       case ChatType.project:
+        if (customTitle != null && customTitle.isNotEmpty) return customTitle;
         return 'Общий чат проекта';
       case ChatType.stage:
-        final projectTitle = (project?.title ?? projectTitleFallback)?.trim();
         final stageTitle = (stage?.title ?? stageTitleFallback)?.trim();
         final stageLabel = stageTitle != null && stageTitle.isNotEmpty
             ? stageTitle
             : stage != null
             ? 'Этап ${stage!.orderIndex + 1}'
             : null;
-        if (stageLabel == null) {
-          return projectTitle != null && projectTitle.isNotEmpty
-              ? projectTitle
-              : 'Проект';
+        if (stageLabel != null) return stageLabel;
+        if (customTitle != null && customTitle.isNotEmpty) {
+          return _stageTitleFromLegacyChatTitle(customTitle);
         }
-        final projectLabel = projectTitle != null && projectTitle.isNotEmpty
-            ? projectTitle
-            : 'Проект';
-        return '$projectLabel - $stageLabel';
+        return 'Чат этапа';
       case ChatType.group:
+        if (customTitle != null && customTitle.isNotEmpty) return customTitle;
         return 'Группа';
       case ChatType.personal:
+        if (customTitle != null && customTitle.isNotEmpty) return customTitle;
         final personalTitle = personalTitleFallback?.trim();
         return personalTitle != null && personalTitle.isNotEmpty
             ? personalTitle
             : 'Личный чат';
     }
   }
+}
+
+String _stageTitleFromLegacyChatTitle(String title) {
+  final parts = title.split(RegExp(r'\s+-\s+'));
+  final last = parts.isEmpty ? title : parts.last.trim();
+  return last.isEmpty ? title : last;
 }
 
 DateTime? _d(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;

@@ -136,7 +136,7 @@ class _AppInputState extends State<AppInput> {
             cursorColor: AppColors.brand,
             decoration: InputDecoration(
               hintText: widget.placeholder,
-              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

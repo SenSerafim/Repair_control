@@ -258,7 +258,7 @@ class _ConfirmBodyState extends ConsumerState<_ConfirmBody> {
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: 'В чём причина паузы? (минимум 10 символов)',
-              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+              hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
               filled: true,
               fillColor: AppColors.n50,
               contentPadding: const EdgeInsets.all(12),

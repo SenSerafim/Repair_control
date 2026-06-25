@@ -14,7 +14,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
     Future.microtask(_hydrate);
-    return ThemeMode.system;
+    return ThemeMode.light;
   }
 
   Future<void> _hydrate() async {
@@ -30,18 +30,19 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
         return ThemeMode.dark;
       case 'system':
       default:
-        return ThemeMode.system;
+        return ThemeMode.light;
     }
   }
 
   Future<void> setMode(ThemeMode mode) async {
-    if (state == mode) return;
+    final normalized = mode == ThemeMode.system ? ThemeMode.light : mode;
+    if (state == normalized) return;
     final code = switch (mode) {
       ThemeMode.light => 'light',
       ThemeMode.dark => 'dark',
-      ThemeMode.system => 'system',
+      ThemeMode.system => 'light',
     };
     await ref.read(secureStorageProvider).writeThemeMode(code);
-    state = mode;
+    state = normalized;
   }
 }

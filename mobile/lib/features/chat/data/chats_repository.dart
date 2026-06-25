@@ -33,6 +33,19 @@ class MyChatItem {
   final String projectTitle;
 }
 
+String chatProjectTitleForInbox(String raw) {
+  final title = raw.trim();
+  if (title.isEmpty) return title;
+  return title.replaceFirst(
+    RegExp(
+      r'\s*\((?:активн(?:ый|ая|ое|ые)?|просрочен(?:а|о|ы)?|заверш[её]н(?:а|о|ы)?|архив(?:ный|ная|ное|ные)?)\)\s*$',
+      caseSensitive: false,
+      unicode: true,
+    ),
+    '',
+  );
+}
+
 class ChatsRepository {
   ChatsRepository(this._dio);
   final Dio _dio;
@@ -75,7 +88,9 @@ class ChatsRepository {
             project?['id'] as String? ??
             chat.projectId ??
             '',
-        projectTitle: chat.project?.title ?? project?['title'] as String? ?? '',
+        projectTitle: chatProjectTitleForInbox(
+          chat.project?.title ?? project?['title'] as String? ?? '',
+        ),
       );
     }).toList();
   });

@@ -85,7 +85,7 @@ class _Tab extends StatelessWidget {
               Text(
                 label,
                 style: AppTextStyles.subtitle.copyWith(
-                  color: active ? AppColors.brand : AppColors.n400,
+                  color: active ? AppColors.brandDark : AppColors.n600,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -103,7 +103,7 @@ class _Tab extends StatelessWidget {
                   child: Text(
                     badge!,
                     style: AppTextStyles.tiny.copyWith(
-                      color: AppColors.brand,
+                      color: AppColors.brandDark,
                       fontWeight: FontWeight.w800,
                       fontSize: 10,
                     ),

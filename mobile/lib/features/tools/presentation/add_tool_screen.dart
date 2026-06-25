@@ -400,7 +400,7 @@ class _StatusRow extends StatelessWidget {
               Icon(
                 active ? Icons.radio_button_checked : Icons.radio_button_off,
                 size: 18,
-                color: active ? AppColors.brand : AppColors.n400,
+                color: active ? AppColors.brandDark : AppColors.n600,
               ),
               const SizedBox(width: 8),
               Text(

@@ -399,7 +399,7 @@ class _Tab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: active ? AppColors.brand : AppColors.n400,
+                color: active ? AppColors.brandDark : AppColors.n600,
               ),
             ),
           ),

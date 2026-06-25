@@ -472,7 +472,7 @@ class _EditNoteBodyState extends ConsumerState<_EditNoteBody> {
           autofocus: true,
           decoration: InputDecoration(
             hintText: 'Текст заметки',
-            hintStyle: AppTextStyles.body.copyWith(color: AppColors.n400),
+            hintStyle: AppTextStyles.body.copyWith(color: AppColors.n500),
             filled: true,
             fillColor: AppColors.n50,
             contentPadding: const EdgeInsets.all(14),

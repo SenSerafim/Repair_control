@@ -77,7 +77,7 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
           final visible = items;
 
           // ТЗ §10.3 — «Поиск по названию чата». Case-insensitive фильтр
-          // в-памяти по title чата, projectTitle и last-message preview.
+          // в-памяти по названию чата, projectTitle и last-message preview.
           final q = _query.trim().toLowerCase();
           final filtered = q.isEmpty
               ? visible
@@ -180,6 +180,10 @@ class _SearchBar extends StatelessWidget {
                   isCollapsed: true,
                   border: InputBorder.none,
                   hintText: 'Поиск по чатам',
+                  hintStyle: TextStyle(
+                    color: AppColors.n500,
+                    fontWeight: FontWeight.w600,
+                  ),
                   contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -257,7 +261,7 @@ class ProjectChatsScreen extends ConsumerWidget {
     final projectTitle = ref
         .watch(projectControllerProvider(projectId))
         .maybeWhen(data: (p) => p.title, orElse: () => null);
-    // Этапы проекта — чтобы подписать stage-чаты «Проект - <название>».
+    // Этапы проекта — чтобы подписать stage-чаты названием этапа.
     final stages =
         ref.watch(stagesControllerProvider(projectId)).value ?? const <Stage>[];
     String? stageTitleFor(Chat c) {
