@@ -153,10 +153,16 @@ export class ExportService {
         finishedAt: this.clock.now(),
       },
     });
+    // actorId=null — это системное событие воркера, а не действие
+    // пользователя. NotificationRouter фильтрует получателей по
+    // `u !== ev.actorId` (не уведомлять автора события), и при
+    // actorId=requestedById единственный получатель (он же заявитель)
+    // вылетал из списка → NotificationLog пустой, юзер не знал что ZIP
+    // готов (Егор 29.06.2026).
     await this.feed.emit({
       kind: 'export_completed',
       projectId: job.projectId,
-      actorId: job.requestedById,
+      actorId: null,
       payload: { jobId, kind: job.kind, sizeBytes },
     });
   }
@@ -166,10 +172,12 @@ export class ExportService {
       where: { id: jobId },
       data: { status: ExportStatus.failed, error, finishedAt: this.clock.now() },
     });
+    // См. комментарий в markDone — actorId=null для системных событий
+    // воркера, иначе заявитель вылетает из списка получателей.
     await this.feed.emit({
       kind: 'export_failed',
       projectId: job.projectId,
-      actorId: job.requestedById,
+      actorId: null,
       payload: { jobId, error },
     });
   }
