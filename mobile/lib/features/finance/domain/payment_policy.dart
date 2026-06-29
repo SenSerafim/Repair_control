@@ -34,8 +34,10 @@ class PaymentPolicy {
         payment.toUserId == meId;
   }
 
-  /// «Распределение аванса» (просмотр) — родительский аванс с уже созданными
-  /// дочерними выплатами, либо я отправитель/получатель.
+  /// «Распределение аванса» (просмотр) — внутренняя кухня бригадира
+  /// (получателя). Заказчик-отправитель этот блок не видит (Егор 29.06.2026
+  /// — раньше кнопка показывалась и заказчику, что приводило к пустому
+  /// шиту с яркой пометкой «вам это не положено»).
   static bool canViewDistribution({
     required Payment payment,
     required String? meId,
@@ -43,8 +45,6 @@ class PaymentPolicy {
     if (meId == null) return false;
     if (payment.kind != PaymentKind.advance) return false;
     if (payment.parentPaymentId != null) return false;
-    return payment.children.isNotEmpty ||
-        payment.toUserId == meId ||
-        payment.fromUserId == meId;
+    return payment.toUserId == meId;
   }
 }

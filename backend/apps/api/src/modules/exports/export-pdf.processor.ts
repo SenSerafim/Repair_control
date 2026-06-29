@@ -207,7 +207,20 @@ export class ExportProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job, err: Error): void {
+  async onFailed(job: Job<{ jobId: string }>, err: Error): Promise<void> {
     this.logger.error(`BullMQ job ${job.id} failed: ${err.message}`);
+    // Гарантируем, что DB-запись ExportJob не остаётся в running/queued после
+    // окончательного провала BullMQ-задачи (включая сценарии stalled/крэша
+    // контейнера, где блок try/catch в process() не успел отработать).
+    const jobId = job.data?.jobId;
+    if (!jobId) return;
+    try {
+      const row = await this.prisma.exportJob.findUnique({ where: { id: jobId } });
+      if (row && row.status !== 'done' && row.status !== 'failed') {
+        await this.exports.markFailed(jobId, err.message);
+      }
+    } catch (e) {
+      this.logger.error(`failed to persist export failure for ${jobId}: ${(e as Error).message}`);
+    }
   }
 }

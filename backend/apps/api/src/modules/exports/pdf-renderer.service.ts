@@ -37,10 +37,18 @@ export class PdfRendererService {
       const chromium = require('@sparticuz/chromium');
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const puppeteer = require('puppeteer-core');
+      // На Alpine (musl) бинарь @sparticuz/chromium (glibc) падает с
+      // `Error relocating /tmp/chromium: __res_init: symbol not found`.
+      // В Dockerfile установлен системный /usr/bin/chromium-browser (musl) и
+      // проброшен через PUPPETEER_EXECUTABLE_PATH — используем его. Fallback
+      // на @sparticuz оставляем для serverless/dev-окружения без системного
+      // chromium.
+      const executablePath =
+        process.env.PUPPETEER_EXECUTABLE_PATH || (await chromium.executablePath());
       const browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
+        executablePath,
         headless: true,
       });
       try {

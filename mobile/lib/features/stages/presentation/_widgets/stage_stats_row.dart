@@ -71,20 +71,23 @@ class _Cell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
+        // Компактная стат-ячейка (Егор 29.06.2026): vertical x8→x4,
+        // fontSize 18→15, gap 2→0 — сэкономили ~30px высоты шапки.
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               value,
               style: TextStyle(
                 fontFamily: 'Manrope',
-                fontSize: 18,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: color ?? AppColors.n800,
-                letterSpacing: -0.5,
+                letterSpacing: -0.3,
+                height: 1.1,
               ),
             ),
-            const SizedBox(height: 2),
             Text(label, style: AppTextStyles.tiny),
           ],
         ),

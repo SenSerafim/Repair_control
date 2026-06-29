@@ -264,10 +264,12 @@ class _BodyState extends ConsumerState<_Body> {
             'Заказчик ещё не одобрил план этапов. До одобрения '
             'старт работ заблокирован.',
         actionLabel: 'Показать план целиком',
-        // Раньше onAction был no-op — кнопка казалась рабочей, но ничего
-        // не делала. Шлём на глобальный список согласований, отфильтрованный
-        // по этому проекту его scope.
-        onAction: () => context.push(AppRoutes.approvals),
+        // Шлём на проектный экран согласования плана — там карточка
+        // Approve/Reject и полный список этапов. Раньше пушили на
+        // /approvals — глобального роута не существовало, GoRouter
+        // вываливался на «Page Not Found» (Егор 29.06.2026).
+        onAction: () =>
+            context.push(AppRoutes.projectPlanApprovalWith(p.id)),
       );
     }
     return switch (p.effectiveSemaphore) {

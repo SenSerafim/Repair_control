@@ -38,6 +38,25 @@ class ApprovalsRepository {
         .toList();
   });
 
+  /// «Мои согласования» — по всем проектам, где пользователь адресат или
+  /// заявитель. Backend: GET /api/me/approvals — возвращает Approval-объекты
+  /// с дополнительным полем `projectTitle` для отображения шапки в списке.
+  Future<List<MyApprovalItem>> listMine({
+    ApprovalScope? scope,
+    ApprovalStatus? status,
+  }) => _call(() async {
+    final r = await _dio.get<List<dynamic>>(
+      '/api/me/approvals',
+      queryParameters: {
+        if (scope != null) 'scope': scope.apiValue,
+        if (status != null) 'status': status.apiValue,
+      },
+    );
+    return r.data!
+        .map((e) => MyApprovalItem.parse(e as Map<String, dynamic>))
+        .toList();
+  });
+
   Future<Approval> get(String id) => _call(() async {
     final r = await _dio.get<Map<String, dynamic>>('/api/approvals/$id');
     return Approval.parse(r.data!);
@@ -196,3 +215,20 @@ class ApprovalAttachmentPresign {
 final approvalsRepositoryProvider = Provider<ApprovalsRepository>((ref) {
   return ApprovalsRepository(ref.read(dioProvider));
 });
+
+/// Элемент списка «Мои согласования» — Approval плюс заголовок проекта,
+/// инлайн с бэкенда (`/api/me/approvals`).
+class MyApprovalItem {
+  const MyApprovalItem({required this.approval, required this.projectTitle});
+
+  factory MyApprovalItem.parse(Map<String, dynamic> json) {
+    final raw = (json['projectTitle'] as String?)?.trim();
+    return MyApprovalItem(
+      approval: Approval.parse(json),
+      projectTitle: raw == null || raw.isEmpty ? 'Проект' : raw,
+    );
+  }
+
+  final Approval approval;
+  final String projectTitle;
+}

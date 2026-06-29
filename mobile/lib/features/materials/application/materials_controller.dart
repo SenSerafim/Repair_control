@@ -24,7 +24,7 @@ class MaterialsController
 
   MaterialsRepository get _repo => ref.read(materialsRepositoryProvider);
 
-  void _upsert(MaterialRequest r) {
+  void upsert(MaterialRequest r) {
     final cur = state.value ?? const <MaterialRequest>[];
     final exists = cur.any((x) => x.id == r.id);
     state = AsyncData(
@@ -48,7 +48,7 @@ class MaterialsController
         stageId: stageId,
         comment: comment,
       );
-      _upsert(r);
+      upsert(r);
       return null;
     } on MaterialsException catch (e) {
       return e.failure;
@@ -103,8 +103,12 @@ class MaterialDetailController
   MaterialsRepository get _repo => ref.read(materialsRepositoryProvider);
 
   /// Обновляет state на новую версию заявки (после mark-delivered / accept-*).
+  /// Дублируем апдейт в проектный список (`materialsControllerProvider`) —
+  /// экран детали читает срез именно оттуда, и без upsert UI не обновлялся
+  /// до жёсткой перезагрузки (Егор 29.06.2026).
   void _setRequest(MaterialRequest r) {
     state = AsyncData(r);
+    ref.read(materialsControllerProvider(r.projectId).notifier).upsert(r);
   }
 
   /// Master/foreman/customer: «Доставлено». ТЗ NEWFIX §5.7 шаг 1.

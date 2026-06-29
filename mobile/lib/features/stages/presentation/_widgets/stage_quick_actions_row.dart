@@ -32,11 +32,12 @@ class StageQuickActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
+      // Компактный нижний отступ (Егор 29.06.2026): x8→x4.
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.x16,
         0,
         AppSpacing.x16,
-        AppSpacing.x8,
+        AppSpacing.x4,
       ),
       child: Row(
         children: [

@@ -258,12 +258,15 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               // _StageHeader удалён: title+badge переехали в AppBar
               // (titleWidget). Назначение бригадира/мастера доступно через
               // «+» в StageExecutorsRow.
+              // ТЗ-фронт §6 / Егор 29.06.2026 — компактная шапка этапа:
+              // отступы между блоками снижены, чтобы вся секция выше табов
+              // занимала не больше ~20% экрана.
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.x16,
-                  AppSpacing.x8,
+                  AppSpacing.x6,
                   AppSpacing.x16,
-                  AppSpacing.x8,
+                  AppSpacing.x4,
                 ),
                 child: StageStatsRow(
                   progressPct: stage.progressCache,
@@ -280,7 +283,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   AppSpacing.x16,
                   0,
                   AppSpacing.x16,
-                  AppSpacing.x8,
+                  AppSpacing.x4,
                 ),
                 child: StageExecutorsRow(
                   projectId: widget.projectId,
@@ -305,19 +308,36 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               // статус-баннером/табами. Чат-шим (`/stages/:stageId/chat`)
               // резолвит chatId; бюджет — фильтрованный срез из общего
               // бюджета проекта (`stages/:stageId/budget`).
+              // Braced-body, чтобы колбэк реально возвращал void: AppButton
+              // ловит Future от context.push и уходит в busy-спиннер. Для
+              // чата это особенно критично — chat-shim делает
+              // pushReplacement, и оригинальный push.Future в go_router
+              // 14.x теряется → кнопка зависает в загрузке навсегда после
+              // возврата на экран (Егор 29.06.2026).
               StageQuickActionsRow(
-                onOpenChat: () => context.push('/stages/${stage.id}/chat'),
-                onOpenBudget: () => context.push(
-                  '/projects/${widget.projectId}/stages/${stage.id}/budget',
-                ),
+                onOpenChat: () {
+                  context.push('/stages/${stage.id}/chat');
+                },
+                onOpenBudget: () {
+                  context.push(
+                    '/projects/${widget.projectId}/stages/${stage.id}/budget',
+                  );
+                },
               ),
-              if (StageBannerData.fromStage(stage, display) != null)
+              // Баннер `WaitingNoContractor` подавляем — его «Бригадир не
+              // назначен» дословно дублирует StageExecutorsRow с CTA «Назначить»
+              // (Егор 29.06.2026, оптимизация шапки до ~20% экрана). Остальные
+              // баннеры (Active/Paused/Review/Overdue/LateStart/Rejected/Done)
+              // несут уникальный контекст — оставляем.
+              if (StageBannerData.fromStage(stage, display) != null &&
+                  StageBannerData.fromStage(stage, display)
+                      is! WaitingNoContractorBanner)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.x16,
                     0,
                     AppSpacing.x16,
-                    AppSpacing.x8,
+                    AppSpacing.x4,
                   ),
                   child: StageStatusBanner(
                     data: StageBannerData.fromStage(stage, display)!,
@@ -918,14 +938,20 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
         // показываем только исполнителю-бригадиру и только когда план уже
         // одобрен (или не требуется). Заказчик этап не стартует.
         final showPlanCta = widget.planRequired && !widget.planApproved;
-        if (showPlanCta && isApproverSide && canDecide) {
+        if (showPlanCta &&
+            isApproverSide &&
+            canDecide &&
+            widget.pendingPlanApproval) {
           // Заказчик/представитель: CTA — открыть экран plan-approval
           // (карточка Approve/Reject). Он согласует, а не отправляет.
+          // Без иконки — с ней лейбл визуально смещался вправо от центра.
+          // Гейт `pendingPlanApproval`: пока бригадир не отправил план,
+          // согласовывать нечего — иначе кнопка ведёт на экран «План не
+          // согласован, бригадир ещё не отправил» (Егор 29.06.2026).
           children.add(
             Expanded(
               child: AppButton(
                 label: 'Согласовать план',
-                icon: Icons.task_alt_rounded,
                 onPressed: () => context.push(
                   AppRoutes.projectPlanApprovalWith(widget.projectId),
                 ),
@@ -1077,12 +1103,14 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     }
 
     if (children.isEmpty) return const SizedBox.shrink();
+    // Егор 29.06.2026: нижний отступ x32+4=36 → x12=12 — кнопка ActionBar
+    // больше не «съедает» лишнее пространство над нижним меню.
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.x16,
         AppSpacing.x12,
         AppSpacing.x16,
-        AppSpacing.x32 + 4,
+        AppSpacing.x12,
       ),
       decoration: const BoxDecoration(
         color: AppColors.n0,

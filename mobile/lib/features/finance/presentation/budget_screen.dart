@@ -680,7 +680,35 @@ class _MaterialsTabState extends ConsumerState<_MaterialsTab> {
                   ),
                 )
                 .toList();
-        final rows = [...allRows, ...spRows]
+        // Расходы категории `materials` («+ Расход» → Материалы) — отдельная
+        // сущность, не входящая в MoneyFlow. Подмешиваем сюда же, иначе
+        // пользователь видит расход в «Истории» и в общем счётчике, а во
+        // вкладке «Материалы» его нет (Егор 29.06.2026).
+        final expenses =
+            ref.watch(projectExpensesProvider(widget.projectId)).value ??
+            const <Expense>[];
+        final expenseRows = expenses
+            .where((e) => e.category == ExpenseCategory.materials)
+            .where((e) => _stageId == 'all' || e.stageId == _stageId)
+            .where(
+              (e) =>
+                  (range.from == null ||
+                      !e.createdAt.isBefore(range.from!)) &&
+                  (range.to == null || !e.createdAt.isAfter(range.to!)),
+            )
+            .map((e) {
+              final cm = e.comment?.trim() ?? '';
+              return BudgetMaterialsRow(
+                title: e.name.isEmpty
+                    ? ExpenseCategory.materials.displayName
+                    : e.name,
+                subtitle: cm.isEmpty ? 'расход · Материалы' : 'расход · $cm',
+                qtyLabel: '—',
+                amount: e.amount,
+              );
+            })
+            .toList();
+        final rows = [...allRows, ...spRows, ...expenseRows]
             .where(
               (r) =>
                   _search.isEmpty ||

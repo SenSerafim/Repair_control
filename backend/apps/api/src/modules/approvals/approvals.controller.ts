@@ -52,6 +52,23 @@ export class ApprovalsController {
     return this.approvals.listForProject(projectId, { scope, status, addresseeId });
   }
 
+  /**
+   * «Мои согласования» — все согласования по всем проектам, где пользователь
+   * выступает адресатом или заявителем. RBAC через @RequireAccess не нужен:
+   * фильтр по userId внутри service уже ограничивает выдачу.
+   *
+   * Каждый элемент дополнен полем `projectTitle` — мобильному клиенту нужно
+   * показать заголовок проекта, а Approval-сущность напрямую его не несёт.
+   */
+  @Get('me/approvals')
+  async listMine(
+    @Req() req: { user: AuthenticatedUser },
+    @Query('scope') scope?: ApprovalScope,
+    @Query('status') status?: ApprovalStatus,
+  ) {
+    return this.approvals.listForUserWithProject(req.user.userId, { scope, status });
+  }
+
   @Get('approvals/:id')
   async get(@Param('id') id: string) {
     return this.approvals.get(id);

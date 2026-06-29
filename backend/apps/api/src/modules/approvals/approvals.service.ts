@@ -173,6 +173,50 @@ export class ApprovalsService {
     });
   }
 
+  /**
+   * Все согласования пользователя по всем проектам, где он адресат ИЛИ
+   * автор запроса. Используется экраном «Мои согласования» в профиле.
+   * RBAC отдельно не требуется: фильтрация по userId уже ограничивает
+   * выдачу данными, в которых пользователь явно фигурирует.
+   */
+  async listForUser(
+    userId: string,
+    filter?: { scope?: ApprovalScope; status?: ApprovalStatus },
+  ): Promise<Approval[]> {
+    return this.prisma.approval.findMany({
+      where: {
+        OR: [{ addresseeId: userId }, { requestedById: userId }],
+        ...(filter?.scope ? { scope: filter.scope } : {}),
+        ...(filter?.status ? { status: filter.status } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Как listForUser, но возвращает Approval с инлайн полем projectTitle —
+   * мобильный клиент группирует «Мои согласования» по проекту и без title
+   * вынужден был бы делать N лишних запросов.
+   */
+  async listForUserWithProject(
+    userId: string,
+    filter?: { scope?: ApprovalScope; status?: ApprovalStatus },
+  ): Promise<Array<Approval & { projectTitle: string }>> {
+    const rows = await this.prisma.approval.findMany({
+      where: {
+        OR: [{ addresseeId: userId }, { requestedById: userId }],
+        ...(filter?.scope ? { scope: filter.scope } : {}),
+        ...(filter?.status ? { status: filter.status } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { project: { select: { title: true } } },
+    });
+    return rows.map((r) => {
+      const { project, ...approval } = r as Approval & { project: { title: string } };
+      return { ...(approval as Approval), projectTitle: project.title };
+    });
+  }
+
   async decide(approvalId: string, input: DecideInput): Promise<Approval> {
     const approval = await this.prisma.approval.findUnique({
       where: { id: approvalId },

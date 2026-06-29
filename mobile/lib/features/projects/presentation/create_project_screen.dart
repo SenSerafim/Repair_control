@@ -641,19 +641,21 @@ class _SelectedStageRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          ReorderableDelayedDragStartListener(
+          // Immediate-листенер: драг стартует сразу при касании хэндла.
+          // С Delayed-версией Tooltip перехватывал long-press и драг не
+          // запускался вообще (Егор 29.06.2026 — баг на step 3 wizard'а).
+          // Тултип убран: иконка `dotsSixVertical` сама по себе понятна,
+          // плюс на step 3 есть подпись «Перетащите для смены порядка».
+          ReorderableDragStartListener(
             index: index,
-            child: Tooltip(
-              message: 'Перетащить этап',
-              child: Container(
-                width: 32,
-                height: 40,
-                alignment: Alignment.center,
-                child: Icon(
-                  PhosphorIconsRegular.dotsSixVertical,
-                  size: 20,
-                  color: AppColors.n500,
-                ),
+            child: Container(
+              width: 32,
+              height: 40,
+              alignment: Alignment.center,
+              child: Icon(
+                PhosphorIconsRegular.dotsSixVertical,
+                size: 20,
+                color: AppColors.n500,
               ),
             ),
           ),

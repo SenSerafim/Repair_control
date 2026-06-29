@@ -68,11 +68,17 @@ class _StageChecklistTabState extends ConsumerState<StageChecklistTab> {
     final display = widget.display;
     final key = StepsKey(projectId: stage.projectId, stageId: stage.id);
     final async = ref.watch(stepsControllerProvider(key));
-    final locked =
-        display == StageDisplayStatus.pending && stage.foremanIds.isEmpty;
+    // Егор 29.06.2026: убрали блок «нет бригадира → locked». Он мешал
+    // план-сетапу — первый шаг создавался через empty-state CTA (там lock
+    // не действует), а дальше UI зашивался: тап в шаг и «+ Добавить шаг»
+    // переставали работать. Бэкенд create/list шагов без бригадира не
+    // запрещает; «нет бригадира» теперь сигналит только StageExecutorsRow.
+    // Toggle-done всё ещё ограничен запретом со стороны бэка (этап должен
+    // быть active).
+    const locked = false;
     final canAddStep = widget.onAddStep != null;
-    // Drag разрешён когда есть права + этап не залочен + поиск пуст.
-    final canReorder = canAddStep && !locked && _query.isEmpty;
+    // Drag разрешён когда есть права + поиск пуст.
+    final canReorder = canAddStep && _query.isEmpty;
 
     // Task 3.3 (TZ-фронт §7.4): один раз достаём pending approvals по проекту
     // и собираем set step-id'шек, по которым открыто согласование scope=step.

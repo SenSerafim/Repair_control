@@ -313,6 +313,15 @@ class MessagesController extends FamilyAsyncNotifier<List<Message>, String> {
           .read(chatsRepositoryProvider)
           .sendMessage(chatId: arg, text: text);
       _handleIncoming(m);
+      // Списки чатов (вкладка «Чаты» + проектные списки) сортируются по
+      // lastMessageAt. Собственное сообщение не приходит обратно как
+      // notification:new (push'ы получают только адресаты), поэтому
+      // myChatsProvider/projectChatsProvider сами не обновятся — без
+      // явной инвалидации новый чат и сортировка появляются только после
+      // hard reload (Егор 29.06.2026).
+      ref
+        ..invalidate(myChatsProvider)
+        ..invalidate(projectChatsProvider);
       return null;
     } on ChatsException catch (e) {
       return e.failure;

@@ -267,9 +267,13 @@ export class ProjectsService {
   async restore(projectId: string, actorUserId: string) {
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new NotFoundError(ErrorCodes.PROJECT_NOT_FOUND, 'project not found');
+    // Восстанавливаем статус по факту прогресса: 100% → completed, иначе active.
+    // Иначе завершённый проект, возвращённый из архива, попадает в active и
+    // прячется мобильным фильтром _excludeDone (progressCache >= 100).
+    const restoredStatus = (project.progressCache ?? 0) >= 100 ? 'completed' : 'active';
     const updated = await this.prisma.project.update({
       where: { id: projectId },
-      data: { status: 'active', archivedAt: null },
+      data: { status: restoredStatus, archivedAt: null },
     });
     await this.feed.emit({
       kind: 'project_restored',

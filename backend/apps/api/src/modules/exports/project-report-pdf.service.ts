@@ -1172,10 +1172,15 @@ export class ProjectReportPdfService {
       const chromium = require('@sparticuz/chromium');
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const puppeteer = require('puppeteer-core');
+      // См. комментарий в PdfRendererService.renderHtmlToPdf — на Alpine
+      // используем системный chromium через PUPPETEER_EXECUTABLE_PATH вместо
+      // glibc-бинаря из @sparticuz/chromium.
+      const executablePath =
+        process.env.PUPPETEER_EXECUTABLE_PATH || (await chromium.executablePath());
       const browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
+        executablePath,
         headless: true,
       });
       try {

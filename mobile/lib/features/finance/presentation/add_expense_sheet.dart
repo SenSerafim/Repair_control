@@ -191,9 +191,13 @@ class _AddExpenseSheetState extends ConsumerState<_AddExpenseSheet> {
               ),
               IconButton(
                 icon: const Icon(Icons.close),
+                // Шит типизирован Expense? — закрытие должно вернуть null,
+                // а не false. Иначе вызывающий получает bool в переменной
+                // типа Expense? и падает с TypeError при попытке открыть
+                // деталь-шит → чёрный экран (Егор 29.06.2026).
                 onPressed: _busy
                     ? null
-                    : () => Navigator.of(context).pop(false),
+                    : () => Navigator.of(context).pop<Expense>(),
                 tooltip: 'Закрыть',
               ),
             ],

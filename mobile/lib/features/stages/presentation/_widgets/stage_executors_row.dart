@@ -126,9 +126,11 @@ class _ExecutorCell extends StatelessWidget {
       borderRadius: AppRadius.card,
       onTap: onTap,
       child: Padding(
+        // Компактная ячейка исполнителя (Егор 29.06.2026): h x12→x10,
+        // v x8→x6, аватар 32→26 — сэкономили ~16px высоты шапки.
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.x12,
-          vertical: AppSpacing.x8,
+          horizontal: AppSpacing.x10,
+          vertical: AppSpacing.x6,
         ),
         child: Row(
           children: [
@@ -137,26 +139,26 @@ class _ExecutorCell extends StatelessWidget {
                 seed: member!.userId,
                 name: (name?.isNotEmpty ?? false) ? name : null,
                 imageUrl: user?.avatarUrl,
-                size: 32,
+                size: 26,
               )
             else
               Container(
-                width: 32,
-                height: 32,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   color: AppColors.n100,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(13),
                   border: Border.all(color: AppColors.n200),
                 ),
                 child: Icon(
                   kind == _ExecutorKind.foreman
                       ? Icons.engineering_outlined
                       : Icons.handyman_outlined,
-                  size: 16,
+                  size: 14,
                   color: AppColors.n500,
                 ),
               ),
-            const SizedBox(width: AppSpacing.x10),
+            const SizedBox(width: AppSpacing.x8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

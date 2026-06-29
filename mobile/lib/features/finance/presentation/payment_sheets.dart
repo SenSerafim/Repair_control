@@ -424,34 +424,6 @@ class _AdvanceDistributionBody extends ConsumerWidget {
               _ChildRow(child: c, member: lookup(c.toUserId)),
               const SizedBox(height: AppSpacing.x8),
             ],
-          const SizedBox(height: AppSpacing.x12),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.x12),
-            decoration: BoxDecoration(
-              color: AppColors.yellowBg,
-              borderRadius: BorderRadius.circular(AppRadius.r12),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  size: 14,
-                  color: AppColors.yellowText,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Заказчик не видит распределение — это внутренняя кухня '
-                    'бригадира.',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.yellowText,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

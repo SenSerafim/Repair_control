@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/approvals/presentation/approval_detail_screen.dart';
 import '../../features/approvals/presentation/approval_result_screen.dart';
 import '../../features/approvals/presentation/approvals_screen.dart';
+import '../../features/approvals/presentation/my_approvals_screen.dart';
 import '../../features/approvals/presentation/plan_approval_screen.dart';
 import '../access/system_role.dart';
 import '../../features/auth/application/auth_controller.dart';
@@ -755,6 +756,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         pageBuilder: slideUpPage((_, __) => const NotificationsScreen()),
+      ),
+      // «Мои согласования» — глобальный экран по всем проектам (вход из
+      // профиля). Детали тапаются в проектный роут /projects/:id/approvals/:id.
+      GoRoute(
+        path: AppRoutes.approvals,
+        pageBuilder: slideLeftPage((_, __) => const MyApprovalsScreen()),
       ),
       GoRoute(
         path: '/documents/:documentId',
